@@ -1,0 +1,398 @@
+{
+    "SNBT": {
+      "subjectPerformanceData": [
+        { "name": "Matematika", "nilai": 85, "target": 90 },
+        { "name": "B. Indonesia", "nilai": 78, "target": 85 },
+        { "name": "B. Inggris", "nilai": 92, "target": 85 },
+        { "name": "Penalaran", "nilai": 75, "target": 80 },
+        { "name": "Literasi", "nilai": 82, "target": 80 }
+      ],
+      "weeklyProgressData": [
+        { "name": "Minggu 1", "nilai": 65, "target": 75 },
+        { "name": "Minggu 2", "nilai": 72, "target": 75 },
+        { "name": "Minggu 3", "nilai": 78, "target": 75 },
+        { "name": "Minggu 4", "nilai": 82, "target": 75 },
+        { "name": "Minggu 5", "nilai": 85, "target": 75 }
+      ],
+      "recentResults": [
+        { "id": 1, "title": "Try Out SNBT 1", "score": 85, "date": "18 April 2025" },
+        { "id": 2, "title": "SNBT Matematika", "score": 78, "date": "15 April 2025" },
+        { "id": 3, "title": "SNBT Penalaran", "score": 92, "date": "12 April 2025" }
+      ],
+      "averageScore": 52.5,
+      "totalCompleted": 15,
+      "studyTime": "24.5",
+      "rank": 42,
+      "radarData": [
+        { "subject": "Matematika", "score": 85 },
+        { "subject": "B. Indonesia", "score": 78 },
+        { "subject": "B. Inggris", "score": 92 },
+        { "subject": "Penalaran", "score": 75 },
+        { "subject": "Literasi", "score": 82 }
+      ],
+      "progressDetail": [
+        { "nama": "Matematika Dasar", "nilai": 85, "peningkatan": 7 },
+        { "nama": "Bahasa Indonesia", "nilai": 78, "peningkatan": 5 },
+        { "nama": "Bahasa Inggris", "nilai": 92, "peningkatan": 12 },
+        { "nama": "Penalaran Umum", "nilai": 75, "peningkatan": 3 },
+        { "nama": "Literasi", "nilai": 82, "peningkatan": 6 },
+        { "nama": "Pengetahuan Kuantitatif", "nilai": 79, "peningkatan": 9 }
+      ],
+      "topicData": {
+        "Matematika": [
+          { "topic": "Aljabar", "score": 92, "avg": 75, "total": 45, "completed": 40 },
+          { "topic": "Geometri", "score": 78, "avg": 70, "total": 35, "completed": 30 },
+          { "topic": "Kalkulus", "score": 65, "avg": 65, "total": 30, "completed": 15 },
+          { "topic": "Trigonometri", "score": 83, "avg": 68, "total": 25, "completed": 20 },
+          { "topic": "Statistik", "score": 89, "avg": 72, "total": 20, "completed": 18 }
+        ],
+        "B. Indonesia": [
+          { "topic": "Tata Bahasa", "score": 82, "avg": 76, "total": 40, "completed": 35 },
+          { "topic": "Pemahaman Bacaan", "score": 76, "avg": 72, "total": 35, "completed": 30 },
+          { "topic": "Kosakata", "score": 85, "avg": 78, "total": 25, "completed": 22 },
+          { "topic": "Teks Argumentasi", "score": 70, "avg": 65, "total": 20, "completed": 15 }
+        ],
+        "B. Inggris": [
+          { "topic": "Reading", "score": 95, "avg": 80, "total": 40, "completed": 38 },
+          { "topic": "Grammar", "score": 90, "avg": 75, "total": 35, "completed": 32 },
+          { "topic": "Vocabulary", "score": 93, "avg": 78, "total": 30, "completed": 28 },
+          { "topic": "Text Completion", "score": 87, "avg": 73, "total": 25, "completed": 22 }
+        ],
+        "Penalaran": [
+          { "topic": "Logika", "score": 80, "avg": 72, "total": 40, "completed": 32 },
+          { "topic": "Analogi", "score": 75, "avg": 70, "total": 30, "completed": 25 },
+          { "topic": "Penalaran Kuantitatif", "score": 70, "avg": 68, "total": 25, "completed": 20 },
+          { "topic": "Penalaran Verbal", "score": 78, "avg": 71, "total": 20, "completed": 18 }
+        ],  
+        "Literasi": [
+          { "topic": "Kemampuan Membaca", "score": 85, "avg": 76, "total": 35, "completed": 32 },
+          { "topic": "Interpretasi", "score": 80, "avg": 72, "total": 30, "completed": 27 },
+          { "topic": "Evaluasi", "score": 78, "avg": 70, "total": 25, "completed": 22 },
+          { "topic": "Analisis Wacana", "score": 82, "avg": 74, "total": 20, "completed": 18 }
+        ]
+      },
+      "probabilitasKelulusan": 78,
+      "nextGoal": { "name": "Target SNBT UI", "score": 700, "currentScore": 650 },
+      "learningInsights": [
+        { "insight": "Kamu 15% lebih baik dalam soal geometri dibanding rata-rata", "type": "positive" },
+        { "insight": "Kecepatan menjawab soal kalkulus 20% lebih lambat dari target", "type": "negative" },
+        { "insight": "Performamu di atas 65% peserta lain dalam try out", "type": "positive" }
+      ],
+      "achievements": [
+        { "title": "Matematika Master", "description": "Mencapai nilai 90+ di 5 tes Matematika", "completed": true, "progress": 100 },
+        { "title": "Konsisten Belajar", "description": "Belajar selama 10 hari berturut-turut", "completed": true, "progress": 100 },
+        { "title": "Reading Champion", "description": "Menyelesaikan semua latihan Reading", "completed": false, "progress": 80 },
+        { "title": "Problem Solver", "description": "Menyelesaikan 100 soal penalaran", "completed": false, "progress": 65 }
+      ],
+      "recommendedResources": [
+        { "type": "video", "subject": "Matematika", "topic": "Kalkulus", "title": "Konsep Dasar Integral", "duration": "15 menit" },
+        { "type": "quiz", "subject": "Penalaran", "topic": "Logika", "title": "Latihan Soal Logika Tingkat Lanjut", "questions": 20 },
+        { "type": "reading", "subject": "B. Indonesia", "topic": "Pemahaman Bacaan", "title": "Teknik Membaca Cepat dan Efektif", "pages": 5 }
+      ],
+      "recommendedPrograms": [
+        { "program": "Kedokteran UI", "match": 82, "minScore": 700, "requirement": "SNBT + SIMAK FK" },
+        { "program": "Teknik Informatika ITB", "match": 78, "minScore": 680, "requirement": "SNBT" },
+        { "program": "Psikologi UGM", "match": 87, "minScore": 650, "requirement": "SNBT" },
+        { "program": "Hukum UNAIR", "match": 90, "minScore": 630, "requirement": "SNBT" }
+      ],
+      "percentileRank": 78,
+      "competitiveAnalysis": [
+        { "name": "Top 5%", "score": 95 },
+        { "name": "Top 10%", "score": 90 },
+        { "name": "Top 25%", "score": 85 },
+        { "name": "Kamu", "score": 52.5 },
+        { "name": "Rata-rata", "score": 75 }
+      ]
+    },
+    "SIMAK": {
+      "subjectPerformanceData": [
+        { "name": "TKPA", "nilai": 76, "target": 85 },
+        { "name": "Saintek", "nilai": 83, "target": 80 },
+        { "name": "Soshum", "nilai": 90, "target": 85 },
+        { "name": "Matematika", "nilai": 72, "target": 80 },
+        { "name": "B. Inggris", "nilai": 88, "target": 85 }
+      ],
+      "weeklyProgressData": [
+        { "name": "Minggu 1", "nilai": 70, "target": 75 },
+        { "name": "Minggu 2", "nilai": 74, "target": 75 },
+        { "name": "Minggu 3", "nilai": 78, "target": 80 },
+        { "name": "Minggu 4", "nilai": 81, "target": 80 },
+        { "name": "Minggu 5", "nilai": 84, "target": 85 }
+      ],
+      "recentResults": [
+        { "id": 1, "title": "Try Out SIMAK UI", "score": 81, "date": "17 April 2025" },
+        { "id": 2, "title": "SIMAK Saintek", "score": 83, "date": "14 April 2025" },
+        { "id": 3, "title": "SIMAK TKPA", "score": 76, "date": "11 April 2025" }
+      ],
+      "averageScore": 81.8,
+      "totalCompleted": 12,
+      "studyTime": "22.0",
+      "rank": 53,
+      "radarData": [
+        { "subject": "TKPA", "score": 76 },
+        { "subject": "Saintek", "score": 83 },
+        { "subject": "Soshum", "score": 90 },
+        { "subject": "Matematika", "score": 72 },
+        { "subject": "B. Inggris", "score": 88 }
+      ],
+      "progressDetail": [
+        { "nama": "TKPA", "nilai": 76, "peningkatan": 4 },
+        { "nama": "Matematika IPA", "nilai": 72, "peningkatan": 3 },
+        { "nama": "Fisika", "nilai": 78, "peningkatan": 6 },
+        { "nama": "Kimia", "nilai": 82, "peningkatan": 8 },
+        { "nama": "Biologi", "nilai": 75, "peningkatan": 5 },
+        { "nama": "Ekonomi", "nilai": 87, "peningkatan": 10 },
+        { "nama": "Geografi", "nilai": 90, "peningkatan": 7 },
+        { "nama": "Bahasa Inggris", "nilai": 88, "peningkatan": 6 }
+      ],
+      "topicData": {
+        "TKPA": [
+          { "topic": "Verbal", "score": 82, "avg": 75, "total": 40, "completed": 36 },
+          { "topic": "Kuantitatif", "score": 70, "avg": 72, "total": 35, "completed": 30 },
+          { "topic": "Penalaran", "score": 75, "avg": 70, "total": 30, "completed": 25 }
+        ],
+        "Saintek": [
+          { "topic": "Fisika Dasar", "score": 85, "avg": 76, "total": 45, "completed": 40 },
+          { "topic": "Kimia Organik", "score": 80, "avg": 70, "total": 40, "completed": 35 },
+          { "topic": "Biologi", "score": 87, "avg": 74, "total": 35, "completed": 32 }
+        ],
+        "Soshum": [
+          { "topic": "Ekonomi", "score": 92, "avg": 78, "total": 40, "completed": 38 },
+          { "topic": "Geografi", "score": 90, "avg": 76, "total": 35, "completed": 33 },
+          { "topic": "Sejarah", "score": 88, "avg": 75, "total": 30, "completed": 28 }
+        ],
+        "Matematika": [
+          { "topic": "Aljabar", "score": 75, "avg": 73, "total": 40, "completed": 35 },
+          { "topic": "Geometri", "score": 70, "avg": 68, "total": 35, "completed": 30 },
+          { "topic": "Kalkulus", "score": 72, "avg": 70, "total": 30, "completed": 25 }
+        ],
+        "B. Inggris": [
+          { "topic": "Reading", "score": 90, "avg": 78, "total": 40, "completed": 38 },
+          { "topic": "Grammar", "score": 86, "avg": 75, "total": 35, "completed": 32 },
+          { "topic": "Vocabulary", "score": 88, "avg": 76, "total": 30, "completed": 28 }
+        ]
+      },
+      "probabilitasKelulusan": 75,
+      "nextGoal": { "name": "Target SIMAK UI", "score": 850, "currentScore": 760 },
+      "learningInsights": [
+        { "insight": "Performa di mata pelajaran Soshum termasuk 10% terbaik", "type": "positive" },
+        { "insight": "Perlu peningkatan pada topik Geometri Matematika", "type": "negative" },
+        { "insight": "Nilai SIMAK-mu di atas 63% peserta lainnya", "type": "positive" }
+      ],
+      "achievements": [
+        { "title": "Soshum Expert", "description": "Mencapai nilai 90+ di semua tes Soshum", "completed": true, "progress": 100 },
+        { "title": "B. Inggris Fluent", "description": "Menyelesaikan semua latihan B. Inggris", "completed": false, "progress": 90 },
+        { "title": "Science Enthusiast", "description": "Selesaikan 50 soal Saintek", "completed": false, "progress": 70 }
+      ],
+      "recommendedResources": [
+        { "type": "video", "subject": "Matematika", "topic": "Geometri", "title": "Bangun Ruang dan Dimensi 3", "duration": "20 menit" },
+        { "type": "quiz", "subject": "TKPA", "topic": "Kuantitatif", "title": "Latihan TKPA Intensif", "questions": 25 },
+        { "type": "reading", "subject": "Soshum", "topic": "Ekonomi", "title": "Konsep Dasar Ekonomi Makro", "pages": 8 }
+      ],
+      "recommendedPrograms": [
+        { "program": "Ilmu Ekonomi UI", "match": 87, "minScore": 750, "requirement": "SIMAK Utama" },
+        { "program": "Kedokteran UGM", "match": 75, "minScore": 800, "requirement": "SIMAK + Tes Fakultas" },
+        { "program": "Hubungan Internasional UNPAD", "match": 92, "minScore": 720, "requirement": "SIMAK Soshum" },
+        { "program": "Teknik Kimia ITB", "match": 78, "minScore": 760, "requirement": "SIMAK Saintek" }
+      ],
+      "percentileRank": 67,
+      "competitiveAnalysis": [
+        { "name": "Top 5%", "score": 93 },
+        { "name": "Top 10%", "score": 89 },
+        { "name": "Top 25%", "score": 84 },
+        { "name": "Kamu", "score": 81.8 },
+        { "name": "Rata-rata", "score": 76 }
+      ]
+    },
+    "Quiz": {
+      "subjectPerformanceData": [
+        { "name": "Matematika", "nilai": 95, "target": 90 },
+        { "name": "Fisika", "nilai": 86, "target": 85 },
+        { "name": "Kimia", "nilai": 75, "target": 80 },
+        { "name": "Biologi", "nilai": 82, "target": 85 },
+        { "name": "B. Inggris", "nilai": 90, "target": 85 }
+      ],
+      "weeklyProgressData": [
+        { "name": "Minggu 1", "nilai": 80, "target": 80 },
+        { "name": "Minggu 2", "nilai": 83, "target": 80 },
+        { "name": "Minggu 3", "nilai": 86, "target": 85 },
+        { "name": "Minggu 4", "nilai": 88, "target": 85 },
+        { "name": "Minggu 5", "nilai": 90, "target": 85 }
+      ],
+      "recentResults": [
+        { "id": 1, "title": "Quiz Matematika", "score": 95, "date": "20 April 2025" },
+        { "id": 2, "title": "Quiz Fisika", "score": 86, "date": "18 April 2025" },
+        { "id": 3, "title": "Quiz Kimia", "score": 75, "date": "15 April 2025" }
+      ],
+      "averageScore": 85.6,
+      "totalCompleted": 28,
+      "studyTime": "18.5",
+      "rank": 17,
+      "radarData": [
+        { "subject": "Matematika", "score": 95 },
+        { "subject": "Fisika", "score": 86 },
+        { "subject": "Kimia", "score": 75 },
+        { "subject": "Biologi", "score": 82 },
+        { "subject": "B. Inggris", "score": 90 }
+      ],
+      "progressDetail": [
+        { "nama": "Matematika", "nilai": 95, "peningkatan": 15 },
+        { "nama": "Fisika", "nilai": 86, "peningkatan": 8 },
+        { "nama": "Kimia", "nilai": 75, "peningkatan": 5 },
+        { "nama": "Biologi", "nilai": 82, "peningkatan": 7 },
+        { "nama": "Bahasa Inggris", "nilai": 90, "peningkatan": 10 }
+      ],
+      "topicData": {
+        "Matematika": [
+          { "topic": "Aljabar", "score": 97, "avg": 75, "total": 40, "completed": 40 },
+          { "topic": "Geometri", "score": 95, "avg": 72, "total": 35, "completed": 35 },
+          { "topic": "Kalkulus", "score": 93, "avg": 70, "total": 30, "completed": 30 }
+        ],
+        "Fisika": [
+          { "topic": "Mekanika", "score": 88, "avg": 75, "total": 35, "completed": 32 },
+          { "topic": "Listrik", "score": 85, "avg": 72, "total": 30, "completed": 27 },
+          { "topic": "Gelombang", "score": 82, "avg": 70, "total": 25, "completed": 22 }
+        ],
+        "Kimia": [
+          { "topic": "Kimia Dasar", "score": 80, "avg": 72, "total": 35, "completed": 30 },
+          { "topic": "Kimia Organik", "score": 75, "avg": 70, "total": 30, "completed": 25 },
+          { "topic": "Kimia Analitik", "score": 70, "avg": 68, "total": 25, "completed": 20 }
+        ],
+        "Biologi": [
+          { "topic": "Sel", "score": 85, "avg": 76, "total": 30, "completed": 28 },
+          { "topic": "Genetika", "score": 80, "avg": 72, "total": 25, "completed": 23 },
+          { "topic": "Sistem Tubuh", "score": 82, "avg": 74, "total": 20, "completed": 18 }
+        ],
+        "B. Inggris": [
+          { "topic": "Reading", "score": 92, "avg": 78, "total": 35, "completed": 33 },
+          { "topic": "Grammar", "score": 88, "avg": 75, "total": 30, "completed": 28 },
+          { "topic": "Vocabulary", "score": 90, "avg": 76, "total": 25, "completed": 24 }
+        ]
+      },
+      "probabilitasKelulusan": null,
+      "nextGoal": { "name": "Rata-rata Nilai Quiz", "score": 90, "currentScore": 85.6 },
+      "learningInsights": [
+        { "insight": "Kamu sangat unggul dalam topik Matematika Aljabar", "type": "positive" },
+        { "insight": "Pengerjaan soal Kimia 25% lebih lambat dari rata-rata", "type": "negative" },
+        { "insight": "Kamu berada di peringkat 17 dari 200+ peserta", "type": "positive" }
+      ],
+      "achievements": [
+        { "title": "Math Wizard", "description": "Nilai Matematika > 95 pada 3 quiz berturut-turut", "completed": true, "progress": 100 },
+        { "title": "Science Explorer", "description": "Selesaikan 100 soal IPA", "completed": false, "progress": 85 },
+        { "title": "English Pro", "description": "Nilai B. Inggris > 90 sebanyak 5 kali", "completed": false, "progress": 60 }
+      ],
+      "recommendedResources": [
+        { "type": "video", "subject": "Kimia", "topic": "Kimia Organik", "title": "Reaksi-reaksi Kimia Organik", "duration": "18 menit" },
+        { "type": "quiz", "subject": "Fisika", "topic": "Gelombang", "title": "Gelombang Elektromagnetik", "questions": 15 },
+        { "type": "reading", "subject": "Biologi", "topic": "Genetika", "title": "Pola Pewarisan Sifat", "pages": 6 }
+      ],
+      "percentileRank": 92,
+      "competitiveAnalysis": [
+        { "name": "Top 5%", "score": 94 },
+        { "name": "Top 10%", "score": 90 },
+        { "name": "Kamu", "score": 85.6 },
+        { "name": "Top 25%", "score": 82 },
+        { "name": "Rata-rata", "score": 78 }
+      ]
+    },
+    "CPNS": {
+      "subjectPerformanceData": [
+        { "name": "TWK", "nilai": 80, "target": 85 },
+        { "name": "TIU", "nilai": 76, "target": 80 },
+        { "name": "TKP", "nilai": 85, "target": 85 },
+        { "name": "Wawasan", "nilai": 72, "target": 75 },
+        { "name": "Kebangsaan", "nilai": 83, "target": 80 }
+      ],
+      "weeklyProgressData": [
+        { "name": "Minggu 1", "nilai": 68, "target": 75 },
+        { "name": "Minggu 2", "nilai": 72, "target": 75 },
+        { "name": "Minggu 3", "nilai": 76, "target": 80 },
+        { "name": "Minggu 4", "nilai": 78, "target": 80 },
+        { "name": "Minggu 5", "nilai": 79, "target": 85 }
+      ],
+      "recentResults": [
+        { "id": 1, "title": "Try Out CPNS", "score": 79, "date": "19 April 2025" },
+        { "id": 2, "title": "CPNS TIU", "score": 76, "date": "16 April 2025" },
+        { "id": 3, "title": "CPNS TKP", "score": 85, "date": "13 April 2025" }
+      ],
+      "averageScore": 79.2,
+      "totalCompleted": 10,
+      "studyTime": "26.0",
+      "rank": 64,
+      "radarData": [
+        { "subject": "TWK", "score": 80 },
+        { "subject": "TIU", "score": 76 },
+        { "subject": "TKP", "score": 85 },
+        { "subject": "Wawasan", "score": 72 },
+        { "subject": "Kebangsaan", "score": 83 }
+      ],
+      "progressDetail": [
+        { "nama": "TWK - Wawasan Kebangsaan", "nilai": 80, "peningkatan": 5 },
+        { "nama": "TWK - Sejarah", "nilai": 75, "peningkatan": 3 },
+        { "nama": "TIU - Verbal", "nilai": 76, "peningkatan": 4 },
+        { "nama": "TIU - Numerik", "nilai": 78, "peningkatan": 6 },
+        { "nama": "TIU - Figural", "nilai": 73, "peningkatan": 2 },
+        { "nama": "TKP - Pelayanan Publik", "nilai": 85, "peningkatan": 7 },
+        { "nama": "TKP - Sosial Budaya", "nilai": 82, "peningkatan": 4 },
+        { "nama": "TKP - Profesionalisme", "nilai": 88, "peningkatan": 8 }
+      ],
+      "topicData": {
+        "TWK": [
+          { "topic": "Pancasila", "score": 83, "avg": 75, "total": 35, "completed": 30 },
+          { "topic": "UUD 1945", "score": 80, "avg": 72, "total": 30, "completed": 25 },
+          { "topic": "NKRI", "score": 78, "avg": 70, "total": 25, "completed": 20 }
+        ],
+        "TIU": [
+          { "topic": "Verbal", "score": 78, "avg": 75, "total": 35, "completed": 30 },
+          { "topic": "Numerik", "score": 76, "avg": 72, "total": 30, "completed": 25 },
+          { "topic": "Figural", "score": 73, "avg": 70, "total": 25, "completed": 20 }
+        ],
+        "TKP": [
+          { "topic": "Pelayanan Publik", "score": 85, "avg": 78, "total": 30, "completed": 28 },
+          { "topic": "Sosial Budaya", "score": 82, "avg": 75, "total": 25, "completed": 22 },
+          { "topic": "Profesionalisme", "score": 88, "avg": 76, "total": 20, "completed": 18 }
+        ],
+        "Wawasan": [
+          { "topic": "Nasionalisme", "score": 75, "avg": 72, "total": 30, "completed": 25 },
+          { "topic": "Integritas", "score": 70, "avg": 68, "total": 25, "completed": 20 },
+          { "topic": "Bela Negara", "score": 72, "avg": 70, "total": 20, "completed": 15 }
+        ],
+        "Kebangsaan": [
+          { "topic": "Sejarah", "score": 85, "avg": 76, "total": 30, "completed": 28 },
+          { "topic": "Geopolitik", "score": 80, "avg": 72, "total": 25, "completed": 22 },
+          { "topic": "Wawasan Nusantara", "score": 83, "avg": 74, "total": 20, "completed": 18 }
+        ]
+      },
+      "probabilitasKelulusan": 70,
+      "nextGoal": { "name": "Target CPNS", "score": 85, "currentScore": 79.2 },
+      "learningInsights": [
+        { "insight": "Performa TKP di atas rata-rata peserta CPNS", "type": "positive" },
+        { "insight": "Topik Wawasan perlu ditingkatkan sebelum ujian", "type": "negative" },
+        { "insight": "Kamu berada di atas 52% peserta try out", "type": "positive" }
+      ],
+      "achievements": [
+        { "title": "TKP Master", "description": "Nilai TKP > 85 dalam 3 try out", "completed": true, "progress": 100 },
+        { "title": "TWK Expert", "description": "Menyelesaikan semua modul TWK", "completed": false, "progress": 75 },
+        { "title": "CPNS Ready", "description": "Nilai rata-rata keseluruhan > 80", "completed": false, "progress": 65 }
+      ],
+      "recommendedResources": [
+        { "type": "video", "subject": "Wawasan", "topic": "Nasionalisme", "title": "Pendalaman Wawasan Kebangsaan", "duration": "25 menit" },
+        { "type": "quiz", "subject": "TIU", "topic": "Figural", "title": "Latihan Soal Figural Lanjutan", "questions": 20 },
+        { "type": "reading", "subject": "TWK", "topic": "UUD 1945", "title": "Amandemen UUD 1945", "pages": 10 }
+      ],
+      "recommendedPrograms": [
+        { "program": "Kementerian Keuangan - Analis Kebijakan", "match": 85, "minScore": 350, "requirement": "Tes SKD + SKB" },
+        { "program": "Kementerian Pendidikan - Pengelola Keuangan", "match": 82, "minScore": 340, "requirement": "Tes SKD" },
+        { "program": "BKN - Analis SDM Aparatur", "match": 78, "minScore": 345, "requirement": "Tes SKD + Wawancara" },
+        { "program": "Pemerintah Kota - Pengelola Pengadaan", "match": 87, "minScore": 335, "requirement": "Tes SKD + Praktik" }
+      ],
+      "percentileRank": 58,
+      "competitiveAnalysis": [
+        { "name": "Top 5%", "score": 90 },
+        { "name": "Top 10%", "score": 86 },
+        { "name": "Top 25%", "score": 82 },
+        { "name": "Kamu", "score": 79.2 },
+        { "name": "Rata-rata", "score": 74 }
+      ]
+    }
+}

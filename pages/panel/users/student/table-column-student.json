@@ -1,0 +1,251 @@
+{
+  "desktop": {
+    "fixedColumnIds": ["id", "code"],
+    "columns": [
+      {
+        "id": "id",
+        "header": "ID",
+        "size": 80,
+        "minSize": 80,
+        "maxSize": 320
+      },
+      {
+        "id": "code",
+        "header": "User Code",
+        "size": 160,
+        "minSize": 160,
+        "maxSize": 640
+      },
+      {
+        "header": "  ",
+        "type": "group",
+        "columns": [
+          {
+            "id": "nama_lengkap",
+            "header": "Nama",
+            "size": 200,
+            "minSize": 200,
+            "maxSize": 480,
+            "maxWidth": 120
+          },
+          {
+            "id": "email",
+            "header": "Email",
+            "size": 250,
+            "minSize": 250,
+            "maxSize": 800,
+            "ellipsis": true,
+            "maxWidth": 160
+          },
+          {
+            "id": "phone",
+            "header": "Kontak",
+            "size": 200,
+            "minSize": 160,
+            "maxSize": 480,
+            "useFormatter": true
+          },
+          {
+            "id": "pendidikan",
+            "header": "Pendidikan",
+            "size": 100,
+            "minSize": 100,
+            "maxSize": 480,
+            "maxWidth": 120
+          },
+          {
+            "id": "usia",
+            "header": "Usia",
+            "size": 80,
+            "minSize": 80,
+            "maxSize": 400
+          }
+        ]
+      },
+      {
+        "header": "Location",
+        "type": "group",
+        "columns": [
+          {
+            "id": "kota",
+            "header": "Kota",
+            "size": 120,
+            "minSize": 120,
+            "maxSize": 720
+          },
+          {
+            "id": "provinsi",
+            "header": "Provinsi",
+            "size": 120,
+            "minSize": 120,
+            "maxSize": 720
+          }
+        ]
+      },
+      {
+        "header": "Activity",
+        "type": "group",
+        "columns": [
+          {
+            "id": "status",
+            "header": "Status",
+            "size": 150,
+            "minSize": 100,
+            "maxSize": 400,
+            "type": "badge",
+            "values": {
+              "inactive": { "text": "Inaktif", "variant": "danger" },
+              "active": { "text": "Aktif", "variant": "success" }
+            }
+          },
+          {
+            "id": "lastlogin",
+            "header": "Last Login",
+            "size": 200,
+            "minSize": 200,
+            "maxSize": 720
+          }
+        ]
+      },
+      {
+        "header": " ",
+        "type": "group",
+        "columns": [
+          {
+            "id": "actions",
+            "header": "Actions",
+            "size": 10,
+            "minSize": 120,
+            "maxSize": 480,
+            "type": "actions"
+          }
+        ]
+      }
+    ]
+  },
+  "mobile": {
+    "fixedColumnIds": ["id"],
+    "columns": [
+      {
+        "id": "id",
+        "header": "ID",
+        "size": 40,
+        "minSize": 40,
+        "maxSize": 320
+      },
+      {
+        "id": "code",
+        "header": "User Code",
+        "size": 100,
+        "minSize": 100,
+        "maxSize": 640
+      },
+      {
+        "header": "  ",
+        "type": "group",
+        "columns": [
+          {
+            "id": "nama_lengkap",
+            "header": "Nama",
+            "size": 200,
+            "minSize": 200,
+            "maxSize": 480,
+            "maxWidth": 120
+          },
+          {
+            "id": "email",
+            "header": "Email",
+            "size": 250,
+            "minSize": 250,
+            "maxSize": 800,
+            "ellipsis": true,
+            "maxWidth": 160
+          },
+          {
+            "id": "phone",
+            "header": "Kontak",
+            "size": 200,
+            "minSize": 160,
+            "maxSize": 480,
+            "useFormatter": true
+          },
+          {
+            "id": "pendidikan",
+            "header": "Pendidikan",
+            "size": 100,
+            "minSize": 100,
+            "maxSize": 480,
+            "maxWidth": 120
+          },
+          {
+            "id": "usia",
+            "header": "Usia",
+            "size": 80,
+            "minSize": 80,
+            "maxSize": 400
+          }
+        ]
+      },
+      {
+        "header": "Location",
+        "type": "group",
+        "columns": [
+          {
+            "id": "kota",
+            "header": "Kota",
+            "size": 120,
+            "minSize": 120,
+            "maxSize": 720
+          },
+          {
+            "id": "provinsi",
+            "header": "Provinsi",
+            "size": 120,
+            "minSize": 120,
+            "maxSize": 720
+          }
+        ]
+      },
+      {
+        "header": "Activity",
+        "type": "group",
+        "columns": [
+          {
+            "id": "status",
+            "header": "Status",
+            "size": 150,
+            "minSize": 100,
+            "maxSize": 400,
+            "type": "badge",
+            "values": {
+              "inactive": { "text": "Inaktif", "variant": "danger" },
+              "active": { "text": "Aktif", "variant": "success" }
+            }
+          },
+          {
+            "id": "lastlogin",
+            "header": "Last Login",
+            "size": 200,
+            "minSize": 200,
+            "maxSize": 720
+          }
+        ]
+      },
+      {
+        "header": " ",
+        "type": "group",
+        "columns": [
+          {
+            "id": "actions",
+            "header": "Actions",
+            "size": 10,
+            "minSize": 120,
+            "maxSize": 480,
+            "type": "actions"
+          }
+        ]
+      }
+    ] 
+  }
+}
+ 

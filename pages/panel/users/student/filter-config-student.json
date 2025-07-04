@@ -1,0 +1,55 @@
+{
+    "defaultFilters": {
+        "courseId" : "All",
+        "teacherId" : "All",
+        "studentId" : "All",
+        "startDate" : null,
+        "endDate": null,
+        "status" : "All"
+    },
+    "formConfig": [
+      {
+        "type": "custom",
+        "key": "status",
+        "label": "Status",
+        "options": [
+          { "label": "All Status", "value": "All" },
+          { "label": "Started", "value": "Started" },
+          { "label": "Finished", "value": "Finished" },
+          { "label": "Not Start", "value": "Not Start" }
+        ]
+      },
+      {
+        "type": "search",
+        "key": "courseId",
+        "label": "Course",
+        "endpoint": "/courses/filter/CRSOFF",
+        "responseKey": "courses",
+        "valueKey": "id",
+        "labelKey": "title"
+      },
+      {
+        "type": "search",
+        "key": "teacherId",
+        "label": "Teacher",
+        "endpoint": "/user-accounts/filter/teacher",
+        "responseKey": "users",
+        "valueKey": "userid",
+        "labelKey": "name"
+      },
+      {
+        "type": "search",
+        "key": "studentId",
+        "label": "Student",
+        "endpoint": "/user-accounts/filter/student",
+        "responseKey": "users",
+        "valueKey": "userid",
+        "labelKey": "name"
+      },
+      {
+        "type": "date-range",
+        "key": "dateRange",
+        "label": "Date Range"
+      }
+    ]
+  }

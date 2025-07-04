@@ -1,0 +1,66 @@
+{
+    "defaultFilters": {
+      "examType": "All",
+      "isFree": "All",
+      "isValid": "All",
+      "dateRange": "none",
+      "startDate": null,
+      "endDate": null,
+      "groupProduct": "All",
+      "series": "All"
+    },
+    "formConfig": [
+      {
+        "type": "yes-no",
+        "key": "isFree",
+        "label": "Free Status",
+        "options": [
+          { "label": "All Free Status", "value": "All" },
+          { "label": "Yes", "value": "true" },
+          { "label": "No", "value": "false" }
+        ]
+      },
+      {
+        "type": "yes-no",
+        "key": "isValid",
+        "label": "Valid Status",
+        "options": [
+          { "label": "All Valid Status", "value": "All" },
+          { "label": "Yes", "value": "true" },
+          { "label": "No", "value": "false" }
+        ]
+      },
+      {
+        "type": "search",
+        "key": "examType",
+        "label": "Exam Type",
+        "endpoint": "/productType/filters/exam_type",
+        "responseKey": "examTypes",
+        "valueKey": "exam_type",
+        "labelKey": "exam_type"
+      },
+      {
+        "type": "search",
+        "key": "groupProduct",
+        "label": "Group Product",
+        "endpoint": "/productType/filters/group_product",
+        "responseKey": "groupProducts",
+        "valueKey": "group_product",
+        "labelKey": "group_product"
+      },
+      {
+        "type": "search",
+        "key": "series",
+        "label": "Series",
+        "endpoint": "/productType/filters/series",
+        "responseKey": "series",
+        "valueKey": "series",
+        "labelKey": "series"
+      },
+      {
+        "type": "date-range",
+        "key": "dateRange",
+        "label": "Date Range"
+      }
+    ]
+  }

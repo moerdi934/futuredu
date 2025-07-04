@@ -1,0 +1,55 @@
+# ── DEPENDENCIES ────────────────────────────────────────────────
+/node_modules/
+.pnp
+.pnp.js
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# ── NEXT.JS BUILD OUTPUT ───────────────────────────────────────
+/.next/                 # SSR-/App Router output
+.out/                   # hasil `next export`
+.next/standalone/       # mode `output: 'standalone'`
+.swc/                   # cache kompiler SWC
+.next/cache/            # incremental cache
+
+# ── TURBOREPO / TURBOPACK ──────────────────────────────────────
+.turbo/                 # cache & artefak turborepo/turbopack
+
+# ── PRODUCTION BUILD (custom) ──────────────────────────────────
+/build/
+
+# ── TESTING ────────────────────────────────────────────────────
+/coverage/
+
+# ── LOG FILES ─────────────────────────────────────────────────
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# ── LOCAL ENVIRONMENT VARS ─────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── VERCEL PROJECT METADATA ───────────────────────────────────
+.vercel/
+
+# ── TYPESCRIPT ────────────────────────────────────────────────
+*.tsbuildinfo
+next-env.d.ts
+
+# ── IDE / EDITOR SETTINGS ─────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.njsproj
+*.sln
+
+# ── OS-SPECIFIC & MISC ────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.pem

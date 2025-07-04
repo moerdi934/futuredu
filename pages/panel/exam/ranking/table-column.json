@@ -1,0 +1,273 @@
+{
+    "desktop": {
+      "fixedColumnIds": ["no", "exam_schedule_name"],
+      "columns": [  
+        {
+          "id": "no",
+          "header": "No",
+          "size": 80,
+          "minSize": 80,
+          "maxSize": 320,
+          "align": "center"
+        },
+        
+        {
+          "id": "exam_schedule_name",
+          "header": "Exam",
+          "size": 160,
+          "minSize": 160,
+          "maxSize": 640
+        },
+        {
+          "id": "exam_schedule_id",
+          "header": "ExamID",
+          "size": 160,
+          "minSize": 160,
+          "maxSize": 640,
+          "hidden": true
+        },
+        {
+          "header": "  ",
+          "type": "group",
+          "columns": [
+            {
+              "id": "exam_type",
+              "header": "Type",
+              "size": 80,
+              "minSize": 80,
+              "maxSize": 480,
+              "ellipsis": true,
+              "maxWidth": 80
+            },
+            {
+                "id": "rank",
+                "header": "Rank",
+                "size": 80,
+                "minSize": 80,
+                "maxSize": 480,
+                "ellipsis": true,
+                "maxWidth": 80,
+                "align": "center"
+              },
+              {
+                "id": "peserta",
+                "header": "Peserta",
+                "size": 80,
+                "minSize": 80,
+                "maxSize": 480,
+                "ellipsis": true,
+                "maxWidth": 80,
+                "align": "center"
+              },
+            {
+              "id": "total_score",
+              "header": "Skor Total",
+              "size": 80,
+              "minSize": 80,
+              "maxSize": 480,
+              "ellipsis": true,
+              "maxWidth": 80,
+              "align": "center"
+            },
+            {
+              "id": "avg_score",
+              "header": "Skor Rata-rata",
+              "size": 160,
+              "minSize": 160,
+              "maxSize": 800,
+              "maxWidth": 160,
+              "align": "center"
+            },
+            {
+              "id": "waktu",
+              "header": "Waktu",
+              "size": 400,
+              "minSize": 400,
+              "maxSize": 480,
+              "maxWidth": 400,
+              "ellipsis": true,
+              "useFormatter": true,
+              "align": "center"
+            },
+            {
+              "id": "lulus",
+              "header": "Lulus",
+              "size": 120,
+              "minSize": 120,
+              "maxSize": 480,
+              "maxWidth": 120,
+              "align": "center"
+            },
+              {
+                "id": "rankkota",
+                "header": "Rank Kota",
+                "size": 120,
+                "minSize": 120,
+                "maxSize": 480,
+                "maxWidth": 120,
+                "align": "center"
+              },
+              {
+                "id": "rankprovinsi",
+                "header": "Rank Provinsi",
+                "size": 120,
+                "minSize": 120,
+                "maxSize": 480,
+                "maxWidth": 120,
+                "align": "center"
+              }
+          ]
+        },
+        {
+          "header": " ",
+          "type": "group",
+          "columns": [
+            {
+              "id": "actions",
+              "header": "Actions",
+              "size": 10,
+              "minSize": 120,
+              "maxSize": 480,
+              "type": "actions",
+              "align": "center"
+            }
+          ]
+        }
+      ]
+    },
+    "mobile": {
+      "fixedColumnIds": ["no"],
+      "columns": [
+        {
+          "id": "no",
+          "header": "No",
+          "size": 40,
+          "minSize": 40,
+          "maxSize": 320,
+          "align": "center"
+        },
+        {
+          "id": "exam_schedule_name",
+          "header": "Exam",
+          "size": 160,
+          "minSize": 160,
+          "maxSize": 640
+        },
+        {
+          "id": "exam_schedule_id",
+          "header": "ExamID",
+          "size": 160,
+          "minSize": 160,
+          "maxSize": 640,
+          "hidden": true
+        },
+        {
+            "header": "  ",
+            "type": "group",
+            "columns": [
+              {
+                "id": "exam_type",
+                "header": "Type",
+                "size": 80,
+                "minSize": 80,
+                "maxSize": 480,
+                "ellipsis": true,
+                "maxWidth": 80
+              },
+              {
+                  "id": "rank",
+                  "header": "Rank",
+                  "size": 80,
+                  "minSize": 80,
+                  "maxSize": 480,
+                  "ellipsis": true,
+                  "maxWidth": 80,
+                  "align": "center"
+                },
+                {
+                  "id": "peserta",
+                  "header": "Peserta",
+                  "size": 80,
+                  "minSize": 80,
+                  "maxSize": 480,
+                  "ellipsis": true,
+                  "maxWidth": 80,
+                  "align": "center"
+                },
+              {
+                "id": "total_score",
+                "header": "Skor Total",
+                "size": 80,
+                "minSize": 80,
+                "maxSize": 480,
+                "ellipsis": true,
+                "maxWidth": 80,
+                "align": "center"
+              },
+              {
+                "id": "avg_score",
+                "header": "Skor Rata-rata",
+                "size": 160,
+                "minSize": 160,
+                "maxSize": 800,
+                "maxWidth": 160,
+                "align": "center"
+              },
+              {
+                "id": "waktu",
+                "header": "Waktu",
+                "size": 400,
+                "minSize": 400,
+                "maxSize": 480,
+                "maxWidth": 400,
+                "ellipsis": true,
+                "useFormatter": true,
+                "align": "center"
+              },
+              {
+                "id": "lulus",
+                "header": "Lulus",
+                "size": 120,
+                "minSize": 120,
+                "maxSize": 480,
+                "maxWidth": 120,
+                "align": "center"
+              },
+                {
+                  "id": "rankkota",
+                  "header": "Rank Kota",
+                  "size": 120,
+                  "minSize": 120,
+                  "maxSize": 480,
+                  "maxWidth": 120,
+                  "align": "center"
+                },
+                {
+                  "id": "rankprovinsi",
+                  "header": "Rank Provinsi",
+                  "size": 120,
+                  "minSize": 120,
+                  "maxSize": 480,
+                  "maxWidth": 120,
+                  "align": "center"
+                }
+            ]
+          },
+          {
+            "header": " ",
+            "type": "group",
+            "columns": [
+              {
+                "id": "actions",
+                "header": "Actions",
+                "size": 10,
+                "minSize": 120,
+                "maxSize": 480,
+                "type": "actions",
+                "align": "center"
+              }
+            ]
+          }
+      ]
+    }
+  }

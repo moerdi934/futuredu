@@ -1,0 +1,254 @@
+{
+  "desktop": {
+    "fixedColumnIds": ["id", "exam_name"],
+    "columns": [  
+      {
+        "id": "id",
+        "header": "ID",
+        "size": 80,
+        "minSize": 80,
+        "maxSize": 320
+      },
+      {
+        "id": "exam_name",
+        "header": "Exam Name",
+        "size": 160,
+        "minSize": 160,
+        "maxSize": 640
+      },
+      {
+        "header": "  ",
+        "type": "group",
+        "columns": [
+          {
+            "id": "exam_id",
+            "header": "Exam ID",
+            "size": 80,
+            "minSize": 80,
+            "maxSize": 480,
+            "ellipsis": true,
+            "maxWidth": 80
+          },
+          {
+            "id": "question_type",
+            "header": "Question Type",
+            "size": 160,
+            "minSize": 160,
+            "maxSize": 800,
+            "maxWidth": 160
+          },
+          {
+            "id": "question_text",
+            "header": "Question",
+            "size": 400,
+            "minSize": 400,
+            "maxSize": 480,
+            "maxWidth": 400,
+            "ellipsis": true,
+            "useFormatter": true
+          },
+          {
+            "id": "correct_answer",
+            "header": "Answer",
+            "size": 120,
+            "minSize": 120,
+            "maxSize": 480,
+            "ellipsis": true,
+            "maxWidth": 120,
+            "useFormatter": true
+          },
+          {
+            "id": "topic",
+            "header": "Topic",
+            "size": 120,
+            "minSize": 120,
+            "maxSize": 480,
+            "maxWidth": 120
+          },
+          {
+            "id": "subtopic",
+            "header": "Sub Topic",
+            "size": 120,
+            "minSize": 120,
+            "maxSize": 480,
+            "maxWidth": 120
+          }
+        ]
+      },
+      {
+        "header": "PIC",
+        "type": "group",
+        "columns": [
+          {
+            "id": "creator",
+            "header": "Creator",
+            "size": 180,
+            "minSize": 180,
+            "maxSize": 720
+          },
+          {
+            "id": "create_date",
+            "header": "Create Date",
+            "size": 180,
+            "minSize": 180,
+            "maxSize": 720
+          },
+          {
+            "id": "editor",
+            "header": "Editor",
+            "size": 180,
+            "minSize": 180,
+            "maxSize": 720
+          },
+          {
+            "id": "edit_date",
+            "header": "Edit Date",
+            "size": 180,
+            "minSize": 180,
+            "maxSize": 720
+          }
+        ]
+      },
+      {
+        "header": " ",
+        "type": "group",
+        "columns": [
+          {
+            "id": "actions",
+            "header": "Actions",
+            "size": 10,
+            "minSize": 120,
+            "maxSize": 480,
+            "type": "actions"
+          }
+        ]
+      }
+    ]
+  },
+  "mobile": {
+    "fixedColumnIds": ["id"],
+    "columns": [
+      {
+        "id": "id",
+        "header": "ID",
+        "size": 40,
+        "minSize": 40,
+        "maxSize": 320
+      },
+      {
+        "id": "exam_name",
+        "header": "Exam Name",
+        "size": 160,
+        "minSize": 160,
+        "maxSize": 640
+      },
+      {
+        "header": "  ",
+        "type": "group",
+        "columns": [
+          {
+            "id": "exam_id",
+            "header": "Exam ID",
+            "size": 80,
+            "minSize": 80,
+            "maxSize": 480,
+            "ellipsis": true,
+            "maxWidth": 80
+          },
+          {
+            "id": "question_type",
+            "header": "Question Type",
+            "size": 160,
+            "minSize": 160,
+            "maxSize": 800,
+            "maxWidth": 160
+          },
+          {
+            "id": "question_text",
+            "header": "Question",
+            "size": 300,
+            "minSize": 300,
+            "maxSize": 480,
+            "maxWidth": 300,
+            "ellipsis": true,
+            "useFormatter": true
+          },
+          {
+            "id": "correct_answer",
+            "header": "Answer",
+            "size": 120,
+            "minSize": 120,
+            "maxSize": 480,
+            "ellipsis": true,
+            "maxWidth": 120,
+            "useFormatter": true
+          },
+          {
+            "id": "topic",
+            "header": "Topic",
+            "size": 120,
+            "minSize": 120,
+            "maxSize": 480,
+            "maxWidth": 120
+          },
+          {
+            "id": "subtopic",
+            "header": "Sub Topic",
+            "size": 120,
+            "minSize": 120,
+            "maxSize": 480,
+            "maxWidth": 120
+          }
+        ]
+      },
+      {
+        "header": "PIC",
+        "type": "group",
+        "columns": [
+          {
+            "id": "creator",
+            "header": "Creator",
+            "size": 180,
+            "minSize": 180,
+            "maxSize": 720
+          },
+          {
+            "id": "create_date",
+            "header": "Create Date",
+            "size": 180,
+            "minSize": 180,
+            "maxSize": 720
+          },
+          {
+            "id": "editor",
+            "header": "Editor",
+            "size": 180,
+            "minSize": 180,
+            "maxSize": 720
+          },
+          {
+            "id": "edit_date",
+            "header": "Edit Date",
+            "size": 180,
+            "minSize": 180,
+            "maxSize": 720
+          }
+        ]
+      },
+      {
+        "header": " ",
+        "type": "group",
+        "columns": [
+          {
+            "id": "actions",
+            "header": "Actions",
+            "size": 10,
+            "minSize": 120,
+            "maxSize": 480,
+            "type": "actions"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "defaultFilters": {
+    "examType": "All",
+    "exam_schedule": "All",
+    "isFree": "All",
+    "isValid": "All",
+    "dateRange": "none",
+    "startDate": null,
+    "endDate": null,
+    "groupProduct": "All",
+    "series": "All"
+  },
+  "formConfig": [
+    {
+      "type": "search",
+      "key": "examType",
+      "label": "Exam Type",
+      "endpoint": "/exam-schedules/search-exam-type",
+      "responseKey": "examTypes",
+      "valueKey": "exam_type",
+      "labelKey": "exam_type"
+    },
+    {
+      "type": "search",
+      "key": "exam_schedule",
+      "label": "Exam",
+      "endpoint": "/exam-schedules/search-by-type",
+      "responseKey": "data",
+      "valueKey": "id",
+      "labelKey": "name",
+      "dependencies": [
+        {
+          "field": "examType",
+          "param": "exam_type"
+        }
+      ]
+    }
+  ]
+}

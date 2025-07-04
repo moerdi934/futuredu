@@ -1,0 +1,283 @@
+{
+    "desktop": {
+      "fixedColumnIds": ["rank", "Nama"],
+      "columns": [  
+        {
+          "id": "rank",
+          "header": "Rank",
+          "size": 80,
+          "minSize": 80,
+          "maxSize": 320
+        },
+        
+        {
+          "id": "name",
+          "header": "Nama",
+          "size": 160,
+          "minSize": 160,
+          "maxSize": 640
+        },
+        {
+          "header": "  ",
+          "type": "group",
+          "columns": [
+            {
+              "id": "total_score",
+              "header": "Skor Total",
+              "size": 80,
+              "minSize": 80,
+              "maxSize": 480,
+              "ellipsis": true,
+              "maxWidth": 80
+            },
+            {
+              "id": "average_score",
+              "header": "Skor Rata-rata",
+              "size": 160,
+              "minSize": 160,
+              "maxSize": 800,
+              "maxWidth": 160
+            },
+            {
+              "id": "lokasi",
+              "header": "Lokasi",
+              "size": 400,
+              "minSize": 400,
+              "maxSize": 480,
+              "maxWidth": 400,
+              "ellipsis": true,
+              "useFormatter": true
+            },
+            {
+              "id": "sekolah",
+              "header": "Sekolah",
+              "size": 120,
+              "minSize": 120,
+              "maxSize": 480,
+              "ellipsis": true,
+              "maxWidth": 120,
+              "useFormatter": true
+            },
+            {
+              "id": "jurusan1",
+              "header": "Pilihan 1",
+              "size": 120,
+              "minSize": 120,
+              "maxSize": 480,
+              "maxWidth": 120
+            },
+            {
+                "id": "jurusan2",
+                "header": "Pilihan 2",
+                "size": 120,
+                "minSize": 120,
+                "maxSize": 480,
+                "maxWidth": 120
+              },
+              {
+                "id": "jurusan3",
+                "header": "Pilihan 3",
+                "size": 120,
+                "minSize": 120,
+                "maxSize": 480,
+                "maxWidth": 120
+              },
+              {
+                "id": "jurusan4",
+                "header": "Pilihan 4",
+                "size": 120,
+                "minSize": 120,
+                "maxSize": 480,
+                "maxWidth": 120
+              },
+            {
+              "id": "lulus",
+              "header": "Lulus",
+              "size": 120,
+              "minSize": 120,
+              "maxSize": 480,
+              "maxWidth": 120
+            },
+            {
+                "id": "rankjurusan",
+                "header": "Rank Jurusan (Pilihan 1)",
+                "size": 120,
+                "minSize": 120,
+                "maxSize": 480,
+                "maxWidth": 120
+              },
+              {
+                "id": "rank_kota",
+                "header": "Rank Kota",
+                "size": 120,
+                "minSize": 120,
+                "maxSize": 480,
+                "maxWidth": 120
+              },
+              {
+                "id": "rank_provinsi",
+                "header": "Rank Provinsi",
+                "size": 120,
+                "minSize": 120,
+                "maxSize": 480,
+                "maxWidth": 120
+              }
+          ]
+        },
+        {
+          "header": " ",
+          "type": "group",
+          "columns": [
+            {
+              "id": "actions",
+              "header": "Actions",
+              "size": 10,
+              "minSize": 120,
+              "maxSize": 480,
+              "type": "actions"
+            }
+          ]
+        }
+      ]
+    },
+    "mobile": {
+      "fixedColumnIds": ["rank"],
+      "columns": [
+        {
+          "id": "rank",
+          "header": "Rank",
+          "size": 40,
+          "minSize": 40,
+          "maxSize": 320
+        },
+        {
+          "id": "name",
+          "header": "Nama",
+          "size": 160,
+          "minSize": 160,
+          "maxSize": 640
+        },
+        {
+          "header": "  ",
+          "type": "group",
+          "columns": [
+            {
+              "id": "total_score",
+              "header": "Skor Total",
+              "size": 80,
+              "minSize": 80,
+              "maxSize": 480,
+              "ellipsis": true,
+              "maxWidth": 80
+            },
+            {
+              "id": "average_score",
+              "header": "Skor Rata-rata",
+              "size": 160,
+              "minSize": 160,
+              "maxSize": 800,
+              "maxWidth": 160
+            },
+            {
+              "id": "lokasi",
+              "header": "Lokasi",
+              "size": 400,
+              "minSize": 400,
+              "maxSize": 480,
+              "maxWidth": 400,
+              "ellipsis": true,
+              "useFormatter": true
+            },
+            {
+              "id": "sekolah",
+              "header": "Sekolah",
+              "size": 120,
+              "minSize": 120,
+              "maxSize": 480,
+              "ellipsis": true,
+              "maxWidth": 120,
+              "useFormatter": true
+            },
+            {
+              "id": "jurusan1",
+              "header": "Pilihan 1",
+              "size": 120,
+              "minSize": 120,
+              "maxSize": 480,
+              "maxWidth": 120
+            },
+            {
+                "id": "jurusan2",
+                "header": "Pilihan 2",
+                "size": 120,
+                "minSize": 120,
+                "maxSize": 480,
+                "maxWidth": 120
+              },
+              {
+                "id": "jurusan3",
+                "header": "Pilihan 3",
+                "size": 120,
+                "minSize": 120,
+                "maxSize": 480,
+                "maxWidth": 120
+              },
+              {
+                "id": "jurusan4",
+                "header": "Pilihan 4",
+                "size": 120,
+                "minSize": 120,
+                "maxSize": 480,
+                "maxWidth": 120
+              },
+            {
+              "id": "lulus",
+              "header": "Lulus",
+              "size": 120,
+              "minSize": 120,
+              "maxSize": 480,
+              "maxWidth": 120
+            },
+            {
+                "id": "rankjurusan",
+                "header": "Rank Jurusan (Pilihan 1)",
+                "size": 120,
+                "minSize": 120,
+                "maxSize": 480,
+                "maxWidth": 120
+              },
+              {
+                "id": "rank_kota",
+                "header": "Rank Kota",
+                "size": 120,
+                "minSize": 120,
+                "maxSize": 480,
+                "maxWidth": 120
+              },
+              {
+                "id": "rank_provinsi",
+                "header": "Rank Provinsi",
+                "size": 120,
+                "minSize": 120,
+                "maxSize": 480,
+                "maxWidth": 120
+              }
+          ]
+        },
+        {
+          "header": " ",
+          "type": "group",
+          "columns": [
+            {
+              "id": "actions",
+              "header": "Actions",
+              "size": 10,
+              "minSize": 120,
+              "maxSize": 480,
+              "type": "actions"
+            }
+          ]
+        }
+      ]
+    }
+  }

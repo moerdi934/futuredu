@@ -1,0 +1,342 @@
+{
+  "desktop": {
+    "fixedColumnIds": ["id", "schedule_name"],
+    "columns": [
+      {
+        "id": "id",
+        "header": "ID",
+        "size": 80,
+        "minSize": 80,
+        "maxSize": 320
+      },
+      {
+        "id": "schedule_name",
+        "header": "Schedule Name",
+        "size": 160,
+        "minSize": 160,
+        "maxSize": 640
+      },
+      {
+        "header": "  ",
+        "type": "group",
+        "columns": [
+          {
+            "id": "exam_id",
+            "header": "Exam ID",
+            "size": 120,
+            "minSize": 120,
+            "maxSize": 480,
+            "ellipsis": true,
+            "maxWidth": 120
+          },
+          {
+            "id": "exam_name",
+            "header": "Exam Name",
+            "size": 160,
+            "minSize": 160,
+            "maxSize": 800,
+            "ellipsis": true,
+            "maxWidth": 160
+          },
+          {
+            "id": "exam_duration",
+            "header": "Duration (mins)",
+            "size": 160,
+            "minSize": 160,
+            "maxSize": 480,
+            "useFormatter": true
+          },
+          {
+            "id": "exam_type",
+            "header": "Exam Type",
+            "size": 120,
+            "minSize": 120,
+            "maxSize": 480,
+            "ellipsis": true,
+            "maxWidth": 120
+          },
+          {
+            "id": "series",
+            "header": "Series",
+            "size": 120,
+            "minSize": 120,
+            "maxSize": 480,
+            "ellipsis": true,
+            "maxWidth": 120
+          },
+          {
+            "id": "group_product",
+            "header": "Group",
+            "size": 120,
+            "minSize": 120,
+            "maxSize": 480,
+            "ellipsis": true,
+            "maxWidth": 120
+          },
+          {
+            "id": "isfree",
+            "header": "Is Free",
+            "size": 100,
+            "minSize": 100,
+            "maxSize": 400,
+            "type": "badge",
+            "values": {
+              "true": { "text": "Free", "variant": "success" },
+              "false": { "text": "Not Free", "variant": "secondary" }
+            }
+          },
+          {
+            "id": "is_valid",
+            "header": "Is Valid",
+            "size": 100,
+            "minSize": 100,
+            "maxSize": 400,
+            "type": "badge",
+            "values": {
+              "true": { "text": "Valid", "variant": "success" },
+              "false": { "text": "Invalid", "variant": "danger" }
+            }
+          },
+          {
+            "id": "start_time",
+            "header": "Start Time (WIB)",
+            "size": 200,
+            "minSize": 200,
+            "maxSize": 800,
+            "type": "date",
+            "useFormatter": true
+          },
+          {
+            "id": "end_time",
+            "header": "End Time (WIB)",
+            "size": 200,
+            "minSize": 200,
+            "maxSize": 800,
+            "type": "date",
+            "useFormatter": true
+          },
+          {
+            "id": "question_qty",
+            "header": "Question Qty",
+            "size": 120,
+            "minSize": 120,
+            "maxSize": 480
+          },
+          {
+            "id": "description",
+            "header": "Description",
+            "size": 300,
+            "minSize": 300,
+            "maxSize": 1200,
+            "ellipsis": true,
+            "maxWidth": 500
+          }
+        ]
+      },
+      {
+        "header": "PIC",
+        "type": "group",
+        "columns": [
+          {
+            "id": "schedule_creator",
+            "header": "Schedule Creator",
+            "size": 180,
+            "minSize": 180,
+            "maxSize": 720
+          },
+          {
+            "id": "exam_creator",
+            "header": "Exam Creator",
+            "size": 180,
+            "minSize": 180,
+            "maxSize": 720
+          }
+        ]
+      },
+      {
+        "header": " ",
+        "type": "group",
+        "columns": [
+          {
+            "id": "actions",
+            "header": "Actions",
+            "size": 10,
+            "minSize": 120,
+            "maxSize": 480,
+            "type": "actions"
+          }
+        ]
+      }
+    ]
+  },
+  "mobile": {
+    "fixedColumnIds": ["id"],
+    "columns": [
+      {
+        "id": "id",
+        "header": "ID",
+        "size": 40,
+        "minSize": 40,
+        "maxSize": 320
+      },
+      {
+          "id": "schedule_name",
+          "header": "Schedule Name",
+          "size": 160,
+          "minSize": 160,
+          "maxSize": 640
+        },
+        {
+          "header": "  ",
+          "type": "group",
+          "columns": [
+            {
+              "id": "exam_id",
+              "header": "Exam ID",
+              "size": 120,
+              "minSize": 120,
+              "maxSize": 480,
+              "ellipsis": true,
+              "maxWidth": 120
+            },
+            {
+              "id": "exam_name",
+              "header": "Exam Name",
+              "size": 160,
+              "minSize": 160,
+              "maxSize": 800,
+              "ellipsis": true,
+              "maxWidth": 160
+            },
+            {
+              "id": "exam_duration",
+              "header": "Duration (mins)",
+              "size": 160,
+              "minSize": 160,
+              "maxSize": 480,
+              "useFormatter": true
+            },
+            {
+              "id": "exam_type",
+              "header": "Exam Type",
+              "size": 120,
+              "minSize": 120,
+              "maxSize": 480,
+              "ellipsis": true,
+              "maxWidth": 120
+            },
+            {
+              "id": "series",
+              "header": "Series",
+              "size": 120,
+              "minSize": 120,
+              "maxSize": 480,
+              "ellipsis": true,
+              "maxWidth": 120
+            },
+            {
+              "id": "group_product",
+              "header": "Group",
+              "size": 120,
+              "minSize": 120,
+              "maxSize": 480,
+              "ellipsis": true,
+              "maxWidth": 120
+            },
+            {
+              "id": "isfree",
+              "header": "Is Free",
+              "size": 100,
+              "minSize": 100,
+              "maxSize": 400,
+              "type": "badge",
+              "values": {
+                "true": { "text": "Free", "variant": "success" },
+                "false": { "text": "Not Free", "variant": "secondary" }
+              }
+            },
+            {
+              "id": "is_valid",
+              "header": "Is Valid",
+              "size": 100,
+              "minSize": 100,
+              "maxSize": 400,
+              "type": "badge",
+              "values": {
+                "true": { "text": "Valid", "variant": "success" },
+                "false": { "text": "Invalid", "variant": "danger" }
+              }
+            },
+            {
+              "id": "start_time",
+              "header": "Start Time (WIB)",
+              "size": 200,
+              "minSize": 200,
+              "maxSize": 800,
+              "type": "date",
+              "useFormatter": true
+            },
+            {
+              "id": "end_time",
+              "header": "End Time (WIB)",
+              "size": 200,
+              "minSize": 200,
+              "maxSize": 800,
+              "type": "date",
+              "useFormatter": true
+            },
+            {
+              "id": "question_qty",
+              "header": "Question Qty",
+              "size": 120,
+              "minSize": 120,
+              "maxSize": 480
+            },
+            {
+              "id": "description",
+              "header": "Description",
+              "size": 300,
+              "minSize": 300,
+              "maxSize": 1200,
+              "ellipsis": true,
+              "maxWidth": 500
+            }
+          ]
+        },
+        {
+          "header": "PIC",
+          "type": "group",
+          "columns": [
+            {
+              "id": "schedule_creator",
+              "header": "Schedule Creator",
+              "size": 180,
+              "minSize": 180,
+              "maxSize": 720
+            },
+            {
+              "id": "exam_creator",
+              "header": "Exam Creator",
+              "size": 180,
+              "minSize": 180,
+              "maxSize": 720
+            }
+          ]
+        },
+        {
+          "header": " ",
+          "type": "group",
+          "columns": [
+            {
+              "id": "actions",
+              "header": "Actions",
+              "size": 10,
+              "minSize": 120,
+              "maxSize": 480,
+              "type": "actions"
+            }
+          ]
+        }
+    ]
+  }
+}
