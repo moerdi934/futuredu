@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
-import { openDB } from "idb";
+// import { openDB } from "idb";
 import CryptoJS from "crypto-js";
 import dynamic from "next/dynamic";
 import {
@@ -30,11 +30,24 @@ const DB_NAME = "diagnostic-test-db-v2";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 /* ───────────── IndexedDB helpers ───────────── */
+/* ───────────── Ganti helper … ───────────── */
 async function getDB() {
+  // 1) Skip di server (build/SSR)
+  if (typeof window === 'undefined') {
+    // kembalikan _stub_ agar pemanggil tidak error
+    return {
+      put:    async () => undefined,
+      getAll: async () => [],
+      clear:  async () => undefined,
+    } as const;
+  }
+
+  // 2) Import `idb` hanya di browser
+  const { openDB } = await import('idb');   // <─ dynamic import
   return openDB(DB_NAME, 1, {
     upgrade(db) {
-      if (!db.objectStoreNames.contains("answers")) {
-        db.createObjectStore("answers", { keyPath: "question_id" });
+      if (!db.objectStoreNames.contains('answers')) {
+        db.createObjectStore('answers', { keyPath: 'question_id' });
       }
     },
   });
