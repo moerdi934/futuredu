@@ -3,12 +3,12 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
 import axios from 'axios';
 import pool from '../lib/db';
-import SalesOrder, { ItemData } from '../models/SalesOrder.model';
-import Invoice from '../models/Invoice.model';
+import SalesOrder, { ItemData } from '../models/salesOrder.model';
+import Invoice from '../models/invoice.model';
 import { AuthenticatedRequest } from '../lib/middleware/auth';
 
 // Import Cart model (assumed to exist)
-import Cart from '../models/Cart.model';
+import * as Cart from '../models/cart.model';
 
 // Types
 export interface CheckoutRequest extends AuthenticatedRequest {

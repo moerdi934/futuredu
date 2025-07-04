@@ -36,6 +36,7 @@
     "katex": "^0.16.22",
     "lodash": "^4.17.21",
     "lucide-react": "^0.344.0",
+    "multer": "^2.0.1",
     "next": "^15.3.4",
     "nprogress": "^0.2.0",
     "p-queue": "^8.1.0",
