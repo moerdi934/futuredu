@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Modal, Button, Form, Container } from 'react-bootstrap';
 import axios, { AxiosError } from 'axios';
-import { ShortFormField } from '../../../admin-components/layout/Report/FormComponent';
+import { ShortFormField } from '../../../../components/layout/FormComponentLayout';
 
 interface FormData {
   username: string;
