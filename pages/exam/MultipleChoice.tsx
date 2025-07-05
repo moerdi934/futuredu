@@ -1,4 +1,7 @@
 'use client';
+export async function getServerSideProps() {
+  return { props: {} };      // lewati SSG, hanya SSR/CSR
+}
 
 import React, { useState } from 'react';
 import 'katex/dist/katex.min.css';
