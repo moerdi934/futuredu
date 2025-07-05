@@ -1,4 +1,4 @@
-import { openDB, IDBPDatabase } from 'idb';
+import { IDBPDatabase } from 'idb';
 
 interface ExamData {
   answers: Record<number, any>;
@@ -9,20 +9,39 @@ interface ExamData {
     timestamp: number;
   } | null;
 }
+type StubDB = {
+  put:    (..._: any[]) => Promise<void>;
+  get:    (..._: any[]) => Promise<any>;
+  getAll: (..._: any[]) => Promise<any[]>;
+  delete: (..._: any[]) => Promise<void>;
+  clear:  (..._: any[]) => Promise<void>;
+};
+
+function createStubDB(): StubDB {
+  const noop = async () => {};
+  const noopArr = async () => [];
+  return { put: noop, get: noop, getAll: noopArr, delete: noop, clear: noop };
+}
 
 class ExamDbService {
   private dbName = 'examAppDb';
   private dbVersion = 1;
-  public db: Promise<IDBPDatabase>;
+  public db: Promise<IDBPDatabase | StubDB>;;
 
   constructor() {
     this.db = this.initDatabase();
   }
 
-  private async initDatabase(): Promise<IDBPDatabase> {
+private async initDatabase(): Promise<IDBPDatabase | StubDB> {
+    // ⛔ 1.  Jika server-side → kembalikan stub agar tidak sentuh indexedDB
+    if (typeof window === 'undefined') {
+      return createStubDB();
+    }
+
+    // ✅ 2.  Browser: baru import idb & buka database
+    const { openDB } = await import('idb');
     return openDB(this.dbName, this.dbVersion, {
       upgrade(db) {
-        // Create stores if they don't exist
         if (!db.objectStoreNames.contains('examData')) {
           db.createObjectStore('examData');
         }

@@ -557,3 +557,40 @@ export const getStudentGroupController = async (req: NextApiRequest, res: NextAp
     });
   }
 };
+
+/* controllers/user.controller.ts – di paling bawah */
+const UserController = {
+  // auth & session
+  login,
+  refreshToken,
+  logout,
+
+  // register
+  create,
+  createNoCaptcha,
+
+  // profile & status
+  getStatus,
+  updateUserController,
+  deleteUserController,
+
+  // lookup
+  findUserByUsername,
+  findUserById,
+  getUsersByRole,
+  searchUsersByRoleAndNameController,
+  searchUsersByMultipleRolesAndNameController,
+
+  // list / dashboard
+  getPaginatedUsersController,
+  getTotalUsersAndGrowthByRoleController,
+  getActiveUsersAndGrowthByRoleController,
+  getNewUsersAndGrowthController,
+  getRevenuePerUserController,
+  getStudentPendidikanDistributionController,
+  getStudentGrowthController,
+  getUserDetailsController,
+  getStudentGroupController,
+};
+
+export default UserController;          // ⬅⬅⬅
