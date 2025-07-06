@@ -2,27 +2,31 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import axios from 'axios';
+import dynamic from 'next/dynamic';
 import CryptoJS from 'crypto-js';
-import SingleChoice from './SingleChoice';
-import MultipleChoice from './MultipleChoice';
-import NumberInput from './NumberInput';
-import TextInput from './TextInput';
-import TrueFalse from './TrueFalse';
-import { BlockMath, InlineMath } from 'react-katex';
-import 'katex/dist/katex.min.css';
-import Latex from 'react-latex-next';
+
+// Dynamic imports to prevent SSR issues
+const SingleChoice = dynamic(() => import('./SingleChoice'), { ssr: false });
+const MultipleChoice = dynamic(() => import('./MultipleChoice'), { ssr: false });
+const NumberInput = dynamic(() => import('./NumberInput'), { ssr: false });
+const TextInput = dynamic(() => import('./TextInput'), { ssr: false });
+const TrueFalse = dynamic(() => import('./TrueFalse'), { ssr: false });
+
+// Lazy load heavy components
+const BlockMath = dynamic(() => import('react-katex').then(mod => ({ default: mod.BlockMath })), { ssr: false });
+const InlineMath = dynamic(() => import('react-katex').then(mod => ({ default: mod.InlineMath })), { ssr: false });
+const Latex = dynamic(() => import('react-latex-next'), { ssr: false });
+
 import { Container, Row, Col, ProgressBar, Card, Button, Modal, Alert, Toast } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Clock, Loader2, Check, AlertCircle, FileCheck, ArrowRight } from 'lucide-react';
-import examDbService from '../../utils/ExamDBService';
-import { useAuth } from '../../context/AuthContext';
-import { useExam } from '../../context/ExamContext';
 
 // Enhanced logging function
 const debugLog = (category: string, message: string, data?: any) => {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [${category}] ${message}`, data ? data : '');
+  if (typeof window !== 'undefined') {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] [${category}] ${message}`, data ? data : '');
+  }
 };
 
 interface Question {
@@ -56,6 +60,13 @@ interface ExamSession {
 }
 
 const ChainExam: React.FC = () => {
+  // Client-side check
+  const [isClient, setIsClient] = useState(false);
+  
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   debugLog('INIT', 'ChainExam component initializing');
   
   const params = useParams();
@@ -68,7 +79,41 @@ const ChainExam: React.FC = () => {
   const [examType, setExamType] = useState<string>('Try-Out');
   const router = useRouter();
 
-  // Get data from context
+  // Dynamic imports for context and services to prevent SSR issues
+  const [examDbService, setExamDbService] = useState<any>(null);
+  const [useAuth, setUseAuth] = useState<any>(null);
+  const [useExam, setUseExam] = useState<any>(null);
+
+  // Load services and context only on client side
+  useEffect(() => {
+    if (isClient) {
+      Promise.all([
+        import('../../utils/ExamDBService').then(mod => mod.default),
+        import('../../context/AuthContext').then(mod => mod.useAuth),
+        import('../../context/ExamContext').then(mod => mod.useExam)
+      ]).then(([examDbServiceImport, useAuthImport, useExamImport]) => {
+        setExamDbService(examDbServiceImport);
+        setUseAuth(() => useAuthImport);
+        setUseExam(() => useExamImport);
+      }).catch(error => {
+        debugLog('IMPORT_ERROR', 'Error loading services', error);
+      });
+    }
+  }, [isClient]);
+
+  // Get data from context - only when available
+  const contextData = useExam ? useExam() : {
+    topicId: null,
+    examScheduleId: null,
+    examOrder: [],
+    examSessions: [],
+    activeSession: null,
+    selectedSchedule: null,
+    examType: 'Try-Out',
+    originPath: '/',
+    clearExamData: () => {}
+  };
+
   const { 
     topicId: contextTopicId,
     examScheduleId: contextExamScheduleId,
@@ -79,7 +124,7 @@ const ChainExam: React.FC = () => {
     examType: contextExamType,
     originPath: contextOriginPath,
     clearExamData
-  } = useExam();
+  } = contextData;
 
   debugLog('CONTEXT', 'Context data received', {
     contextTopicId,
@@ -132,6 +177,8 @@ const ChainExam: React.FC = () => {
 
   // Set data from context
   useEffect(() => {
+    if (!isClient) return;
+    
     debugLog('CONTEXT_EFFECT', 'Setting data from context');
     
     if (contextOriginPath) {
@@ -177,63 +224,65 @@ const ChainExam: React.FC = () => {
         setExamType(currentExam.examType);
       }
     }
-  }, [contextOriginPath, contextTopicId, contextExamType, contextExamScheduleId, contextActiveSession, examOrder, exam_string]);
+  }, [isClient, contextOriginPath, contextTopicId, contextExamType, contextExamScheduleId, contextActiveSession, examOrder, exam_string]);
 
   // Question elapsed time tracking
   useEffect(() => {
-    if (!loading && questions.length > 0) {
-      debugLog('QUESTION_TRACKING', 'Updating question elapsed time', {
-        currentQuestionIndex: currentQuestion,
-        questionId: questions[currentQuestion]?.id,
-        exam_string
-      });
-      
-      if (exam_string) {
-        examDbService.updateQuestionElapsedTime(exam_string, questions[currentQuestion].id);
-      }
+    if (!isClient || !examDbService || !loading && questions.length > 0) return;
+    
+    debugLog('QUESTION_TRACKING', 'Updating question elapsed time', {
+      currentQuestionIndex: currentQuestion,
+      questionId: questions[currentQuestion]?.id,
+      exam_string
+    });
+    
+    if (exam_string) {
+      examDbService.updateQuestionElapsedTime(exam_string, questions[currentQuestion].id);
     }
-  }, [loading, questions, currentQuestion, exam_string]);
+  }, [isClient, examDbService, loading, questions, currentQuestion, exam_string]);
 
   // Cleanup effect
   useEffect(() => {
+    if (!isClient) return;
+    
     return () => {
       debugLog('CLEANUP', 'Component cleanup');
       if (timerRef.current) clearInterval(timerRef.current);
       if (autoSaveRef.current) clearInterval(autoSaveRef.current);
       
-      if (exam_string && questions.length > 0) {
+      if (examDbService && exam_string && questions.length > 0) {
         examDbService.finalizeCurrentQuestionTime(exam_string);
       }
     };
-  }, [exam_string, questions]);
+  }, [isClient, examDbService, exam_string, questions]);
 
   // Countdown timer for inaccessible exams
   useEffect(() => {
-    if (!isExamAccessible && examStartTime) {
-      debugLog('COUNTDOWN', 'Starting countdown timer', examStartTime);
+    if (!isClient || isExamAccessible || !examStartTime) return;
+    
+    debugLog('COUNTDOWN', 'Starting countdown timer', examStartTime);
+    
+    const timer = setInterval(() => {
+      const now = new Date();
+      const startTime = new Date(examStartTime);
+      const diff = startTime.getTime() - now.getTime();
       
-      const timer = setInterval(() => {
-        const now = new Date();
-        const startTime = new Date(examStartTime);
-        const diff = startTime.getTime() - now.getTime();
-        
-        if (diff <= 0) {
-          debugLog('COUNTDOWN', 'Countdown finished, retrying access');
-          clearInterval(timer);
-          handleRetryAccess();
-          return;
-        }
-        
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-        
-        setCountdown(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-      }, 1000);
+      if (diff <= 0) {
+        debugLog('COUNTDOWN', 'Countdown finished, retrying access');
+        clearInterval(timer);
+        handleRetryAccess();
+        return;
+      }
       
-      return () => clearInterval(timer);
-    }
-  }, [isExamAccessible, examStartTime]);
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setCountdown(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [isClient, isExamAccessible, examStartTime]);
 
   const decryptData = (encryptedData: string) => {
     debugLog('DECRYPT', 'Starting decryption');
@@ -274,6 +323,8 @@ const ChainExam: React.FC = () => {
   };
 
   const findLatestUnfinishedExam = useCallback(async () => {
+    if (!isClient || !examDbService) return false;
+    
     debugLog('FIND_EXAM', 'Finding latest unfinished exam', {
       hasExamString: !!exam_string,
       examOrderLength: examOrder.length
@@ -298,12 +349,17 @@ const ChainExam: React.FC = () => {
       setLoading(false);
     }
     return false;
-  }, [examOrder, exam_string, router]);
+  }, [isClient, examDbService, examOrder, exam_string, router]);
 
   const fetchQuestions = async () => {
+    if (!isClient) return;
+    
     debugLog('FETCH_QUESTIONS', 'Starting to fetch questions', { exam_string });
     
     try {
+      // Dynamic import of axios to prevent SSR issues
+      const axios = (await import('axios')).default;
+      
       const currentExam = examOrder.find((exam) => exam.exam_string === exam_string);
       debugLog('FETCH_QUESTIONS', 'Current exam found', currentExam);
       
@@ -311,12 +367,14 @@ const ChainExam: React.FC = () => {
         setExamId(currentExam.exam_id);
       }
       
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/questions/byExamString?exam_string=${exam_string}`,
         {
           withCredentials: true,
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('authToken')}`
+            Authorization: `Bearer ${authToken}`
           }
         }
       );
@@ -367,6 +425,8 @@ const ChainExam: React.FC = () => {
   };
 
   const loadExistingSession = async (currentExamId?: number) => {
+    if (!isClient || !examDbService) return;
+    
     const examIdToUse = currentExamId || examId;
     
     debugLog('LOAD_SESSION', 'Loading existing session', {
@@ -381,6 +441,9 @@ const ChainExam: React.FC = () => {
     }
     
     try {
+      const axios = (await import('axios')).default;
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/examSession/active`,
         {
@@ -390,7 +453,7 @@ const ChainExam: React.FC = () => {
           },
           withCredentials: true,
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('authToken')}`
+            Authorization: `Bearer ${authToken}`
           }
         }
       );
@@ -519,6 +582,8 @@ const ChainExam: React.FC = () => {
 
   // Initialize exam
   useEffect(() => {
+    if (!isClient || !examDbService) return;
+    
     const initializeExam = async () => {
       debugLog('INITIALIZE', 'Starting exam initialization');
       setIsInitializing(true);
@@ -536,112 +601,117 @@ const ChainExam: React.FC = () => {
     };
     
     initializeExam();
-  }, []);
+  }, [isClient, examDbService]);
 
   // Re-initialize when exam_string changes
   useEffect(() => {
-    if (exam_string && !isInitializing) {
-      debugLog('REINITIALIZE', 'Reinitializing for new exam string', exam_string);
-      
-      setLoading(true);
-      setQuestions([]);
-      setDuration(0);
-      setTimeLeft(0);
-      setAnswers({});
-      setError(false);
-      setSubmitError(false);
-      setCurrentQuestion(0);
-      setShowModalNext(false);
-      setShowConfirmationModal(false);
-      setExamSession(null);
-      setIsTimeExpired(false);
-      
-      const currentExam = examOrder.find((exam) => exam.exam_string === exam_string);
-      
-      if (currentExam && currentExam.exam_id) {
-        setExamId(currentExam.exam_id);
-      }
-      
-      fetchQuestions();
+    if (!isClient || !examDbService || !exam_string || isInitializing) return;
+    
+    debugLog('REINITIALIZE', 'Reinitializing for new exam string', exam_string);
+    
+    setLoading(true);
+    setQuestions([]);
+    setDuration(0);
+    setTimeLeft(0);
+    setAnswers({});
+    setError(false);
+    setSubmitError(false);
+    setCurrentQuestion(0);
+    setShowModalNext(false);
+    setShowConfirmationModal(false);
+    setExamSession(null);
+    setIsTimeExpired(false);
+    
+    const currentExam = examOrder.find((exam) => exam.exam_string === exam_string);
+    
+    if (currentExam && currentExam.exam_id) {
+      setExamId(currentExam.exam_id);
     }
-  }, [exam_string, isInitializing]);
+    
+    fetchQuestions();
+  }, [isClient, examDbService, exam_string, isInitializing]);
 
   // Error retry mechanism
   useEffect(() => {
-    if (error && !isInitializing) {
-      debugLog('ERROR_RETRY', 'Setting up retry timeout');
-      const retryTimeout = setTimeout(() => {
-        debugLog('ERROR_RETRY', 'Retrying fetch questions');
-        fetchQuestions();
-      }, 5000);
-  
-      return () => clearTimeout(retryTimeout);
-    }
-  }, [error, isInitializing]);
+    if (!isClient || !error || isInitializing) return;
+    
+    debugLog('ERROR_RETRY', 'Setting up retry timeout');
+    const retryTimeout = setTimeout(() => {
+      debugLog('ERROR_RETRY', 'Retrying fetch questions');
+      fetchQuestions();
+    }, 5000);
+
+    return () => clearTimeout(retryTimeout);
+  }, [isClient, error, isInitializing]);
 
   // Main timer effect
   useEffect(() => {
-    if (!loading && timeLeft > 0) {
-      debugLog('TIMER_START', 'Starting main timer', { timeLeft });
+    if (!isClient || loading || timeLeft <= 0) return;
+    
+    debugLog('TIMER_START', 'Starting main timer', { timeLeft });
+    
+    const updateTimer = () => {
+      const now = Date.now();
+      const deltaTime = Math.floor((now - lastTickRef.current) / 1000);
       
-      const updateTimer = () => {
-        const now = Date.now();
-        const deltaTime = Math.floor((now - lastTickRef.current) / 1000);
-        
-        if (deltaTime >= 1) {
-          setTimeLeft(prevTime => {
-            const newTime = Math.max(0, prevTime - deltaTime);
-            if (newTime <= 0) {
-              debugLog('TIMER_EXPIRED', 'Timer expired, auto-submitting');
-              setIsTimeExpired(true);
-              handleSubmit(undefined, true);
-              return 0;
-            }
-            return newTime;
-          });
-          lastTickRef.current = now;
-        }
-      };
+      if (deltaTime >= 1) {
+        setTimeLeft(prevTime => {
+          const newTime = Math.max(0, prevTime - deltaTime);
+          if (newTime <= 0) {
+            debugLog('TIMER_EXPIRED', 'Timer expired, auto-submitting');
+            setIsTimeExpired(true);
+            handleSubmit(undefined, true);
+            return 0;
+          }
+          return newTime;
+        });
+        lastTickRef.current = now;
+      }
+    };
 
-      timerRef.current = setInterval(updateTimer, 100);
+    timerRef.current = setInterval(updateTimer, 100);
 
-      return () => {
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-        }
-      };
-    }
-  }, [loading, timeLeft, handleSubmit]);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [isClient, loading, timeLeft, handleSubmit]);
 
   // Auto-save effect
   useEffect(() => {
-    if (!loading && timeLeft > 0 && timeLeft % 120 === 0) {
-      debugLog('AUTO_SAVE', 'Setting up auto-save interval');
-      
+    if (!isClient || loading || timeLeft <= 0 || timeLeft % 120 !== 0) return;
+    
+    debugLog('AUTO_SAVE', 'Setting up auto-save interval');
+    
+    if (autoSaveRef.current) {
+      clearInterval(autoSaveRef.current);
+    }
+    
+    autoSaveRef.current = setInterval(() => {
+      if (Object.keys(answers).length > 0) {
+        debugLog('AUTO_SAVE', 'Auto-saving answers');
+        saveExamSession();
+      }
+    }, 1000);
+
+    return () => {
       if (autoSaveRef.current) {
         clearInterval(autoSaveRef.current);
       }
-      
-      autoSaveRef.current = setInterval(() => {
-        if (Object.keys(answers).length > 0) {
-          debugLog('AUTO_SAVE', 'Auto-saving answers');
-          saveExamSession();
-        }
-      }, 1000);
-
-      return () => {
-        if (autoSaveRef.current) {
-          clearInterval(autoSaveRef.current);
-        }
-      };
-    }
-  }, [loading, answers, timeLeft]);
+    };
+  }, [isClient, loading, answers, timeLeft]);
 
   const saveExamSession = async () => {
+    if (!isClient || !examDbService) return false;
+    
     debugLog('SAVE_SESSION', 'Starting session save');
     setAutoSaving(true);
     
     try {
+      const axios = (await import('axios')).default;
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      
       const questionElapsedTimes = await examDbService.getQuestionElapsedTimes(exam_string);
       
       await axios.post(
@@ -655,7 +725,7 @@ const ChainExam: React.FC = () => {
         { 
           withCredentials: true,
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('authToken')}`
+            Authorization: `Bearer ${authToken}`
           }
         }
       );
@@ -678,6 +748,8 @@ const ChainExam: React.FC = () => {
   };
 
   const handleChange = async (id: number, value: any) => {
+    if (!examDbService) return;
+    
     debugLog('ANSWER_CHANGE', 'Answer changed', { questionId: id, value });
     
     const updatedAnswers = {
@@ -689,6 +761,8 @@ const ChainExam: React.FC = () => {
   };
 
   const handleTrueFalseChange = async (id: number, index: number, value: any) => {
+    if (!examDbService) return;
+    
     debugLog('TRUE_FALSE_CHANGE', 'True/false answer changed', { questionId: id, index, value });
     
     const updatedAnswers = [...(answers[id] || [])];
@@ -747,6 +821,8 @@ const ChainExam: React.FC = () => {
   };
 
   const handleNavigation = async (index: number) => {
+    if (!examDbService) return;
+    
     debugLog('NAVIGATION', 'Navigating to question', { 
       from: currentQuestion, 
       to: index 
@@ -764,12 +840,17 @@ const ChainExam: React.FC = () => {
   };
 
   const submitToServer = async (shouldScore = false): Promise<boolean> => {
+    if (!isClient || !examDbService) return false;
+    
     debugLog('SUBMIT_SERVER', 'Submitting to server', { shouldScore });
     
     setSubmitLoading(true);
     setSubmitError(false);
     
     try {
+      const axios = (await import('axios')).default;
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      
       const finalElapsedTimes = await examDbService.finalizeCurrentQuestionTime(exam_string);
       
       await axios.post(
@@ -783,7 +864,7 @@ const ChainExam: React.FC = () => {
         { 
           withCredentials: true,
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('authToken')}`
+            Authorization: `Bearer ${authToken}`
           }
         }
       );
@@ -800,7 +881,7 @@ const ChainExam: React.FC = () => {
             { 
             withCredentials: true,
             headers: {
-              Authorization: `Bearer ${localStorage.getItem('authToken')}`
+              Authorization: `Bearer ${authToken}`
               }
             }
           )
@@ -819,7 +900,7 @@ const ChainExam: React.FC = () => {
             { 
               withCredentials: true,
               headers: {
-                Authorization: `Bearer ${localStorage.getItem('authToken')}`
+                Authorization: `Bearer ${authToken}`
               }
             }
           );
@@ -841,64 +922,76 @@ const ChainExam: React.FC = () => {
   };
 
   const renderQuestion = (q: Question) => {
+    if (!isClient) return null;
+    
     debugLog('RENDER_QUESTION', 'Rendering question', { id: q.id, type: q.type });
     
     switch (q.type) {
       case 'single-choice':
         return (
           <div className="single-choice-container">
-            <SingleChoice 
-              question={<Latex>{q.question}</Latex>} 
-              options={q.options} 
-              onChange={(value) => handleChange(q.id, value)} 
-              selectedAnswers={answers[q.id] || []} 
-            />
+            {SingleChoice && (
+              <SingleChoice 
+                question={Latex ? <Latex>{q.question}</Latex> : q.question} 
+                options={q.options} 
+                onChange={(value) => handleChange(q.id, value)} 
+                selectedAnswers={answers[q.id] || []} 
+              />
+            )}
           </div>
         );
       
       case 'multiple-choice':
         return (
           <div className="multiple-choice-container">
-            <MultipleChoice 
-              question={q.question} 
-              options={q.options || []} 
-              selectedAnswers={answers[q.id] || []} 
-              onChange={(value) => handleChange(q.id, value)} 
-            />
+            {MultipleChoice && (
+              <MultipleChoice 
+                question={q.question} 
+                options={q.options || []} 
+                selectedAnswers={answers[q.id] || []} 
+                onChange={(value) => handleChange(q.id, value)} 
+              />
+            )}
           </div>
         );
         
       case 'number':
         return (
           <div className="number-input-container">
-            <NumberInput 
-              question={q.question} 
-              onChange={(value) => handleChange(q.id, value)}
-              value={answers[q.id]} 
-            />
+            {NumberInput && (
+              <NumberInput 
+                question={q.question} 
+                onChange={(value) => handleChange(q.id, value)}
+                value={answers[q.id]} 
+              />
+            )}
           </div>
         );
         
       case 'text':
         return (
           <div className="text-input-container">
-            <TextInput 
-              question={q.question} 
-              onChange={(value) => handleChange(q.id, value)}
-              value={answers[q.id]} 
-            />
+            {TextInput && (
+              <TextInput 
+                question={q.question} 
+                onChange={(value) => handleChange(q.id, value)}
+                value={answers[q.id]} 
+              />
+            )}
           </div>
         );
         
       case 'true-false':
         return (
           <div className="true-false-container">
-            <TrueFalse 
-              question={q.question} 
-              statements={q.statements || []} 
-              selectedAnswers={answers[q.id] || []} 
-              onChange={(index, value) => handleTrueFalseChange(q.id, index, value)} 
-            />
+            {TrueFalse && (
+              <TrueFalse 
+                question={q.question} 
+                statements={q.statements || []} 
+                selectedAnswers={answers[q.id] || []} 
+                onChange={(index, value) => handleTrueFalseChange(q.id, index, value)} 
+              />
+            )}
           </div>
         );
         
@@ -920,9 +1013,14 @@ const ChainExam: React.FC = () => {
   };
 
   const handleRetryAccess = async () => {
+    if (!isClient) return;
+    
     debugLog('RETRY_ACCESS', 'Retrying exam access');
     
     try {
+      const axios = (await import('axios')).default;
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/examSession/active`,
         {
@@ -932,7 +1030,7 @@ const ChainExam: React.FC = () => {
           },
           withCredentials: true,
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('authToken')}`
+            Authorization: `Bearer ${authToken}`
           }
         }
       );
@@ -960,6 +1058,11 @@ const ChainExam: React.FC = () => {
       }
     }
   };
+
+  // Don't render anything on server side
+  if (!isClient) {
+    return null;
+  }
 
   // Loading state
   if (loading) {
