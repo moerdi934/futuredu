@@ -21,7 +21,7 @@ type ExamType = 'SNBT' | 'SIMAK' | 'Quiz' | 'CPNS';
 
 interface AchievementProps {
   examType: ExamType;
-  currentExamData: ExamData;
+  currentExamData?: ExamData; // Make this optional
 }
 
 interface LeaderboardUser {
@@ -58,6 +58,23 @@ const Lock: React.FC<IconProps> = ({ className, size = 24 }) => {
 };
 
 const Achievement: React.FC<AchievementProps> = ({ examType, currentExamData }) => {
+  // Early return if data is not available
+  if (!currentExamData || !currentExamData.achievements) {
+    return (
+      <Row className="tw-mb-4">
+        <Col>
+          <Card className="tw-border-0 tw-shadow-sm">
+            <Card.Body>
+              <div className="tw-text-center tw-py-20">
+                <div className="tw-text-gray-500">Loading achievements...</div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    );
+  }
+
   // Colors for the pie chart
   const COLORS = ['#8884d8', '#e0e0e0'];
 
