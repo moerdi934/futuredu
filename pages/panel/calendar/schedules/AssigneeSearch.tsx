@@ -18,8 +18,8 @@ interface AssigneeSearchProps {
 
 const AssigneeSearch: React.FC<AssigneeSearchProps> = ({ 
   onSelectAssignee, 
-  selectedAssigneeIds, 
-  roles 
+  selectedAssigneeIds = [], // Default to empty array
+  roles = [] // Default to empty array
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [users, setUsers] = useState<User[]>([]);
@@ -30,7 +30,8 @@ const AssigneeSearch: React.FC<AssigneeSearchProps> = ({
 
   useEffect(() => {
     console.log("assign roles:", roles);
-    if (searchTerm.trim() === '' || roles.length === 0) {
+    // Add safety check for roles
+    if (searchTerm.trim() === '' || !roles || roles.length === 0) {
       setUsers([]);
       return;
     }
@@ -43,10 +44,16 @@ const AssigneeSearch: React.FC<AssigneeSearchProps> = ({
           searchTerm, 
           roles // Send roles array to backend
         });
-        setUsers(response.data.users);
+        // Add safety check for response data
+        if (response.data && response.data.users) {
+          setUsers(response.data.users);
+        } else {
+          setUsers([]);
+        }
       } catch (err) {
         console.error('Error fetching users:', err);
         setError('Failed to search assignees.');
+        setUsers([]); // Clear users on error
       } finally {
         setLoading(false);
       }
@@ -59,7 +66,8 @@ const AssigneeSearch: React.FC<AssigneeSearchProps> = ({
     e.preventDefault();
     e.stopPropagation();
     
-    if (!selectedAssigneeIds.includes(user.userid)) {
+    // Add safety check for selectedAssigneeIds
+    if (selectedAssigneeIds && !selectedAssigneeIds.includes(user.userid)) {
       onSelectAssignee(user);
       setSearchTerm(''); // Optional: Clear search term after selection
       setUsers([]);       // Optional: Clear users after selection
@@ -80,7 +88,7 @@ const AssigneeSearch: React.FC<AssigneeSearchProps> = ({
           placeholder="Search assignee..."
           value={searchTerm}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-          disabled={roles.length === 0} // Disable if no role selected
+          disabled={!roles || roles.length === 0} // Add safety check for roles
         />
       </Form.Group>
       {loading && (
@@ -89,14 +97,14 @@ const AssigneeSearch: React.FC<AssigneeSearchProps> = ({
         </div>
       )}
       {error && <Alert variant="danger">{error}</Alert>}
-      {users.length > 0 && (
+      {users && users.length > 0 && (
         <ListGroup>
           {users.map((user) => (
             <ListGroup.Item
               key={user.userid}
               action
               onClick={(e) => handleUserClick(e, user)}
-              disabled={selectedAssigneeIds.includes(user.userid)}
+              disabled={selectedAssigneeIds && selectedAssigneeIds.includes(user.userid)}
             >
               {user.name}
             </ListGroup.Item>
