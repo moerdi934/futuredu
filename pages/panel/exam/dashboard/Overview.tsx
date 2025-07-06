@@ -50,8 +50,8 @@ type ExamType = 'SNBT' | 'SIMAK' | 'Quiz' | 'CPNS';
 
 interface OverviewProps {
   examType: ExamType;
-  currentExamData: ExamData;
-  upcomingExams: UpcomingExam[];
+  currentExamData?: ExamData; // Make this optional
+  upcomingExams?: UpcomingExam[]; // Make this optional
   getProgressColor: (score: number) => string;
 }
 
@@ -94,7 +94,24 @@ const LightbulbIcon: React.FC<IconProps> = ({ className, size = 16 }) => {
   );
 };
 
-const Overview: React.FC<OverviewProps> = ({ examType, currentExamData, upcomingExams, getProgressColor }) => {
+const Overview: React.FC<OverviewProps> = ({ examType, currentExamData, upcomingExams = [], getProgressColor }) => {
+  // Early return if data is not available
+  if (!currentExamData || !currentExamData.weeklyProgressData || !currentExamData.nextGoal || !currentExamData.recentResults) {
+    return (
+      <Row className="tw-mb-4">
+        <Col>
+          <Card className="tw-border-0 tw-shadow-sm">
+            <Card.Body>
+              <div className="tw-text-center tw-py-20">
+                <div className="tw-text-gray-500">Loading overview data...</div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    );
+  }
+
   // Render the weekly progress chart with conditional formatting based on nilai vs target
   const renderWeeklyProgressChart = () => {
     const lastWeekData = currentExamData.weeklyProgressData[currentExamData.weeklyProgressData.length - 1];
@@ -248,18 +265,24 @@ const Overview: React.FC<OverviewProps> = ({ examType, currentExamData, upcoming
             <Card.Body>
               <h5 className="tw-font-bold tw-mb-4">Jadwal {examType} Mendatang</h5>
               <div className="tw-space-y-3">
-                {upcomingExams.map(exam => (
-                  <div key={exam.id} className="tw-border-l-4 tw-border-purple-500 tw-pl-3 tw-py-1 hover:tw-bg-purple-50 tw-rounded-r-lg tw-transition-all">
-                    <div className="tw-font-medium">{exam.title}</div>
-                    <div className="tw-flex tw-justify-between tw-text-sm">
-                      <span className="tw-text-gray-500">{exam.subject}</span>
-                      <span className="tw-flex tw-items-center">
-                        <Calendar size={14} className="tw-mr-1" />
-                        {exam.date}
-                      </span>
+                {upcomingExams && upcomingExams.length > 0 ? (
+                  upcomingExams.map(exam => (
+                    <div key={exam.id} className="tw-border-l-4 tw-border-purple-500 tw-pl-3 tw-py-1 hover:tw-bg-purple-50 tw-rounded-r-lg tw-transition-all">
+                      <div className="tw-font-medium">{exam.title}</div>
+                      <div className="tw-flex tw-justify-between tw-text-sm">
+                        <span className="tw-text-gray-500">{exam.subject}</span>
+                        <span className="tw-flex tw-items-center">
+                          <Calendar size={14} className="tw-mr-1" />
+                          {exam.date}
+                        </span>
+                      </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="tw-text-center tw-py-4">
+                    <div className="tw-text-gray-500">Tidak ada jadwal upcoming</div>
                   </div>
-                ))}
+                )}
                 <Button className="tw-bg-purple-600 hover:tw-bg-purple-700 tw-border-0 tw-w-full tw-mt-2">
                   Lihat Semua Jadwal
                 </Button>

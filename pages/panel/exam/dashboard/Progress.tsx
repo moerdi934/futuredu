@@ -65,7 +65,7 @@ type ExamType = 'SNBT' | 'SIMAK' | 'Quiz' | 'CPNS';
 
 interface ProgressProps {
   examType: ExamType;
-  currentExamData: ExamData;
+  currentExamData?: ExamData; // Make this optional
   selectedSubject: string | null;
   setSelectedSubject: (subject: string | null) => void;
   showTopicDetail: boolean;
@@ -120,6 +120,23 @@ const Progress: React.FC<ProgressProps> = ({
   getProgressColor
 }) => {
   
+  // Early return if data is not available
+  if (!currentExamData || !currentExamData.radarData || !currentExamData.competitiveAnalysis || !currentExamData.progressDetail || !currentExamData.recommendedPrograms || !currentExamData.recommendedResources) {
+    return (
+      <Row className="tw-mb-4">
+        <Col>
+          <Card className="tw-border-0 tw-shadow-sm">
+            <Card.Body>
+              <div className="tw-text-center tw-py-20">
+                <div className="tw-text-gray-500">Loading progress data...</div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    );
+  }
+
   // Render topic radar chart for subject
   const renderTopicRadarChart = () => {
     if (!selectedSubject) return null;

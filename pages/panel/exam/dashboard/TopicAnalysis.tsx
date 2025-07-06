@@ -29,7 +29,7 @@ type ExamType = 'SNBT' | 'SIMAK' | 'Quiz' | 'CPNS';
 
 interface TopicAnalysisProps {
   examType: ExamType;
-  currentExamData: ExamData;
+  currentExamData?: ExamData; // Make this optional
   selectedSubject: string | null;
   setSelectedSubject: (subject: string | null) => void;
   getTopicData: (subject: string) => TopicData[];
@@ -62,6 +62,23 @@ const TopicAnalysis: React.FC<TopicAnalysisProps> = ({
   getColorForScore,
   getProgressColor
 }) => {
+  // Early return if data is not available
+  if (!currentExamData || !currentExamData.radarData || !currentExamData.topicData) {
+    return (
+      <Row className="tw-mb-4">
+        <Col>
+          <Card className="tw-border-0 tw-shadow-sm">
+            <Card.Body>
+              <div className="tw-text-center tw-py-20">
+                <div className="tw-text-gray-500">Loading topic analysis data...</div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    );
+  }
+
   return (
     <>
       <Row className="tw-mb-4">
@@ -139,7 +156,11 @@ const TopicAnalysis: React.FC<TopicAnalysisProps> = ({
                           <span>{topic.completed}/{topic.total} latihan diselesaikan</span>
                         </div>
                       </div>
-                    ))}
+                    )) || (
+                      <div className="tw-text-center tw-py-4">
+                        <div className="tw-text-gray-500">Tidak ada data topik tersedia</div>
+                      </div>
+                    )}
                   </div>
                 </Card.Body>
               </Card>
@@ -158,31 +179,40 @@ const TopicAnalysis: React.FC<TopicAnalysisProps> = ({
                   </div>
                   
                   <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-3 tw-gap-4">
-                    {currentExamData.topicData[selectedSubject]?.sort((a, b) => a.score - b.score).slice(0, 3).map((topic, idx) => (
-                      <div key={idx} className="tw-bg-white tw-border tw-border-gray-100 tw-rounded-lg tw-p-4 tw-shadow-sm hover:tw-shadow-md tw-transition-all">
-                        <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
-                          <div className="tw-flex tw-items-center tw-justify-center tw-rounded-full tw-bg-red-50 tw-h-8 tw-w-8">
-                            <Target size={16} className="tw-text-red-500" />
+                    {currentExamData.topicData[selectedSubject] && currentExamData.topicData[selectedSubject].length > 0 ? (
+                      currentExamData.topicData[selectedSubject]
+                        .sort((a, b) => a.score - b.score)
+                        .slice(0, 3)
+                        .map((topic, idx) => (
+                          <div key={idx} className="tw-bg-white tw-border tw-border-gray-100 tw-rounded-lg tw-p-4 tw-shadow-sm hover:tw-shadow-md tw-transition-all">
+                            <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
+                              <div className="tw-flex tw-items-center tw-justify-center tw-rounded-full tw-bg-red-50 tw-h-8 tw-w-8">
+                                <Target size={16} className="tw-text-red-500" />
+                              </div>
+                              <span className="tw-font-medium">{topic.topic}</span>
+                            </div>
+                            <div className="tw-mb-2">
+                              <div className="tw-flex tw-justify-between tw-mb-1">
+                                <span className="tw-text-gray-500 tw-text-sm">Skor kamu</span>
+                                <span className="tw-font-bold">{topic.score}/100</span>
+                              </div>
+                              <ProgressBar now={topic.score} variant={getProgressColor(topic.score)} className="tw-h-2" />
+                            </div>
+                            <div className="tw-text-sm tw-text-gray-600 tw-mb-3">
+                              {topic.score < topic.avg 
+                                ? `${(topic.avg - topic.score).toFixed(1)} poin di bawah rata-rata` 
+                                : `${(topic.score - topic.avg).toFixed(1)} poin di atas rata-rata`}
+                            </div>
+                            <Button variant="purple" size="sm" className="tw-bg-purple-600 tw-border-0 tw-w-full">
+                              Latih Sekarang
+                            </Button>
                           </div>
-                          <span className="tw-font-medium">{topic.topic}</span>
-                        </div>
-                        <div className="tw-mb-2">
-                          <div className="tw-flex tw-justify-between tw-mb-1">
-                            <span className="tw-text-gray-500 tw-text-sm">Skor kamu</span>
-                            <span className="tw-font-bold">{topic.score}/100</span>
-                          </div>
-                          <ProgressBar now={topic.score} variant={getProgressColor(topic.score)} className="tw-h-2" />
-                        </div>
-                        <div className="tw-text-sm tw-text-gray-600 tw-mb-3">
-                          {topic.score < topic.avg 
-                            ? `${(topic.avg - topic.score).toFixed(1)} poin di bawah rata-rata` 
-                            : `${(topic.score - topic.avg).toFixed(1)} poin di atas rata-rata`}
-                        </div>
-                        <Button variant="purple" size="sm" className="tw-bg-purple-600 tw-border-0 tw-w-full">
-                          Latih Sekarang
-                        </Button>
+                        ))
+                    ) : (
+                      <div className="tw-col-span-3 tw-text-center tw-py-8">
+                        <div className="tw-text-gray-500">Tidak ada data topik untuk {selectedSubject}</div>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </Card.Body>
               </Card>
