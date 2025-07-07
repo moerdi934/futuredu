@@ -41,7 +41,9 @@ interface LoginForm {
 const Login: React.FC = () => {
   const router = useRouter();
   const { login, isAuthenticated } = useAuth();
-
+console.log('API URL from env:', process.env.NEXT_PUBLIC_API_URL);
+console.log('Final API URL:', apiUrl);
+console.log('Full login URL:', `${apiUrl}/users/login`);
   /* ----- state ----- */
   const [form, setForm] = useState<LoginForm>({
     username: '',
@@ -72,6 +74,8 @@ const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
+      const loginUrl = `${apiUrl}/users/login`;
+      console.log('About to POST to:', loginUrl);
       const { data } = await axios.post(
         `${apiUrl}/users/login`,
         form,
