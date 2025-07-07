@@ -1,6 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState }
+
+// Disable static generation
+export async function getServerSideProps() {
+  return {
+    props: {}, // will be passed to the page component as props
+  }
+}
+
+// Export with dynamic import to prevent SSR issues
+export default dynamic(() => Promise.resolve(TryOutClient), {
+  ssr: false
+}) from 'react';
+import dynamic from 'next/dynamic';
 import {
   Container, Row, Col, Card, Button,
   Accordion, Spinner,
@@ -29,7 +42,7 @@ interface Props {
 }
 
 /* ---------- component ---------- */
-export default function TryOutClient({ initialSchedules = null }: Props) {
+function TryOutClient({ initialSchedules = null }: Props) {
   const { username } = useAuth();
   const router = useRouter();
 
