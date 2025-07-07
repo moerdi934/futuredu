@@ -42,14 +42,20 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selId, setSelId] = useState<number|null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Add mounted check to prevent SSR/hydration issues
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   /* fetch data dari client side dengan force refresh ------------ */
   useEffect(() => {
-    // Force client-side rendering check
-    if (typeof window === 'undefined') return;
+    // Only run on client side after component is mounted
+    if (!isMounted || typeof window === 'undefined') return;
     
     // Jika ada initialSchedules dari props, gunakan itu
-    if (initialSchedules && Array.isArray(initialSchedules)) {
+    if (initialSchedules && Array.isArray(initialSchedules) && initialSchedules.length >= 0) {
       setSchedules(initialSchedules);
       setLoading(false);
       return;
@@ -74,7 +80,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
             }
           }
         );
-        setSchedules(data || []);
+        setSchedules(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Error fetching schedules:', error);
         setSchedules([]);
@@ -82,7 +88,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
         setLoading(false); 
       }
     })();
-  }, [initialSchedules]);
+  }, [initialSchedules, isMounted]);
 
   /* helpers ---------------------------------------------------- */
   const formatTimeDisplay = (timeString: string | undefined): JSX.Element => {
@@ -138,6 +144,8 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
 
   // Auto refresh data setiap 5 menit untuk memastikan data terbaru
   useEffect(() => {
+    if (!isMounted) return;
+
     const interval = setInterval(() => {
       if (typeof window !== 'undefined' && !initialSchedules) {
         // Refresh data tanpa loading state
@@ -153,7 +161,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
             }
           }
         ).then(({ data }) => {
-          setSchedules(data || []);
+          setSchedules(Array.isArray(data) ? data : []);
         }).catch(error => {
           console.error('Error refreshing schedules:', error);
         });
@@ -161,7 +169,21 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     }, 5 * 60 * 1000); // 5 menit
 
     return () => clearInterval(interval);
-  }, [initialSchedules]);
+  }, [initialSchedules, isMounted]);
+
+  // Don't render anything on server side to prevent hydration mismatch
+  if (!isMounted) {
+    return (
+      <Row className="justify-content-center">
+        <Col lg={11} xl={10}>
+          <div className="tw-text-center tw-py-12">
+            <Spinner animation="border" className="tw-text-violet-600 tw-w-16 tw-h-16" />
+            <p className="tw-mt-4 tw-text-violet-600 tw-font-medium">Memuat halaman...</p>
+          </div>
+        </Col>
+      </Row>
+    );
+  }
 
   /* UI --------------------------------------------------------- */
   return (
@@ -191,7 +213,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
               )}
 
               {/* kosong */}
-              {!loading && schedules.length === 0 && (
+              {!loading && (!schedules || schedules.length === 0) && (
                 <div className="tw-text-center tw-py-12">
                   <div className="tw-w-24 tw-h-24 tw-bg-violet-100 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-4">
                     <Clock className="tw-w-12 tw-h-12 tw-text-violet-600" />
@@ -202,7 +224,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
               )}
 
               {/* grid jadwal */}
-              {!loading && schedules.length > 0 && (
+              {!loading && schedules && schedules.length > 0 && (
                 <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 xl:tw-grid-cols-3 2xl:tw-grid-cols-4 tw-gap-6">
                   {schedules.map((schedule, index) => (
                     <Card key={schedule.id} className="tw-border-0 tw-shadow-lg tw-transition-all tw-duration-300 tw-hover:shadow-2xl tw-hover:scale-105 tw-bg-white">
