@@ -129,9 +129,9 @@ const ProductsClient = ({ initialData }: Props) => {
 
   /* local state */
   const [category, setCategory] = useState<Category>('STAN');
-  // Fix: Provide default empty array if initialData is undefined
-  const [packages, setPackages] = useState<Package[]>(initialData || []);
+  const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   /* modal */
   const [modalOpen, setModalOpen] = useState(false);
@@ -141,8 +141,19 @@ const ProductsClient = ({ initialData }: Props) => {
   /*  HANDLERS                                                        */
   /* ---------------------------------------------------------------- */
 
+  // Handle client-side mounting
+  useEffect(() => {
+    setMounted(true);
+    // Initialize with initial data if available for STAN category
+    if (category === 'STAN' && initialData && initialData.length > 0) {
+      setPackages(initialData);
+    }
+  }, []);
+
   /* fetch saat kategori berubah */
   useEffect(() => {
+    if (!mounted) return; // Don't fetch on server-side
+
     if (category === 'STAN' && initialData && initialData.length > 0) {
       // If we have initial data for STAN and we're on STAN category, use it
       setPackages(initialData);
@@ -163,7 +174,7 @@ const ProductsClient = ({ initialData }: Props) => {
         setLoading(false);
       }
     })();
-  }, [category, initialData]);
+  }, [category, initialData, mounted]);
 
   /* format IDR */
   const formatCurrency = (amount: number) => {
@@ -179,7 +190,7 @@ const ProductsClient = ({ initialData }: Props) => {
 
   return (
     <div className="tw-w-full tw-px-3 sm:tw-px-6 lg:tw-px-8 xl:tw-px-12 2xl:tw-px-16 tw-py-12 tw-relative tw-z-10">
-      {/* HERO SECTION */}
+      {/* HERO SECTION - SSR */}
       <Row className="justify-content-center mb-5">
         <Col lg={10} className="text-center">
           <div className="tw-mb-8">
@@ -196,7 +207,7 @@ const ProductsClient = ({ initialData }: Props) => {
         </Col>
       </Row>
 
-      {/* FILTER KATEGORI */}
+      {/* FILTER KATEGORI - SSR */}
       <Row className="tw-justify-center tw-mb-10">
         <Col xs={12} className="tw-flex tw-justify-center tw-flex-wrap tw-gap-3">
           {(['STAN', 'STIS', 'UTBK'] as Category[]).map((c, index) => (
@@ -221,7 +232,7 @@ const ProductsClient = ({ initialData }: Props) => {
         </Col>
       </Row>
 
-      {/* PAKET TITLE SECTION */}
+      {/* PAKET TITLE SECTION - SSR */}
       <Row className="justify-content-center mb-12 lg:tw-mb-16">
         <Col lg={8} className="text-center">
           <div className="tw-bg-white/15 tw-backdrop-blur-sm tw-rounded-3xl tw-p-8 tw-border tw-border-white/30 tw-shadow-2xl">
@@ -237,8 +248,16 @@ const ProductsClient = ({ initialData }: Props) => {
         </Col>
       </Row>
 
-      {/* GRID PAKET */}
-      {loading ? (
+      {/* GRID PAKET - CSR */}
+      {!mounted ? (
+        // Show a placeholder during SSR
+        <div className="tw-text-center tw-py-16">
+          <div className="tw-w-32 tw-h-32 tw-bg-white/20 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-6 tw-backdrop-blur-sm tw-shadow-2xl">
+            <Spinner animation="border" className="tw-text-white" style={{ width: '4rem', height: '4rem' }} />
+          </div>
+          <p className="tw-text-2xl tw-font-semibold tw-text-white tw-drop-shadow">Memuat paket bimbel terbaik untukmu...</p>
+        </div>
+      ) : loading ? (
         <div className="tw-text-center tw-py-16">
           <div className="tw-w-32 tw-h-32 tw-bg-white/20 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-6 tw-backdrop-blur-sm tw-shadow-2xl">
             <Spinner animation="border" className="tw-text-white" style={{ width: '4rem', height: '4rem' }} />
@@ -247,15 +266,13 @@ const ProductsClient = ({ initialData }: Props) => {
         </div>
       ) : (
         <Row className="tw-g-4 lg:tw-g-6">
-          {/* Fix: Check if packages exists and has length property */}
-          {(!packages || packages.length === 0) && (
+          {packages.length === 0 && (
             <Col xs={12} className="tw-text-center tw-text-white tw-text-lg">
               Paket belum tersedia.
             </Col>
           )}
 
-          {/* Fix: Add safety check for packages */}
-          {packages && packages.map((pkg, idx) => (
+          {packages.map((pkg, idx) => (
             <Col xs={12} sm={6} lg={4} xl={3} key={pkg.product_id} className="tw-mb-6">
               <Card className="tw-h-full tw-border-0 tw-rounded-2xl tw-shadow-2xl tw-transition-all tw-duration-500 hover:tw-shadow-3xl hover:tw-scale-105 tw-flex tw-flex-col tw-bg-white/95 tw-backdrop-blur-sm tw-overflow-hidden">
                 {/* HEADER GRADASI */}
@@ -291,7 +308,6 @@ const ProductsClient = ({ initialData }: Props) => {
                         Benefit yang kamu dapatkan:
                       </h6>
                       <ul className="tw-space-y-2">
-                        {/* Fix: Add safety check for features */}
                         {(pkg.features || []).map((feature, index) => (
                           <li key={index} className="tw-flex tw-items-start tw-gap-3 tw-text-gray-700">
                             <div className="tw-w-2 tw-h-2 tw-bg-purple-500 tw-rounded-full tw-mt-2 tw-flex-shrink-0"></div>
