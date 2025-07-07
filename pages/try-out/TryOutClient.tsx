@@ -1,19 +1,6 @@
 'use client';
 
-import { useEffect, useState }
-
-// Disable static generation
-export async function getServerSideProps() {
-  return {
-    props: {}, // will be passed to the page component as props
-  }
-}
-
-// Export with dynamic import to prevent SSR issues
-export default dynamic(() => Promise.resolve(TryOutClient), {
-  ssr: false
-}) from 'react';
-import dynamic from 'next/dynamic';
+import { useEffect, useState } from 'react';
 import {
   Container, Row, Col, Card, Button,
   Accordion, Spinner,
@@ -25,6 +12,10 @@ import axios from 'axios';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../context/AuthContext';
 import ExamModal from './ExamModal';
+
+// Force dynamic rendering - disable static generation
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? '';
 
@@ -42,7 +33,7 @@ interface Props {
 }
 
 /* ---------- component ---------- */
-function TryOutClient({ initialSchedules = null }: Props) {
+export default function TryOutClient({ initialSchedules = null }: Props) {
   const { username } = useAuth();
   const router = useRouter();
 
@@ -52,8 +43,11 @@ function TryOutClient({ initialSchedules = null }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
   const [selId, setSelId] = useState<number|null>(null);
 
-  /* fetch data dari client side --------------------------- */
+  /* fetch data dari client side dengan force refresh ------------ */
   useEffect(() => {
+    // Force client-side rendering check
+    if (typeof window === 'undefined') return;
+    
     // Jika ada initialSchedules dari props, gunakan itu
     if (initialSchedules && Array.isArray(initialSchedules)) {
       setSchedules(initialSchedules);
@@ -61,12 +55,24 @@ function TryOutClient({ initialSchedules = null }: Props) {
       return;
     }
 
-    // Jika tidak ada, fetch dari client side
+    // Jika tidak ada, fetch dari client side dengan cache busting
     (async () => {
       setLoading(true);
       try {
         const { data } = await axios.get<ExamSchedule[]>(
-          `${apiUrl}/exam-schedules/type/SNBT`
+          `${apiUrl}/exam-schedules/type/SNBT`,
+          {
+            // Disable caching untuk memastikan data fresh
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0',
+            },
+            // Add timestamp untuk cache busting
+            params: {
+              _t: Date.now()
+            }
+          }
         );
         setSchedules(data || []);
       } catch (error) {
@@ -130,6 +136,33 @@ function TryOutClient({ initialSchedules = null }: Props) {
     setModalOpen(true);
   };
 
+  // Auto refresh data setiap 5 menit untuk memastikan data terbaru
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (typeof window !== 'undefined' && !initialSchedules) {
+        // Refresh data tanpa loading state
+        axios.get<ExamSchedule[]>(
+          `${apiUrl}/exam-schedules/type/SNBT`,
+          {
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+            },
+            params: {
+              _t: Date.now()
+            }
+          }
+        ).then(({ data }) => {
+          setSchedules(data || []);
+        }).catch(error => {
+          console.error('Error refreshing schedules:', error);
+        });
+      }
+    }, 5 * 60 * 1000); // 5 menit
+
+    return () => clearInterval(interval);
+  }, [initialSchedules]);
+
   /* UI --------------------------------------------------------- */
   return (
     <Row className="justify-content-center">
@@ -142,6 +175,10 @@ function TryOutClient({ initialSchedules = null }: Props) {
                   <BookOpen className="tw-w-6 tw-h-6 tw-text-white" />
                 </div>
                 Tryout UTBK 2024 - Tes Skolastik & Literasi
+                <div className="tw-ml-auto tw-flex tw-items-center tw-gap-1">
+                  <div className="tw-w-2 tw-h-2 tw-bg-green-500 tw-rounded-full tw-animate-pulse"></div>
+                  <span className="tw-text-sm tw-font-medium tw-text-green-600">Live</span>
+                </div>
               </div>
             </Accordion.Header>
             <Accordion.Body className="tw-p-8 tw-bg-gradient-to-br tw-from-gray-50 tw-to-violet-50">
