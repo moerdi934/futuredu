@@ -24,30 +24,44 @@ interface ExamSchedule {
 }
 
 /* ---------- props ---------- */
-interface Props { initialSchedules: ExamSchedule[] | any }
+interface Props { 
+  initialSchedules?: ExamSchedule[] | null;
+}
 
 /* ---------- component ---------- */
-export default function TryOutClient({ initialSchedules }: Props) {
+export default function TryOutClient({ initialSchedules = null }: Props) {
   const { username } = useAuth();
   const router = useRouter();
 
   /* state ------------------------------------------------------- */
-  const [schedules, setSchedules] = useState<ExamSchedule[]>(initialSchedules ?? []);
-  const [loading, setLoading] = useState(initialSchedules.length === 0);
+  const [schedules, setSchedules] = useState<ExamSchedule[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selId, setSelId] = useState<number|null>(null);
 
-  /* fetch ulang bila data SSR kosong --------------------------- */
+  /* fetch data dari client side --------------------------- */
   useEffect(() => {
-    if (initialSchedules.length) return; // sudah ada
+    // Jika ada initialSchedules dari props, gunakan itu
+    if (initialSchedules && Array.isArray(initialSchedules)) {
+      setSchedules(initialSchedules);
+      setLoading(false);
+      return;
+    }
+
+    // Jika tidak ada, fetch dari client side
     (async () => {
       setLoading(true);
       try {
         const { data } = await axios.get<ExamSchedule[]>(
           `${apiUrl}/exam-schedules/type/SNBT`
         );
-        setSchedules(data);
-      } finally { setLoading(false); }
+        setSchedules(data || []);
+      } catch (error) {
+        console.error('Error fetching schedules:', error);
+        setSchedules([]);
+      } finally { 
+        setLoading(false); 
+      }
     })();
   }, [initialSchedules]);
 
@@ -59,8 +73,9 @@ export default function TryOutClient({ initialSchedules }: Props) {
         Anytime
       </span>
     );
+    
     const timeDate = new Date(timeString);
-    if (timeDate.getFullYear() < 2000) {
+    if (isNaN(timeDate.getTime()) || timeDate.getFullYear() < 2000) {
       return (
         <span className="tw-flex tw-items-center">
           <span className="tw-text-violet-600 tw-font-semibold tw-flex tw-items-center">
@@ -71,12 +86,14 @@ export default function TryOutClient({ initialSchedules }: Props) {
         </span>
       );
     }
+    
     const now = new Date();
     const isPast = timeDate < now;
     const isFuture = timeDate > now;
     let className = "tw-font-medium tw-flex tw-items-center";
     if (isPast) className += " tw-text-red-500 tw-line-through";
     if (isFuture) className += " tw-text-green-600";
+    
     return (
       <span className={className}>
         <Clock className="tw-w-4 tw-h-4 tw-mr-1" />
@@ -92,7 +109,10 @@ export default function TryOutClient({ initialSchedules }: Props) {
   };
 
   const handleStart = (id: number) => {
-    if (!username) { router.push('/login'); return; }
+    if (!username) { 
+      router.push('/login'); 
+      return; 
+    }
     setSelId(id);
     setModalOpen(true);
   };
@@ -116,6 +136,7 @@ export default function TryOutClient({ initialSchedules }: Props) {
               {loading && (
                 <div className="tw-text-center tw-py-12">
                   <Spinner animation="border" className="tw-text-violet-600 tw-w-16 tw-h-16" />
+                  <p className="tw-mt-4 tw-text-violet-600 tw-font-medium">Memuat jadwal try out...</p>
                 </div>
               )}
 
