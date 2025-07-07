@@ -17,7 +17,7 @@ interface CreateBulkModalProps {
 const CreateBulkModal: React.FC<CreateBulkModalProps> = ({
   show,
   onHide,
-  data,
+  data = [], // Add default empty array
   autoExported,
   onReset,
   onExport,
@@ -33,6 +33,11 @@ const CreateBulkModal: React.FC<CreateBulkModalProps> = ({
       default: return type;
     }
   };
+
+  // Early return if no data to prevent rendering issues
+  if (!data || data.length === 0) {
+    return null;
+  }
 
   return (
     <Modal 
@@ -79,9 +84,9 @@ const CreateBulkModal: React.FC<CreateBulkModalProps> = ({
             <tbody>
               {data.map((item, index) => (
                 <tr key={index}>
-                  <td className="tw-font-mono">{item.code}</td>
-                  <td>{getQuestionTypeLabel(item.question_type)}</td>
-                  <td className="tw-text-center">{item.level}</td>
+                  <td className="tw-font-mono">{item?.code || 'N/A'}</td>
+                  <td>{getQuestionTypeLabel(item?.question_type || '')}</td>
+                  <td className="tw-text-center">{item?.level || 'N/A'}</td>
                 </tr>
               ))}
             </tbody>
