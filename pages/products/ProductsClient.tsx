@@ -120,7 +120,7 @@ const priceBoxStyles = {
 /* ------------------------------------------------------------------ */
 
 interface Props {
-  initialData: Package[];
+  initialData?: Package[]; // Make it optional
 }
 
 const ProductsClient = ({ initialData }: Props) => {
@@ -129,7 +129,8 @@ const ProductsClient = ({ initialData }: Props) => {
 
   /* local state */
   const [category, setCategory] = useState<Category>('STAN');
-  const [packages, setPackages] = useState<Package[]>(initialData);
+  // Fix: Provide default empty array if initialData is undefined
+  const [packages, setPackages] = useState<Package[]>(initialData || []);
   const [loading, setLoading] = useState(false);
 
   /* modal */
@@ -142,7 +143,11 @@ const ProductsClient = ({ initialData }: Props) => {
 
   /* fetch saat kategori berubah */
   useEffect(() => {
-    if (category === 'STAN') return; // data STAN sudah di-SSR
+    if (category === 'STAN' && initialData && initialData.length > 0) {
+      // If we have initial data for STAN and we're on STAN category, use it
+      setPackages(initialData);
+      return;
+    }
 
     (async () => {
       setLoading(true);
@@ -158,7 +163,7 @@ const ProductsClient = ({ initialData }: Props) => {
         setLoading(false);
       }
     })();
-  }, [category]);
+  }, [category, initialData]);
 
   /* format IDR */
   const formatCurrency = (amount: number) => {
@@ -242,13 +247,15 @@ const ProductsClient = ({ initialData }: Props) => {
         </div>
       ) : (
         <Row className="tw-g-4 lg:tw-g-6">
-          {packages.length === 0 && (
+          {/* Fix: Check if packages exists and has length property */}
+          {(!packages || packages.length === 0) && (
             <Col xs={12} className="tw-text-center tw-text-white tw-text-lg">
               Paket belum tersedia.
             </Col>
           )}
 
-          {packages.map((pkg, idx) => (
+          {/* Fix: Add safety check for packages */}
+          {packages && packages.map((pkg, idx) => (
             <Col xs={12} sm={6} lg={4} xl={3} key={pkg.product_id} className="tw-mb-6">
               <Card className="tw-h-full tw-border-0 tw-rounded-2xl tw-shadow-2xl tw-transition-all tw-duration-500 hover:tw-shadow-3xl hover:tw-scale-105 tw-flex tw-flex-col tw-bg-white/95 tw-backdrop-blur-sm tw-overflow-hidden">
                 {/* HEADER GRADASI */}
@@ -284,7 +291,8 @@ const ProductsClient = ({ initialData }: Props) => {
                         Benefit yang kamu dapatkan:
                       </h6>
                       <ul className="tw-space-y-2">
-                        {(pkg.features ?? []).map((feature, index) => (
+                        {/* Fix: Add safety check for features */}
+                        {(pkg.features || []).map((feature, index) => (
                           <li key={index} className="tw-flex tw-items-start tw-gap-3 tw-text-gray-700">
                             <div className="tw-w-2 tw-h-2 tw-bg-purple-500 tw-rounded-full tw-mt-2 tw-flex-shrink-0"></div>
                             <span className="tw-text-sm tw-font-medium">{feature}</span>
@@ -327,9 +335,11 @@ const ProductsClient = ({ initialData }: Props) => {
                         <Trophy className="tw-w-6 tw-h-6 tw-text-yellow-500" />
                         {formatCurrency(Number(pkg.price))}
                       </p>
-                      <p style={priceBoxStyles.originalPrice}>
-                        <del>{formatCurrency(Number(pkg.no_promo_price))}</del>
-                      </p>
+                      {pkg.no_promo_price && (
+                        <p style={priceBoxStyles.originalPrice}>
+                          <del>{formatCurrency(Number(pkg.no_promo_price))}</del>
+                        </p>
+                      )}
                     </div>
                   </div>
 
