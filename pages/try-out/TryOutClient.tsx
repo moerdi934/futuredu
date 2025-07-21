@@ -1,3 +1,5 @@
+
+// pages/exam/TryOutClient.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -42,53 +44,70 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selId, setSelId] = useState<number|null>(null);
-  const [isMounted, setIsMounted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Add mounted check to prevent SSR/hydration issues
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  /* fetch data function ----------------------------------------- */
+  const fetchSchedules = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('Fetching schedules from:', `${apiUrl}/exam-schedules/type/SNBT`);
+      
+      const response = await axios.get<ExamSchedule[]>(
+        `${apiUrl}/exam-schedules/type/SNBT`,
+        {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+          },
+          params: {
+            _t: Date.now()
+          },
+          timeout: 10000, // 10 second timeout
+        }
+      );
+      
+      console.log('Response data:', response.data);
+      
+      if (Array.isArray(response.data)) {
+        setSchedules(response.data);
+      } else {
+        console.warn('Response data is not an array:', response.data);
+        setSchedules([]);
+      }
+    } catch (error) {
+      console.error('Error fetching schedules:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error occurred');
+      setSchedules([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  /* fetch data dari client side dengan force refresh ------------ */
+  /* initial data load ------------------------------------------- */
   useEffect(() => {
-    // Only run on client side after component is mounted
-    if (!isMounted || typeof window === 'undefined') return;
-    
-    // Jika ada initialSchedules dari props, gunakan itu
-    if (initialSchedules && Array.isArray(initialSchedules) && initialSchedules.length >= 0) {
+    // Debug: log initial conditions
+    console.log('Initial conditions:', {
+      apiUrl,
+      initialSchedules,
+      hasInitialSchedules: initialSchedules && Array.isArray(initialSchedules),
+      initialSchedulesLength: initialSchedules?.length
+    });
+
+    // Jika ada initialSchedules yang valid dan tidak kosong, gunakan itu
+    if (initialSchedules && Array.isArray(initialSchedules) && initialSchedules.length > 0) {
+      console.log('Using initial schedules from props');
       setSchedules(initialSchedules);
       setLoading(false);
       return;
     }
 
-    // Jika tidak ada, fetch dari client side dengan cache busting
-    (async () => {
-      setLoading(true);
-      try {
-        const { data } = await axios.get<ExamSchedule[]>(
-          `${apiUrl}/exam-schedules/type/SNBT`,
-          {
-            // Disable caching untuk memastikan data fresh
-            headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache',
-              'Expires': '0',
-            },
-            // Add timestamp untuk cache busting
-            params: {
-              _t: Date.now()
-            }
-          }
-        );
-        setSchedules(Array.isArray(data) ? data : []);
-      } catch (error) {
-        console.error('Error fetching schedules:', error);
-        setSchedules([]);
-      } finally { 
-        setLoading(false); 
-      }
-    })();
-  }, [initialSchedules, isMounted]);
+    // Jika tidak ada initial schedules atau kosong, fetch dari client
+    console.log('Fetching schedules from client side');
+    fetchSchedules();
+  }, []);
 
   /* helpers ---------------------------------------------------- */
   const formatTimeDisplay = (timeString: string | undefined): JSX.Element => {
@@ -142,48 +161,21 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     setModalOpen(true);
   };
 
-  // Auto refresh data setiap 5 menit untuk memastikan data terbaru
-  useEffect(() => {
-    if (!isMounted) return;
+  const handleRetry = () => {
+    fetchSchedules();
+  };
 
+  /* Auto refresh data setiap 5 menit ---------------------------- */
+  useEffect(() => {
     const interval = setInterval(() => {
-      if (typeof window !== 'undefined' && !initialSchedules) {
-        // Refresh data tanpa loading state
-        axios.get<ExamSchedule[]>(
-          `${apiUrl}/exam-schedules/type/SNBT`,
-          {
-            headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache',
-            },
-            params: {
-              _t: Date.now()
-            }
-          }
-        ).then(({ data }) => {
-          setSchedules(Array.isArray(data) ? data : []);
-        }).catch(error => {
-          console.error('Error refreshing schedules:', error);
-        });
+      // Hanya auto-refresh jika tidak ada error dan tidak sedang loading
+      if (!error && !loading) {
+        fetchSchedules();
       }
     }, 5 * 60 * 1000); // 5 menit
 
     return () => clearInterval(interval);
-  }, [initialSchedules, isMounted]);
-
-  // Don't render anything on server side to prevent hydration mismatch
-  if (!isMounted) {
-    return (
-      <Row className="justify-content-center">
-        <Col lg={11} xl={10}>
-          <div className="tw-text-center tw-py-12">
-            <Spinner animation="border" className="tw-text-violet-600 tw-w-16 tw-h-16" />
-            <p className="tw-mt-4 tw-text-violet-600 tw-font-medium">Memuat halaman...</p>
-          </div>
-        </Col>
-      </Row>
-    );
-  }
+  }, [error, loading]);
 
   /* UI --------------------------------------------------------- */
   return (
@@ -212,19 +204,42 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
                 </div>
               )}
 
+              {/* error */}
+              {error && !loading && (
+                <div className="tw-text-center tw-py-12">
+                  <div className="tw-w-24 tw-h-24 tw-bg-red-100 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-4">
+                    <Zap className="tw-w-12 tw-h-12 tw-text-red-600" />
+                  </div>
+                  <h4 className="tw-text-xl tw-font-semibold tw-text-red-800 tw-mb-2">Gagal Memuat Data</h4>
+                  <p className="tw-text-red-600 tw-mb-4">{error}</p>
+                  <Button
+                    onClick={handleRetry}
+                    className="tw-bg-violet-600 tw-hover:bg-violet-700 tw-border-0 tw-px-6 tw-py-2"
+                  >
+                    Coba Lagi
+                  </Button>
+                </div>
+              )}
+
               {/* kosong */}
-              {!loading && (!schedules || schedules.length === 0) && (
+              {!loading && !error && (!schedules || schedules.length === 0) && (
                 <div className="tw-text-center tw-py-12">
                   <div className="tw-w-24 tw-h-24 tw-bg-violet-100 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-4">
                     <Clock className="tw-w-12 tw-h-12 tw-text-violet-600" />
                   </div>
                   <h4 className="tw-text-xl tw-font-semibold tw-text-violet-800 tw-mb-2">Belum Ada Try Out Tersedia</h4>
-                  <p className="tw-text-violet-600">Try out akan segera hadir! Stay tuned 🎯</p>
+                  <p className="tw-text-violet-600 tw-mb-4">Try out akan segera hadir! Stay tuned 🎯</p>
+                  <Button
+                    onClick={handleRetry}
+                    className="tw-bg-violet-600 tw-hover:bg-violet-700 tw-border-0 tw-px-6 tw-py-2"
+                  >
+                    Refresh
+                  </Button>
                 </div>
               )}
 
               {/* grid jadwal */}
-              {!loading && schedules && schedules.length > 0 && (
+              {!loading && !error && schedules && schedules.length > 0 && (
                 <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 xl:tw-grid-cols-3 2xl:tw-grid-cols-4 tw-gap-6">
                   {schedules.map((schedule, index) => (
                     <Card key={schedule.id} className="tw-border-0 tw-shadow-lg tw-transition-all tw-duration-300 tw-hover:shadow-2xl tw-hover:scale-105 tw-bg-white">

@@ -5,6 +5,7 @@ import NProgress from 'nprogress';
 import { AuthProvider } from '../context/AuthContext';
 import { StatusProvider } from '../context/StatusContext';
 import { ExamProvider } from '../context/ExamContext';
+import { DrillProvider } from '../context/DrillContext';
 import '../components/layout/sidebar.css'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../styles/globals.css';
@@ -147,6 +148,7 @@ function MyApp({ Component, pageProps }: AppProps) {
   }, []);
 
   return (
+    <DrillProvider>
     <ExamProvider>
       <AuthProvider>
         <StatusProvider>
@@ -154,6 +156,7 @@ function MyApp({ Component, pageProps }: AppProps) {
         </StatusProvider>
       </AuthProvider>
     </ExamProvider>
+    </DrillProvider>
   );
 }
 

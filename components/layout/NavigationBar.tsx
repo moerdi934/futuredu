@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar, Nav, Container, Form, FormControl, Button, NavDropdown, Modal, Badge } from 'react-bootstrap';
-import { FaSearch, FaUser, FaBars, FaTimes, FaGraduationCap, FaBook, FaPencilAlt, FaClipboardCheck, FaBlog, FaShoppingCart } from 'react-icons/fa';
+import { FaSearch, FaUser, FaBars, FaTimes, FaGraduationCap, FaBook, FaPencilAlt, FaClipboardCheck, FaBlog, FaShoppingCart  } from 'react-icons/fa';
+import { LuBrain } from "react-icons/lu";
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../context/AuthContext';
@@ -131,11 +132,11 @@ const NavigationBar = () => {
               </NavLink>
               
               <NavLink 
-                href="/ruang-belajar" 
+                href="/all-courses" 
                 className="tw-text-white tw-font-medium tw-mx-1 tw-px-3 tw-rounded-full tw-transition-all tw-duration-300 hover:tw-bg-purple-700 hover:tw-shadow-md tw-flex tw-items-center tw-py-1"
                 onClick={handleNavClick}
               >
-                <FaGraduationCap className="tw-mr-1" /> Mulai Belajar
+                <FaGraduationCap className="tw-mr-1" /> Materi
               </NavLink>
               
               <NavLink 
@@ -145,13 +146,21 @@ const NavigationBar = () => {
               >
                 <FaClipboardCheck className="tw-mr-1" /> Try Out
               </NavLink>
+
+              <NavLink 
+                href="/diagnostic-test" 
+                className="tw-text-white tw-font-medium tw-mx-1 tw-px-3 tw-rounded-full tw-transition-all tw-duration-300 hover:tw-bg-purple-700 hover:tw-shadow-md tw-flex tw-items-center tw-py-1"
+                onClick={handleNavClick}
+              >
+                <LuBrain className="tw-mr-1" /> Asah Kemampuan
+              </NavLink>
               
-              <Nav.Link 
+              {/* <Nav.Link 
                 onClick={handleShowModal} 
                 className="tw-text-white tw-font-medium tw-mx-1 tw-px-3 tw-rounded-full tw-transition-all tw-duration-300 hover:tw-bg-purple-700 hover:tw-shadow-md tw-flex tw-items-center tw-py-1"
               >
                 <FaBlog className="tw-mr-1" /> Blog
-              </Nav.Link>
+              </Nav.Link> */}
             </Nav>
             
             <Form className="tw-flex tw-flex-grow-1 lg:tw-w-4/12 tw-mx-auto tw-my-1 lg:tw-my-0">

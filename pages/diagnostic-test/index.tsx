@@ -7,6 +7,7 @@ import {
   Star, Play, ChevronRight, Quote
 } from 'lucide-react';
 import DiagnosticTestModal from './DiagnosticTestModal';
+import NavigationBar from '../../components/layout/NavigationBar';
 
 interface DiagnosticTest {
   id: number;
@@ -232,7 +233,8 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
   };
 
   return (
-    <>
+    <div className="tw-h-full" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', minHeight: '125vh'}}>
+      <NavigationBar></NavigationBar> 
       <Head>
         <title>Diagnostic Test - Platform Pembelajaran</title>
         <meta name="description" content="Temukan potensi kognitif terbaikmu melalui serangkaian tes diagnostik yang komprehensif dan terstruktur" />
@@ -380,7 +382,7 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

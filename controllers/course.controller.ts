@@ -1198,3 +1198,58 @@ export const deleteCourse = async (req: NextApiRequest, res: NextApiResponse) =>
     res.status(500).json({ error: error.message });
   }
 };
+
+export const getUserCourseProgress = async (req: AuthenticatedRequest, res: NextApiResponse) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    const progress = await Course.getUserCourseProgress(req.user.id);
+    
+    res.status(200).json({
+      message: 'User course progress retrieved successfully',
+      data: progress
+    });
+  } catch (error: any) {
+    console.error('Error getting user course progress:', error);
+    res.status(500).json({ 
+      message: 'Failed to retrieve user course progress', 
+      error: error.message 
+    });
+  }
+};
+
+export const getUserCourseProgressByCourseId = async (req: AuthenticatedRequest, res: NextApiResponse) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    const { courseId } = req.query;
+    
+    if (!courseId || isNaN(Number(courseId))) {
+      return res.status(400).json({ message: 'Valid course ID is required' });
+    }
+
+    const progress = await Course.getUserCourseProgressByCourseId(
+      req.user.id, 
+      Number(courseId)
+    );
+    
+    if (!progress) {
+      return res.status(404).json({ message: 'Course not found or no progress data available' });
+    }
+
+    res.status(200).json({
+      message: 'User course progress retrieved successfully',
+      data: progress
+    });
+  } catch (error: any) {
+    console.error('Error getting user course progress by course ID:', error);
+    res.status(500).json({ 
+      message: 'Failed to retrieve user course progress', 
+      error: error.message 
+    });
+  }
+};

@@ -99,6 +99,24 @@ export interface UpdateCourseData {
   edit_user_id: number;
 }
 
+export interface UserCourseProgress {
+  id: number;
+  title: string;
+  description: string;
+  imageurl?: string;
+  type?: number;
+  learning_point?: any[];
+  course_string?: string;
+  user_id: string;
+  finished_quiz_topics: number;
+  finished_materials: number;
+  quiz: number;
+  material: number;
+  quiz_progress_percentage: number;
+  material_progress_percentage: number;
+  overall_progress_percentage: number;
+}
+
 // Course Model Functions
 export const getAll = async (): Promise<Course[]> => {
   try {
@@ -270,6 +288,153 @@ export const deleteCourse = async (id: number): Promise<void> => {
     await pool.query('DELETE FROM courses WHERE id = $1', [id]);
   } catch (error) {
     console.error('Error deleting course:', error);
+    throw error;
+  }
+};
+
+export const getUserCourseProgress = async (userId: string): Promise<UserCourseProgress[]> => {
+  try {
+    const query = `
+      WITH material_count AS (
+        SELECT
+          (
+            SELECT COUNT(t.id) 
+            FROM topics t
+            LEFT JOIN sections s ON s.id = t.section_id
+            WHERE s.course_id = c.id
+          ) quiz,
+          (
+            SELECT COUNT(m.id) 
+            FROM materials m
+            LEFT JOIN topics t ON t.id = m.topic_id
+            LEFT JOIN sections s ON s.id = t.section_id
+            WHERE s.course_id = c.id
+          ) material,
+          c.id
+        FROM courses c
+      )
+      SELECT
+        c.id, 
+        c.title, 
+        c.description, 
+        c.imageurl, 
+        c."type", 
+        c.learning_point, 
+        c.course_string,
+        ce.user_id,
+        COUNT(DISTINCT CASE
+          WHEN u.quiz_id IS NOT NULL THEN u.topic_id
+        END) AS finished_quiz_topics,
+        COUNT(DISTINCT u.material_id) AS finished_materials,
+        mc.quiz,
+        mc.material,
+        -- Calculate progress percentages
+        CASE 
+          WHEN mc.quiz > 0 THEN 
+            ROUND((COUNT(DISTINCT CASE WHEN u.quiz_id IS NOT NULL THEN u.topic_id END) * 100.0) / mc.quiz, 2)
+          ELSE 0 
+        END AS quiz_progress_percentage,
+        CASE 
+          WHEN mc.material > 0 THEN 
+            ROUND((COUNT(DISTINCT u.material_id) * 100.0) / mc.material, 2)
+          ELSE 0 
+        END AS material_progress_percentage,
+        CASE 
+          WHEN (mc.quiz + mc.material) > 0 THEN 
+            ROUND(((COUNT(DISTINCT CASE WHEN u.quiz_id IS NOT NULL THEN u.topic_id END) + COUNT(DISTINCT u.material_id)) * 100.0) / (mc.quiz + mc.material), 2)
+          ELSE 0 
+        END AS overall_progress_percentage,
+        ce.expires_at
+      FROM course_entitlements ce
+      LEFT JOIN courses c ON c.id = ce.course_id
+      LEFT JOIN material_count mc ON mc.id = c.id
+      LEFT JOIN sections s ON s.course_id = c.id
+      LEFT JOIN topics t ON t.section_id = s.id
+      LEFT JOIN usercoursesession u ON u.topic_id = t.id AND u.user_id = ce.user_id
+      WHERE ce.user_id = $1 
+        AND (ce.expires_at IS NULL OR ce.expires_at > NOW())
+      GROUP BY c.id, c.title, c.description, c.imageurl, c."type", c.learning_point, c.course_string, ce.user_id, mc.quiz, mc.material, ce.expires_at
+      ORDER BY c.title
+    `;
+
+    const result = await pool.query(query, [userId]);
+    return result.rows;
+  } catch (error) {
+    console.error('Error getting user course progress:', error);
+    throw error;
+  }
+};
+
+export const getUserCourseProgressByCourseId = async (userId: string, courseId: number): Promise<UserCourseProgress | null> => {
+  try {
+    const query = `
+      WITH material_count AS (
+        SELECT
+          (
+            SELECT COUNT(t.id) 
+            FROM topics t
+            LEFT JOIN sections s ON s.id = t.section_id
+            WHERE s.course_id = c.id
+          ) quiz,
+          (
+            SELECT COUNT(m.id) 
+            FROM materials m
+            LEFT JOIN topics t ON t.id = m.topic_id
+            LEFT JOIN sections s ON s.id = t.section_id
+            WHERE s.course_id = c.id
+          ) material,
+          c.id
+        FROM courses c
+        WHERE c.id = $2
+      )
+      SELECT
+        c.id, 
+        c.title, 
+        c.description, 
+        c.imageurl, 
+        c."type", 
+        c.learning_point, 
+        c.course_string,
+        ce.user_id,
+        COUNT(DISTINCT CASE
+          WHEN u.quiz_id IS NOT NULL THEN u.topic_id
+        END) AS finished_quiz_topics,
+        COUNT(DISTINCT u.material_id) AS finished_materials,
+        mc.quiz,
+        mc.material,
+        -- Calculate progress percentages
+        CASE 
+          WHEN mc.quiz > 0 THEN 
+            ROUND((COUNT(DISTINCT CASE WHEN u.quiz_id IS NOT NULL THEN u.topic_id END) * 100.0) / mc.quiz, 2)
+          ELSE 0 
+        END AS quiz_progress_percentage,
+        CASE 
+          WHEN mc.material > 0 THEN 
+            ROUND((COUNT(DISTINCT u.material_id) * 100.0) / mc.material, 2)
+          ELSE 0 
+        END AS material_progress_percentage,
+        CASE 
+          WHEN (mc.quiz + mc.material) > 0 THEN 
+            ROUND(((COUNT(DISTINCT CASE WHEN u.quiz_id IS NOT NULL THEN u.topic_id END) + COUNT(DISTINCT u.material_id)) * 100.0) / (mc.quiz + mc.material), 2)
+          ELSE 0 
+        END AS overall_progress_percentage,
+        ce.expires_at
+      FROM course_entitlements ce
+      LEFT JOIN courses c ON c.id = ce.course_id
+      LEFT JOIN material_count mc ON mc.id = c.id
+      LEFT JOIN sections s ON s.course_id = c.id
+      LEFT JOIN topics t ON t.section_id = s.id
+      LEFT JOIN usercoursesession u ON u.topic_id = t.id AND u.user_id = ce.user_id
+      WHERE ce.user_id = $1 
+        AND ce.course_id = $2
+        AND (ce.expires_at IS NULL OR ce.expires_at > NOW())
+      GROUP BY c.id, c.title, c.description, c.imageurl, c."type", c.learning_point, c.course_string, ce.user_id, mc.quiz, mc.material, ce.expires_at
+    `;
+
+    const result = await pool.query(query, [userId, courseId]);
+    return result.rows.length > 0 ? result.rows[0] : null;
+  } catch (error) {
+    console.error('Error getting user course progress by course ID:', error);
     throw error;
   }
 };

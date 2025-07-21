@@ -49,10 +49,10 @@ export default function CheckoutPage() {
           setCheckoutData(data);
         } catch (err) {
           console.error('Error parsing checkout data:', err);
-          router.push('/cart');
+          router.push('/keranjang');
         }
       } else {
-        router.push('/cart');
+        router.push('/keranjang');
       }
     }
   }, [router]);
