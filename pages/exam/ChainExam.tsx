@@ -1,3 +1,9 @@
+
+
+// ===================================
+// Modified ChainExam Component
+// ===================================
+
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -5,6 +11,7 @@ import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import CryptoJS from 'crypto-js';
 import ChangeTabPrevention from '../../components/ChangeTabPrevention';
+import { useDistributedTimeSync } from '../../hooks/useDistributedTimeSync';
 
 const SingleChoice = dynamic(() => import('./SingleChoice'), { ssr: false });
 const MultipleChoice = dynamic(() => import('./MultipleChoice'), { ssr: false });
@@ -69,6 +76,22 @@ const ChainExam: React.FC = () => {
   const params = useParams();
   const exam_string = params?.exam_string as string;
   debugLog('PARAMS', 'Exam string from params', { exam_string });
+  
+  // Initialize distributed time sync
+  const {
+    timeOffset,
+    getServerTime,
+    detectTimeJump,
+    forceSyncNow,
+    isOnline,
+    syncCount,
+    getSyncStats
+  } = useDistributedTimeSync({
+    minInterval: 15 * 60 * 1000,  // 15 minutes
+    maxInterval: 20 * 60 * 1000,  // 20 minutes
+    focusThreshold: 5 * 60 * 1000, // 5 minutes
+    jumpThreshold: 10 * 1000       // 10 seconds
+  });
   
   const [examId, setExamId] = useState<number | null>(null);
   const [examScheduleId, setExamScheduleId] = useState<string | null>(null);
@@ -155,7 +178,7 @@ const ChainExam: React.FC = () => {
   const [originPath, setOriginPath] = useState<string>('/');
 
   const timerRef = useRef<NodeJS.Timeout>();
-  const lastTickRef = useRef<number>(Date.now());
+  const lastTickRef = useRef<number>(0);
   const autoSaveRef = useRef<NodeJS.Timeout>();
 
   const examOrder = contextExamOrder || [];
@@ -166,6 +189,17 @@ const ChainExam: React.FC = () => {
     currentExamIndex,
     foundExam: examOrder.find(exam => exam.exam_string === exam_string)
   });
+
+  // Initialize lastTickRef with server time
+  useEffect(() => {
+    if (timeOffset !== 0 && lastTickRef.current === 0) {
+      lastTickRef.current = getServerTime();
+      debugLog('TIMER_INIT', 'Timer reference initialized with server time', {
+        serverTime: new Date(lastTickRef.current).toISOString(),
+        offset: timeOffset
+      });
+    }
+  }, [timeOffset, getServerTime]);
 
   useEffect(() => {
     if (!isClient) return;
@@ -260,9 +294,9 @@ const ChainExam: React.FC = () => {
     debugLog('COUNTDOWN', 'Starting countdown timer', examStartTime);
     
     const timer = setInterval(() => {
-      const now = new Date();
-      const startTime = new Date(examStartTime);
-      const diff = startTime.getTime() - now.getTime();
+      const now = getServerTime(); // Use server time for countdown
+      const startTime = new Date(examStartTime).getTime();
+      const diff = startTime - now;
       
       if (diff <= 0) {
         debugLog('COUNTDOWN', 'Countdown finished, retrying access');
@@ -279,7 +313,7 @@ const ChainExam: React.FC = () => {
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [isClient, isExamAccessible, examStartTime]);
+  }, [isClient, isExamAccessible, examStartTime, getServerTime]);
 
   const decryptData = (encryptedData: string) => {
     debugLog('DECRYPT', 'Starting decryption');
@@ -388,10 +422,10 @@ const ChainExam: React.FC = () => {
         duration: parsedData.duration
       });
       
-      if (examSession && !examSession.is_auto_move && new Date() < new Date(examSession.start_time)) {
+      if (examSession && !examSession.is_auto_move && getServerTime() < new Date(examSession.start_time).getTime()) {
         debugLog('FETCH_QUESTIONS', 'Exam not accessible yet', {
           examStartTime: examSession.start_time,
-          currentTime: new Date().toISOString()
+          currentServerTime: new Date(getServerTime()).toISOString()
         });
         setExamStartTime(examSession.start_time);
         setShowNotAccessibleModal(true);
@@ -472,7 +506,7 @@ const ChainExam: React.FC = () => {
         
         setExamName(sessionData.name);
         
-        if (!sessionData.is_auto_move && new Date() < new Date(sessionData.start_time)) {
+        if (!sessionData.is_auto_move && getServerTime() < new Date(sessionData.start_time).getTime()) {
           debugLog('LOAD_SESSION', 'Session not accessible yet');
           setExamStartTime(sessionData.start_time);
           setShowNotAccessibleModal(true);
@@ -488,7 +522,7 @@ const ChainExam: React.FC = () => {
         if (sessionData.question_elapsed_times) {
           const examData = await examDbService.getExamData(exam_string) || { 
             answers: sessionData.answers || {}, 
-            startTime: Date.now(),
+            startTime: getServerTime(),
             questionElapsedTimes: {},
             lastQuestionVisit: null
           };
@@ -497,18 +531,18 @@ const ChainExam: React.FC = () => {
           await db.put('examData', examData, exam_string);
         }
         
-        const now = Date.now();
+        const serverNow = getServerTime();
         const endTime = new Date(sessionData.end_time).getTime();
-        const remainingTime = Math.max(0, Math.floor((endTime - now) / 1000));
+        const remainingTime = Math.max(0, Math.floor((endTime - serverNow) / 1000));
         
         debugLog('LOAD_SESSION', 'Time calculations', {
-          now: new Date(now).toISOString(),
+          serverNow: new Date(serverNow).toISOString(),
           endTime: new Date(endTime).toISOString(),
           remainingTime
         });
         
         setTimeLeft(remainingTime);
-        lastTickRef.current = now;
+        lastTickRef.current = serverNow;
         
         setExamSession(sessionData);
         
@@ -537,7 +571,7 @@ const ChainExam: React.FC = () => {
           timeInSeconds: duration * 60
         });
         setTimeLeft(duration * 60);
-        lastTickRef.current = Date.now();
+        lastTickRef.current = getServerTime();
       }
     }
   };
@@ -643,15 +677,37 @@ const ChainExam: React.FC = () => {
     return () => clearTimeout(retryTimeout);
   }, [isClient, error, isInitializing]);
 
+  // Modified timer with server time and time jump detection
   useEffect(() => {
-    if (!isClient || loading || timeLeft <= 0) return;
+    if (!isClient || loading || timeLeft <= 0 || lastTickRef.current === 0) return;
     
-    debugLog('TIMER_START', 'Starting main timer', { timeLeft });
+    debugLog('TIMER_START', 'Starting main timer', { timeLeft, serverTime: new Date(getServerTime()).toISOString() });
     
     const updateTimer = () => {
-      const now = Date.now();
-      const deltaTime = Math.floor((now - lastTickRef.current) / 1000);
+      const serverNow = getServerTime(); // Use server time instead of Date.now()
+      const deltaTime = Math.floor((serverNow - lastTickRef.current) / 1000);
       
+      // Detect time manipulation
+      if (detectTimeJump(serverNow, lastTickRef.current)) {
+        debugLog('TIME_JUMP', '⚠️ Time jump detected! Forcing sync...', { 
+          deltaTime, 
+          expected: 1,
+          serverNow: new Date(serverNow).toISOString(),
+          lastTick: new Date(lastTickRef.current).toISOString()
+        });
+        
+        // Force immediate re-sync
+        forceSyncNow();
+        
+        // Use expected 1-second delta to prevent manipulation
+        const safeDelta = 1;
+        setTimeLeft(prevTime => Math.max(0, prevTime - safeDelta));
+        lastTickRef.current = serverNow - ((safeDelta - 1) * 1000);
+        
+        return;
+      }
+
+      // Normal timer update
       if (deltaTime >= 1) {
         setTimeLeft(prevTime => {
           const newTime = Math.max(0, prevTime - deltaTime);
@@ -663,7 +719,7 @@ const ChainExam: React.FC = () => {
           }
           return newTime;
         });
-        lastTickRef.current = now;
+        lastTickRef.current = serverNow;
       }
     };
 
@@ -674,7 +730,7 @@ const ChainExam: React.FC = () => {
         clearInterval(timerRef.current);
       }
     };
-  }, [isClient, loading, timeLeft, handleSubmit]);
+  }, [isClient, loading, timeLeft, getServerTime, detectTimeJump, forceSyncNow, handleSubmit]);
 
   useEffect(() => {
     if (!isClient || loading || timeLeft <= 0 || timeLeft % 120 !== 0) return;
@@ -1035,7 +1091,7 @@ const ChainExam: React.FC = () => {
       if (response.data.status === 'success' && response.data.data) {
         const sessionData = response.data.data;
         
-        if (!sessionData.is_auto_move && new Date() >= new Date(sessionData.start_time)) {
+        if (!sessionData.is_auto_move && getServerTime() >= new Date(sessionData.start_time).getTime()) {
           debugLog('RETRY_ACCESS', 'Access granted, fetching questions');
           setShowNotAccessibleModal(false);
           setIsExamAccessible(true);
@@ -1048,13 +1104,31 @@ const ChainExam: React.FC = () => {
       }
     } catch (error) {
       debugLog('RETRY_ACCESS', 'Error checking exam accessibility', error);
-      if (examStartTime && new Date() >= new Date(examStartTime)) {
+      if (examStartTime && getServerTime() >= new Date(examStartTime).getTime()) {
         setIsExamAccessible(true);
         setShowNotAccessibleModal(false);
         fetchQuestions();
       }
     }
   };
+
+  // Optional: Display sync status in development
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      const interval = setInterval(() => {
+        const stats = getSyncStats();
+        console.log('📊 Sync Stats:', {
+          totalSyncs: stats.totalSyncs,
+          lastSyncAgo: Math.round(stats.lastSyncAgo / 1000 / 60) + ' min ago',
+          nextSyncIn: Math.round(stats.nextSyncIn / 1000 / 60) + ' min',
+          offsetMs: stats.currentOffset,
+          isOnline
+        });
+      }, 60000); // Every minute in dev
+
+      return () => clearInterval(interval);
+    }
+  }, [getSyncStats, isOnline]);
 
   if (!isClient) {
     return null;
@@ -1068,6 +1142,11 @@ const ChainExam: React.FC = () => {
           <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
           <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">Loading Exam...</h2>
           <p className="tw-text-violet-600 tw-mt-2">Please wait while we prepare your questions</p>
+          {process.env.NODE_ENV === 'development' && (
+            <p className="tw-text-sm tw-text-gray-500 tw-mt-2">
+              Time sync: {syncCount} syncs, offset: {timeOffset}ms
+            </p>
+          )}
         </div>
       </div>
     );
@@ -1150,6 +1229,11 @@ const ChainExam: React.FC = () => {
                 {examSession && (
                   <p className="tw-text-sm tw-text-violet-200">
                     End time: {new Date(examSession.end_time).toLocaleTimeString()}
+                  </p>
+                )}
+                {process.env.NODE_ENV === 'development' && (
+                  <p className="tw-text-xs tw-text-violet-300">
+                    Sync: {syncCount}x | Offset: {timeOffset}ms | {isOnline ? '🟢' : '🔴'}
                   </p>
                 )}
               </div>
@@ -1362,6 +1446,7 @@ const ChainExam: React.FC = () => {
           </div>
         </div>
 
+        {/* Confirmation Modal */}
         <Modal 
           show={showConfirmationModal} 
           onHide={() => setShowConfirmationModal(false)}
@@ -1416,6 +1501,7 @@ const ChainExam: React.FC = () => {
           </Modal.Footer>
         </Modal>
       
+        {/* Next Exam Modal */}
         <Modal 
           show={showModalNext} 
           onHide={() => {}}
@@ -1537,6 +1623,7 @@ const ChainExam: React.FC = () => {
           </Modal.Footer>
         </Modal>
 
+        {/* Not Accessible Modal */}
         <Modal 
           show={showNotAccessibleModal} 
           onHide={() => setShowNotAccessibleModal(false)}

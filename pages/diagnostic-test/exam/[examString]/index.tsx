@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
-// import { openDB } from "idb";
 import CryptoJS from "crypto-js";
 import dynamic from "next/dynamic";
 import {
@@ -29,21 +28,49 @@ const TOTAL_DURATION_SECONDS = 10 * 60; // 10 menit
 const DB_NAME = "diagnostic-test-db-v2";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
+/* ───────────── Types ───────────── */
+interface Question {
+  id: number;
+  type: string;
+  question: string;
+  options?: string[];
+  statements?: string[];
+}
+
+interface TimerData {
+  s: string;
+  e: string;
+  d: string;
+  v: string;
+}
+
+interface WorkerMessage {
+  type: 'store' | 'tick' | 'timeout' | 'restored' | 'invalid';
+  remaining?: number;
+  elapsed?: number;
+  data?: TimerData;
+}
+
+interface ExamState {
+  exam_id?: string | number;
+  schedule_id?: string | number;
+  session_id?: string | number;
+  user_id?: string | number;
+}
+
 /* ───────────── IndexedDB helpers ───────────── */
-/* ───────────── Ganti helper … ───────────── */
 async function getDB() {
-  // 1) Skip di server (build/SSR)
+  // Skip di server (build/SSR)
   if (typeof window === 'undefined') {
-    // kembalikan _stub_ agar pemanggil tidak error
     return {
-      put:    async () => undefined,
+      put: async () => undefined,
       getAll: async () => [],
-      clear:  async () => undefined,
+      clear: async () => undefined,
     } as const;
   }
 
-  // 2) Import `idb` hanya di browser
-  const { openDB } = await import('idb');   // <─ dynamic import
+  // Import `idb` hanya di browser
+  const { openDB } = await import('idb');
   return openDB(DB_NAME, 1, {
     upgrade(db) {
       if (!db.objectStoreNames.contains('answers')) {
@@ -54,7 +81,7 @@ async function getDB() {
 }
 
 /* ───────────── Encryption helpers ───────────── */
-function decryptData(encryptedData: string) {
+function decryptData(encryptedData: string): string {
   try {
     const [ivHex, encrypted] = encryptedData.split(":");
     const iv = CryptoJS.enc.Hex.parse(ivHex);
@@ -78,44 +105,172 @@ function decryptData(encryptedData: string) {
   }
 }
 
-interface Question {
-  id: number;
-  type: string;
-  question: string;
-  options?: string[];
-  statements?: string[];
-}
-
-const DiagnosticTest = () => {
+const DiagnosticTest: React.FC = () => {
   const router = useRouter();
   const { examString } = router.query;
   
   // Get state from router (passed from modal)
-  const state = router.query || {};
+  const state: ExamState = router.query || {};
 
   /* ───────────── Fetch state ───────────── */
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [examName, setExamName] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [examName, setExamName] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   /* ───────────── Working-session state ───────────── */
-  const [currentIdx, setCurrentIdx] = useState(0);
+  const [currentIdx, setCurrentIdx] = useState<number>(0);
   const [answer, setAnswer] = useState<any>(null);
-  const [elapsedPerSoal, setElapsedPerSoal] = useState(0);
-  const [timer, setTimer] = useState(TOTAL_DURATION_SECONDS);
-  const [submitLoading, setSubmitLoading] = useState(false);
+  const [elapsedPerSoal, setElapsedPerSoal] = useState<number>(0);
+  const [timer, setTimer] = useState<number>(TOTAL_DURATION_SECONDS);
+  const [timerLoaded, setTimerLoaded] = useState<boolean>(false);
+  const [submitLoading, setSubmitLoading] = useState<boolean>(false);
 
   /* ───────────── Submit-score state ───────────── */
-  const [savingScore, setSavingScore] = useState(false);
-  const [finishModal, setFinishModal] = useState(false);
+  const [savingScore, setSavingScore] = useState<boolean>(false);
+  const [finishModal, setFinishModal] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  /* ───────────── Refs ───────────── */
-  const intervalRef = useRef<NodeJS.Timeout>();
-  const soalStartTime = useRef(Date.now());
+  /* ───────────── Timer refs ───────────── */
+  const workerRef = useRef<Worker | null>(null);
+  const sessionKeyRef = useRef<string>('');
+  const soalStartTime = useRef<number>(Date.now());
+  const fallbackInterval = useRef<NodeJS.Timeout | null>(null);
 
-  /* ───────────── Fetch & decrypt ───────────── */
+  /* ───────────── Generate unique session key ───────────── */
+  useEffect(() => {
+    if (!sessionKeyRef.current) {
+      const examId = state.exam_id?.toString() || 'unknown';
+      const userId = state.user_id?.toString() || 'anonymous'; 
+      const timestamp = Date.now().toString();
+      const random = Math.random().toString(36).substring(2);
+      
+      sessionKeyRef.current = CryptoJS.MD5(examId + userId + timestamp + random).toString();
+    }
+  }, [state.exam_id, state.user_id]);
+
+  /* ───────────── Initialize Secure Timer ───────────── */
+  useEffect(() => {
+    if (!sessionKeyRef.current) return;
+    
+    // Fallback timer function
+    const startFallbackTimer = () => {
+      const startTime = Date.now();
+      fallbackInterval.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const remaining = Math.max(0, TOTAL_DURATION_SECONDS - elapsed);
+        setTimer(remaining);
+        
+        if (remaining <= 0) {
+          if (fallbackInterval.current) {
+            clearInterval(fallbackInterval.current);
+          }
+          handleFinish(true);
+        }
+      }, 1000);
+      
+      setTimerLoaded(true);
+    };
+
+    // Try Web Worker first
+    if (typeof Worker !== 'undefined') {
+      try {
+        workerRef.current = new Worker('/secure-exam-timer.js');
+        
+        workerRef.current.onmessage = function(e: MessageEvent<WorkerMessage>) {
+          const { type, remaining, data } = e.data;
+          
+          switch (type) {
+            case 'store':
+              if (data) {
+                sessionStorage.setItem('_examTimer', JSON.stringify(data));
+              }
+              setTimerLoaded(true);
+              break;
+              
+            case 'tick':
+              if (typeof remaining === 'number') {
+                setTimer(remaining);
+              }
+              break;
+              
+            case 'timeout':
+              sessionStorage.removeItem('_examTimer');
+              handleFinish(true);
+              break;
+              
+            case 'restored':
+              if (typeof remaining === 'number') {
+                setTimer(remaining);
+              }
+              setTimerLoaded(true);
+              console.log('Timer restored successfully');
+              break;
+              
+            case 'invalid':
+              console.log('Invalid timer data, starting fresh');
+              sessionStorage.removeItem('_examTimer');
+              startFreshTimer();
+              break;
+          }
+        };
+
+        workerRef.current.onerror = function(error) {
+          console.error('Web Worker error:', error);
+          startFallbackTimer();
+        };
+        
+        // Check for existing timer
+        const storedTimer = sessionStorage.getItem('_examTimer');
+        if (storedTimer) {
+          try {
+            const parsed: TimerData = JSON.parse(storedTimer);
+            workerRef.current.postMessage({
+              action: 'restore',
+              payload: {
+                stored: parsed,
+                sessionKey: sessionKeyRef.current
+              }
+            });
+          } catch {
+            startFreshTimer();
+          }
+        } else {
+          startFreshTimer();
+        }
+      } catch (error) {
+        console.error('Failed to create Web Worker, using fallback:', error);
+        startFallbackTimer();
+      }
+    } else {
+      console.log('Web Worker not supported, using fallback timer');
+      startFallbackTimer();
+    }
+    
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.postMessage({ action: 'stop' });
+        workerRef.current.terminate();
+      }
+      if (fallbackInterval.current) {
+        clearInterval(fallbackInterval.current);
+      }
+    };
+  }, [sessionKeyRef.current]);
+
+  const startFreshTimer = () => {
+    if (workerRef.current && sessionKeyRef.current) {
+      workerRef.current.postMessage({
+        action: 'start',
+        payload: {
+          duration: TOTAL_DURATION_SECONDS,
+          sessionKey: sessionKeyRef.current
+        }
+      });
+    }
+  };
+
+  /* ───────────── Fetch & decrypt questions ───────────── */
   useEffect(() => {
     if (!router.isReady || !examString) return;
     
@@ -158,22 +313,6 @@ const DiagnosticTest = () => {
     soalStartTime.current = Date.now();
   }, [currentIdx, questions]);
 
-  /* ───────────── Timer global ───────────── */
-  useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      setTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(intervalRef.current);
-          handleFinish(true); // true ⇒ dipicu timer
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(intervalRef.current);
-  }, []); // sekali saja
-
   /* ───────────── Timer per-soal ───────────── */
   useEffect(() => {
     const perSoalInterval = setInterval(() => {
@@ -183,7 +322,7 @@ const DiagnosticTest = () => {
   }, [currentIdx]);
 
   /* ───────────── IndexedDB utils ───────────── */
-  function getInitialAnswer(question: Question) {
+  function getInitialAnswer(question: Question): any {
     if (!question) return null;
     switch (question.type) {
       case "single-choice":
@@ -201,39 +340,41 @@ const DiagnosticTest = () => {
     }
   }
 
-  const saveAnswerToIDB = async (payload: any) => {
+  const saveAnswerToIDB = async (payload: any): Promise<void> => {
     try {
       const db = await getDB();
       await db.put("answers", payload);
-    } catch (_) {}
+    } catch (_) {
+      // Silent fail
+    }
   };
 
-  const getAllAnswersFromIDB = async () => {
+  const getAllAnswersFromIDB = async (): Promise<any[]> => {
     const db = await getDB();
     return db.getAll("answers");
   };
 
-  const clearIDB = async () => {
+  const clearIDB = async (): Promise<void> => {
     const db = await getDB();
     await db.clear("answers");
   };
 
   /* ───────────── Answer helpers ───────────── */
-  const handleChange = (value: any) => setAnswer(value);
+  const handleChange = (value: any): void => setAnswer(value);
 
-  const handleTrueFalseChange = (idx: number, val: any) => {
+  const handleTrueFalseChange = (idx: number, val: any): void => {
     const updated = [...(answer || [])];
     updated[idx] = val;
     setAnswer(updated);
   };
 
-  function formatTime(seconds: number) {
+  function formatTime(seconds: number): string {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;
   }
 
-  function isAnswerFilled() {
+  function isAnswerFilled(): boolean {
     const q = questions[currentIdx];
     if (!q) return false;
     switch (q.type) {
@@ -253,12 +394,11 @@ const DiagnosticTest = () => {
   }
 
   /* ───────────── Navigation ───────────── */
-  const handleNextOrFinish = async () => {
+  const handleNextOrFinish = async (): Promise<void> => {
     if (!questions.length) return;
     setSubmitLoading(true);
-    clearInterval(intervalRef.current);
 
-    // simpan current answer
+    // Save current answer
     await saveAnswerToIDB({
       question_id: questions[currentIdx].id,
       exam_id: state.exam_id,
@@ -270,19 +410,8 @@ const DiagnosticTest = () => {
     });
 
     if (currentIdx < questions.length - 1 && timer > 0) {
-      // lanjut soal berikut
+      // Go to next question
       setCurrentIdx(currentIdx + 1);
-      // restart timer
-      intervalRef.current = setInterval(() => {
-        setTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(intervalRef.current);
-            handleFinish(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
     } else {
       await handleFinish(false);
     }
@@ -290,13 +419,20 @@ const DiagnosticTest = () => {
     setSubmitLoading(false);
   };
 
-  /* ───────────── Submit skor ke server ───────────── */
-  const handleFinish = async (autoFromTimer = false) => {
+  /* ───────────── Submit score to server ───────────── */
+  const handleFinish = async (autoFromTimer: boolean = false): Promise<void> => {
     try {
       setSavingScore(true);
-      clearInterval(intervalRef.current);
+      
+      // Stop timer
+      if (workerRef.current) {
+        workerRef.current.postMessage({ action: 'stop' });
+      }
+      if (fallbackInterval.current) {
+        clearInterval(fallbackInterval.current);
+      }
 
-      // jika dipicu timer, simpan jawaban terakhir (bila terisi)
+      // If triggered by timer, save last answer if filled
       if (autoFromTimer && isAnswerFilled()) {
         await saveAnswerToIDB({
           question_id: questions[currentIdx].id,
@@ -335,6 +471,7 @@ const DiagnosticTest = () => {
       }
 
       await clearIDB();
+      sessionStorage.removeItem('_examTimer');
       setFinishModal(true);
     } catch (err: any) {
       setSubmitError(err.message || "Terjadi kesalahan saat submit skor.");
@@ -343,10 +480,12 @@ const DiagnosticTest = () => {
     }
   };
 
-  const handleBackToDashboard = () => router.push("/dashboard");
+  const handleBackToDashboard = (): void => {
+    router.push("/dashboard");
+  };
 
   /* ───────────── Render helpers ───────────── */
-  function renderQuestion(q: Question) {
+  function renderQuestion(q: Question): React.ReactNode {
     if (!q || answer === null) return null;
     switch (q.type) {
       case "single-choice":
@@ -398,7 +537,7 @@ const DiagnosticTest = () => {
   }
 
   /* ───────────── UI Loading/Error ───────────── */
-  if (loading) {
+  if (loading || !timerLoaded) {
     return (
       <>
         <Head>
@@ -453,7 +592,7 @@ const DiagnosticTest = () => {
     );
   }
 
-  /* ───────────── Success modal setelah submit ───────────── */
+  /* ───────────── Success modal after submit ───────────── */
   if (finishModal) {
     return (
       <>

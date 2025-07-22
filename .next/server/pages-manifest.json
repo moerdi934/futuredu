@@ -2,11 +2,6 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/section/[sectionCode]": "pages/section/[sectionCode].js",
-  "/course/[courseCode]": "pages/course/[courseCode].js",
-  "/api/userCourse/courses/[courseString]": "pages/api/userCourse/courses/[courseString].js",
-  "/api/users/check-auth": "pages/api/users/check-auth.js",
-  "/all-courses": "pages/all-courses.js",
-  "/api/users/status": "pages/api/users/status.js",
-  "/api/userCourse/sections/[sectionString]": "pages/api/userCourse/sections/[sectionString].js"
+  "/diagnostic-test/exam/[examString]": "pages/diagnostic-test/exam/[examString].js",
+  "/diagnostic-test": "pages/diagnostic-test.js"
 }
