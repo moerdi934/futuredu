@@ -1,6 +1,7 @@
+// pages/panel/courses/create-course/Sidebar.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, ChevronRight, ChevronDown, BookOpen, PlayCircle, FileText, HelpCircle, Target, Menu, ChevronLeft } from 'lucide-react';
 
 // Types
@@ -56,8 +57,14 @@ const Sidebar: React.FC<SidebarProps> = ({
   setSidebarOpen,
   scrollToElement
 }) => {
+  const [mounted, setMounted] = useState<boolean>(false);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0]));
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+
+  // Ensure component only runs on client-side
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const toggleSection = (index: number): void => {
     const newExpanded = new Set(expandedSections);
@@ -72,6 +79,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   const toggleCollapse = (): void => {
     setIsCollapsed(!isCollapsed);
   };
+
+  // Safe data with fallbacks
+  const safeSections = Array.isArray(sections) ? sections : [];
+  const safeCourseTitle = courseTitle || '';
 
   const sampleData = {
     courseTitle: "Fundamental Programming with React",
@@ -120,8 +131,17 @@ const Sidebar: React.FC<SidebarProps> = ({
     ]
   };
 
-  const displaySections = sections.length > 0 ? sections : sampleData.sections;
-  const displayCourseTitle = courseTitle || sampleData.courseTitle;
+  const displaySections = safeSections.length > 0 ? safeSections : sampleData.sections;
+  const displayCourseTitle = safeCourseTitle || sampleData.courseTitle;
+
+  // Don't render anything until mounted on client
+  if (!mounted) {
+    return (
+      <div className="tw-fixed tw-top-4 tw-right-4 tw-z-50 tw-bg-white tw-p-4 tw-rounded-lg tw-shadow-lg">
+        <div className="tw-text-purple-600">Memuat sidebar...</div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -198,6 +218,8 @@ const Sidebar: React.FC<SidebarProps> = ({
               <div className="tw-space-y-4">
                 {displaySections.map((section, sectionIndex) => {
                   const isExpanded = expandedSections.has(sectionIndex);
+                  const safeTopics = Array.isArray(section.topics) ? section.topics : [];
+                  
                   return (
                     <div key={section.id} className="tw-bg-white tw-rounded-xl tw-shadow-sm tw-border tw-border-purple-200 tw-overflow-hidden tw-transition-all tw-duration-200 hover:tw-shadow-md">
                       
@@ -222,11 +244,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                                 <div className="tw-flex tw-items-center tw-space-x-4 tw-text-xs tw-text-purple-200">
                                   <span className="tw-flex tw-items-center tw-space-x-1">
                                     <BookOpen className="tw-w-3 tw-h-3" />
-                                    <span>{section.topics.length} topik</span>
+                                    <span>{safeTopics.length} topik</span>
                                   </span>
                                   <span className="tw-flex tw-items-center tw-space-x-1">
                                     <FileText className="tw-w-3 tw-h-3" />
-                                    <span>{section.topics.reduce((acc, topic) => acc + topic.materials.length, 0)} materi</span>
+                                    <span>{safeTopics.reduce((acc, topic) => acc + (Array.isArray(topic.materials) ? topic.materials.length : 0), 0)} materi</span>
                                   </span>
                                 </div>
                               </div>
@@ -243,69 +265,75 @@ const Sidebar: React.FC<SidebarProps> = ({
                       </div>
 
                       {/* Section Content */}
-                      {isExpanded && section.topics.length > 0 && (
+                      {isExpanded && safeTopics.length > 0 && (
                         <div className="tw-p-2">
-                          {section.topics.map((topic, topicIndex) => (
-                            <div key={topic.id} className="tw-mb-3 last:tw-mb-0">
-                              
-                              {/* Topic Header */}
-                              <div 
-                                className="tw-p-3 tw-rounded-lg tw-bg-purple-50 hover:tw-bg-purple-100 tw-cursor-pointer tw-transition-all tw-duration-200 tw-border tw-border-purple-100 hover:tw-border-purple-200"
-                                onClick={() => scrollToElement(`topic-${topic.id}`)}
-                              >
-                                <div className="tw-flex tw-items-start tw-space-x-3">
-                                  <div className="tw-w-6 tw-h-6 tw-bg-purple-500 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-text-white tw-text-xs tw-font-bold tw-flex-shrink-0 tw-mt-0.5">
-                                    {topicIndex + 1}
-                                  </div>
-                                  <div className="tw-flex-1 tw-min-w-0">
-                                    <h6 className="tw-font-semibold tw-text-purple-800 tw-text-sm tw-mb-2 tw-leading-tight">
-                                      {topic.title || 'Topik Baru'}
-                                    </h6>
-                                    <div className="tw-flex tw-flex-wrap tw-gap-2 tw-text-xs">
-                                      <div className="tw-flex tw-items-center tw-space-x-1 tw-bg-white tw-px-2 tw-py-1 tw-rounded-full tw-text-purple-600">
-                                        <FileText className="tw-w-3 tw-h-3" />
-                                        <span>{topic.materials.length}</span>
-                                      </div>
-                                      <div className="tw-flex tw-items-center tw-space-x-1 tw-bg-white tw-px-2 tw-py-1 tw-rounded-full tw-text-green-600">
-                                        <HelpCircle className="tw-w-3 tw-h-3" />
-                                        <span>{topic.quiz.questions.length}</span>
-                                      </div>
-                                      <div className="tw-flex tw-items-center tw-space-x-1 tw-bg-white tw-px-2 tw-py-1 tw-rounded-full tw-text-orange-600">
-                                        <Target className="tw-w-3 tw-h-3" />
-                                        <span>{topic.drill.questions.length}</span>
+                          {safeTopics.map((topic, topicIndex) => {
+                            const safeMaterials = Array.isArray(topic.materials) ? topic.materials : [];
+                            const safeQuizQuestions = Array.isArray(topic.quiz?.questions) ? topic.quiz.questions : [];
+                            const safeDrillQuestions = Array.isArray(topic.drill?.questions) ? topic.drill.questions : [];
+                            
+                            return (
+                              <div key={topic.id} className="tw-mb-3 last:tw-mb-0">
+                                
+                                {/* Topic Header */}
+                                <div 
+                                  className="tw-p-3 tw-rounded-lg tw-bg-purple-50 hover:tw-bg-purple-100 tw-cursor-pointer tw-transition-all tw-duration-200 tw-border tw-border-purple-100 hover:tw-border-purple-200"
+                                  onClick={() => scrollToElement(`topic-${topic.id}`)}
+                                >
+                                  <div className="tw-flex tw-items-start tw-space-x-3">
+                                    <div className="tw-w-6 tw-h-6 tw-bg-purple-500 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-text-white tw-text-xs tw-font-bold tw-flex-shrink-0 tw-mt-0.5">
+                                      {topicIndex + 1}
+                                    </div>
+                                    <div className="tw-flex-1 tw-min-w-0">
+                                      <h6 className="tw-font-semibold tw-text-purple-800 tw-text-sm tw-mb-2 tw-leading-tight">
+                                        {topic.title || 'Topik Baru'}
+                                      </h6>
+                                      <div className="tw-flex tw-flex-wrap tw-gap-2 tw-text-xs">
+                                        <div className="tw-flex tw-items-center tw-space-x-1 tw-bg-white tw-px-2 tw-py-1 tw-rounded-full tw-text-purple-600">
+                                          <FileText className="tw-w-3 tw-h-3" />
+                                          <span>{safeMaterials.length}</span>
+                                        </div>
+                                        <div className="tw-flex tw-items-center tw-space-x-1 tw-bg-white tw-px-2 tw-py-1 tw-rounded-full tw-text-green-600">
+                                          <HelpCircle className="tw-w-3 tw-h-3" />
+                                          <span>{safeQuizQuestions.length}</span>
+                                        </div>
+                                        <div className="tw-flex tw-items-center tw-space-x-1 tw-bg-white tw-px-2 tw-py-1 tw-rounded-full tw-text-orange-600">
+                                          <Target className="tw-w-3 tw-h-3" />
+                                          <span>{safeDrillQuestions.length}</span>
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
                                 </div>
-                              </div>
 
-                              {/* Materials List */}
-                              {topic.materials.length > 0 && (
-                                <div className="tw-ml-6 tw-mt-2 tw-space-y-1">
-                                  {topic.materials.map((material, materialIndex) => (
-                                    <div
-                                      key={material.id}
-                                      className="tw-p-2 tw-rounded-md tw-bg-white tw-cursor-pointer tw-transition-all tw-duration-150 hover:tw-bg-purple-50 tw-border tw-border-transparent hover:tw-border-purple-200 tw-group"
-                                      onClick={() => scrollToElement(`material-${material.id}`)}
-                                    >
-                                      <div className="tw-flex tw-items-center tw-space-x-2">
-                                        <ChevronRight className="tw-w-3 tw-h-3 tw-text-purple-400 tw-transition-transform tw-duration-150 group-hover:tw-translate-x-0.5" />
-                                        {material.hasVideo && (
-                                          <PlayCircle className="tw-w-3 tw-h-3 tw-text-red-500" />
-                                        )}
-                                        <span className="tw-text-xs tw-font-medium tw-text-purple-700 tw-flex-1 tw-truncate">
-                                          {materialIndex + 1}. {material.title || 'Materi Baru'}
-                                        </span>
-                                        {material.isMandatory && (
-                                          <div className="tw-w-2 tw-h-2 tw-bg-red-500 tw-rounded-full tw-flex-shrink-0" />
-                                        )}
+                                {/* Materials List */}
+                                {safeMaterials.length > 0 && (
+                                  <div className="tw-ml-6 tw-mt-2 tw-space-y-1">
+                                    {safeMaterials.map((material, materialIndex) => (
+                                      <div
+                                        key={material.id}
+                                        className="tw-p-2 tw-rounded-md tw-bg-white tw-cursor-pointer tw-transition-all tw-duration-150 hover:tw-bg-purple-50 tw-border tw-border-transparent hover:tw-border-purple-200 tw-group"
+                                        onClick={() => scrollToElement(`material-${material.id}`)}
+                                      >
+                                        <div className="tw-flex tw-items-center tw-space-x-2">
+                                          <ChevronRight className="tw-w-3 tw-h-3 tw-text-purple-400 tw-transition-transform tw-duration-150 group-hover:tw-translate-x-0.5" />
+                                          {material.hasVideo && (
+                                            <PlayCircle className="tw-w-3 tw-h-3 tw-text-red-500" />
+                                          )}
+                                          <span className="tw-text-xs tw-font-medium tw-text-purple-700 tw-flex-1 tw-truncate">
+                                            {materialIndex + 1}. {material.title || 'Materi Baru'}
+                                          </span>
+                                          {material.isMandatory && (
+                                            <div className="tw-w-2 tw-h-2 tw-bg-red-500 tw-rounded-full tw-flex-shrink-0" />
+                                          )}
+                                        </div>
                                       </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

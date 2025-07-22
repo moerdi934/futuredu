@@ -1,14 +1,26 @@
+// pages/panel/courses/create-course/index.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Plus, Trash2, Eye, EyeOff, Upload, Link, Play, Menu, X, ChevronRight } from 'lucide-react';
 import axios from 'axios';
 import dynamic from 'next/dynamic';
 
-// Dynamic imports untuk client-side components
-const SuperEditor = dynamic(() => import('../../../../components/supereditor/SuperEditor'), { ssr: false });
-const PreviewComponent = dynamic(() => import('./PreviewComponent'), { ssr: false });
-const Sidebar = dynamic(() => import('./Sidebar'), { ssr: false });
+// Dynamic imports dengan loading states dan no SSR
+const SuperEditor = dynamic(() => import('../../../../components/supereditor/SuperEditor'), { 
+  ssr: false,
+  loading: () => <div className="tw-p-4 tw-text-center tw-text-purple-600">Memuat editor...</div>
+});
+
+const PreviewComponent = dynamic(() => import('./PreviewComponent'), { 
+  ssr: false,
+  loading: () => <div className="tw-p-4 tw-text-center tw-text-purple-600">Memuat preview...</div>
+});
+
+const Sidebar = dynamic(() => import('./Sidebar'), { 
+  ssr: false,
+  loading: () => <div className="tw-p-4 tw-text-center tw-text-purple-600">Memuat sidebar...</div>
+});
 
 // Types
 interface Material {
@@ -63,6 +75,7 @@ interface QuestionSearchLoading {
 
 // Component
 const CreateCourse: React.FC = () => {
+  const [mounted, setMounted] = useState<boolean>(false);
   const [courseTitle, setCourseTitle] = useState<string>('');
   const [courseDescription, setCourseDescription] = useState<string>('');
   const [courseImageUrl, setCourseImageUrl] = useState<string>('');
@@ -77,8 +90,16 @@ const CreateCourse: React.FC = () => {
   const [questionSearchLoading, setQuestionSearchLoading] = useState<QuestionSearchLoading>({});
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  // API Base URL from environment
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+  // Ensure component only runs on client-side
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // API Base URL from environment - only access after mounting
+  const getApiBaseUrl = (): string => {
+    if (typeof window === 'undefined') return '';
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+  };
 
   const addLearningPoint = (): void => {
     setLearningPoints([...learningPoints, '']);
@@ -243,7 +264,7 @@ const CreateCourse: React.FC = () => {
   };
 
   const searchQuestions = async (searchTerm: string, topicId: number, type: 'quiz' | 'drill'): Promise<void> => {
-    if (!searchTerm.trim()) {
+    if (!mounted || !searchTerm.trim()) {
       setQuestionSearchResults(prev => ({
         ...prev,
         [`${topicId}-${type}`]: []
@@ -256,6 +277,8 @@ const CreateCourse: React.FC = () => {
 
     try {
       const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const API_BASE_URL = getApiBaseUrl();
+      
       const response = await axios.get(`${API_BASE_URL}/questions/search`, {
         params: { search: searchTerm },
         headers: {
@@ -329,6 +352,8 @@ const CreateCourse: React.FC = () => {
   };
 
   const scrollToElement = (elementId: string): void => {
+    if (typeof window === 'undefined') return;
+    
     const element = document.getElementById(elementId);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -382,117 +407,69 @@ const CreateCourse: React.FC = () => {
     return true;
   };
 
-  const prepareCourseData = (): FormData => {
-    const formData = new FormData();
-    formData.append('title', courseTitle);
-    formData.append('description', courseDescription);
-    formData.append('imageUrl', courseImageUrl);
-    formData.append('learningPoints', JSON.stringify(learningPoints));
-    
-    const sectionsData = sections.map(section => ({
-      id: section.id,
-      title: section.title,
-      description: section.description,
-      duration: section.duration,
-      topics: section.topics.map(topic => ({
-        id: topic.id,
-        title: topic.title,
-        materials: topic.materials.map(material => ({
-          id: material.id,
-          title: material.title,
-          isMandatory: material.isMandatory,
-          hasVideo: material.hasVideo,
-          videoType: material.videoType,
-          videoUrl: material.videoUrl,
-          content: material.content,
-          videoFileName: material.videoFile ? material.videoFile.name : null
-        })),
-        quiz: topic.quiz,
-        drill: topic.drill
-      }))
-    }));
-    
-    formData.append('sections', JSON.stringify(sectionsData));
-    
-    let fileIndex = 0;
-    sections.forEach(section => {
-      section.topics.forEach(topic => {
-        topic.materials.forEach(material => {
-          if (material.hasVideo && material.videoType === 'upload' && material.videoFile) {
-            formData.append(`videoFile_${fileIndex}`, material.videoFile);
-            formData.append(`videoFile_${fileIndex}_materialId`, material.id.toString());
-            fileIndex++;
-          }
-        });
-      });
-    });
-    
-    return formData;
-  };
-
   const saveCourse = async (): Promise<void> => {
-if (!validateCourseData()) {
-    return;
-  }
+    if (!mounted || !validateCourseData()) {
+      return;
+    }
 
-  setIsSaving(true);
-  
-  try {
-    // Prepare data sebagai JSON object
-    const courseData = {
-      title: courseTitle.trim(),
-      description: courseDescription.trim(),
-      imageUrl: courseImageUrl.trim(),
-      learningPoints: learningPoints.filter(point => point.trim().length > 0),
-      sections: sections.map(section => ({
-        id: section.id,
-        title: section.title.trim(),
-        description: section.description.trim(),
-        duration: section.duration,
-        topics: section.topics.map(topic => ({
-          id: topic.id,
-          title: topic.title.trim(),
-          materials: topic.materials.map(material => ({
-            id: material.id,
-            title: material.title.trim(),
-            isMandatory: material.isMandatory,
-            hasVideo: material.hasVideo,
-            videoType: material.videoType,
-            videoUrl: material.videoUrl.trim(),
-            content: material.content,
-            videoFileName: material.videoFile ? material.videoFile.name : null
-          })),
-          quiz: topic.quiz || { questions: [] },
-          drill: topic.drill || { questions: [] }
+    setIsSaving(true);
+    
+    try {
+      const courseData = {
+        title: courseTitle.trim(),
+        description: courseDescription.trim(),
+        imageUrl: courseImageUrl.trim(),
+        learningPoints: learningPoints.filter(point => point.trim().length > 0),
+        sections: sections.map(section => ({
+          id: section.id,
+          title: section.title.trim(),
+          description: section.description.trim(),
+          duration: section.duration,
+          topics: section.topics.map(topic => ({
+            id: topic.id,
+            title: topic.title.trim(),
+            materials: topic.materials.map(material => ({
+              id: material.id,
+              title: material.title.trim(),
+              isMandatory: material.isMandatory,
+              hasVideo: material.hasVideo,
+              videoType: material.videoType,
+              videoUrl: material.videoUrl.trim(),
+              content: material.content,
+              videoFileName: material.videoFile ? material.videoFile.name : null
+            })),
+            quiz: topic.quiz || { questions: [] },
+            drill: topic.drill || { questions: [] }
+          }))
         }))
-      }))
-    };
-    
-    console.log('=== SENDING JSON DATA ===');
-    console.log('Course Data:', JSON.stringify(courseData, null, 2));
-    
-    const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-    
-    const response = await axios.post(`${API_BASE_URL}/courses/detail`, courseData, {
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
+      };
+      
+      console.log('=== SENDING JSON DATA ===');
+      console.log('Course Data:', JSON.stringify(courseData, null, 2));
+      
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const API_BASE_URL = getApiBaseUrl();
+      
+      const response = await axios.post(`${API_BASE_URL}/courses/detail`, courseData, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-    alert('Course berhasil disimpan!');
-    console.log('Course saved:', response.data);
-    resetForm();
-  } catch (error: any) {
-    console.error('=== ERROR SAVING COURSE ===');
-    console.error('Error:', error);
-    console.error('Response:', error.response?.data);
-    
-    const errorMessage = error.response?.data?.message || error.message || 'Gagal menyimpan course';
-    alert(`Gagal menyimpan course: ${errorMessage}`);
-  } finally {
-    setIsSaving(false);
-  }
+      alert('Course berhasil disimpan!');
+      console.log('Course saved:', response.data);
+      resetForm();
+    } catch (error: any) {
+      console.error('=== ERROR SAVING COURSE ===');
+      console.error('Error:', error);
+      console.error('Response:', error.response?.data);
+      
+      const errorMessage = error.response?.data?.message || error.message || 'Gagal menyimpan course';
+      alert(`Gagal menyimpan course: ${errorMessage}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const resetForm = (): void => {
@@ -507,6 +484,18 @@ if (!validateCourseData()) {
     setQuestionSearchResults({});
     setQuestionSearchLoading({});
   };
+
+  // Don't render anything until mounted on client
+  if (!mounted) {
+    return (
+      <div className="tw-flex tw-min-h-screen tw-bg-gray-50 tw-items-center tw-justify-center">
+        <div className="tw-text-center">
+          <div className="tw-animate-spin tw-rounded-full tw-h-32 tw-w-32 tw-border-b-2 tw-border-purple-600 tw-mx-auto"></div>
+          <p className="tw-text-purple-600 tw-mt-4 tw-text-lg">Memuat halaman...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="tw-flex tw-min-h-screen tw-bg-gray-50">
@@ -563,6 +552,7 @@ if (!validateCourseData()) {
           />
         ) : (
           <div className="tw-space-y-6">
+            {/* Course Information Section */}
             <div className="tw-border tw-border-purple-300 tw-rounded-lg tw-shadow-lg">
               <div className="tw-bg-purple-600 tw-text-white tw-p-4 tw-rounded-t-lg">
                 <h3 className="tw-text-xl tw-font-semibold tw-mb-0">Informasi Course</h3>
@@ -641,6 +631,7 @@ if (!validateCourseData()) {
               </div>
             </div>
 
+            {/* Sections */}
             <div className="tw-border tw-border-purple-300 tw-rounded-lg tw-shadow-lg">
               <div className="tw-bg-purple-600 tw-text-white tw-p-4 tw-rounded-t-lg tw-flex tw-justify-between tw-items-center">
                 <h3 className="tw-text-xl tw-font-semibold tw-mb-0">Section Course</h3>
@@ -670,7 +661,7 @@ if (!validateCourseData()) {
                               Section {sectionIndex + 1}: {section.title || 'Section Baru'}
                             </span>
                             <span className="tw-bg-purple-600 tw-text-white tw-px-2 tw-py-1 tw-rounded tw-text-xs">
-                              {section.topics.length} Topik
+                              {(section.topics || []).length} Topik
                             </span>
                           </div>
                           {expandedSections.has(section.id) ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -738,7 +729,7 @@ if (!validateCourseData()) {
                                     Tambah Topik
                                   </button>
                                 </div>
-                                {section.topics.map((topic, topicIndex) => (
+                                {(section.topics || []).map((topic, topicIndex) => (
                                   <div key={topic.id} id={`topic-${topic.id}`} className="tw-border tw-border-purple-200 tw-rounded-lg tw-bg-white">
                                     <div 
                                       className="tw-p-4 tw-cursor-pointer tw-flex tw-justify-between tw-items-center hover:tw-bg-purple-50 tw-transition-colors"
@@ -749,7 +740,7 @@ if (!validateCourseData()) {
                                           Topik {topicIndex + 1}: {topic.title || 'Topik Baru'}
                                         </span>
                                         <span className="tw-bg-gray-500 tw-text-white tw-px-2 tw-py-1 tw-rounded tw-text-xs">
-                                          {topic.materials.length} Materi
+                                          {(topic.materials || []).length} Materi
                                         </span>
                                       </div>
                                       {expandedTopics.has(topic.id) ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -793,7 +784,7 @@ if (!validateCourseData()) {
                                               </button>
                                             </div>
 
-                                            {topic.materials.map((material, materialIndex) => (
+                                            {(topic.materials || []).map((material, materialIndex) => (
                                               <div key={material.id} id={`material-${material.id}`} className="tw-mb-3 tw-border tw-border-purple-200 tw-rounded-lg">
                                                 <div 
                                                   className="tw-bg-white tw-p-3 tw-flex tw-justify-between tw-items-center tw-rounded-t-lg tw-cursor-pointer hover:tw-bg-purple-50 tw-transition-colors"
@@ -937,7 +928,7 @@ if (!validateCourseData()) {
                                           <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4 tw-border-t tw-border-purple-200 tw-pt-4">
                                             <div className="tw-border tw-border-orange-300 tw-rounded-lg">
                                               <div className="tw-bg-orange-500 tw-text-white tw-p-3 tw-rounded-t-lg">
-                                                <h6 className="tw-mb-0 tw-font-medium">Quiz ({(topic.quiz.questions || []).length} soal)</h6>
+                                                <h6 className="tw-mb-0 tw-font-medium">Quiz ({((topic.quiz && topic.quiz.questions) || []).length} soal)</h6>
                                               </div>
                                               <div className="tw-bg-orange-50 tw-p-3 tw-space-y-3">
                                                 <div>
@@ -965,13 +956,13 @@ if (!validateCourseData()) {
                                                         key={question.id} 
                                                         className="tw-p-2 tw-border-b tw-border-orange-100 tw-flex tw-justify-between tw-items-center tw-bg-white hover:tw-bg-orange-50 tw-cursor-pointer"
                                                         onClick={() => {
-                                                          if (!(topic.quiz.questions || []).find(q => q.id === question.id)) {
+                                                          if (!((topic.quiz && topic.quiz.questions) || []).find(q => q.id === question.id)) {
                                                             addQuestionToTopic(section.id, topic.id, 'quiz', question.id, question.code);
                                                           }
                                                         }}
                                                       >
                                                         <span className="tw-text-sm tw-text-orange-800">{question.id} - {question.code}</span>
-                                                        {(topic.quiz.questions || []).find(q => q.id === question.id) && (
+                                                        {((topic.quiz && topic.quiz.questions) || []).find(q => q.id === question.id) && (
                                                           <span className="tw-text-xs tw-bg-orange-200 tw-text-orange-800 tw-px-2 tw-py-1 tw-rounded">Sudah dipilih</span>
                                                         )}
                                                       </div>
@@ -987,11 +978,11 @@ if (!validateCourseData()) {
                                                   <label className="tw-block tw-text-sm tw-text-orange-700 tw-mb-2">
                                                     Soal yang Dipilih
                                                   </label>
-                                                  {(topic.quiz.questions || []).length === 0 ? (
+                                                  {((topic.quiz && topic.quiz.questions) || []).length === 0 ? (
                                                     <div className="tw-text-sm tw-text-gray-500 tw-italic">Belum ada soal dipilih</div>
                                                   ) : (
                                                     <div className="tw-space-y-1">
-                                                      {(topic.quiz.questions || []).map(question => (
+                                                      {((topic.quiz && topic.quiz.questions) || []).map(question => (
                                                         <div key={question.id} className="tw-flex tw-justify-between tw-items-center tw-bg-white tw-p-2 tw-rounded tw-border tw-border-orange-200">
                                                           <span className="tw-text-sm tw-text-orange-800">{question.id} - {question.code}</span>
                                                           <button
@@ -1010,7 +1001,7 @@ if (!validateCourseData()) {
 
                                             <div className="tw-border tw-border-green-300 tw-rounded-lg">
                                               <div className="tw-bg-green-500 tw-text-white tw-p-3 tw-rounded-t-lg">
-                                                <h6 className="tw-mb-0 tw-font-medium">Drill ({(topic.drill.questions || []).length} soal)</h6>
+                                                <h6 className="tw-mb-0 tw-font-medium">Drill ({((topic.drill && topic.drill.questions) || []).length} soal)</h6>
                                               </div>
                                               <div className="tw-bg-green-50 tw-p-3 tw-space-y-3">
                                                 <div>
@@ -1038,13 +1029,13 @@ if (!validateCourseData()) {
                                                         key={question.id} 
                                                         className="tw-p-2 tw-border-b tw-border-green-100 tw-flex tw-justify-between tw-items-center tw-bg-white hover:tw-bg-green-50 tw-cursor-pointer"
                                                         onClick={() => {
-                                                          if (!(topic.drill.questions || []).find(q => q.id === question.id)) {
+                                                          if (!((topic.drill && topic.drill.questions) || []).find(q => q.id === question.id)) {
                                                             addQuestionToTopic(section.id, topic.id, 'drill', question.id, question.code);
                                                           }
                                                         }}
                                                       >
                                                         <span className="tw-text-sm tw-text-green-800">{question.id} - {question.code}</span>
-                                                        {(topic.drill.questions || []).find(q => q.id === question.id) && (
+                                                        {((topic.drill && topic.drill.questions) || []).find(q => q.id === question.id) && (
                                                           <span className="tw-text-xs tw-bg-green-200 tw-text-green-800 tw-px-2 tw-py-1 tw-rounded">Sudah dipilih</span>
                                                         )}
                                                       </div>
@@ -1060,11 +1051,11 @@ if (!validateCourseData()) {
                                                   <label className="tw-block tw-text-sm tw-text-green-700 tw-mb-2">
                                                     Soal yang Dipilih
                                                   </label>
-                                                  {(topic.drill.questions || []).length === 0 ? (
+                                                  {((topic.drill && topic.drill.questions) || []).length === 0 ? (
                                                     <div className="tw-text-sm tw-text-gray-500 tw-italic">Belum ada soal dipilih</div>
                                                   ) : (
                                                     <div className="tw-space-y-1">
-                                                      {(topic.drill.questions || []).map(question => (
+                                                      {((topic.drill && topic.drill.questions) || []).map(question => (
                                                         <div key={question.id} className="tw-flex tw-justify-between tw-items-center tw-bg-white tw-p-2 tw-rounded tw-border tw-border-green-200">
                                                           <span className="tw-text-sm tw-text-green-800">{question.id} - {question.code}</span>
                                                           <button

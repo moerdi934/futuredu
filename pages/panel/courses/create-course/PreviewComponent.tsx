@@ -1,3 +1,4 @@
+// pages/panel/courses/create-course/PreviewComponent.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -79,6 +80,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
   learningPoints,
   sections,
 }) => {
+  const [mounted, setMounted] = useState<boolean>(false);
   const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   const [selectedMaterialId, setSelectedMaterialId] = useState<number | null>(null);
@@ -90,7 +92,14 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [hoveredSectionId, setHoveredSectionId] = useState<number | null>(null);
 
+  // Ensure component only runs on client-side
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 992);
       if (window.innerWidth < 992) {
@@ -101,7 +110,11 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  }, [mounted]);
+
+  // Safe data with fallbacks
+  const safeSections = Array.isArray(sections) ? sections : [];
+  const safeLearningPoints = Array.isArray(learningPoints) ? learningPoints : [];
 
   // Format duration utility function
   const formatDuration = (minutes: number | undefined): string => {
@@ -159,11 +172,13 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
   };
 
   const calculateTopicProgress = (topic: Topic): number => {
-    const mandatoryMaterials = topic.materials.filter(m => m.isMandatory);
+    const safeMaterials = Array.isArray(topic.materials) ? topic.materials : [];
+    const mandatoryMaterials = safeMaterials.filter(m => m.isMandatory);
     const completedMandatoryMaterials = mandatoryMaterials.filter(m => completedMaterials.has(m.id));
     const isQuizCompleted = completedQuizzes.has(topic.id);
+    const safeQuizQuestions = Array.isArray(topic.quiz?.questions) ? topic.quiz.questions : [];
     
-    const totalItems = mandatoryMaterials.length + (topic.quiz.questions.length > 0 ? 1 : 0);
+    const totalItems = mandatoryMaterials.length + (safeQuizQuestions.length > 0 ? 1 : 0);
     const completedItems = completedMandatoryMaterials.length + (isQuizCompleted ? 1 : 0);
     
     return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
@@ -172,13 +187,16 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
   const calculateSectionProgress = (section: Section): number => {
     let totalItems = 0;
     let completedItems = 0;
+    const safeTopics = Array.isArray(section.topics) ? section.topics : [];
     
-    section.topics.forEach(topic => {
-      const mandatoryMaterials = topic.materials.filter(m => m.isMandatory);
+    safeTopics.forEach(topic => {
+      const safeMaterials = Array.isArray(topic.materials) ? topic.materials : [];
+      const mandatoryMaterials = safeMaterials.filter(m => m.isMandatory);
       totalItems += mandatoryMaterials.length;
       completedItems += mandatoryMaterials.filter(m => completedMaterials.has(m.id)).length;
       
-      if (topic.quiz.questions.length > 0) {
+      const safeQuizQuestions = Array.isArray(topic.quiz?.questions) ? topic.quiz.questions : [];
+      if (safeQuizQuestions.length > 0) {
         totalItems += 1;
         if (completedQuizzes.has(topic.id)) {
           completedItems += 1;
@@ -189,36 +207,41 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
     return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
   };
 
-  const selectedSection = sections.find(section => section.id === selectedSectionId);
-  const selectedTopic = selectedSection?.topics.find(topic => topic.id === selectedTopicId);
-  const selectedMaterial = selectedTopic?.materials.find(material => material.id === selectedMaterialId);
+  const selectedSection = safeSections.find(section => section.id === selectedSectionId);
+  const selectedTopic = selectedSection?.topics?.find(topic => topic.id === selectedTopicId);
+  const selectedMaterial = selectedTopic?.materials?.find(material => material.id === selectedMaterialId);
 
   // Navigation functions
   const getCurrentTopic = (): Topic | undefined => {
-    return selectedSection?.topics.find(topic => topic.id === selectedTopicId);
+    return selectedSection?.topics?.find(topic => topic.id === selectedTopicId);
   };
 
   const getCurrentMaterialIndex = (): number => {
     if (!selectedTopic || !selectedMaterialId) return -1;
-    return selectedTopic.materials.findIndex(m => m.id === selectedMaterialId);
+    const safeMaterials = Array.isArray(selectedTopic.materials) ? selectedTopic.materials : [];
+    return safeMaterials.findIndex(m => m.id === selectedMaterialId);
   };
 
   const handleNext = (): void => {
     const currentTopic = getCurrentTopic();
     if (!currentTopic) return;
 
+    const safeMaterials = Array.isArray(currentTopic.materials) ? currentTopic.materials : [];
+    const safeQuizQuestions = Array.isArray(currentTopic.quiz?.questions) ? currentTopic.quiz.questions : [];
+    const safeDrillQuestions = Array.isArray(currentTopic.drill?.questions) ? currentTopic.drill.questions : [];
+
     // Navigation within materials
     if (selectedContentType === 'material' && selectedMaterialId) {
       const materialIndex = getCurrentMaterialIndex();
-      const nextMaterial = currentTopic.materials[materialIndex + 1];
+      const nextMaterial = safeMaterials[materialIndex + 1];
       
       if (nextMaterial) {
         selectContent(currentTopic.id, 'material', nextMaterial.id);
       } else {
         // If last material, move to quiz or drill
-        if (currentTopic.quiz.questions.length > 0) {
+        if (safeQuizQuestions.length > 0) {
           selectContent(currentTopic.id, 'quiz');
-        } else if (currentTopic.drill.questions.length > 0) {
+        } else if (safeDrillQuestions.length > 0) {
           selectContent(currentTopic.id, 'drill');
         } else {
           // Return to topic list if no quiz/drill
@@ -229,7 +252,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
     // Navigation from quiz to drill
     else if (selectedContentType === 'quiz') {
       // Move to drill if available
-      if (currentTopic.drill.questions.length > 0) {
+      if (safeDrillQuestions.length > 0) {
         selectContent(currentTopic.id, 'drill');
       } else {
         // If no drill, return to topic list
@@ -246,10 +269,13 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
     const currentTopic = getCurrentTopic();
     if (!currentTopic) return;
 
+    const safeMaterials = Array.isArray(currentTopic.materials) ? currentTopic.materials : [];
+    const safeQuizQuestions = Array.isArray(currentTopic.quiz?.questions) ? currentTopic.quiz.questions : [];
+
     // Navigation within materials
     if (selectedContentType === 'material' && selectedMaterialId) {
       const materialIndex = getCurrentMaterialIndex();
-      const prevMaterial = currentTopic.materials[materialIndex - 1];
+      const prevMaterial = safeMaterials[materialIndex - 1];
       
       if (prevMaterial) {
         selectContent(currentTopic.id, 'material', prevMaterial.id);
@@ -257,17 +283,17 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
     }
     // Navigation from quiz to last material
     else if (selectedContentType === 'quiz') {
-      const lastMaterial = currentTopic.materials[currentTopic.materials.length - 1];
+      const lastMaterial = safeMaterials[safeMaterials.length - 1];
       if (lastMaterial) {
         selectContent(currentTopic.id, 'material', lastMaterial.id);
       }
     }
     // Navigation from drill to quiz or last material
     else if (selectedContentType === 'drill') {
-      if (currentTopic.quiz.questions.length > 0) {
+      if (safeQuizQuestions.length > 0) {
         selectContent(currentTopic.id, 'quiz');
       } else {
-        const lastMaterial = currentTopic.materials[currentTopic.materials.length - 1];
+        const lastMaterial = safeMaterials[safeMaterials.length - 1];
         if (lastMaterial) {
           selectContent(currentTopic.id, 'material', lastMaterial.id);
         }
@@ -284,17 +310,21 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
     const currentTopic = getCurrentTopic();
     if (!currentTopic) return true;
     
+    const safeMaterials = Array.isArray(currentTopic.materials) ? currentTopic.materials : [];
+    const safeQuizQuestions = Array.isArray(currentTopic.quiz?.questions) ? currentTopic.quiz.questions : [];
+    const safeDrillQuestions = Array.isArray(currentTopic.drill?.questions) ? currentTopic.drill.questions : [];
+    
     if (selectedContentType === 'material') {
       const materialIndex = getCurrentMaterialIndex();
-      const isLastMaterial = materialIndex === currentTopic.materials.length - 1;
+      const isLastMaterial = materialIndex === safeMaterials.length - 1;
       
       // If last material and no quiz/drill
       return isLastMaterial && 
-        currentTopic.quiz.questions.length === 0 && 
-        currentTopic.drill.questions.length === 0;
+        safeQuizQuestions.length === 0 && 
+        safeDrillQuestions.length === 0;
     } else if (selectedContentType === 'quiz') {
       // If quiz is last and no drill
-      return currentTopic.drill.questions.length === 0;
+      return safeDrillQuestions.length === 0;
     }
     // Drill is always last content
     return true;
@@ -306,6 +336,18 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
     if (progress >= 40) return 'warning';
     return 'danger';
   };
+
+  // Don't render anything until mounted on client
+  if (!mounted) {
+    return (
+      <div className="tw-min-h-screen tw-bg-gray-50 tw-flex tw-items-center tw-justify-center">
+        <div className="tw-text-center">
+          <div className="tw-animate-spin tw-rounded-full tw-h-32 tw-w-32 tw-border-b-2 tw-border-purple-600 tw-mx-auto"></div>
+          <p className="tw-text-purple-600 tw-mt-4 tw-text-lg">Memuat preview...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="tw-bg-gradient-to-br tw-from-purple-100 tw-via-pink-50 tw-to-indigo-100">
@@ -375,7 +417,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                   {courseDescription || 'Deskripsi course yang menarik dan menginspirasi akan muncul di sini untuk memotivasi belajar!'}
                 </p>
                 
-                {learningPoints && learningPoints.length > 0 && (
+                {safeLearningPoints && safeLearningPoints.length > 0 && (
                   <div className="tw-mt-6 tw-bg-gradient-to-r tw-from-purple-50 tw-to-pink-50 tw-p-4 md:tw-p-6 tw-rounded-xl tw-border tw-border-purple-200">
                     <h3 className="tw-text-lg md:tw-text-xl tw-font-bold tw-text-purple-700 tw-mb-4 tw-flex tw-items-center tw-justify-center tw-gap-2">
                       <Star className="tw-text-yellow-500" size={24} />
@@ -383,7 +425,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                       <Star className="tw-text-yellow-500" size={24} />
                     </h3>
                     <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-3 tw-max-w-4xl tw-mx-auto">
-                      {learningPoints.map((point, index) => (
+                      {safeLearningPoints.map((point, index) => (
                         <div key={index} className="tw-flex tw-items-start tw-gap-3 tw-bg-white tw-p-3 tw-rounded-lg tw-shadow-sm tw-border tw-border-purple-100 tw-hover:tw-shadow-md tw-transition-all tw-duration-200">
                           <div className="tw-bg-gradient-to-r tw-from-purple-400 tw-to-pink-400 tw-text-white tw-rounded-full tw-w-6 tw-h-6 tw-flex tw-items-center tw-justify-center tw-flex-shrink-0 tw-text-sm tw-font-bold">
                             {index + 1}
@@ -449,8 +491,10 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                 </Card.Header>
                 <Card.Body className="tw-p-6">
                   <div className="tw-space-y-4">
-                    {sections.map((section, index) => {
+                    {safeSections.map((section, index) => {
                       const progress = calculateSectionProgress(section);
+                      const safeTopics = Array.isArray(section.topics) ? section.topics : [];
+                      
                       return (
                         <div
                           key={section.id}
@@ -489,7 +533,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                                 )}
                                 <div className="tw-flex tw-items-center tw-gap-2 tw-text-indigo-600">
                                   <BookOpen size={16} />
-                                  <span className="tw-text-sm tw-font-medium">{section.topics.length} topik seru</span>
+                                  <span className="tw-text-sm tw-font-medium">{safeTopics.length} topik seru</span>
                                 </div>
                               </div>
                               
@@ -512,7 +556,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                             <div className="tw-mt-4 tw-border-t tw-border-purple-200 tw-pt-4">
                               <h4 className="tw-text-sm tw-font-bold tw-text-purple-700 tw-mb-3">Topik Pembelajaran:</h4>
                               <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-2">
-                                {section.topics.slice(0, 3).map((topic, topicIndex) => (
+                                {safeTopics.slice(0, 3).map((topic, topicIndex) => (
                                   <div key={topic.id} className="tw-flex tw-items-center tw-gap-2 tw-bg-purple-50 tw-p-2 tw-rounded-lg">
                                     <div className="tw-bg-purple-200 tw-text-purple-800 tw-rounded-full tw-w-6 tw-h-6 tw-flex tw-items-center tw-justify-center tw-text-xs">
                                       {topicIndex + 1}
@@ -522,10 +566,10 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                                     </span>
                                   </div>
                                 ))}
-                                {section.topics.length > 3 && (
+                                {safeTopics.length > 3 && (
                                   <div className="tw-bg-gradient-to-r tw-from-purple-100 tw-to-pink-100 tw-p-2 tw-rounded-lg tw-text-center">
                                     <span className="tw-text-xs tw-text-purple-600">
-                                      +{section.topics.length - 3} topik lainnya
+                                      +{safeTopics.length - 3} topik lainnya
                                     </span>
                                   </div>
                                 )}
@@ -600,7 +644,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                   </Card.Header>
                   {!sidebarCollapsed && (
                     <Card.Body className="tw-p-0 tw-max-h-96 tw-overflow-y-auto tw-scrollbar-thin tw-scrollbar-thumb-purple-300 tw-scrollbar-track-purple-100">
-                      {selectedSection?.topics.map((topic, topicIndex) => {
+                      {selectedSection && Array.isArray(selectedSection.topics) && selectedSection.topics.map((topic, topicIndex) => {
                         const topicProgress = calculateTopicProgress(topic);
                         return (
                           <div key={topic.id} className="tw-border-b tw-border-purple-100 last:tw-border-b-0">
@@ -641,7 +685,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                             </div>
                             {expandedTopics.has(topic.id) && (
                               <div className="tw-bg-gradient-to-r tw-from-purple-25 tw-to-pink-25 tw-border-t tw-border-purple-100">
-                                {topic.materials.map((material, materialIndex) => (
+                                {Array.isArray(topic.materials) && topic.materials.map((material, materialIndex) => (
                                   <div
                                     key={material.id}
                                     className={`tw-px-6 tw-py-3 tw-cursor-pointer tw-border-b tw-border-purple-50 tw-hover:tw-bg-purple-100 tw-transition-colors ${
@@ -760,13 +804,14 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                       </Card.Header>
                       <Card.Body className="tw-p-6 tw-bg-gradient-to-br tw-from-purple-50 tw-to-pink-50">
                         <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-6">
-                          {selectedSection?.topics.map((topic, topicIndex) => {
+                          {selectedSection && Array.isArray(selectedSection.topics) && selectedSection.topics.map((topic, topicIndex) => {
                             const topicProgress = calculateTopicProgress(topic);
+                            const safeMaterials = Array.isArray(topic.materials) ? topic.materials : [];
                             return (
                               <div
                                 key={topic.id}
                                 className="tw-group tw-cursor-pointer tw-bg-white tw-border-2 tw-border-purple-200 tw-rounded-xl tw-p-6 tw-hover:tw-shadow-xl tw-hover:tw-border-purple-400 tw-transition-all tw-duration-300 tw-hover:tw-scale-105 tw-hover:tw-bg-gradient-to-br tw-hover:tw-from-purple-50 tw-hover:tw-to-pink-50"
-                                onClick={() => selectContent(topic.id, 'material', topic.materials[0]?.id)}
+                                onClick={() => selectContent(topic.id, 'material', safeMaterials[0]?.id)}
                               >
                                 <div className="tw-flex tw-items-start tw-justify-between tw-mb-4">
                                   <div className="tw-flex tw-items-center tw-gap-3">
@@ -800,10 +845,10 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                                   <div className="tw-flex tw-items-center tw-gap-2 tw-text-sm">
                                     <BookOpen className="tw-text-purple-600" size={16} />
                                     <span className="tw-text-purple-700 tw-font-medium">
-                                      {topic.materials.length} Materi Pembelajaran
+                                      {safeMaterials.length} Materi Pembelajaran
                                     </span>
                                   </div>
-                                  {topic.quiz.questions.length > 0 && (
+                                  {Array.isArray(topic.quiz?.questions) && topic.quiz.questions.length > 0 && (
                                     <div className="tw-flex tw-items-center tw-gap-2 tw-text-sm">
                                       <FileText className="tw-text-pink-600" size={16} />
                                       <span className="tw-text-pink-700 tw-font-medium">
@@ -819,7 +864,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                                   </div>
                                 </div>
 
-                                {topic.materials.some(m => m.isMandatory) && (
+                                {safeMaterials.some(m => m.isMandatory) && (
                                   <div className="tw-mt-4 tw-pt-3 tw-border-t tw-border-purple-200">
                                     <Badge bg="danger" className="tw-text-xs tw-animate-pulse">
                                       ⭐ Ada Materi Wajib
@@ -847,6 +892,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                     </Card>
                   ) : (
                     <div className="tw-space-y-6">
+                      {/* Material Content */}
                       {selectedContentType === 'material' && selectedMaterial && (
                         <Card className="tw-border-0 tw-shadow-2xl tw-bg-white tw-rounded-2xl tw-overflow-hidden">
                           <Card.Header className="tw-bg-gradient-to-r tw-from-purple-500 tw-via-purple-600 tw-to-indigo-600 tw-text-white tw-p-6 tw-relative tw-overflow-hidden">
@@ -991,6 +1037,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                         </Card>
                       )}
 
+                      {/* Quiz Content */}
                       {selectedContentType === 'quiz' && selectedTopic && (
                         <Card className="tw-border-0 tw-shadow-2xl tw-bg-white tw-rounded-2xl tw-overflow-hidden">
                           <Card.Header className="tw-bg-gradient-to-r tw-from-pink-500 tw-via-purple-600 tw-to-indigo-600 tw-text-white tw-p-6 tw-relative tw-overflow-hidden">
@@ -1002,11 +1049,11 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                                 </div>
                                 <div>
                                   <h3 className="tw-text-lg md:tw-text-xl tw-font-bold tw-mb-1">
-                                    Quiz: {selectedTopic.quiz.title || selectedTopic.title} 🧠
+                                    Quiz: {selectedTopic.quiz?.title || selectedTopic.title} 🧠
                                   </h3>
                                   <div className="tw-flex tw-items-center tw-gap-2">
                                     <Badge bg="light" text="dark" className="tw-text-xs">
-                                      {selectedTopic.quiz.questions.length} Soal Seru
+                                      {Array.isArray(selectedTopic.quiz?.questions) ? selectedTopic.quiz.questions.length : 0} Soal Seru
                                     </Badge>
                                   </div>
                                 </div>
@@ -1031,7 +1078,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                             </div>
                           </Card.Header>
                           <Card.Body className="tw-p-6 tw-bg-gradient-to-br tw-from-pink-25 tw-to-purple-25">
-                            {selectedTopic.quiz.questions.length > 0 ? (
+                            {Array.isArray(selectedTopic.quiz?.questions) && selectedTopic.quiz.questions.length > 0 ? (
                               <div className="tw-space-y-4">
                                 <div className="tw-bg-white tw-p-6 tw-rounded-xl tw-shadow-lg tw-border tw-border-pink-200">
                                   <div className="tw-text-center tw-mb-6">
@@ -1111,13 +1158,13 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                                 Sebelumnya
                               </Button>
                               
-<Button
+                              <Button
                                 variant="primary"
                                 onClick={handleNext}
                                 disabled={!completedQuizzes.has(selectedTopic.id)}
                                 className="tw-flex tw-items-center tw-gap-2 tw-bg-gradient-to-r tw-from-pink-600 tw-to-purple-600 tw-border-0"
                               >
-                                {selectedTopic.drill.questions.length > 0 ? "Lanjut ke Drill" : "Selesai"}
+                                {Array.isArray(selectedTopic.drill?.questions) && selectedTopic.drill.questions.length > 0 ? "Lanjut ke Drill" : "Selesai"}
                                 <ChevronRight size={16} />
                               </Button>
                             </div>
@@ -1125,6 +1172,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                         </Card>
                       )}
 
+                      {/* Drill Content */}
                       {selectedContentType === 'drill' && selectedTopic && (
                         <Card className="tw-border-0 tw-shadow-2xl tw-bg-white tw-rounded-2xl tw-overflow-hidden">
                           <Card.Header className="tw-bg-gradient-to-r tw-from-indigo-500 tw-via-purple-600 tw-to-pink-600 tw-text-white tw-p-6 tw-relative tw-overflow-hidden">
@@ -1135,7 +1183,7 @@ const PreviewComponent: React.FC<PreviewComponentProps> = ({
                               </div>
                               <div>
                                 <h3 className="tw-text-lg md:tw-text-xl tw-font-bold tw-mb-1">
-                                  Latihan Drill: {selectedTopic.drill.title || selectedTopic.title} 💪
+                                  Latihan Drill: {selectedTopic.drill?.title || selectedTopic.title} 💪
                                 </h3>
                                 <Badge bg="light" text="dark" className="tw-text-xs">
                                   Latihan Interaktif
