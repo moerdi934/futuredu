@@ -10,6 +10,7 @@ export interface ExamSession {
   start_time?: Date;
   end_time?: Date;
   answers: any;
+  question_elapsed_times?: any; // Added this field
   is_submitted: boolean;
   last_save: Date;
   is_auto_move?: boolean;
@@ -24,10 +25,12 @@ export interface CreateExamSessionData {
   exam_id: string;
   user_id: string;
   answers: any;
+  question_elapsed_times?: any; // Added this field
 }
 
 export interface UpdateExamSessionData {
   answers: any;
+  question_elapsed_times?: any; // Added this field
 }
 
 export interface CreateExamSessionsData {
@@ -37,15 +40,21 @@ export interface CreateExamSessionsData {
 }
 
 // Create a new exam session
-export const create = async (examScheduleId: number, examId: string, userId: string, answers: any): Promise<ExamSession> => {
+export const create = async (
+  examScheduleId: number, 
+  examId: string, 
+  userId: string, 
+  answers: any, 
+  questionElapsedTimes: any = {}
+): Promise<ExamSession> => {
   const query = `
-    INSERT INTO "tExamSession" (exam_schedule_id, exam_id, user_id, answers, last_save)
-    VALUES ($1, $2, $3, $4, NOW())
+    INSERT INTO "tExamSession" (exam_schedule_id, exam_id, user_id, answers, question_elapsed_times, last_save)
+    VALUES ($1, $2, $3, $4, $5, NOW())
     RETURNING *
   `;
   
   try {
-    const result = await pool.query(query, [examScheduleId, examId, userId, answers]);
+    const result = await pool.query(query, [examScheduleId, examId, userId, answers, JSON.stringify(questionElapsedTimes)]);
     return result.rows[0];
   } catch (error) {
     console.error('Error creating exam session:', error);
@@ -108,8 +117,8 @@ export const createExamSessions = async (userId: string, examScheduleId: number,
       // Insert session
       const sessionResult = await client.query(
         `INSERT INTO "tExamSession" 
-         (exam_schedule_id, exam_id, user_id, start_time, end_time, answers, is_submitted, last_save, is_auto_move, minute_exam)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         (exam_schedule_id, exam_id, user_id, start_time, end_time, answers, question_elapsed_times, is_submitted, last_save, is_auto_move, minute_exam)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
          RETURNING *`,
         [
           examScheduleId,
@@ -118,6 +127,7 @@ export const createExamSessions = async (userId: string, examScheduleId: number,
           sessionStartTime,
           sessionEndTime,
           JSON.stringify({}), // Empty answers object
+          JSON.stringify({}), // Empty question_elapsed_times object
           false, // Not submitted
           new Date(), // Current time for last_save
           schedule.is_auto_move,
@@ -179,8 +189,15 @@ export const updateSessionTimes = async (sessionId: number, startTime: Date, end
   }
 };
 
-export const update = async (sessionId: number, answers: any): Promise<ExamSession> => {
-  const query = `
+export const update = async (sessionId: number, answers: any, questionElapsedTimes?: any): Promise<ExamSession> => {
+  // If questionElapsedTimes is provided, update both answers and question_elapsed_times
+  // Otherwise, only update answers
+  const query = questionElapsedTimes !== undefined ? `
+    UPDATE "tExamSession"
+    SET answers = $1, question_elapsed_times = $2, last_save = NOW(), updated_at = NOW()
+    WHERE id = $3
+    RETURNING *
+  ` : `
     UPDATE "tExamSession"
     SET answers = $1, last_save = NOW(), updated_at = NOW()
     WHERE id = $2
@@ -188,7 +205,11 @@ export const update = async (sessionId: number, answers: any): Promise<ExamSessi
   `;
   
   try {
-    const result = await pool.query(query, [answers, sessionId]);
+    const params = questionElapsedTimes !== undefined 
+      ? [answers, JSON.stringify(questionElapsedTimes), sessionId]
+      : [answers, sessionId];
+    
+    const result = await pool.query(query, params);
     return result.rows[0];
   } catch (error) {
     console.error('Error updating exam session:', error);
@@ -197,8 +218,13 @@ export const update = async (sessionId: number, answers: any): Promise<ExamSessi
 };
 
 // Submit an exam session (mark as completed)
-export const submit = async (sessionId: number, answers: any): Promise<ExamSession> => {
-  const query = `
+export const submit = async (sessionId: number, answers: any, questionElapsedTimes?: any): Promise<ExamSession> => {
+  const query = questionElapsedTimes !== undefined ? `
+    UPDATE "tExamSession"
+    SET answers = $1, question_elapsed_times = $2, is_submitted = TRUE, last_save = NOW(), updated_at = NOW()
+    WHERE id = $3
+    RETURNING *
+  ` : `
     UPDATE "tExamSession"
     SET answers = $1, is_submitted = TRUE, last_save = NOW(), updated_at = NOW()
     WHERE id = $2
@@ -206,7 +232,11 @@ export const submit = async (sessionId: number, answers: any): Promise<ExamSessi
   `;
   
   try {
-    const result = await pool.query(query, [answers, sessionId]);
+    const params = questionElapsedTimes !== undefined 
+      ? [answers, JSON.stringify(questionElapsedTimes), sessionId]
+      : [answers, sessionId];
+    
+    const result = await pool.query(query, params);
     return result.rows[0];
   } catch (error) {
     console.error('Error submitting exam session:', error);

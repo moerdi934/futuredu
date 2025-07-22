@@ -13,6 +13,7 @@ export interface ExamSession {
   exam_id: number;
   user_id: number;
   answers: string | object;
+  question_elapsed_times?: string | object; // Added this field
 }
 
 export interface Question {
@@ -81,7 +82,7 @@ export const getExamScheduleById = async (scheduleId: number): Promise<ExamSched
 };
 
 /**
- * Get exam sessions by schedule ID and user ID
+ * Get exam sessions by schedule ID and user ID - Updated to include question_elapsed_times
  */
 export const getExamSessionsByScheduleAndUser = async (
   scheduleId: number, 
@@ -98,7 +99,7 @@ export const getExamSessionsByScheduleAndUser = async (
         AND ts.user_id = $2 
         AND ts.is_submitted = true
     )
-    SELECT id, exam_id, user_id, answers
+    SELECT id, exam_id, user_id, answers, question_elapsed_times
     FROM RankedSessions
     WHERE rn = 1
   `;
@@ -155,7 +156,7 @@ export const formatAnswerForStorage = (userAnswer: any, questionType: string): s
 };
 
 /**
- * Save a user's answer to a question
+ * Save a user's answer to a question - Updated to handle elapsed_time
  */
 export const saveUserAnswer = async (answerData: {
   exam_id: number;
@@ -164,30 +165,59 @@ export const saveUserAnswer = async (answerData: {
   user_id: number;
   is_correct: boolean;
   question_type: string;
-  elapsed_time?: number;
+  elapsed_time?: number | null;
 }): Promise<UserAnswer> => {
   const { exam_id, question_id, user_answer, user_id, is_correct, question_type, elapsed_time } = answerData;
   
   try {
     const formattedUserAnswer = formatAnswerForStorage(user_answer, question_type);
     
-    const insertQuery = `
-      INSERT INTO user_answers
-        (exam_id, question_id, user_answer, user_id, is_correct, elapsed_time)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING *
+    // Check if answer already exists for this user, exam, and question
+    const existingQuery = `
+      SELECT id FROM user_answers 
+      WHERE user_id = $1 AND exam_id = $2 AND question_id = $3
     `;
+    const existingResult = await pool.query(existingQuery, [user_id, exam_id, question_id]);
     
-    const insertResult = await pool.query(insertQuery, [
-      exam_id,
-      question_id,
-      formattedUserAnswer,
-      user_id,
-      is_correct,
-      elapsed_time || null
-    ]);
-    
-    return insertResult.rows[0];
+    if (existingResult.rows.length > 0) {
+      // Update existing answer
+      const updateQuery = `
+        UPDATE user_answers
+        SET user_answer = $1, is_correct = $2, elapsed_time = $3, answer_time = NOW()
+        WHERE user_id = $4 AND exam_id = $5 AND question_id = $6
+        RETURNING *
+      `;
+      
+      const updateResult = await pool.query(updateQuery, [
+        formattedUserAnswer,
+        is_correct,
+        elapsed_time,
+        user_id,
+        exam_id,
+        question_id
+      ]);
+      
+      return updateResult.rows[0];
+    } else {
+      // Insert new answer
+      const insertQuery = `
+        INSERT INTO user_answers
+          (exam_id, question_id, user_answer, user_id, is_correct, elapsed_time)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `;
+      
+      const insertResult = await pool.query(insertQuery, [
+        exam_id,
+        question_id,
+        formattedUserAnswer,
+        user_id,
+        is_correct,
+        elapsed_time
+      ]);
+      
+      return insertResult.rows[0];
+    }
   } catch (error) {
     console.error('Error saving user answer:', error);
     console.error('Answer data:', JSON.stringify(answerData));
@@ -205,7 +235,7 @@ export const countTotalQuestions = async (examId: number): Promise<number> => {
     WHERE id = $1
   `;
   const result = await pool.query(query, [examId]);
-  return parseInt(result.rows[0].total);
+  return parseInt(result.rows[0].total) || 0;
 };
 
 /**
@@ -213,12 +243,12 @@ export const countTotalQuestions = async (examId: number): Promise<number> => {
  */
 export const countTotalQuestionLevel = async (examId: number): Promise<number> => {
   const query = `
-    SELECT (level_1_question_qty+level_2_question_qty+level_3_question_qty+level_4_question_qty+level_5_question_qty) as total
+    SELECT COALESCE((level_1_question_qty+level_2_question_qty+level_3_question_qty+level_4_question_qty+level_5_question_qty), 0) as total
     FROM exams
     WHERE id = $1
   `;
   const result = await pool.query(query, [examId]);
-  return parseInt(result.rows[0].total);
+  return parseInt(result.rows[0].total) || 0;
 };
 
 /**
@@ -234,23 +264,57 @@ export const saveUserExamScore = async (scoreData: {
 }): Promise<UserExamScore> => {
   const { user_id, exam_id, score, total_questions, total_correct, exam_schedule_id } = scoreData;
   
-  const insertQuery = ` 
-    INSERT INTO user_exam_scores
-      (user_id, exam_id, score, total_questions, total_correct, exam_schedule_id)
-    VALUES ($1, $2, $3, $4, $5, $6)
-    RETURNING *
-  `;
-  
-  const insertResult = await pool.query(insertQuery, [
-    user_id,
-    exam_id,
-    score,
-    total_questions,
-    total_correct,
-    exam_schedule_id || null
-  ]);
-  
-  return insertResult.rows[0];
+  try {
+    // Check if score already exists for this user and exam
+    const existingQuery = `
+      SELECT id FROM user_exam_scores 
+      WHERE user_id = $1 AND exam_id = $2 AND (exam_schedule_id = $3 OR (exam_schedule_id IS NULL AND $3 IS NULL))
+    `;
+    const existingResult = await pool.query(existingQuery, [user_id, exam_id, exam_schedule_id || null]);
+    
+    if (existingResult.rows.length > 0) {
+      // Update existing score
+      const updateQuery = `
+        UPDATE user_exam_scores
+        SET score = $1, total_questions = $2, total_correct = $3
+        WHERE user_id = $4 AND exam_id = $5 AND (exam_schedule_id = $6 OR (exam_schedule_id IS NULL AND $6 IS NULL))
+        RETURNING *
+      `;
+      
+      const updateResult = await pool.query(updateQuery, [
+        score,
+        total_questions,
+        total_correct,
+        user_id,
+        exam_id,
+        exam_schedule_id || null
+      ]);
+      
+      return updateResult.rows[0];
+    } else {
+      // Insert new score
+      const insertQuery = ` 
+        INSERT INTO user_exam_scores
+          (user_id, exam_id, score, total_questions, total_correct, exam_schedule_id)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `;
+      
+      const insertResult = await pool.query(insertQuery, [
+        user_id,
+        exam_id,
+        score,
+        total_questions,
+        total_correct,
+        exam_schedule_id || null
+      ]);
+      
+      return insertResult.rows[0];
+    }
+  } catch (error) {
+    console.error('Error saving user exam score:', error);
+    throw error;
+  }
 };
 
 /**
@@ -267,13 +331,13 @@ export const getQuestionById = async (questionId: number): Promise<Question | nu
 };
 
 /**
- * Get user exam stat level
+ * Get user exam stat level - Enhanced with elapsed time analysis
  */
 export const getUserExamStatLevel = async (
   scheduleId: number, 
   userId: number
 ): Promise<UserExamStatResult> => {
-  // Query untuk mendapatkan statistik
+  // Query untuk mendapatkan statistik dengan enhanced elapsed time handling
   const statsQuery = `
     WITH unnested_exam_ids AS (
       SELECT 
@@ -288,7 +352,7 @@ export const getUserExamStatLevel = async (
         ua.question_id,
         ua.answer_time,
         ua.is_correct,
-        ua.elapsed_time,
+        COALESCE(ua.elapsed_time, 0) as elapsed_time,
         q.level
       FROM unnested_exam_ids ue
       LEFT JOIN exams e ON ue.exam_id = e.id
@@ -306,7 +370,7 @@ export const getUserExamStatLevel = async (
         la.user_id,
         COUNT(la.question_id) AS total_questions_answered,
         COUNT(CASE WHEN la.is_correct THEN 1 END) AS total_correct_answers,
-        AVG(la.elapsed_time) AS avg_elapsed_time
+        ROUND(AVG(CASE WHEN la.elapsed_time > 0 THEN la.elapsed_time END), 2) AS avg_elapsed_time
       FROM unnested_exam_ids ue
       JOIN latest_answers la ON ue.exam_id = la.exam_id
       GROUP BY ue.schedule_id, la.user_id
@@ -318,7 +382,7 @@ export const getUserExamStatLevel = async (
         la.level,
         COUNT(la.question_id) AS questions_per_level,
         COUNT(CASE WHEN la.is_correct THEN 1 END) AS correct_per_level,
-        AVG(la.elapsed_time) AS avg_time_per_level
+        ROUND(AVG(CASE WHEN la.elapsed_time > 0 THEN la.elapsed_time END), 2) AS avg_time_per_level
       FROM unnested_exam_ids ue
       JOIN latest_answers la ON ue.exam_id = la.exam_id
       WHERE la.level IS NOT NULL
@@ -329,18 +393,18 @@ export const getUserExamStatLevel = async (
       et.user_id,
       et.total_questions_answered,
       et.total_correct_answers,
-      et.avg_elapsed_time,
+      COALESCE(et.avg_elapsed_time, 0) as avg_elapsed_time,
       ls.level,
-      ls.questions_per_level,
-      ls.correct_per_level,
-      ls.avg_time_per_level
+      COALESCE(ls.questions_per_level, 0) as questions_per_level,
+      COALESCE(ls.correct_per_level, 0) as correct_per_level,
+      COALESCE(ls.avg_time_per_level, 0) as avg_time_per_level
     FROM exam_totals et
     LEFT JOIN level_stats ls ON et.schedule_id = ls.schedule_id 
       AND et.user_id = ls.user_id
     ORDER BY et.schedule_id, et.user_id, ls.level;
   `;
 
-  // Query untuk mendapatkan list question_id per exam_id
+  // Query untuk mendapatkan list question_id per exam_id dengan elapsed time info
   const questionsQuery = `
     WITH unnested_exam_ids AS (
       SELECT 
@@ -355,7 +419,7 @@ export const getUserExamStatLevel = async (
         ua.question_id,
         ua.answer_time,
         ua.is_correct,
-        ua.elapsed_time
+        COALESCE(ua.elapsed_time, 0) as elapsed_time
       FROM unnested_exam_ids ue
       LEFT JOIN exams e ON ue.exam_id = e.id
       LEFT JOIN user_answers ua ON ua.exam_id = e.id
@@ -368,7 +432,8 @@ export const getUserExamStatLevel = async (
     SELECT 
       la.exam_id,
       array_agg(la.question_id ORDER BY la.question_id) AS question_ids,
-      COUNT(la.question_id) AS total_questions
+      COUNT(la.question_id) AS total_questions,
+      ROUND(AVG(CASE WHEN la.elapsed_time > 0 THEN la.elapsed_time END), 2) as avg_elapsed_time_per_exam
     FROM latest_answers la
     GROUP BY la.exam_id
     ORDER BY la.exam_id;
@@ -389,4 +454,69 @@ export const getUserExamStatLevel = async (
     console.error('Error in getUserExamStatLevel:', error);
     throw error;
   }
+};
+
+/**
+ * Get user answers with elapsed time for a specific exam
+ */
+export const getUserAnswersWithElapsedTime = async (
+  userId: number,
+  examId: number
+): Promise<UserAnswer[]> => {
+  const query = `
+    SELECT 
+      id,
+      exam_id,
+      question_id,
+      user_answer,
+      user_id,
+      is_correct,
+      answer_time,
+      elapsed_time
+    FROM user_answers
+    WHERE user_id = $1 AND exam_id = $2
+    ORDER BY question_id, answer_time DESC
+  `;
+  
+  const result = await pool.query(query, [userId, examId]);
+  return result.rows;
+};
+
+/**
+ * Get average elapsed time per question type for analytics
+ */
+export const getElapsedTimeAnalytics = async (
+  examId: number,
+  userId?: number
+): Promise<any[]> => {
+  const baseQuery = `
+    SELECT 
+      q.question_type,
+      q.level,
+      COUNT(ua.id) as total_answers,
+      ROUND(AVG(CASE WHEN ua.elapsed_time > 0 THEN ua.elapsed_time END), 2) as avg_elapsed_time,
+      ROUND(MIN(CASE WHEN ua.elapsed_time > 0 THEN ua.elapsed_time END), 2) as min_elapsed_time,
+      ROUND(MAX(ua.elapsed_time), 2) as max_elapsed_time,
+      COUNT(CASE WHEN ua.is_correct THEN 1 END) as correct_answers,
+      ROUND(COUNT(CASE WHEN ua.is_correct THEN 1 END) * 100.0 / COUNT(ua.id), 2) as accuracy_percentage
+    FROM user_answers ua
+    JOIN questions q ON ua.question_id = q.id
+    WHERE ua.exam_id = $1
+  `;
+  
+  let query = baseQuery;
+  let params = [examId];
+  
+  if (userId) {
+    query += ' AND ua.user_id = $2';
+    params.push(userId);
+  }
+  
+  query += `
+    GROUP BY q.question_type, q.level
+    ORDER BY q.level, q.question_type
+  `;
+  
+  const result = await pool.query(query, params);
+  return result.rows;
 };

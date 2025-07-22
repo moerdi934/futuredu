@@ -13,7 +13,7 @@ interface AnswerData {
 
 interface DiagnosticAnswerData {
   answers: AnswerData[];
-}
+} 
 
 /**
  * Compare user answers with correct answers
@@ -148,6 +148,26 @@ export const parseUserAnswers = (answers: any): Record<string, any> => {
 };
 
 /**
+ * Parse question elapsed times from JSON format in tExamSession
+ */
+export const parseQuestionElapsedTimes = (questionElapsedTimes: any): Record<string, number> => {
+  if (!questionElapsedTimes) return {};
+  
+  // If questionElapsedTimes is already a parsed object, return it
+  if (typeof questionElapsedTimes === 'object' && !Array.isArray(questionElapsedTimes)) {
+    return questionElapsedTimes;
+  }
+  
+  // Try to parse the JSON string
+  try {
+    return JSON.parse(questionElapsedTimes);
+  } catch (error) {
+    console.error('Error parsing question elapsed times:', error);
+    return {};
+  }
+};
+
+/**
  * Process all exam answers for an exam schedule with transaction support
  */
 export const processExamScheduleAnswers = async (req: AuthenticatedRequest, res: NextApiResponse) => {
@@ -195,6 +215,9 @@ export const processExamScheduleAnswers = async (req: AuthenticatedRequest, res:
         continue;
       }
       
+      // Parse elapsed times from session
+      const parsedElapsedTimes = parseQuestionElapsedTimes(session.question_elapsed_times);
+      
       try {
         // Get questions for this exam
         const questions = await UserExamAnswers.getExamQuestions(session.exam_id);
@@ -211,6 +234,9 @@ export const processExamScheduleAnswers = async (req: AuthenticatedRequest, res:
           // Skip questions that weren't answered
           if (userAnswer === undefined) continue;
           
+          // Get elapsed time for this question (if available)
+          const elapsedTime = parsedElapsedTimes[questionId.toString()] || null;
+          
           // Check if the answer is correct
           const isCorrect = isAnswerCorrect(
             userAnswer, 
@@ -220,14 +246,15 @@ export const processExamScheduleAnswers = async (req: AuthenticatedRequest, res:
           
           if (isCorrect) correctCount++;
           
-          // Save the answer
+          // Save the answer with elapsed time
           const answerData = {
             exam_id: session.exam_id,
             question_id: questionId,
             user_answer: userAnswer,
             user_id: userId,
             is_correct: isCorrect,
-            question_type: question.question_type
+            question_type: question.question_type,
+            elapsed_time: elapsedTime
           };
           
           const savedAnswer = await UserExamAnswers.saveUserAnswer(answerData);

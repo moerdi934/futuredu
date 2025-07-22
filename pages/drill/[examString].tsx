@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { useDrill, useCurrentDrillSession } from '@/contexts/DrillContext';
+import { useDrill, useCurrentDrillSession } from '../../context/DrillContext';
 import SingleChoice from '../exam/SingleChoice';
 import MultipleChoice from '../exam/MultipleChoice';
 import NumberInput from '../exam/NumberInput';
@@ -45,6 +45,22 @@ interface ScoreResponse {
   pembahasan?: string;
 }
 
+// Utility function untuk logging yang konsisten
+const logger = {
+  info: (component: string, action: string, data?: any) => {
+    console.log(`[${new Date().toISOString()}] [PracticeDrill] [${component}] [INFO] ${action}`, data ? data : '');
+  },
+  warn: (component: string, action: string, data?: any) => {
+    console.warn(`[${new Date().toISOString()}] [PracticeDrill] [${component}] [WARN] ${action}`, data ? data : '');
+  },
+  error: (component: string, action: string, error?: any) => {
+    console.error(`[${new Date().toISOString()}] [PracticeDrill] [${component}] [ERROR] ${action}`, error ? error : '');
+  },
+  debug: (component: string, action: string, data?: any) => {
+    console.debug(`[${new Date().toISOString()}] [PracticeDrill] [${component}] [DEBUG] ${action}`, data ? data : '');
+  }
+};
+
 const PracticeDrill: React.FC = () => {
   const params = useParams();
   const router = useRouter();
@@ -64,6 +80,7 @@ const PracticeDrill: React.FC = () => {
   const [pageLoading, setPageLoading] = useState(true);
   const [pageError, setPageError] = useState<string | null>(null);
   const [sessionVerified, setSessionVerified] = useState(false);
+  const [sessionInitialized, setSessionInitialized] = useState(false);
 
   // ======= Soal drill logic =======
   const [loading, setLoading] = useState(true);
@@ -85,10 +102,36 @@ const PracticeDrill: React.FC = () => {
 
   const timerRef = useRef<NodeJS.Timeout>();
   const startTimeRef = useRef<number>(Date.now());
+  const mountedRef = useRef(true);
+  const initializationRef = useRef(false);
 
-  // Initialize session from URL params or existing session
+  // Cleanup on unmount
   useEffect(() => {
+    mountedRef.current = true;
+    logger.info('Component', 'Component mounted', { examString });
+    
+    return () => {
+      mountedRef.current = false;
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      logger.info('Component', 'Component unmounted');
+    };
+  }, [examString]);
+
+  // Initialize session ONLY ONCE
+  useEffect(() => {
+    if (initializationRef.current) {
+      logger.debug('SessionInit', 'Initialization already in progress, skipping');
+      return;
+    }
+
+    initializationRef.current = true;
+    logger.info('SessionInit', 'Starting ONE-TIME session initialization');
+    
     const initializeSession = () => {
+      logger.debug('SessionInit', 'Checking URL parameters');
+      
       // Try to get session data from URL params (when coming from another page)
       const examScheduleId = searchParams?.get('exam_schedule_id');
       const topicId = searchParams?.get('topic_id');
@@ -96,9 +139,24 @@ const PracticeDrill: React.FC = () => {
       const examId = searchParams?.get('exam_id');
       const questionsLeftParam = searchParams?.get('questions_left');
 
+      logger.debug('SessionInit', 'URL parameters extracted', {
+        examScheduleId,
+        topicId,
+        sessionIdParam,
+        examId,
+        questionsLeftParam: questionsLeftParam ? questionsLeftParam.substring(0, 100) + '...' : null
+      });
+
       if (examScheduleId && topicId && sessionIdParam && examId && questionsLeftParam) {
         try {
+          logger.info('SessionInit', 'Creating session from URL parameters');
+          
           const questionsLeft = JSON.parse(decodeURIComponent(questionsLeftParam));
+          
+          logger.debug('SessionInit', 'Questions left parsed', { 
+            questionsCount: questionsLeft.length,
+            totalQuestions: questionsLeft.reduce((total: number, ql: QuestionLeft) => total + ql.remaining_questions.length, 0)
+          });
           
           // Generate unique session ID for this drill instance
           const drillSessionId = generateSessionId(
@@ -106,6 +164,8 @@ const PracticeDrill: React.FC = () => {
             parseInt(examId), 
             parseInt(topicId)
           );
+          
+          logger.info('SessionInit', 'Generated drill session ID', { drillSessionId });
           
           // Create new session
           createSession(drillSessionId, {
@@ -117,23 +177,36 @@ const PracticeDrill: React.FC = () => {
             exam_string: examString
           });
           
+          setSessionInitialized(true);
+          logger.info('SessionInit', 'Session created successfully from URL parameters');
           return;
         } catch (error) {
-          console.error('Error parsing URL parameters:', error);
+          logger.error('SessionInit', 'Error parsing URL parameters', error);
         }
       }
 
       // Try to get from existing sessionStorage (fallback for compatibility)
+      logger.debug('SessionInit', 'Checking sessionStorage for fallback');
+      
       if (typeof window !== 'undefined') {
         const storedState = sessionStorage.getItem('drillState');
         if (storedState) {
           try {
+            logger.info('SessionInit', 'Found stored state in sessionStorage');
+            
             const parsedState = JSON.parse(storedState);
             const drillSessionId = generateSessionId(
               parsedState.exam_schedule_id,
               parsedState.exam_id,
               parsedState.topic_id
             );
+            
+            logger.debug('SessionInit', 'Creating session from sessionStorage', {
+              drillSessionId,
+              examScheduleId: parsedState.exam_schedule_id,
+              examId: parsedState.exam_id,
+              topicId: parsedState.topic_id
+            });
             
             createSession(drillSessionId, {
               ...parsedState,
@@ -142,33 +215,52 @@ const PracticeDrill: React.FC = () => {
             
             // Clean up old sessionStorage
             sessionStorage.removeItem('drillState');
+            setSessionInitialized(true);
+            logger.info('SessionInit', 'Session created from sessionStorage and cleaned up');
             return;
           } catch (error) {
-            console.error('Error parsing stored state:', error);
+            logger.error('SessionInit', 'Error parsing stored state', error);
           }
         }
       }
 
       // If no valid session data found
-      setTimeout(() => {
-        setPageError('Anda tidak dapat akses latihan ini. Hubungi admin jika Anda merasa ini kesalahan.');
-        setPageLoading(false);
-      }, 1000);
+      logger.warn('SessionInit', 'No valid session data found, setting error state');
+      setPageError('Anda tidak dapat akses latihan ini. Hubungi admin jika Anda merasa ini kesalahan.');
+      setPageLoading(false);
+      logger.error('SessionInit', 'Access denied - no valid session data');
     };
 
     initializeSession();
   }, [searchParams, examString, createSession, generateSessionId]);
 
-  // ============= Akses & Session Verifikasi ==================
+  // Session verification - hanya jalankan jika session sudah terinisialisasi
   useEffect(() => {
-    if (!currentSession) {
+    if (!sessionInitialized || !currentSession) {
+      logger.debug('SessionVerify', 'Session not initialized or no current session', {
+        sessionInitialized,
+        hasCurrentSession: !!currentSession
+      });
       return;
     }
 
+    // Prevent multiple verification calls
+    if (sessionVerified) {
+      logger.debug('SessionVerify', 'Session already verified, skipping');
+      return;
+    }
+
+    logger.info('SessionVerify', 'Starting session verification', {
+      sessionId: currentSession.session_id,
+      examScheduleId: currentSession.exam_schedule_id,
+      examId: currentSession.exam_id
+    });
+
     const verifySession = async () => {
       try {
-        setPageLoading(true);
-        setPageError(null);
+        setPageError(null); // Clear any previous errors
+        
+        logger.debug('SessionVerify', 'Sending verification request to API');
         
         const res = await axios.post(
           `${process.env.NEXT_PUBLIC_API_URL}/examSession/verifikasi`,
@@ -185,7 +277,12 @@ const PracticeDrill: React.FC = () => {
           }
         );
 
-        if (res.status === 200) {
+        logger.info('SessionVerify', 'Verification response received', { 
+          status: res.status,
+          responseData: res.data 
+        });
+
+        if (res.status === 200 && mountedRef.current) {
           setSessionVerified(true);
           setQuestionsLeft(currentSession.questions_left || []);
           
@@ -195,34 +292,68 @@ const PracticeDrill: React.FC = () => {
           );
           setTotalQuestionsCount(totalCount);
           setPageLoading(false);
+          setPageError(null); // Ensure error is cleared
+          
+          logger.info('SessionVerify', 'Session verified successfully', {
+            totalQuestions: totalCount,
+            questionsLeftCount: currentSession.questions_left?.length
+          });
         } else {
-          setPageError('Gagal verifikasi sesi. Silakan mulai ulang dari kursus.');
+          const errorMsg = 'Gagal verifikasi sesi. Silakan mulai ulang dari kursus.';
+          setPageError(errorMsg);
           setPageLoading(false);
+          logger.warn('SessionVerify', 'Verification failed - unexpected status', { status: res.status });
         }
       } catch (err: any) {
+        if (!mountedRef.current) return;
+        
+        logger.error('SessionVerify', 'Verification request failed', {
+          status: err?.response?.status,
+          message: err?.message,
+          response: err?.response?.data
+        });
+        
         if (err?.response?.status === 403) {
-          setPageError('Sesi tidak valid atau sudah kedaluwarsa. Silakan mulai latihan drill dari kursus terkait.');
+          const errorMsg = 'Sesi tidak valid atau sudah kedaluwarsa. Silakan mulai latihan drill dari kursus terkait.';
+          setPageError(errorMsg);
+          logger.error('SessionVerify', 'Session invalid or expired (403)');
         } else {
-          setPageError('Tidak dapat memverifikasi sesi. Hubungi admin jika ini kesalahan.');
+          const errorMsg = 'Tidak dapat memverifikasi sesi. Hubungi admin jika ini kesalahan.';
+          setPageError(errorMsg);
+          logger.error('SessionVerify', 'Verification failed with unknown error');
         }
         setPageLoading(false);
       }
     };
 
     verifySession();
-  }, [currentSession]);
+  }, [sessionInitialized, currentSession, sessionVerified]);
 
-  // ====== Fetch soal pertama setelah sesi terverifikasi ======
+  // Load questions setelah session terverifikasi
   useEffect(() => {
-    if (!sessionVerified || !currentSession) return;
+    if (!sessionVerified || !currentSession) {
+      logger.debug('QuestionLoad', 'Conditions not met for loading questions', {
+        sessionVerified,
+        hasCurrentSession: !!currentSession
+      });
+      return;
+    }
+    
+    logger.info('QuestionLoad', 'Session verified, checking questions', {
+      questionsLeftCount: questionsLeft.length
+    });
+    
     if (questionsLeft.length > 0) {
       loadCurrentQuestion();
     } else {
+      logger.warn('QuestionLoad', 'No questions left to load');
       setLoading(false);
     }
   }, [sessionVerified, currentSession, questionsLeft]);
 
-  const getInitialAnswer = (questionType: string, statements?: string[]) => {
+  const getInitialAnswer = useCallback((questionType: string, statements?: string[]) => {
+    logger.debug('Answer', 'Getting initial answer', { questionType, statementsCount: statements?.length });
+    
     switch (questionType) {
       case 'single-choice':
         return '';
@@ -235,34 +366,57 @@ const PracticeDrill: React.FC = () => {
       case 'true-false':
         return statements ? Array(statements.length).fill(undefined) : [];
       default:
+        logger.warn('Answer', 'Unknown question type for initial answer', { questionType });
         return null;
     }
-  };
+  }, []);
 
-  const getNextQuestionId = (): { questionId: number; examId: number } | null => {
+  const getNextQuestionId = useCallback((): { questionId: number; examId: number } | null => {
+    logger.debug('QuestionSelection', 'Getting next question ID', {
+      questionsLeftCount: questionsLeft.length
+    });
+    
     for (const ql of questionsLeft) {
       if (ql.remaining_questions.length > 0) {
-        return { questionId: ql.remaining_questions[0], examId: ql.exam_id };
+        const result = { questionId: ql.remaining_questions[0], examId: ql.exam_id };
+        logger.debug('QuestionSelection', 'Next question found', result);
+        return result;
       }
     }
+    
+    logger.warn('QuestionSelection', 'No next question found');
     return null;
-  };
+  }, [questionsLeft]);
 
-  const loadCurrentQuestion = async () => {
+  const loadCurrentQuestion = useCallback(async () => {
+    logger.info('QuestionLoad', 'Starting to load current question');
+    
     if (!questionsLeft || questionsLeft.length === 0) {
-      setError('Tidak ada soal yang tersisa untuk dikerjakan.');
+      const errorMsg = 'Tidak ada soal yang tersisa untuk dikerjakan.';
+      setError(errorMsg);
       setLoading(false);
+      logger.warn('QuestionLoad', errorMsg);
       return;
     }
+    
     const nextQuestion = getNextQuestionId();
     if (!nextQuestion) {
-      setError('Semua soal sudah selesai dikerjakan!');
+      const errorMsg = 'Semua soal sudah selesai dikerjakan!';
+      setError(errorMsg);
       setLoading(false);
+      logger.info('QuestionLoad', errorMsg);
       return;
     }
+    
     try {
       setLoading(true);
       setError(null);
+      
+      logger.info('QuestionLoad', 'Fetching question from API', {
+        questionId: nextQuestion.questionId,
+        examId: nextQuestion.examId
+      });
+      
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/questions/u/${nextQuestion.questionId}`,
         {
@@ -272,6 +426,18 @@ const PracticeDrill: React.FC = () => {
           }
         }
       );
+      
+      if (!mountedRef.current) return;
+      
+      logger.info('QuestionLoad', 'Question fetched successfully', {
+        questionId: response.data.id,
+        questionType: response.data.question_type,
+        hasOptions: !!response.data.options,
+        hasStatements: !!response.data.statements,
+        optionsCount: response.data.options?.length,
+        statementsCount: response.data.statements?.length
+      });
+      
       const fetchedQuestion: Question = {
         id: response.data.id,
         type: response.data.question_type,
@@ -280,9 +446,11 @@ const PracticeDrill: React.FC = () => {
         statements: response.data.statements,
         exam_id: nextQuestion.examId
       };
+      
       setQuestion(fetchedQuestion);
       setCurrentQuestionId(fetchedQuestion.id);
       setCurrentExamId(nextQuestion.examId);
+      
       const initialAnswer = getInitialAnswer(fetchedQuestion.type, fetchedQuestion.statements);
       setAnswer(initialAnswer);
       setSubmitted(false);
@@ -290,34 +458,54 @@ const PracticeDrill: React.FC = () => {
       setIsAnswerCorrect(null);
       setScoreResponse(null);
       setTimeElapsed(0);
+      
+      logger.info('QuestionLoad', 'Question loaded and state reset', {
+        questionId: fetchedQuestion.id,
+        questionType: fetchedQuestion.type,
+        initialAnswer
+      });
+      
     } catch (err: any) {
+      if (!mountedRef.current) return;
+      
+      logger.error('QuestionLoad', 'Failed to fetch question', {
+        status: err.response?.status,
+        message: err?.message,
+        questionId: nextQuestion.questionId
+      });
+      
       if (err.response?.status === 404) {
         setError('Soal tidak ditemukan. Silakan coba lagi.');
       } else {
         setError('Gagal memuat soal. Silakan coba lagi.');
       }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [questionsLeft, getNextQuestionId, getInitialAnswer]);
 
+  // Timer management
   useEffect(() => {
-    if (!loading && !submitted && question) {
+    if (!loading && !submitted && question && mountedRef.current) {
+      logger.info('Timer', 'Starting timer for question', { questionId: question.id });
+      
       startTimeRef.current = Date.now();
       timerRef.current = setInterval(() => {
-        setTimeElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
+        if (mountedRef.current) {
+          setTimeElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
+        }
       }, 1000);
+      
       return () => {
-        if (timerRef.current) clearInterval(timerRef.current);
+        if (timerRef.current) {
+          logger.debug('Timer', 'Cleaning up timer');
+          clearInterval(timerRef.current);
+        }
       };
     }
   }, [loading, submitted, question]);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -328,15 +516,38 @@ const PracticeDrill: React.FC = () => {
       : `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  const handleChange = (value: any) => setAnswer(value);
+  const handleChange = useCallback((value: any) => {
+    logger.debug('Answer', 'Answer changed', { 
+      questionType: question?.type,
+      newValue: value,
+      questionId: currentQuestionId 
+    });
+    setAnswer(value);
+  }, [question?.type, currentQuestionId]);
 
-  const handleTrueFalseChange = (index: number, value: any) => {
-    const updatedAnswer = [...(answer || [])];
-    updatedAnswer[index] = value;
-    setAnswer(updatedAnswer);
-  };
+  const handleTrueFalseChange = useCallback((index: number, value: any) => {
+    logger.debug('Answer', 'True/False answer changed', { 
+      index, 
+      value, 
+      questionId: currentQuestionId 
+    });
+    
+    setAnswer(prev => {
+      const updatedAnswer = [...(prev || [])];
+      updatedAnswer[index] = value;
+      return updatedAnswer;
+    });
+  }, [currentQuestionId]);
 
-  const handleSubmit = () => setShowSubmitModal(true);
+  const handleSubmit = useCallback(() => {
+    logger.info('Submit', 'Submit button clicked', {
+      questionId: currentQuestionId,
+      answer,
+      timeElapsed,
+      questionType: question?.type
+    });
+    setShowSubmitModal(true);
+  }, [currentQuestionId, answer, timeElapsed, question?.type]);
 
   const formatAnswerForDisplay = (ans: any, type: string): string => {
     switch (type) {
@@ -359,6 +570,14 @@ const PracticeDrill: React.FC = () => {
   };
 
   const submitAnswerToAPI = async (questionId: number, examId: number, userAnswer: any, elapsed: number): Promise<ScoreResponse | null> => {
+    logger.info('SubmitAPI', 'Submitting answer to API', {
+      questionId,
+      examId,
+      userAnswer,
+      elapsed,
+      examScheduleId: currentSession?.exam_schedule_id
+    });
+    
     try {
       const payload: AnswerPayload = {
         exam_schedule_id: currentSession!.exam_schedule_id,
@@ -366,6 +585,9 @@ const PracticeDrill: React.FC = () => {
         user_answer: userAnswer,
         elapsed_time: elapsed
       };
+      
+      logger.debug('SubmitAPI', 'Sending payload to score endpoint', payload);
+      
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/score/with-a/${questionId}`,
         payload,
@@ -376,6 +598,14 @@ const PracticeDrill: React.FC = () => {
           }
         }
       );
+      
+      logger.info('SubmitAPI', 'Score response received', {
+        isCorrect: response.data.data.is_correct,
+        hasExplanation: !!response.data.data.explanation,
+        hasPembahasan: !!response.data.data.pembahasan,
+        correctAnswer: response.data.data.correct_answer
+      });
+      
       return {
         is_correct: response.data.data.is_correct,
         correct_answer: response.data.data.correct_answer,
@@ -384,21 +614,52 @@ const PracticeDrill: React.FC = () => {
         pembahasan: response.data.data.pembahasan
       };
     } catch (err: any) {
+      logger.error('SubmitAPI', 'Failed to submit answer', {
+        status: err.response?.status,
+        message: err?.message,
+        response: err.response?.data,
+        questionId
+      });
       return null;
     }
   };
 
   const confirmSubmit = async () => {
-    if (!question || !currentSession || !currentQuestionId) return;
+    if (!question || !currentSession || !currentQuestionId) {
+      logger.warn('SubmitConfirm', 'Cannot submit - missing required data', {
+        hasQuestion: !!question,
+        hasCurrentSession: !!currentSession,
+        hasCurrentQuestionId: !!currentQuestionId
+      });
+      return;
+    }
+    
+    logger.info('SubmitConfirm', 'Confirming submission', {
+      questionId: currentQuestionId,
+      examId: currentExamId,
+      timeElapsed
+    });
+    
     setSubmitLoading(true);
-    if (timerRef.current) clearInterval(timerRef.current);
+    
+    if (timerRef.current) {
+      logger.debug('SubmitConfirm', 'Stopping timer');
+      clearInterval(timerRef.current);
+    }
+    
     const scoreResult = await submitAnswerToAPI(
       currentQuestionId,
       currentExamId || 0,
       answer,
       timeElapsed
     );
-    if (scoreResult) {
+    
+    if (scoreResult && mountedRef.current) {
+      logger.info('SubmitConfirm', 'Answer submitted successfully', {
+        isCorrect: scoreResult.is_correct,
+        questionId: currentQuestionId
+      });
+      
       setScoreResponse(scoreResult);
       setIsAnswerCorrect(scoreResult.is_correct);
       setQuestion(prev => prev ? {
@@ -407,23 +668,46 @@ const PracticeDrill: React.FC = () => {
         explanation: scoreResult.explanation
       } : prev);
       setSubmitted(true);
-    } else {
+    } else if (mountedRef.current) {
+      logger.error('SubmitConfirm', 'Failed to submit answer');
       setError('Gagal menyimpan jawaban. Silakan coba lagi.');
     }
+    
     setShowSubmitModal(false);
     setSubmitLoading(false);
   };
 
-  const handleShowExplanation = () => setShowExplanation(true);
+  const handleShowExplanation = useCallback(() => {
+    logger.info('UI', 'Showing explanation', { questionId: currentQuestionId });
+    setShowExplanation(true);
+  }, [currentQuestionId]);
 
-  const handleNextQuestion = () => {
-    if (!currentSession || !sessionId) return;
+  const handleNextQuestion = useCallback(() => {
+    if (!currentSession || !sessionId) {
+      logger.warn('NextQuestion', 'Cannot proceed - missing session data', {
+        hasCurrentSession: !!currentSession,
+        hasSessionId: !!sessionId
+      });
+      return;
+    }
+
+    logger.info('NextQuestion', 'Moving to next question', {
+      currentQuestionId,
+      currentExamId,
+      questionsLeftCount: questionsLeft.length
+    });
 
     const updatedQuestionsLeft = questionsLeft.map(ql => {
       if (ql.exam_id === currentExamId) {
+        const filtered = ql.remaining_questions.filter(qId => qId !== currentQuestionId);
+        logger.debug('NextQuestion', 'Updated questions for exam', {
+          examId: ql.exam_id,
+          removedQuestionId: currentQuestionId,
+          remainingCount: filtered.length
+        });
         return {
           ...ql,
-          remaining_questions: ql.remaining_questions.filter(qId => qId !== currentQuestionId)
+          remaining_questions: filtered
         };
       }
       return ql;
@@ -435,7 +719,15 @@ const PracticeDrill: React.FC = () => {
     setCompletedQuestionsCount(prev => prev + 1);
 
     const hasMoreQuestions = updatedQuestionsLeft.some(ql => ql.remaining_questions.length > 0);
+    
+    logger.info('NextQuestion', 'Questions updated', {
+      updatedQuestionsLeftCount: updatedQuestionsLeft.length,
+      hasMoreQuestions,
+      completedCount: completedQuestionsCount + 1
+    });
+    
     if (!hasMoreQuestions) {
+      logger.info('NextQuestion', 'All questions completed, removing session and navigating back');
       // Remove session when drill is completed
       if (sessionId) {
         removeSession(sessionId);
@@ -444,40 +736,68 @@ const PracticeDrill: React.FC = () => {
       return;
     }
     
-    loadCurrentQuestion();
+    // Reset for next question
+    setQuestion(null);
+    setLoading(true);
     startTimeRef.current = Date.now();
-  };
+  }, [currentSession, sessionId, currentQuestionId, currentExamId, questionsLeft, updateQuestionsLeft, removeSession, router, completedQuestionsCount]);
 
-  const handleBackToDashboard = () => {
+  const handleBackToDashboard = useCallback(() => {
+    logger.info('Navigation', 'Navigating back to dashboard');
+    
     // Clean up session when leaving
     if (sessionId) {
+      logger.debug('Navigation', 'Removing session', { sessionId });
       removeSession(sessionId);
     }
     router.push('/dashboard');
-  };
+  }, [sessionId, removeSession, router]);
 
-  const isAnswerFilled = (): boolean => {
+  const isAnswerFilled = useCallback((): boolean => {
     if (!question) return false;
-    switch (question.type) {
-      case 'single-choice':
-        return answer !== '' && answer !== null;
-      case 'multiple-choice':
-        return Array.isArray(answer) && answer.length > 0;
-      case 'number':
-        return typeof answer === 'number' && !isNaN(answer);
-      case 'text':
-        return answer !== '' && answer !== null;
-      case 'true-false':
-        return Array.isArray(answer) &&
-          answer.length === (question.statements?.length || 0) &&
-          answer.every(a => a !== undefined);
-      default:
-        return false;
-    }
-  };
+    
+    const filled = (() => {
+      switch (question.type) {
+        case 'single-choice':
+          return answer !== '' && answer !== null;
+        case 'multiple-choice':
+          return Array.isArray(answer) && answer.length > 0;
+        case 'number':
+          return typeof answer === 'number' && !isNaN(answer);
+        case 'text':
+          return answer !== '' && answer !== null;
+        case 'true-false':
+          return Array.isArray(answer) &&
+            answer.length === (question.statements?.length || 0) &&
+            answer.every(a => a !== undefined);
+        default:
+          return false;
+      }
+    })();
+    
+    logger.debug('Answer', 'Checking if answer is filled', {
+      questionType: question.type,
+      answer,
+      filled,
+      questionId: currentQuestionId
+    });
+    
+    return filled;
+  }, [question, answer, currentQuestionId]);
 
   const renderQuestion = (q: Question) => {
-    if (answer === null) return null;
+    if (answer === null) {
+      logger.warn('Render', 'Cannot render question - answer is null', { questionId: q.id });
+      return null;
+    }
+    
+    logger.debug('Render', 'Rendering question', {
+      questionId: q.id,
+      questionType: q.type,
+      hasOptions: !!q.options,
+      hasStatements: !!q.statements
+    });
+    
     switch (q.type) {
       case 'single-choice':
         return (
@@ -491,7 +811,10 @@ const PracticeDrill: React.FC = () => {
           />
         );
       case 'multiple-choice':
-        if (!Array.isArray(answer)) return null;
+        if (!Array.isArray(answer)) {
+          logger.warn('Render', 'Multiple choice answer is not array', { answer, questionId: q.id });
+          return null;
+        }
         return (
           <MultipleChoice
             question={<Latex>{q.question}</Latex>}
@@ -502,7 +825,7 @@ const PracticeDrill: React.FC = () => {
             correctAnswer={scoreResponse?.correct_answer}
           />
         );
-      case 'number':
+case 'number':
         return (
           <NumberInput
             question={q.question}
@@ -523,7 +846,10 @@ const PracticeDrill: React.FC = () => {
           />
         );
       case 'true-false':
-        if (!Array.isArray(answer)) return null;
+        if (!Array.isArray(answer)) {
+          logger.warn('Render', 'True/False answer is not array', { answer, questionId: q.id });
+          return null;
+        }
         return (
           <TrueFalse
             question={q.question}
@@ -535,14 +861,37 @@ const PracticeDrill: React.FC = () => {
           />
         );
       default:
+        logger.warn('Render', 'Unknown question type', { questionType: q.type, questionId: q.id });
         return null;
     }
   };
 
-  const hasMoreQuestions = () => questionsLeft.some(ql => ql.remaining_questions.length > 0);
+  const hasMoreQuestions = useCallback(() => {
+    const result = questionsLeft.some(ql => ql.remaining_questions.length > 0);
+    logger.debug('Questions', 'Checking if more questions available', {
+      result,
+      questionsLeftCount: questionsLeft.length
+    });
+    return result;
+  }, [questionsLeft]);
+
+  // Debug current state
+  logger.debug('State', 'Current component state', {
+    pageLoading,
+    pageError,
+    sessionVerified,
+    sessionInitialized,
+    loading,
+    error,
+    hasQuestion: !!question,
+    hasCurrentSession: !!currentSession,
+    sessionId,
+    questionsLeftCount: questionsLeft.length
+  });
 
   // =================== UI: ACCESS ERROR / LOADING ===================
   if (pageLoading) {
+    logger.debug('UI', 'Rendering page loading state');
     return (
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <div className="tw-text-center">
@@ -555,6 +904,7 @@ const PracticeDrill: React.FC = () => {
   }
 
   if (pageError) {
+    logger.debug('UI', 'Rendering page error state', { pageError });
     return (
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <Container>
@@ -585,6 +935,7 @@ const PracticeDrill: React.FC = () => {
 
   // =================== UI: DRILL LOGIC ===================
   if (error) {
+    logger.debug('UI', 'Rendering error state', { error });
     return (
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <Container>
@@ -614,6 +965,7 @@ const PracticeDrill: React.FC = () => {
   }
 
   if (loading) {
+    logger.debug('UI', 'Rendering loading state');
     return (
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <div className="tw-text-center">
@@ -626,6 +978,7 @@ const PracticeDrill: React.FC = () => {
   }
 
   if (!question && !loading) {
+    logger.debug('UI', 'Rendering completion state - no questions left');
     return (
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <Container>
@@ -655,6 +1008,14 @@ const PracticeDrill: React.FC = () => {
       </div>
     );
   }
+
+  logger.debug('UI', 'Rendering main drill interface', {
+    questionId: question?.id,
+    questionType: question?.type,
+    submitted,
+    timeElapsed,
+    progressPercent: (completedQuestionsCount / totalQuestionsCount) * 100
+  });
 
   return (
     <div className="tw-min-h-screen tw-bg-violet-50">
@@ -796,7 +1157,10 @@ const PracticeDrill: React.FC = () => {
 
       <Modal
         show={showSubmitModal}
-        onHide={() => setShowSubmitModal(false)}
+        onHide={() => {
+          logger.debug('UI', 'Submit modal closed by user');
+          setShowSubmitModal(false);
+        }}
         centered
         backdrop="static"
       >
@@ -828,7 +1192,10 @@ const PracticeDrill: React.FC = () => {
         <Modal.Footer>
           <Button
             variant="outline-secondary"
-            onClick={() => setShowSubmitModal(false)}
+            onClick={() => {
+              logger.debug('UI', 'Submit cancelled by user');
+              setShowSubmitModal(false);
+            }}
             className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
             disabled={submitLoading}
           >

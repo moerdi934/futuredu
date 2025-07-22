@@ -9,6 +9,7 @@ export interface SaveSessionRequest {
   exam_schedule_id: number;
   exam_id: string;
   answers: any;
+  question_elapsed_times?: any; // Added this field
 }
 
 export interface CreateExamSessionsRequest {
@@ -20,6 +21,7 @@ export interface SubmitSessionRequest {
   exam_schedule_id: number;
   exam_id: string;
   answers?: any;
+  question_elapsed_times?: any; // Added this field
 }
 
 export interface VerifikasiRequest {
@@ -46,7 +48,12 @@ export interface GetExamScheduleSessionsQuery {
 export const saveSession = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   const user_id = req.user!.id;
   try {
-    const { exam_schedule_id, exam_id, answers }: SaveSessionRequest = req.body;
+    const { 
+      exam_schedule_id, 
+      exam_id, 
+      answers, 
+      question_elapsed_times 
+    }: SaveSessionRequest = req.body;
 
     if (!exam_schedule_id || !exam_id || !user_id || !answers) {
       return res.status(400).json({
@@ -65,7 +72,11 @@ export const saveSession = async (req: AuthenticatedRequest, res: NextApiRespons
     let result;
     if (existingSession) {
       // Update existing session
-      result = await examSessionModel.update(existingSession.id, answers);
+      result = await examSessionModel.update(
+        existingSession.id, 
+        answers, 
+        question_elapsed_times
+      );
       return res.status(200).json({
         status: 'success',
         message: 'Session updated successfully',
@@ -77,8 +88,9 @@ export const saveSession = async (req: AuthenticatedRequest, res: NextApiRespons
         exam_schedule_id,
         exam_id,
         user_id,
-        answers
-      );
+        answers,
+        question_elapsed_times || {}
+      ); 
       return res.status(201).json({
         status: 'success',
         message: 'Session created successfully',
@@ -195,7 +207,12 @@ export const getSession = async (req: AuthenticatedRequest, res: NextApiResponse
 export const submitSession = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   try {
     const user_id = req.user!.id;
-    const { exam_schedule_id, exam_id, answers }: SubmitSessionRequest = req.body;
+    const { 
+      exam_schedule_id, 
+      exam_id, 
+      answers, 
+      question_elapsed_times 
+    }: SubmitSessionRequest = req.body;
 
     if (!exam_schedule_id || !exam_id || !user_id) {
       return res.status(400).json({
@@ -216,7 +233,8 @@ export const submitSession = async (req: AuthenticatedRequest, res: NextApiRespo
       // Update and submit existing session
       result = await examSessionModel.submit(
         existingSession.id,
-        answers || existingSession.answers
+        answers || existingSession.answers,
+        question_elapsed_times
       );
     } else {
       // Create and submit new session
@@ -231,10 +249,15 @@ export const submitSession = async (req: AuthenticatedRequest, res: NextApiRespo
         exam_schedule_id,
         exam_id,
         user_id,
-        answers
+        answers,
+        question_elapsed_times || {}
       );
       
-      result = await examSessionModel.submit(newSession.id, answers);
+      result = await examSessionModel.submit(
+        newSession.id, 
+        answers, 
+        question_elapsed_times
+      );
     }
 
     return res.status(200).json({
@@ -258,7 +281,7 @@ export const getUserSessions = async (req: AuthenticatedRequest, res: NextApiRes
     const user_id = req.user!.id;
 
     if (!user_id) {
-      return res.status(400).json({
+      return res.status(400).json({ 
         status: 'error',
         message: 'User ID is required'
       });
@@ -390,7 +413,14 @@ export const Verifikasi = async (req: AuthenticatedRequest, res: NextApiResponse
         }
       });
     } else {
-      const CreateSession = await examSessionModel.create(schedule_id, exam_id, user_id, []);
+      // Updated to include empty question_elapsed_times when creating new session
+      const CreateSession = await examSessionModel.create(
+        schedule_id, 
+        exam_id, 
+        user_id, 
+        [], 
+        {} // Empty question_elapsed_times object
+      );
       return res.status(201).json({
         status: 'success',
         data: {

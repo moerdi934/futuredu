@@ -50,12 +50,14 @@ export const getCourseDetailReadable = async (req: AuthenticatedRequest, res: Ne
             AND ucs.user_id = $2
             AND m2.is_mandatory = true
         ), 0) + COALESCE((
-          SELECT DISTINCT COUNT(ucs.quiz_id)::integer 
+          SELECT COUNT(DISTINCT ucs.quiz_id)::integer
           FROM usercoursesession ucs
           LEFT JOIN topics t2 ON t2.id = ucs.topic_id
+          left join exam_schedule es on es.id = ucs.quiz_id
           WHERE t2.section_id = s.id 
             AND ucs.user_id = $2
-            AND ucs.quiz_id IS NOT NULL
+            AND ucs.quiz_id IS NOT null
+            and es.name not like 'Drill%'
         ), 0) as finished,
         
         -- Bonus count (non-mandatory materials completed)
