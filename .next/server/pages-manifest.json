@@ -1,7 +1,1 @@
-{
-  "/_app": "pages/_app.js",
-  "/_error": "pages/_error.js",
-  "/_document": "pages/_document.js",
-  "/diagnostic-test/exam/[examString]": "pages/diagnostic-test/exam/[examString].js",
-  "/diagnostic-test": "pages/diagnostic-test.js"
-}
+{}

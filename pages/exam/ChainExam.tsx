@@ -1,9 +1,3 @@
-
-
-// ===================================
-// Modified ChainExam Component
-// ===================================
-
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -12,6 +6,14 @@ import dynamic from 'next/dynamic';
 import CryptoJS from 'crypto-js';
 import ChangeTabPrevention from '../../components/ChangeTabPrevention';
 import { useDistributedTimeSync } from '../../hooks/useDistributedTimeSync';
+
+// Import hidden timer contexts
+import { UserPurchaseProvider, useUserPurchase } from '../../context/UserPurchaseContext';
+import { ActiveUserProvider, useActiveUser } from '../../context/ActiveUserContext';
+import { AllProductProvider, useAllProduct } from '../../context/AllProductContext';
+
+// Import helper for timer authentication
+import { RewardTimerAuthenticator } from '../../utils/RewardAuthenticationProcessor';
 
 const SingleChoice = dynamic(() => import('./SingleChoice'), { ssr: false });
 const MultipleChoice = dynamic(() => import('./MultipleChoice'), { ssr: false });
@@ -26,13 +28,6 @@ const Latex = dynamic(() => import('react-latex-next'), { ssr: false });
 import { Container, Row, Col, ProgressBar, Card, Button, Modal, Alert, Toast } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Clock, Loader2, Check, AlertCircle, FileCheck, ArrowRight } from 'lucide-react';
-
-const debugLog = (category: string, message: string, data?: any) => {
-  if (typeof window !== 'undefined') {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] [${category}] ${message}`, data ? data : '');
-  }
-};
 
 interface Question {
   id: number;
@@ -64,18 +59,86 @@ interface ExamSession {
   question_elapsed_times?: Record<number, number>;
 }
 
-const ChainExam: React.FC = () => {
+// Hidden Timer Validation Component
+const HiddenTimerValidator: React.FC<{
+  mainTimer: number;
+  onSecurityBreach: () => void;
+}> = ({ mainTimer, onSecurityBreach }) => {
+  const userPurchase = useUserPurchase();
+  const activeUser = useActiveUser();
+  const allProduct = useAllProduct();
+  const timerAuthenticator = useRef(new RewardTimerAuthenticator(30));
+  
+  useEffect(() => {
+    const validateTimers = () => {
+      try {
+        // Get hidden timer values from all contexts
+        const purchaseTimer = userPurchase.getMarketResearchInterval();
+        const userActivityTimer = activeUser.getUserActivityInterval();
+        const inventoryTimer = allProduct.getInventoryUpdateInterval();
+        
+        // Perform cross-validation using helper
+        const validationResult = timerAuthenticator.current.validateTimerConsistency([
+          mainTimer,
+          purchaseTimer,
+          userActivityTimer,
+          inventoryTimer
+        ]);
+        
+        // Check individual context validations
+        const purchaseValid = userPurchase.validatePurchaseAuthority(mainTimer);
+        const userActivityValid = activeUser.validateUserSessionIntegrity(mainTimer);
+        const inventoryValid = allProduct.validateInventorySystemIntegrity(mainTimer);
+        
+        // If any validation fails or confidence is too low, trigger security breach
+        if (!validationResult.isValid || 
+            validationResult.confidence < 0.7 ||
+            !purchaseValid || 
+            !userActivityValid || 
+            !inventoryValid) {
+          
+          console.warn('🚨 Timer integrity validation failed:', {
+            mainTimer,
+            hiddenTimers: {
+              purchase: purchaseTimer,
+              userActivity: userActivityTimer,
+              inventory: inventoryTimer
+            },
+            validationResult,
+            individualChecks: {
+              purchase: purchaseValid,
+              userActivity: userActivityValid,
+              inventory: inventoryValid
+            }
+          });
+          
+          onSecurityBreach();
+        }
+      } catch (error) {
+        console.error('Timer validation error:', error);
+        onSecurityBreach();
+      }
+    };
+    
+    // Validate every 10 seconds
+    const validationInterval = setInterval(validateTimers, 10000);
+    
+    return () => clearInterval(validationInterval);
+  }, [mainTimer, userPurchase, activeUser, allProduct, onSecurityBreach]);
+  
+  return null; // Hidden component
+};
+
+// Main Exam Component
+const ExamContent: React.FC = () => {
   const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  debugLog('INIT', 'ChainExam component initializing');
-  
   const params = useParams();
   const exam_string = params?.exam_string as string;
-  debugLog('PARAMS', 'Exam string from params', { exam_string });
   
   // Initialize distributed time sync
   const {
@@ -114,7 +177,7 @@ const ChainExam: React.FC = () => {
         setUseAuth(() => useAuthImport);
         setUseExam(() => useExamImport);
       }).catch(error => {
-        debugLog('IMPORT_ERROR', 'Error loading services', error);
+        console.error('Error loading services', error);
       });
     }
   }, [isClient]);
@@ -143,16 +206,6 @@ const ChainExam: React.FC = () => {
     clearExamData
   } = contextData;
 
-  debugLog('CONTEXT', 'Context data received', {
-    contextTopicId,
-    contextExamScheduleId,
-    contextExamOrder: contextExamOrder?.length || 0,
-    contextExamSessions: contextExamSessions?.length || 0,
-    contextActiveSession: !!contextActiveSession,
-    contextExamType,
-    contextOriginPath
-  });
-
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -176,74 +229,50 @@ const ChainExam: React.FC = () => {
   const [isTimeExpired, setIsTimeExpired] = useState(false);
   const [selectedTopicId, setSelectedTopicId] = useState<number|null>(null);
   const [originPath, setOriginPath] = useState<string>('/');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout>();
   const lastTickRef = useRef<number>(0);
   const autoSaveRef = useRef<NodeJS.Timeout>();
+  const submissionInProgress = useRef<boolean>(false);
 
   const examOrder = contextExamOrder || [];
   const currentExamIndex = examOrder.findIndex((exam: ExamOrder) => exam.exam_string === exam_string);
-  
-  debugLog('EXAM_ORDER', 'Exam order processed', {
-    examOrderLength: examOrder.length,
-    currentExamIndex,
-    foundExam: examOrder.find(exam => exam.exam_string === exam_string)
-  });
 
   // Initialize lastTickRef with server time
   useEffect(() => {
     if (timeOffset !== 0 && lastTickRef.current === 0) {
       lastTickRef.current = getServerTime();
-      debugLog('TIMER_INIT', 'Timer reference initialized with server time', {
-        serverTime: new Date(lastTickRef.current).toISOString(),
-        offset: timeOffset
-      });
     }
   }, [timeOffset, getServerTime]);
 
   useEffect(() => {
     if (!isClient) return;
     
-    debugLog('CONTEXT_EFFECT', 'Setting data from context');
-    
     if (contextOriginPath) {
-      debugLog('CONTEXT_EFFECT', 'Setting origin path', contextOriginPath);
       setOriginPath(contextOriginPath);
     }
     
     if (contextTopicId) {
-      debugLog('CONTEXT_EFFECT', 'Setting topic ID', contextTopicId);
       setSelectedTopicId(contextTopicId);
     }
     
     if (contextExamType) {
-      debugLog('CONTEXT_EFFECT', 'Setting exam type', contextExamType);
       setExamType(contextExamType);
     }
     
     if (contextExamScheduleId) {
-      debugLog('CONTEXT_EFFECT', 'Setting exam schedule ID', contextExamScheduleId);
       setExamScheduleId(contextExamScheduleId.toString());
     }
     
     if (contextActiveSession) {
-      debugLog('CONTEXT_EFFECT', 'Setting active session', contextActiveSession);
       setExamSession(contextActiveSession);
     }
     
     if (examOrder.length > 0 && exam_string) {
       const currentExam = examOrder.find(exam => exam.exam_string === exam_string);
-      debugLog('CONTEXT_EFFECT', 'Looking for current exam', { 
-        exam_string, 
-        currentExam,
-        examOrderCount: examOrder.length 
-      });
       
       if (currentExam && currentExam.exam_id) {
-        debugLog('CONTEXT_EFFECT', 'Setting exam ID and type', {
-          examId: currentExam.exam_id,
-          examType: currentExam.examType
-        });
         setExamId(currentExam.exam_id);
         setExamType(currentExam.examType);
       }
@@ -255,19 +284,8 @@ const ChainExam: React.FC = () => {
     
     const currentQuestionData = questions[currentQuestion];
     if (!currentQuestionData || !currentQuestionData.id) {
-      debugLog('QUESTION_TRACKING', 'Invalid question data, skipping tracking', {
-        currentQuestionIndex: currentQuestion,
-        questionsLength: questions.length,
-        currentQuestionData
-      });
       return;
     }
-    
-    debugLog('QUESTION_TRACKING', 'Updating question elapsed time', {
-      currentQuestionIndex: currentQuestion,
-      questionId: currentQuestionData.id,
-      exam_string
-    });
     
     if (exam_string) {
       examDbService.updateQuestionElapsedTime(exam_string, currentQuestionData.id);
@@ -278,7 +296,6 @@ const ChainExam: React.FC = () => {
     if (!isClient) return;
     
     return () => {
-      debugLog('CLEANUP', 'Component cleanup');
       if (timerRef.current) clearInterval(timerRef.current);
       if (autoSaveRef.current) clearInterval(autoSaveRef.current);
       
@@ -291,15 +308,12 @@ const ChainExam: React.FC = () => {
   useEffect(() => {
     if (!isClient || isExamAccessible || !examStartTime) return;
     
-    debugLog('COUNTDOWN', 'Starting countdown timer', examStartTime);
-    
     const timer = setInterval(() => {
-      const now = getServerTime(); // Use server time for countdown
+      const now = getServerTime();
       const startTime = new Date(examStartTime).getTime();
       const diff = startTime - now;
       
       if (diff <= 0) {
-        debugLog('COUNTDOWN', 'Countdown finished, retrying access');
         clearInterval(timer);
         handleRetryAccess();
         return;
@@ -316,15 +330,12 @@ const ChainExam: React.FC = () => {
   }, [isClient, isExamAccessible, examStartTime, getServerTime]);
 
   const decryptData = (encryptedData: string) => {
-    debugLog('DECRYPT', 'Starting decryption');
-    
     try {
       const [ivHex, encrypted] = encryptedData.split(':');
       const iv = CryptoJS.enc.Hex.parse(ivHex);
       const encryptionKeyString = process.env.NEXT_PUBLIC_EXAM_ENCRYPTION_KEY;
       
       if (!encryptionKeyString) {
-        debugLog('DECRYPT', 'Encryption key not found');
         throw new Error('Encryption configuration error');
       }
       
@@ -345,10 +356,8 @@ const ChainExam: React.FC = () => {
       const decrypted = CryptoJS.AES.decrypt(encrypted, key, decryptParams);
       const result = decrypted.toString(CryptoJS.enc.Utf8);
       
-      debugLog('DECRYPT', 'Decryption successful', { resultLength: result.length });
       return result;
     } catch (error) {
-      debugLog('DECRYPT', 'Decryption failed', error);
       throw new Error('Failed to decrypt data');
     }
   };
@@ -356,23 +365,13 @@ const ChainExam: React.FC = () => {
   const findLatestUnfinishedExam = useCallback(async () => {
     if (!isClient || !examDbService) return false;
     
-    debugLog('FIND_EXAM', 'Finding latest unfinished exam', {
-      hasExamString: !!exam_string,
-      examOrderLength: examOrder.length
-    });
-    
     if (!exam_string && examOrder.length > 0) {
       setLoading(true);
       
       for (let i = examOrder.length - 1; i >= 0; i--) {
         const hasData = await examDbService.hasExamData(examOrder[i].exam_string);
-        debugLog('FIND_EXAM', `Checking exam ${i}`, {
-          examString: examOrder[i].exam_string,
-          hasData
-        });
         
         if (hasData) {
-          debugLog('FIND_EXAM', 'Found unfinished exam, navigating', examOrder[i].exam_string);
           router.push(`/exam/${examOrder[i].exam_string}`);
           return true;
         }
@@ -385,13 +384,10 @@ const ChainExam: React.FC = () => {
   const fetchQuestions = async () => {
     if (!isClient) return;
     
-    debugLog('FETCH_QUESTIONS', 'Starting to fetch questions', { exam_string });
-    
     try {
       const axios = (await import('axios')).default;
       
       const currentExam = examOrder.find((exam) => exam.exam_string === exam_string);
-      debugLog('FETCH_QUESTIONS', 'Current exam found', currentExam);
       
       if (currentExam && currentExam.exam_id) {
         setExamId(currentExam.exam_id);
@@ -409,24 +405,10 @@ const ChainExam: React.FC = () => {
         }
       );
 
-      debugLog('FETCH_QUESTIONS', 'API response received', {
-        status: response.status,
-        hasEncryptedData: !!response.data?.encryptedData
-      });
-
       const decryptedData = decryptData(response.data.encryptedData);
       const parsedData = JSON.parse(decryptedData);
       
-      debugLog('FETCH_QUESTIONS', 'Data parsed successfully', {
-        questionsCount: parsedData.questions?.length || 0,
-        duration: parsedData.duration
-      });
-      
       if (examSession && !examSession.is_auto_move && getServerTime() < new Date(examSession.start_time).getTime()) {
-        debugLog('FETCH_QUESTIONS', 'Exam not accessible yet', {
-          examStartTime: examSession.start_time,
-          currentServerTime: new Date(getServerTime()).toISOString()
-        });
         setExamStartTime(examSession.start_time);
         setShowNotAccessibleModal(true);
         setIsExamAccessible(false);
@@ -437,18 +419,11 @@ const ChainExam: React.FC = () => {
       setQuestions(parsedData.questions);
       setDuration(examDurationInMinutes);
       
-      debugLog('FETCH_QUESTIONS', 'Questions and duration set', {
-        questionsLength: parsedData.questions.length,
-        duration: examDurationInMinutes
-      });
-      
       await loadExistingSession(currentExam?.exam_id);
       setLoading(false);
       setError(false);
       
-      debugLog('FETCH_QUESTIONS', 'Fetch questions completed successfully');
     } catch (error) {
-      debugLog('FETCH_QUESTIONS', 'Error fetching questions', error);
       setError(true);
       setLoading(false);
     }
@@ -459,14 +434,7 @@ const ChainExam: React.FC = () => {
     
     const examIdToUse = currentExamId || examId;
     
-    debugLog('LOAD_SESSION', 'Loading existing session', {
-      examScheduleId,
-      examIdToUse,
-      currentExamId
-    });
-    
     if (!examScheduleId || !examIdToUse) {
-      debugLog('LOAD_SESSION', 'Missing required IDs, skipping session load');
       return;
     }
     
@@ -487,27 +455,13 @@ const ChainExam: React.FC = () => {
           }
         }
       );
-
-      debugLog('LOAD_SESSION', 'Session API response', {
-        status: response.data.status,
-        hasData: !!response.data.data
-      });
         
       if (response.data.status === 'success' && response.data.data) {
         const sessionData = response.data.data;
         
-        debugLog('LOAD_SESSION', 'Session data received', {
-          name: sessionData.name,
-          isAutoMove: sessionData.is_auto_move,
-          startTime: sessionData.start_time,
-          endTime: sessionData.end_time,
-          answersCount: Object.keys(sessionData.answers || {}).length
-        });
-        
         setExamName(sessionData.name);
         
         if (!sessionData.is_auto_move && getServerTime() < new Date(sessionData.start_time).getTime()) {
-          debugLog('LOAD_SESSION', 'Session not accessible yet');
           setExamStartTime(sessionData.start_time);
           setShowNotAccessibleModal(true);
           setIsExamAccessible(false);
@@ -535,104 +489,96 @@ const ChainExam: React.FC = () => {
         const endTime = new Date(sessionData.end_time).getTime();
         const remainingTime = Math.max(0, Math.floor((endTime - serverNow) / 1000));
         
-        debugLog('LOAD_SESSION', 'Time calculations', {
-          serverNow: new Date(serverNow).toISOString(),
-          endTime: new Date(endTime).toISOString(),
-          remainingTime
-        });
-        
         setTimeLeft(remainingTime);
         lastTickRef.current = serverNow;
         
         setExamSession(sessionData);
         
         if (remainingTime <= 0) {
-          debugLog('LOAD_SESSION', 'Time expired, auto-submitting');
           setIsTimeExpired(true);
-          handleSubmit(undefined, true);
+          handleAutoSubmit();
         }
         
         return;
       }
     } catch (error) {
-      debugLog('LOAD_SESSION', 'Error loading session, falling back to local data', error);
-      
       const savedAnswers = await examDbService.getAnswers(exam_string);
       if (savedAnswers) {
-        debugLog('LOAD_SESSION', 'Loaded answers from local storage', {
-          answersCount: Object.keys(savedAnswers).length
-        });
         setAnswers(savedAnswers);
       }
       
       if (duration > 0) {
-        debugLog('LOAD_SESSION', 'Setting default time from duration', {
-          duration,
-          timeInSeconds: duration * 60
-        });
         setTimeLeft(duration * 60);
         lastTickRef.current = getServerTime();
       }
     }
   };
 
-  const handleSubmit = useCallback((e?: React.FormEvent, skipConfirmation = false) => {
-    debugLog('SUBMIT', 'Handle submit called', {
-      hasEvent: !!e,
-      skipConfirmation,
-      isTimeExpired
-    });
+  // Modified submission handler - auto submit immediately when time expires
+  const handleAutoSubmit = useCallback(async () => {
+    if (submissionInProgress.current) return;
     
+    submissionInProgress.current = true;
+    setIsTimeExpired(true);
+    setIsSubmitting(true);
+    
+    // Submit to server immediately
+    const shouldScore = !nextExam;
+    const success = await submitToServer(shouldScore);
+    
+    if (success) {
+      // Clear exam data
+      await examDbService?.deleteExamData(exam_string);
+      
+      // Determine next action
+      const nextExamIndex = currentExamIndex + 1;
+      const hasNextExam = nextExamIndex < examOrder.length;
+      
+      if (hasNextExam) {
+        setNextExam(examOrder[nextExamIndex]?.name || null);
+        setShowModalNext(true);
+      } else {
+        // No more exams, go back to home
+        clearExamData();
+        router.push(originPath || '/');
+      }
+    } else {
+      setSubmitError(true);
+      setShowModalNext(true);
+    }
+    
+    setIsSubmitting(false);
+    submissionInProgress.current = false;
+  }, [examDbService, exam_string, currentExamIndex, examOrder, nextExam, clearExamData, router, originPath]);
+
+  const handleSubmit = useCallback((e?: React.FormEvent, skipConfirmation = false) => {
     if (e) e.preventDefault();
     
     if (isTimeExpired || skipConfirmation) {
-      directSubmit();
+      handleAutoSubmit();
     } else {
       setShowConfirmationModal(true);
     }
-  }, [isTimeExpired]);
+  }, [isTimeExpired, handleAutoSubmit]);
 
-  const directSubmit = useCallback(() => {
-    debugLog('DIRECT_SUBMIT', 'Direct submit called', {
-      currentExamIndex,
-      examOrderLength: examOrder.length
-    });
-    
-    const nextExamIndex = currentExamIndex + 1;
-    setNextExam(examOrder[nextExamIndex]?.name || null);
+  const confirmSubmit = useCallback(async () => {
     setShowConfirmationModal(false);
-    setShowModalNext(true);
-  }, [currentExamIndex, examOrder]);
-
-  const confirmSubmit = useCallback(() => {
-    debugLog('CONFIRM_SUBMIT', 'Confirm submit called');
-    setShowConfirmationModal(false);
-    directSubmit();
-  }, [directSubmit]);
-
-  const handleAutoSubmit = useCallback(() => {
-    debugLog('AUTO_SUBMIT', 'Auto submit triggered by tab change');
-    setIsTimeExpired(true);
-    handleSubmit(undefined, true);
-  }, [handleSubmit]);
+    await handleAutoSubmit();
+  }, [handleAutoSubmit]);
 
   useEffect(() => {
     if (!isClient || !examDbService) return;
     
     const initializeExam = async () => {
-      debugLog('INITIALIZE', 'Starting exam initialization');
       setIsInitializing(true);
       
       if (!exam_string) {
-        debugLog('INITIALIZE', 'No exam string, finding latest unfinished');
         await findLatestUnfinishedExam();
       } else {
-        debugLog('INITIALIZE', 'Exam string found, fetching questions');
         await fetchQuestions();
       }
       
       setIsInitializing(false);
-      debugLog('INITIALIZE', 'Exam initialization completed');
     };
     
     initializeExam();
@@ -640,8 +586,6 @@ const ChainExam: React.FC = () => {
 
   useEffect(() => {
     if (!isClient || !examDbService || !exam_string || isInitializing) return;
-    
-    debugLog('REINITIALIZE', 'Reinitializing for new exam string', exam_string);
     
     setLoading(true);
     setQuestions([]);
@@ -668,9 +612,7 @@ const ChainExam: React.FC = () => {
   useEffect(() => {
     if (!isClient || !error || isInitializing) return;
     
-    debugLog('ERROR_RETRY', 'Setting up retry timeout');
     const retryTimeout = setTimeout(() => {
-      debugLog('ERROR_RETRY', 'Retrying fetch questions');
       fetchQuestions();
     }, 5000);
 
@@ -681,25 +623,14 @@ const ChainExam: React.FC = () => {
   useEffect(() => {
     if (!isClient || loading || timeLeft <= 0 || lastTickRef.current === 0) return;
     
-    debugLog('TIMER_START', 'Starting main timer', { timeLeft, serverTime: new Date(getServerTime()).toISOString() });
-    
     const updateTimer = () => {
-      const serverNow = getServerTime(); // Use server time instead of Date.now()
+      const serverNow = getServerTime();
       const deltaTime = Math.floor((serverNow - lastTickRef.current) / 1000);
       
       // Detect time manipulation
       if (detectTimeJump(serverNow, lastTickRef.current)) {
-        debugLog('TIME_JUMP', '⚠️ Time jump detected! Forcing sync...', { 
-          deltaTime, 
-          expected: 1,
-          serverNow: new Date(serverNow).toISOString(),
-          lastTick: new Date(lastTickRef.current).toISOString()
-        });
-        
-        // Force immediate re-sync
         forceSyncNow();
         
-        // Use expected 1-second delta to prevent manipulation
         const safeDelta = 1;
         setTimeLeft(prevTime => Math.max(0, prevTime - safeDelta));
         lastTickRef.current = serverNow - ((safeDelta - 1) * 1000);
@@ -712,9 +643,7 @@ const ChainExam: React.FC = () => {
         setTimeLeft(prevTime => {
           const newTime = Math.max(0, prevTime - deltaTime);
           if (newTime <= 0) {
-            debugLog('TIMER_EXPIRED', 'Timer expired, auto-submitting');
-            setIsTimeExpired(true);
-            handleSubmit(undefined, true);
+            handleAutoSubmit();
             return 0;
           }
           return newTime;
@@ -730,12 +659,10 @@ const ChainExam: React.FC = () => {
         clearInterval(timerRef.current);
       }
     };
-  }, [isClient, loading, timeLeft, getServerTime, detectTimeJump, forceSyncNow, handleSubmit]);
+  }, [isClient, loading, timeLeft, getServerTime, detectTimeJump, forceSyncNow, handleAutoSubmit]);
 
   useEffect(() => {
     if (!isClient || loading || timeLeft <= 0 || timeLeft % 120 !== 0) return;
-    
-    debugLog('AUTO_SAVE', 'Setting up auto-save interval');
     
     if (autoSaveRef.current) {
       clearInterval(autoSaveRef.current);
@@ -743,7 +670,6 @@ const ChainExam: React.FC = () => {
     
     autoSaveRef.current = setInterval(() => {
       if (Object.keys(answers).length > 0) {
-        debugLog('AUTO_SAVE', 'Auto-saving answers');
         saveExamSession();
       }
     }, 1000);
@@ -758,7 +684,6 @@ const ChainExam: React.FC = () => {
   const saveExamSession = async () => {
     if (!isClient || !examDbService) return false;
     
-    debugLog('SAVE_SESSION', 'Starting session save');
     setAutoSaving(true);
     
     try {
@@ -783,12 +708,10 @@ const ChainExam: React.FC = () => {
         }
       );
       
-      debugLog('SAVE_SESSION', 'Session saved successfully');
       setAutoSaving(false);
       setShowCheckpointToast(true);
       return true;
     } catch (error) {
-      debugLog('SAVE_SESSION', 'Error saving session', error);
       setAutoSaving(false);
       return false;
     }
@@ -803,8 +726,6 @@ const ChainExam: React.FC = () => {
   const handleChange = async (id: number, value: any) => {
     if (!examDbService) return;
     
-    debugLog('ANSWER_CHANGE', 'Answer changed', { questionId: id, value });
-    
     const updatedAnswers = {
       ...answers,
       [id]: value
@@ -815,8 +736,6 @@ const ChainExam: React.FC = () => {
 
   const handleTrueFalseChange = async (id: number, index: number, value: any) => {
     if (!examDbService) return;
-    
-    debugLog('TRUE_FALSE_CHANGE', 'True/false answer changed', { questionId: id, index, value });
     
     const updatedAnswers = [...(answers[id] || [])];
     updatedAnswers[index] = value;
@@ -845,41 +764,28 @@ const ChainExam: React.FC = () => {
   };
 
   const handleNextExam = async () => {
-    debugLog('NEXT_EXAM', 'Handle next exam', { nextExam });
-    
-    const shouldScore = !nextExam;
-    const success = await submitToServer(shouldScore);
-    
-    if (success) {
-      if (nextExam) {
-        const nextExamString = examOrder[currentExamIndex + 1].exam_string;
-        setShowModalNext(false);
-        
-        setCurrentQuestion(0);
-        setQuestions([]);
-        setAnswers({});
-        setExamSession(null);
-        
-        router.push(`/exam/${nextExamString}`);
-      } else {
-        clearExamData();
-        router.push(originPath || '/');
-      }
+    if (nextExam) {
+      const nextExamString = examOrder[currentExamIndex + 1].exam_string;
+      setShowModalNext(false);
+      
+      setCurrentQuestion(0);
+      setQuestions([]);
+      setAnswers({});
+      setExamSession(null);
+      
+      router.push(`/exam/${nextExamString}`);
+    } else {
+      clearExamData();
+      router.push(originPath || '/');
     }
   };
 
   const handleRetrySubmit = () => {
-    debugLog('RETRY_SUBMIT', 'Retrying submit');
-    handleNextExam();
+    handleAutoSubmit();
   };
 
   const handleNavigation = async (index: number) => {
     if (!examDbService || questions.length === 0 || currentQuestion >= questions.length) return;
-    
-    debugLog('NAVIGATION', 'Navigating to question', { 
-      from: currentQuestion, 
-      to: index 
-    });
     
     if (exam_string && questions[currentQuestion] && questions[currentQuestion].id) {
       await examDbService.updateQuestionElapsedTime(exam_string, questions[currentQuestion].id);
@@ -894,8 +800,6 @@ const ChainExam: React.FC = () => {
 
   const submitToServer = async (shouldScore = false): Promise<boolean> => {
     if (!isClient || !examDbService) return false;
-    
-    debugLog('SUBMIT_SERVER', 'Submitting to server', { shouldScore });
     
     setSubmitLoading(true);
     setSubmitError(false);
@@ -922,9 +826,7 @@ const ChainExam: React.FC = () => {
         }
       );
 
-      if (!nextExam && selectedTopicId){
-        debugLog('SUBMIT_SERVER', 'Submitting user course completion', { selectedTopicId });
-        
+if (!nextExam && selectedTopicId){
         try{
           await axios.post(
             `${process.env.NEXT_PUBLIC_API_URL}/userCourse/`,{
@@ -939,13 +841,11 @@ const ChainExam: React.FC = () => {
             }
           )
         }catch(error){
-          debugLog('SUBMIT_SERVER', 'Error submitting user course', error);
+          console.error('Error submitting user course', error);
         }
       }
       
       if (shouldScore && !nextExam) {
-        debugLog('SUBMIT_SERVER', 'Submitting for scoring');
-        
         try {
           await axios.post(
             `${process.env.NEXT_PUBLIC_API_URL}/score/schedule/${examScheduleId}`,
@@ -958,16 +858,13 @@ const ChainExam: React.FC = () => {
             }
           );
         } catch (scoreError) {
-          debugLog('SUBMIT_SERVER', 'Error submitting for scoring', scoreError);
+          console.error('Error submitting for scoring', scoreError);
         }
       }
   
-      await examDbService.deleteExamData(exam_string);
       setSubmitLoading(false);
-      debugLog('SUBMIT_SERVER', 'Submit to server completed successfully');
       return true;
     } catch (error) {
-      debugLog('SUBMIT_SERVER', 'Error submitting to server', error);
       setSubmitLoading(false);
       setSubmitError(true);
       return false;
@@ -976,8 +873,6 @@ const ChainExam: React.FC = () => {
 
   const renderQuestion = (q: Question) => {
     if (!isClient) return null;
-    
-    debugLog('RENDER_QUESTION', 'Rendering question', { id: q.id, type: q.type });
     
     switch (q.type) {
       case 'single-choice':
@@ -1049,26 +944,17 @@ const ChainExam: React.FC = () => {
         );
         
       default:
-        debugLog('RENDER_QUESTION', 'Unknown question type', q.type);
         return null;
     }
   };
 
   const handleClose = async () => {
-    debugLog('CLOSE', 'Handling close');
-    
-    const shouldScore = !nextExam;
-    const success = await submitToServer(shouldScore);
-    if (success) {
-      clearExamData();
-      router.push(originPath || '/');
-    }
+    clearExamData();
+    router.push(originPath || '/');
   };
 
   const handleRetryAccess = async () => {
     if (!isClient) return;
-    
-    debugLog('RETRY_ACCESS', 'Retrying exam access');
     
     try {
       const axios = (await import('axios')).default;
@@ -1092,18 +978,15 @@ const ChainExam: React.FC = () => {
         const sessionData = response.data.data;
         
         if (!sessionData.is_auto_move && getServerTime() >= new Date(sessionData.start_time).getTime()) {
-          debugLog('RETRY_ACCESS', 'Access granted, fetching questions');
           setShowNotAccessibleModal(false);
           setIsExamAccessible(true);
           fetchQuestions();
         } else {
-          debugLog('RETRY_ACCESS', 'Still not accessible');
           setExamStartTime(sessionData.start_time);
           setIsExamAccessible(false);
         }
       }
     } catch (error) {
-      debugLog('RETRY_ACCESS', 'Error checking exam accessibility', error);
       if (examStartTime && getServerTime() >= new Date(examStartTime).getTime()) {
         setIsExamAccessible(true);
         setShowNotAccessibleModal(false);
@@ -1112,30 +995,11 @@ const ChainExam: React.FC = () => {
     }
   };
 
-  // Optional: Display sync status in development
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      const interval = setInterval(() => {
-        const stats = getSyncStats();
-        console.log('📊 Sync Stats:', {
-          totalSyncs: stats.totalSyncs,
-          lastSyncAgo: Math.round(stats.lastSyncAgo / 1000 / 60) + ' min ago',
-          nextSyncIn: Math.round(stats.nextSyncIn / 1000 / 60) + ' min',
-          offsetMs: stats.currentOffset,
-          isOnline
-        });
-      }, 60000); // Every minute in dev
-
-      return () => clearInterval(interval);
-    }
-  }, [getSyncStats, isOnline]);
-
   if (!isClient) {
     return null;
   }
 
   if (loading) {
-    debugLog('RENDER', 'Rendering loading state');
     return (
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <div className="tw-text-center">
@@ -1153,7 +1017,6 @@ const ChainExam: React.FC = () => {
   }
   
   if (error) {
-    debugLog('RENDER', 'Rendering error state');
     return (
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <div className="tw-text-center">
@@ -1174,7 +1037,6 @@ const ChainExam: React.FC = () => {
   }
   
   if (!isExamAccessible) {
-    debugLog('RENDER', 'Rendering not accessible state');
     return (
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <div className="tw-text-center">
@@ -1206,487 +1068,532 @@ const ChainExam: React.FC = () => {
     );
   }
 
-  debugLog('RENDER', 'Rendering main exam interface', {
-    questionsLength: questions.length,
-    currentQuestion,
-    timeLeft,
-    answersCount: Object.keys(answers).length
-  });
-
   return (
-    <ChangeTabPrevention 
-      onAutoSubmit={handleAutoSubmit}
-      enabled={!loading && !error && isExamAccessible && questions.length > 0}
-    >
-      <div className="tw-min-h-screen tw-bg-violet-50">
-        <div className="tw-bg-violet-600 tw-text-white tw-py-4 tw-shadow-lg tw-mb-6">
-          <Container>
-            <div className="tw-flex tw-justify-between tw-items-center">
-              <div className="tw-flex-1 tw-min-w-0">
-                <h1 className="tw-text-2xl tw-font-bold tw-mb-1 tw-break-words tw-pr-4">
-                  {examName || 'Loading...'}
-                </h1>
-                {examSession && (
-                  <p className="tw-text-sm tw-text-violet-200">
-                    End time: {new Date(examSession.end_time).toLocaleTimeString()}
-                  </p>
-                )}
-                {process.env.NODE_ENV === 'development' && (
-                  <p className="tw-text-xs tw-text-violet-300">
-                    Sync: {syncCount}x | Offset: {timeOffset}ms | {isOnline ? '🟢' : '🔴'}
-                  </p>
-                )}
-              </div>
-              <div className="tw-flex tw-items-center tw-gap-3 tw-bg-violet-700 tw-rounded-lg tw-px-6 tw-py-3 tw-flex-shrink-0">
-                <Clock size={28} className="tw-text-violet-200" />
-                <div className="tw-flex tw-flex-col tw-items-start">
-                  <span className="tw-text-violet-200 tw-text-sm">Time Remaining</span>
-                  <span className="tw-text-3xl tw-font-mono tw-font-bold">{formatTime(timeLeft)}</span>
+    <>
+      {/* Hidden Timer Validator */}
+      <HiddenTimerValidator 
+        mainTimer={timeLeft}
+        onSecurityBreach={handleAutoSubmit}
+      />
+
+      <ChangeTabPrevention 
+        onAutoSubmit={handleAutoSubmit}
+        enabled={!loading && !error && isExamAccessible && questions.length > 0}
+      >
+        <div className="tw-min-h-screen tw-bg-violet-50">
+          <div className="tw-bg-violet-600 tw-text-white tw-py-4 tw-shadow-lg tw-mb-6">
+            <Container>
+              <div className="tw-flex tw-justify-between tw-items-center">
+                <div className="tw-flex-1 tw-min-w-0">
+                  <h1 className="tw-text-2xl tw-font-bold tw-mb-1 tw-break-words tw-pr-4">
+                    {examName || 'Loading...'}
+                  </h1>
+                  {examSession && (
+                    <p className="tw-text-sm tw-text-violet-200">
+                      End time: {new Date(examSession.end_time).toLocaleTimeString()}
+                    </p>
+                  )}
+                  {process.env.NODE_ENV === 'development' && (
+                    <p className="tw-text-xs tw-text-violet-300">
+                      Sync: {syncCount}x | Offset: {timeOffset}ms | {isOnline ? '🟢' : '🔴'}
+                    </p>
+                  )}
+                </div>
+                <div className="tw-flex tw-items-center tw-gap-3 tw-bg-violet-700 tw-rounded-lg tw-px-6 tw-py-3 tw-flex-shrink-0">
+                  <Clock size={28} className="tw-text-violet-200" />
+                  <div className="tw-flex tw-flex-col tw-items-start">
+                    <span className="tw-text-violet-200 tw-text-sm">Time Remaining</span>
+                    <span className="tw-text-3xl tw-font-mono tw-font-bold">{formatTime(timeLeft)}</span>
+                  </div>
                 </div>
               </div>
+            </Container>
+          </div>
+
+          {/* Auto-Submit Loading Overlay */}
+          {isSubmitting && (
+            <div className="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-flex tw-items-center tw-justify-center tw-z-50">
+              <div className="tw-bg-white tw-p-8 tw-rounded-lg tw-text-center tw-max-w-md">
+                <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
+                <h3 className="tw-text-xl tw-font-semibold tw-text-violet-800 tw-mb-2">
+                  Submitting Exam
+                </h3>
+                <p className="tw-text-violet-600">
+                  Please wait while we process your answers...
+                </p>
+              </div>
             </div>
-          </Container>
-        </div>
+          )}
 
-        <div 
-          className="tw-fixed tw-top-4 tw-right-4 tw-z-50"
-          style={{ display: showCheckpointToast ? 'block' : 'none' }}
-        >
-          <Toast 
-            onClose={() => setShowCheckpointToast(false)} 
-            show={showCheckpointToast} 
-            delay={3000} 
-            autohide
-            className="tw-bg-violet-100 tw-border-violet-300 tw-border"
+          <div 
+            className="tw-fixed tw-top-4 tw-right-4 tw-z-50"
+            style={{ display: showCheckpointToast ? 'block' : 'none' }}
           >
-            <Toast.Header className="tw-bg-violet-200 tw-text-violet-800">
-              <Check className="tw-mr-2 tw-text-violet-600" size={16} />
-              <strong className="tw-mr-auto">Checkpoint Saved</strong>
-            </Toast.Header>
-            <Toast.Body className="tw-text-violet-700">
-              Your answers have been saved to the server.
-            </Toast.Body>
-          </Toast>
-        </div>
+            <Toast 
+              onClose={() => setShowCheckpointToast(false)} 
+              show={showCheckpointToast} 
+              delay={3000} 
+              autohide
+              className="tw-bg-violet-100 tw-border-violet-300 tw-border"
+            >
+              <Toast.Header className="tw-bg-violet-200 tw-text-violet-800">
+                <Check className="tw-mr-2 tw-text-violet-600" size={16} />
+                <strong className="tw-mr-auto">Checkpoint Saved</strong>
+              </Toast.Header>
+              <Toast.Body className="tw-text-violet-700">
+                Your answers have been saved to the server.
+              </Toast.Body>
+            </Toast>
+          </div>
 
-        <Container className="tw-mb-8">
-          <Row>
-            <Col lg={8} className="tw-mb-4">
-              <Card className="tw-shadow-md tw-border-0 tw-rounded-xl
-                [&_p_img]:tw-max-w-full 
-                [&_p_img]:tw-h-auto 
-                [&_p_img]:tw-block 
-                [&_p_img]:tw-mx-auto 
-                [&_p_img]:tw-my-4
-                [&_img]:tw-max-w-full 
-                [&_img]:tw-h-auto 
-                [&_img]:tw-block 
-                [&_img]:tw-mx-auto 
-                [&_img]:tw-my-4">
-                <Card.Body className="tw-p-6">
-                  {questions.length > 0 && currentQuestion < questions.length ? (
-                    <>
-                      <div className="tw-flex tw-justify-between tw-items-center tw-mb-6">
-                        <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">
-                          Question {currentQuestion + 1} of {questions.length}
-                        </h2>
-                        {autoSaving && (
-                          <div className="tw-flex tw-items-center tw-text-violet-600">
-                            <Loader2 className="tw-h-4 tw-w-4 tw-animate-spin tw-mr-2" />
-                            <span className="tw-text-sm">Saving...</span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="tw-mb-6">
-                        {renderQuestion(questions[currentQuestion])}
-                      </div>
-
-                      <div className="tw-flex tw-justify-between tw-mt-8">
-                        <Button
-                          variant="outline-secondary"
-                          className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
-                          disabled={currentQuestion === 0}
-                          onClick={() => handleNavigation(currentQuestion - 1)}
-                        >
-                          Previous
-                        </Button>
-                        <Button
-                          className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700"
-                          disabled={currentQuestion === questions.length - 1}
-                          onClick={() => handleNavigation(currentQuestion + 1)}
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="tw-text-center tw-py-8">
-                      <p className="tw-text-gray-500">No questions available</p>
-                    </div>
-                  )}
-                </Card.Body>
-              </Card>
-            </Col>
-
-            <Col lg={4} className="tw-hidden md:tw-block">
-              <Card className="tw-shadow-md tw-border-0 tw-rounded-xl tw-sticky tw-top-4">
-                <Card.Body className="tw-p-4">
-                  <h3 className="tw-text-lg tw-font-semibold tw-text-violet-800 tw-mb-4">Question Navigator</h3>
-                  {questions.length > 0 ? (
-                    <>
-                      <div className="tw-grid tw-grid-cols-5 tw-gap-2 tw-mb-6">
-                        {questions.map((q, index) => (
-                          <Button
-                            key={q.id}
-                            variant={currentQuestion === index ? "primary" : "outline-secondary"}
-                            className={`tw-w-10 tw-h-10 tw-rounded-lg tw-flex tw-items-center tw-justify-center 
-                              ${currentQuestion === index 
-                                ? 'tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700' 
-                                : 'tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50'}
-                              ${isAnswered(q.id) ? 'tw-bg-violet-200' : ''}`}
-                            onClick={() => handleNavigation(index)}
-                          >
-                            {index + 1}
-                          </Button>
-                        ))}
-                      </div>
-
-                      <div className="tw-mb-4">
-                        <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
-                          <span>Progress</span>
-                          <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
+          <Container className="tw-mb-8">
+            <Row>
+              <Col lg={8} className="tw-mb-4">
+                <Card className="tw-shadow-md tw-border-0 tw-rounded-xl
+                  [&_p_img]:tw-max-w-full 
+                  [&_p_img]:tw-h-auto 
+                  [&_p_img]:tw-block 
+                  [&_p_img]:tw-mx-auto 
+                  [&_p_img]:tw-my-4
+                  [&_img]:tw-max-w-full 
+                  [&_img]:tw-h-auto 
+                  [&_img]:tw-block 
+                  [&_img]:tw-mx-auto 
+                  [&_img]:tw-my-4">
+                  <Card.Body className="tw-p-6">
+                    {questions.length > 0 && currentQuestion < questions.length ? (
+                      <>
+                        <div className="tw-flex tw-justify-between tw-items-center tw-mb-6">
+                          <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">
+                            Question {currentQuestion + 1} of {questions.length}
+                          </h2>
+                          {autoSaving && (
+                            <div className="tw-flex tw-items-center tw-text-violet-600">
+                              <Loader2 className="tw-h-4 tw-w-4 tw-animate-spin tw-mr-2" />
+                              <span className="tw-text-sm">Saving...</span>
+                            </div>
+                          )}
                         </div>
-                        <ProgressBar 
-                          now={(getFilledAnswersCount() / questions.length) * 100} 
-                          className="tw-h-2 tw-bg-violet-100"
-                        >
-                          <ProgressBar 
-                            now={(getFilledAnswersCount()/ questions.length) * 100} 
-                            className="tw-bg-violet-600"
-                          />
-                        </ProgressBar>
+                        
+                        <div className="tw-mb-6">
+                          {renderQuestion(questions[currentQuestion])}
+                        </div>
+
+                        <div className="tw-flex tw-justify-between tw-mt-8">
+                          <Button
+                            variant="outline-secondary"
+                            className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
+                            disabled={currentQuestion === 0}
+                            onClick={() => handleNavigation(currentQuestion - 1)}
+                          >
+                            Previous
+                          </Button>
+                          <Button
+                            className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700"
+                            disabled={currentQuestion === questions.length - 1}
+                            onClick={() => handleNavigation(currentQuestion + 1)}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="tw-text-center tw-py-8">
+                        <p className="tw-text-gray-500">No questions available</p>
                       </div>
+                    )}
+                  </Card.Body>
+                </Card>
+              </Col>
 
-                      {currentQuestion === questions.length - 1 && (
-                        <Button 
-                          variant="primary" 
-                          className="tw-w-full tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
-                          onClick={handleSubmit}
-                        >
-                          Submit Exam
-                        </Button>
-                      )}
-                    </>
-                  ) : (
-                    <div className="tw-text-center tw-text-gray-500">
-                      <p>No questions loaded</p>
+              <Col lg={4} className="tw-hidden md:tw-block">
+                <Card className="tw-shadow-md tw-border-0 tw-rounded-xl tw-sticky tw-top-4">
+                  <Card.Body className="tw-p-4">
+                    <h3 className="tw-text-lg tw-font-semibold tw-text-violet-800 tw-mb-4">Question Navigator</h3>
+                    {questions.length > 0 ? (
+                      <>
+                        <div className="tw-grid tw-grid-cols-5 tw-gap-2 tw-mb-6">
+                          {questions.map((q, index) => (
+                            <Button
+                              key={q.id}
+                              variant={currentQuestion === index ? "primary" : "outline-secondary"}
+                              className={`tw-w-10 tw-h-10 tw-rounded-lg tw-flex tw-items-center tw-justify-center 
+                                ${currentQuestion === index 
+                                  ? 'tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700' 
+                                  : 'tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50'}
+                                ${isAnswered(q.id) ? 'tw-bg-violet-200' : ''}`}
+                              onClick={() => handleNavigation(index)}
+                            >
+                              {index + 1}
+                            </Button>
+                          ))}
+                        </div>
+
+                        <div className="tw-mb-4">
+                          <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
+                            <span>Progress</span>
+                            <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
+                          </div>
+                          <ProgressBar 
+                            now={(getFilledAnswersCount() / questions.length) * 100} 
+                            className="tw-h-2 tw-bg-violet-100"
+                          >
+                            <ProgressBar 
+                              now={(getFilledAnswersCount()/ questions.length) * 100} 
+                              className="tw-bg-violet-600"
+                            />
+                          </ProgressBar>
+                        </div>
+
+                        {currentQuestion === questions.length - 1 && (
+                          <Button 
+                            variant="primary" 
+                            className="tw-w-full tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
+                            onClick={handleSubmit}
+                          >
+                            Submit Exam
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      <div className="tw-text-center tw-text-gray-500">
+                        <p>No questions loaded</p>
+                      </div>
+                    )}
+                  </Card.Body>
+                </Card>
+              </Col>
+            </Row>
+          </Container>
+
+          <div className="tw-block md:tw-hidden tw-fixed tw-bottom-0 tw-left-0 tw-right-0 tw-bg-white tw-shadow-lg tw-border-t tw-border-gray-200 tw-z-50">
+            <div className="tw-p-4">
+              {questions.length > 0 ? (
+                <>
+                  <div className="tw-mb-3">
+                    <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
+                      <span>Progress</span>
+                      <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
                     </div>
-                  )}
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
-        </Container>
-
-        <div className="tw-block md:tw-hidden tw-fixed tw-bottom-0 tw-left-0 tw-right-0 tw-bg-white tw-shadow-lg tw-border-t tw-border-gray-200 tw-z-50">
-          <div className="tw-p-4">
-            {questions.length > 0 ? (
-              <>
-                <div className="tw-mb-3">
-                  <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
-                    <span>Progress</span>
-                    <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
-                  </div>
-                  <ProgressBar 
-                    now={(getFilledAnswersCount() / questions.length) * 100} 
-                    className="tw-h-2 tw-bg-violet-100"
-                  >
                     <ProgressBar 
                       now={(getFilledAnswersCount() / questions.length) * 100} 
-                      className="tw-bg-violet-600"
-                    />
-                  </ProgressBar>
-                </div>
-                
-                <div className="tw-overflow-x-auto tw-pb-2">
-                  <div className="tw-flex tw-gap-2 tw-min-w-max">
-                    {questions.map((q, index) => (
-                      <Button
-                        key={q.id}
-                        variant={currentQuestion === index ? "primary" : "outline-secondary"}
-                        className={`tw-w-10 tw-h-10 tw-rounded-lg tw-flex-shrink-0 tw-flex tw-items-center tw-justify-center 
-                          ${currentQuestion === index 
-                            ? 'tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700' 
-                            : 'tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50'}
-                          ${isAnswered(q.id) ? 'tw-bg-violet-200' : ''}`}
-                        onClick={() => handleNavigation(index)}
-                      >
-                        {index + 1}
-                      </Button>
-                    ))}
+                      className="tw-h-2 tw-bg-violet-100"
+                    >
+                      <ProgressBar 
+                        now={(getFilledAnswersCount() / questions.length) * 100} 
+                        className="tw-bg-violet-600"
+                      />
+                    </ProgressBar>
                   </div>
-                </div>
-
-                {currentQuestion === questions.length - 1 && (
-                  <Button 
-                    variant="primary" 
-                    className="tw-w-full tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
-                    onClick={handleSubmit}
-                  >
-                    Submit Exam
-                  </Button>
-                )}
-              </>
-            ) : (
-              <div className="tw-text-center tw-text-gray-500">
-                <p>No questions available</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Confirmation Modal */}
-        <Modal 
-          show={showConfirmationModal} 
-          onHide={() => setShowConfirmationModal(false)}
-          centered
-          backdrop="static"
-        >
-          <Modal.Header className="tw-bg-violet-50">
-            <Modal.Title className="tw-text-violet-800 tw-flex tw-items-center">
-              <AlertCircle className="tw-mr-2 tw-text-violet-600" size={20} />
-              Confirm Submission
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <div className="tw-p-2">
-              <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-violet-900">Are you sure you want to end this exam?</p>
-              
-              <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
-                <div className="tw-flex tw-items-center tw-mb-2">
-                  <FileCheck className="tw-text-violet-600 tw-mr-2" size={18} />
-                  <span className="tw-font-medium tw-text-violet-800">Exam Summary</span>
-                </div>
-                <p className="tw-text-violet-700 tw-mb-2">
-                  <span className="tw-font-medium">Completed:</span> {getFilledAnswersCount()} of {questions.length} questions
-                </p>
-                {getFilledAnswersCount() < questions.length && (
-                  <div className="tw-bg-amber-50 tw-p-2 tw-rounded tw-border tw-border-amber-200 tw-text-amber-800 tw-text-sm">
-                    Warning: You have {questions.length - getFilledAnswersCount()} unanswered questions.
+                  
+                  <div className="tw-overflow-x-auto tw-pb-2">
+                    <div className="tw-flex tw-gap-2 tw-min-w-max">
+                      {questions.map((q, index) => (
+                        <Button
+                          key={q.id}
+                          variant={currentQuestion === index ? "primary" : "outline-secondary"}
+                          className={`tw-w-10 tw-h-10 tw-rounded-lg tw-flex-shrink-0 tw-flex tw-items-center tw-justify-center 
+                            ${currentQuestion === index 
+                              ? 'tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700' 
+                              : 'tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50'}
+                            ${isAnswered(q.id) ? 'tw-bg-violet-200' : ''}`}
+                          onClick={() => handleNavigation(index)}
+                        >
+                          {index + 1}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
-                )}
-              </div>
-              
-              <p className="tw-text-gray-600 tw-text-sm">
-                Once submitted, you won&apos;t be able to change your answers for this section.
-              </p>
+
+                  {currentQuestion === questions.length - 1 && (
+                    <Button 
+                      variant="primary" 
+                      className="tw-w-full tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
+                      onClick={handleSubmit}
+                    >
+                      Submit Exam
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <div className="tw-text-center tw-text-gray-500">
+                  <p>No questions available</p>
+                </div>
+              )}
             </div>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button 
-              variant="outline-secondary" 
-              onClick={() => setShowConfirmationModal(false)}
-              className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
-            >
-              Continue Exam
-            </Button>
-            <Button 
-              variant="primary" 
-              onClick={confirmSubmit}
-              className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center"
-            >
-              <ArrowRight className="tw-mr-1" size={16} /> End Exam
-            </Button>
-          </Modal.Footer>
-        </Modal>
-      
-        {/* Next Exam Modal */}
-        <Modal 
-          show={showModalNext} 
-          onHide={() => {}}
-          centered
-          backdrop="static"
-          keyboard={false}
-        >
-          <Modal.Header className="tw-bg-violet-50">
-            <Modal.Title className="tw-text-violet-800">
-              {submitLoading ? (
-                <div className="tw-flex tw-items-center">
-                  <Loader2 className="tw-h-5 tw-w-5 tw-animate-spin tw-mr-2 tw-text-violet-600" />
-                  Menyimpan Jawaban...
-                </div>
-              ) : isTimeExpired ? (
-                "Waktu Telah Habis"
-              ) : nextExam ? "Lanjut ke Ujian Berikutnya?" : "Selesai"}
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            {submitLoading ? (
-              <div className="tw-text-center tw-py-4">
-                <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
-                <p className="tw-text-lg tw-font-medium">Sedang menyimpan jawaban...</p>
-                <p className="tw-text-gray-600">Mohon tunggu sebentar</p>
-              </div>
-            ) : submitError ? (
-              <div className="tw-py-2">
-                <Alert variant="danger" className="tw-mb-4">
-                  <p className="tw-font-bold tw-mb-2">Gagal menyimpan jawaban</p>
-                  <p>Jangan khawatir, soal selanjutnya akan dimulai setelah selesai mengirim jawaban kamu saat ini.</p>
-                </Alert>
-                <p>Silakan coba kirim ulang jawaban.</p>
-              </div>
-            ) : isTimeExpired ? (
-              <div className="tw-p-2 tw-text-center">
-                <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
-                  <Clock className="tw-h-16 tw-w-16 tw-text-violet-600 tw-mx-auto tw-mb-2" />
-                  <p className="tw-text-xl tw-font-medium tw-text-violet-800 tw-mb-2">Waktu ujian telah habis!</p>
-                  <p className="tw-text-violet-700">
-                    Jawaban Anda akan diproses secara otomatis.
-                  </p>
-                </div>
+          </div>
+
+          {/* Confirmation Modal */}
+          <Modal 
+            show={showConfirmationModal} 
+            onHide={() => setShowConfirmationModal(false)}
+            centered
+            backdrop="static"
+          >
+            <Modal.Header className="tw-bg-violet-50">
+              <Modal.Title className="tw-text-violet-800 tw-flex tw-items-center">
+                <AlertCircle className="tw-mr-2 tw-text-violet-600" size={20} />
+                Confirm Submission
+              </Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <div className="tw-p-2">
+                <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-violet-900">Are you sure you want to end this exam?</p>
+                
                 <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
                   <div className="tw-flex tw-items-center tw-mb-2">
                     <FileCheck className="tw-text-violet-600 tw-mr-2" size={18} />
-                    <span className="tw-font-medium tw-text-violet-800">Ringkasan Ujian</span>
+                    <span className="tw-font-medium tw-text-violet-800">Exam Summary</span>
                   </div>
                   <p className="tw-text-violet-700 tw-mb-2">
-                    <span className="tw-font-medium">Terjawab:</span> {getFilledAnswersCount()} dari {questions.length} pertanyaan
+                    <span className="tw-font-medium">Completed:</span> {getFilledAnswersCount()} of {questions.length} questions
                   </p>
-                </div>
-              </div>
-            ) : nextExam ? (
-              <div className="tw-p-2">
-                <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4 tw-text-center">
-                  <FileCheck className="tw-h-12 tw-w-12 tw-text-violet-600 tw-mx-auto tw-mb-2" />
-                  <p className="tw-text-lg tw-font-medium tw-text-violet-800 tw-mb-2">Bagian ini telah selesai!</p>
-                  <p className="tw-text-violet-700">
-                    Kamu akan melanjutkan ke <span className="tw-font-semibold">{nextExam}</span>.
-                  </p>
-                </div>
-                <p className="tw-text-center tw-text-gray-600">Apakah kamu siap untuk melanjutkan?</p>
-              </div>
-            ) : (
-              <div className="tw-p-2 tw-text-center">
-                <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
-                  <Check className="tw-h-16 tw-w-16 tw-text-violet-600 tw-mx-auto tw-mb-2" />
-                  <p className="tw-text-xl tw-font-medium tw-text-violet-800 tw-mb-2">Selamat!</p>
-                  <p className="tw-text-violet-700">
-                    Kamu telah menyelesaikan semua ujian dengan baik.
-                  </p>
-                </div>
-                <p className="tw-text-gray-600">Terima kasih atas partisipasimu!</p>
-              </div>
-            )}
-          </Modal.Body>
-          <Modal.Footer>
-            {submitLoading ? null : (
-              <>
-                {submitError ? (
-                  <Button 
-                    variant="primary" 
-                    className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700"
-                    onClick={handleRetrySubmit}
-                  >
-                    Kirim Ulang
-                  </Button>
-                ) : (
-                  <>
-                    <Button 
-                      variant="secondary" 
-                      onClick={handleClose}
-                    >
-                      Kembali ke Home
-                    </Button>
-                    {nextExam && !isTimeExpired && (
-                      <Button 
-                        variant="primary" 
-                        className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center"
-                        onClick={handleNextExam}
-                      >
-                        Lanjut <ArrowRight className="tw-ml-1" size={16} />
-                      </Button>
-                    )}
-                    {isTimeExpired && nextExam && (
-                      <Button 
-                        variant="primary" 
-                        className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center"
-                        onClick={handleNextExam}
-                      >
-                        Lanjut ke Ujian Berikutnya <ArrowRight className="tw-ml-1" size={16} />
-                      </Button>
-                    )}
-                  </>
-                )}
-              </>
-            )}
-          </Modal.Footer>
-        </Modal>
-
-        {/* Not Accessible Modal */}
-        <Modal 
-          show={showNotAccessibleModal} 
-          onHide={() => setShowNotAccessibleModal(false)}
-          centered
-          backdrop="static"
-        >
-          <Modal.Header className="tw-bg-violet-50">
-            <Modal.Title className="tw-text-violet-800 tw-flex tw-items-center">
-              <Clock className="tw-mr-2 tw-text-violet-600" size={20} />
-              Exam Not Available
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <div className="tw-p-2 tw-text-center">
-              <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-violet-900">
-                This exam is not available yet.
-              </p>
-              
-              {examStartTime && (
-                <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
-                  <p className="tw-text-violet-700 tw-mb-2">
-                    Scheduled start time:
-                  </p>
-                  <p className="tw-text-lg tw-font-medium tw-text-violet-800">
-                    {new Date(examStartTime).toLocaleString()}
-                  </p>
-                  
-                  <div className="tw-mt-4">
-                    <p className="tw-text-violet-600">Available in:</p>
-                    <div className="tw-text-2xl tw-font-mono tw-font-bold tw-text-violet-700 tw-mt-2">
-                      {countdown}
+                  {getFilledAnswersCount() < questions.length && (
+                    <div className="tw-bg-amber-50 tw-p-2 tw-rounded tw-border tw-border-amber-200 tw-text-amber-800 tw-text-sm">
+                      Warning: You have {questions.length - getFilledAnswersCount()} unanswered questions.
                     </div>
+                  )}
+                </div>
+                
+                <p className="tw-text-gray-600 tw-text-sm">
+                  Once submitted, you won&apos;t be able to change your answers for this section.
+                </p>
+              </div>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button 
+                variant="outline-secondary" 
+                onClick={() => setShowConfirmationModal(false)}
+                className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
+              >
+                Continue Exam
+              </Button>
+              <Button 
+                variant="primary" 
+                onClick={confirmSubmit}
+                className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center"
+              >
+                <ArrowRight className="tw-mr-1" size={16} /> End Exam
+              </Button>
+            </Modal.Footer>
+          </Modal>
+        
+          {/* Next Exam Modal */}
+          <Modal 
+            show={showModalNext} 
+            onHide={() => {}}
+            centered
+            backdrop="static"
+            keyboard={false}
+          >
+            <Modal.Header className="tw-bg-violet-50">
+              <Modal.Title className="tw-text-violet-800">
+                {submitLoading ? (
+                  <div className="tw-flex tw-items-center">
+                    <Loader2 className="tw-h-5 tw-w-5 tw-animate-spin tw-mr-2 tw-text-violet-600" />
+                    Processing Submission...
                   </div>
+                ) : isTimeExpired ? (
+                  "Time Expired"
+                ) : nextExam ? "Continue to Next Exam?" : "Completed"}
+              </Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              {submitLoading ? (
+                <div className="tw-text-center tw-py-4">
+                  <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
+                  <p className="tw-text-lg tw-font-medium">Processing your answers...</p>
+                  <p className="tw-text-gray-600">Please wait a moment</p>
+                </div>
+              ) : submitError ? (
+                <div className="tw-py-2">
+                  <Alert variant="danger" className="tw-mb-4">
+                    <p className="tw-font-bold tw-mb-2">Submission failed</p>
+                    <p>Please try submitting again.</p>
+                  </Alert>
+                </div>
+              ) : isTimeExpired ? (
+                <div className="tw-p-2 tw-text-center">
+                  <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
+                    <Clock className="tw-h-16 tw-w-16 tw-text-violet-600 tw-mx-auto tw-mb-2" />
+                    <p className="tw-text-xl tw-font-medium tw-text-violet-800 tw-mb-2">Exam time has expired!</p>
+                    <p className="tw-text-violet-700">
+                      Your answers have been submitted automatically.
+                    </p>
+                  </div>
+                  <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
+                    <div className="tw-flex tw-items-center tw-mb-2">
+                      <FileCheck className="tw-text-violet-600 tw-mr-2" size={18} />
+                      <span className="tw-font-medium tw-text-violet-800">Exam Summary</span>
+                    </div>
+                    <p className="tw-text-violet-700 tw-mb-2">
+                      <span className="tw-font-medium">Answered:</span> {getFilledAnswersCount()} of {questions.length} questions
+                    </p>
+                  </div>
+                </div>
+              ) : nextExam ? (
+                <div className="tw-p-2">
+                  <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4 tw-text-center">
+                    <FileCheck className="tw-h-12 tw-w-12 tw-text-violet-600 tw-mx-auto tw-mb-2" />
+                    <p className="tw-text-lg tw-font-medium tw-text-violet-800 tw-mb-2">Section completed!</p>
+                    <p className="tw-text-violet-700">
+                      Continue to <span className="tw-font-semibold">{nextExam}</span>.
+                    </p>
+                  </div>
+                  <p className="tw-text-center tw-text-gray-600">Are you ready to continue?</p>
+                </div>
+              ) : (
+                <div className="tw-p-2 tw-text-center">
+                  <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
+                    <Check className="tw-h-16 tw-w-16 tw-text-violet-600 tw-mx-auto tw-mb-2" />
+                    <p className="tw-text-xl tw-font-medium tw-text-violet-800 tw-mb-2">Congratulations!</p>
+                    <p className="tw-text-violet-700">
+                      You have completed all exams successfully.
+                    </p>
+                  </div>
+                  <p className="tw-text-gray-600">Thank you for your participation!</p>
                 </div>
               )}
-              
-              <p className="tw-text-gray-600 tw-text-sm">
-                Please wait until the scheduled time to access this exam.
-              </p>
-            </div>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button 
-              variant="outline-secondary" 
-              onClick={() => {
-                setShowNotAccessibleModal(false);
-                router.push(originPath || '/');
-              }}
-              className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
-            >
-              Back to Home
-            </Button>
-            <Button 
-              variant="primary" 
-              onClick={handleRetryAccess}
-              className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700"
-            >
-              Check Again
-            </Button>
-          </Modal.Footer>
-        </Modal>
-      </div>
-    </ChangeTabPrevention>
+            </Modal.Body>
+            <Modal.Footer>
+              {submitLoading ? null : (
+                <>
+                  {submitError ? (
+                    <Button 
+                      variant="primary" 
+                      className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700"
+                      onClick={handleRetrySubmit}
+                    >
+                      Retry Submission
+                    </Button>
+                  ) : (
+                    <>
+                      <Button 
+                        variant="secondary" 
+                        onClick={handleClose}
+                      >
+                        Back to Home
+                      </Button>
+                      {nextExam && (
+                        <Button 
+                          variant="primary" 
+                          className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center"
+                          onClick={handleNextExam}
+                        >
+                          Continue <ArrowRight className="tw-ml-1" size={16} />
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </Modal.Footer>
+          </Modal>
+
+          {/* Not Accessible Modal */}
+          <Modal 
+            show={showNotAccessibleModal} 
+            onHide={() => setShowNotAccessibleModal(false)}
+            centered
+            backdrop="static"
+          >
+            <Modal.Header className="tw-bg-violet-50">
+              <Modal.Title className="tw-text-violet-800 tw-flex tw-items-center">
+                <Clock className="tw-mr-2 tw-text-violet-600" size={20} />
+                Exam Not Available
+              </Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <div className="tw-p-2 tw-text-center">
+                <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-violet-900">
+                  This exam is not available yet.
+                </p>
+                
+                {examStartTime && (
+                  <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
+                    <p className="tw-text-violet-700 tw-mb-2">
+                      Scheduled start time:
+                    </p>
+                    <p className="tw-text-lg tw-font-medium tw-text-violet-800">
+                      {new Date(examStartTime).toLocaleString()}
+                    </p>
+                    
+                    <div className="tw-mt-4">
+                      <p className="tw-text-violet-600">Available in:</p>
+                      <div className="tw-text-2xl tw-font-mono tw-font-bold tw-text-violet-700 tw-mt-2">
+                        {countdown}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <p className="tw-text-gray-600 tw-text-sm">
+                  Please wait until the scheduled time to access this exam.
+                </p>
+              </div>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button 
+                variant="outline-secondary" 
+                onClick={() => {
+                  setShowNotAccessibleModal(false);
+                  router.push(originPath || '/');
+                }}
+                className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
+              >
+                Back to Home
+              </Button>
+              <Button 
+                variant="primary" 
+                onClick={handleRetryAccess}
+                className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700"
+              >
+                Check Again
+              </Button>
+            </Modal.Footer>
+          </Modal>
+        </div>
+      </ChangeTabPrevention>
+    </>
+  );
+};
+
+// Main ChainExam Component with All Providers
+const ChainExam: React.FC = () => {
+  const [isClient, setIsClient] = useState(false);
+  const [examDuration, setExamDuration] = useState<number>(0);
+  
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return null;
+  }
+
+  return (
+    <UserPurchaseProvider 
+      examDuration={examDuration} 
+      onSecurityBreach={() => {
+        console.log('🚨 Purchase context security breach detected');
+      }}
+    >
+      <ActiveUserProvider 
+        examDuration={examDuration}
+        onSessionAnomaly={() => {
+          console.log('🚨 User activity context anomaly detected');
+        }}
+      >
+        <AllProductProvider 
+          examDuration={examDuration}
+          onInventoryBreach={() => {
+            console.log('🚨 Product context inventory breach detected');
+          }}
+        >
+          <ExamContent />
+        </AllProductProvider>
+      </ActiveUserProvider>
+    </UserPurchaseProvider>
   );
 };
 
