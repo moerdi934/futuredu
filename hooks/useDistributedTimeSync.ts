@@ -5,10 +5,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface TimeSyncConfig {
-  minInterval: number;    // Minimum interval (default: 15 minutes)
-  maxInterval: number;    // Maximum interval (default: 20 minutes) 
-  focusThreshold: number; // Re-sync threshold when tab focused (default: 5 minutes)
-  jumpThreshold: number;  // Time jump detection threshold (default: 10 seconds)
+  minInterval: number;    // Minimum interval (default: 2 minutes)
+  maxInterval: number;    // Maximum interval (default: 5 minutes) 
+  focusThreshold: number; // Re-sync threshold when tab focused (default: 1 minute)
+  jumpThreshold: number;  // Time jump detection threshold (default: 5 seconds)
   maxRetries: number;     // Max retry attempts (default: 3)
 }
 
@@ -22,10 +22,10 @@ interface TimeSyncState {
 
 export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
   const defaultConfig: TimeSyncConfig = {
-    minInterval: 15 * 60 * 1000,  // 15 minutes
-    maxInterval: 20 * 60 * 1000,  // 20 minutes
-    focusThreshold: 5 * 60 * 1000, // 5 minutes
-    jumpThreshold: 10 * 1000,      // 10 seconds
+    minInterval: 2 * 60 * 1000,   // 2 minutes (shortened for backup timer sync)
+    maxInterval: 5 * 60 * 1000,   // 5 minutes (shortened for backup timer sync)
+    focusThreshold: 1 * 60 * 1000, // 1 minute (shortened for better focus detection)
+    jumpThreshold: 5 * 1000,       // 5 seconds (more sensitive to time jumps)
     maxRetries: 3
   };
 
@@ -104,7 +104,8 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
         networkLatency: Math.round(networkLatency),
         syncCount: state.syncCount + 1,
         nextSyncIn: Math.round(nextInterval / 1000 / 60) + ' minutes',
-        nextSyncAt: new Date(nextSyncTime).toLocaleTimeString()
+        nextSyncAt: new Date(nextSyncTime).toLocaleTimeString(),
+        intervalRange: `${Math.round(finalConfig.minInterval / 1000 / 60)}-${Math.round(finalConfig.maxInterval / 1000 / 60)} min`
       });
 
       return newOffset;
@@ -144,7 +145,7 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
         scheduleNextSync(); // Schedule the next one
       }, timeUntilNextSync);
 
-      console.log(`📅 Next sync scheduled in ${Math.round(timeUntilNextSync / 1000 / 60)} minutes`);
+      console.log(`📅 Next sync scheduled in ${Math.round(timeUntilNextSync / 1000 / 60)} minutes (${new Date(state.nextSyncTime).toLocaleTimeString()})`);
     }
   }, [state.nextSyncTime, syncTime]);
 
@@ -153,7 +154,7 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
     return Date.now() + state.timeOffset;
   }, [state.timeOffset]);
 
-  // Detect time jumps (potential manipulation)
+  // Detect time jumps (potential manipulation) - more sensitive
   const detectTimeJump = useCallback((currentTime: number, lastTime: number) => {
     if (lastTime === 0) return false;
     
@@ -161,17 +162,29 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
     const expectedDelta = 1000; // 1 second expected
     const actualJump = Math.abs(deltaTime - expectedDelta);
     
-    return actualJump > finalConfig.jumpThreshold;
+    // More sensitive detection for exam security
+    const isJump = actualJump > finalConfig.jumpThreshold;
+    
+    if (isJump) {
+      console.warn(`🚨 Time jump detected: ${actualJump}ms (threshold: ${finalConfig.jumpThreshold}ms)`);
+    }
+    
+    return isJump;
   }, [finalConfig.jumpThreshold]);
 
   // Force immediate sync (for time jump detection)
   const forceSyncNow = useCallback(() => {
+    console.log('🔄 Force sync triggered');
     return syncTime('force');
   }, [syncTime]);
 
   // Initial sync on mount
   useEffect(() => {
-    console.log('🚀 Initializing distributed time sync...');
+    console.log('🚀 Initializing distributed time sync with enhanced security...', {
+      syncInterval: `${Math.round(finalConfig.minInterval / 1000 / 60)}-${Math.round(finalConfig.maxInterval / 1000 / 60)} minutes`,
+      focusThreshold: `${Math.round(finalConfig.focusThreshold / 1000 / 60)} minute`,
+      jumpThreshold: `${finalConfig.jumpThreshold / 1000} seconds`
+    });
     syncTime('initial');
   }, []);
 
@@ -188,7 +201,7 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
     };
   }, [state.nextSyncTime, scheduleNextSync]);
 
-  // Handle tab focus events
+  // Handle tab focus events - more aggressive sync
   useEffect(() => {
     const handleFocus = () => {
       if (!state.isOnline) return;
@@ -196,34 +209,47 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
       const timeSinceLastSync = Date.now() - state.lastSyncTime;
       
       if (timeSinceLastSync > finalConfig.focusThreshold) {
-        console.log('🎯 Tab focused after', Math.round(timeSinceLastSync / 1000 / 60), 'minutes');
+        console.log('🎯 Tab focused after', Math.round(timeSinceLastSync / 1000 / 60), 'minutes - syncing time');
         syncTime('focus');
+      } else {
+        console.log('🎯 Tab focused - last sync was recent, skipping');
       }
     };
 
     const handleBlur = () => {
-      console.log('👋 Tab lost focus');
+      console.log('👋 Tab lost focus - focus detection active');
+    };
+
+    // Add visibility change detection as well
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        handleFocus();
+      } else {
+        handleBlur();
+      }
     };
 
     window.addEventListener('focus', handleFocus);
     window.addEventListener('blur', handleBlur);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('blur', handleBlur);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [state.lastSyncTime, state.isOnline, finalConfig.focusThreshold, syncTime]);
 
   // Handle network status changes
   useEffect(() => {
     const handleOnline = () => {
-      console.log('🌐 Network restored');
+      console.log('🌐 Network restored - immediate sync');
       setState(prev => ({ ...prev, isOnline: true }));
       syncTime('online');
     };
 
     const handleOffline = () => {
-      console.log('❌ Network lost');
+      console.log('❌ Network lost - pausing sync');
       setState(prev => ({ ...prev, isOnline: false }));
       
       if (syncTimeoutRef.current) {
@@ -239,6 +265,25 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
       window.removeEventListener('offline', handleOffline);
     };
   }, [syncTime]);
+
+  // Performance monitoring and adaptive sync
+  useEffect(() => {
+    // Monitor page performance and adjust sync frequency if needed
+    const monitorPerformance = () => {
+      if ('performance' in window && 'memory' in (window.performance as any)) {
+        const memory = (window.performance as any).memory;
+        const memoryUsage = memory.usedJSHeapSize / memory.jsHeapSizeLimit;
+        
+        if (memoryUsage > 0.8) {
+          console.warn('⚠️ High memory usage detected, sync frequency may be affected');
+        }
+      }
+    };
+
+    const performanceInterval = setInterval(monitorPerformance, 5 * 60 * 1000); // Every 5 minutes
+
+    return () => clearInterval(performanceInterval);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -270,7 +315,12 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
       totalSyncs: state.syncCount,
       lastSyncAgo: Date.now() - state.lastSyncTime,
       nextSyncIn: state.nextSyncTime - Date.now(),
-      currentOffset: state.timeOffset
-    })
+      currentOffset: state.timeOffset,
+      syncFrequency: `${Math.round(finalConfig.minInterval / 1000 / 60)}-${Math.round(finalConfig.maxInterval / 1000 / 60)} min`,
+      isHighFrequency: finalConfig.maxInterval <= 5 * 60 * 1000
+    }),
+    
+    // Configuration info
+    config: finalConfig
   };
 };

@@ -6,6 +6,9 @@ import { AuthProvider } from '../context/AuthContext';
 import { StatusProvider } from '../context/StatusContext';
 import { ExamProvider } from '../context/ExamContext';
 import { DrillProvider } from '../context/DrillContext';
+import { UserPurchaseProvider } from '../context/UserPurchaseContext';
+import { AllProductProvider } from '../context/AllProductContext';
+import { ActiveUserProvider } from '../context/ActiveUserContext';
 import '../components/layout/sidebar.css'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../styles/globals.css';
@@ -149,13 +152,23 @@ function MyApp({ Component, pageProps }: AppProps) {
 
   return (
     <DrillProvider>
-    <ExamProvider>
-      <AuthProvider>
-        <StatusProvider>
-          <Component {...pageProps} />
-        </StatusProvider>
-      </AuthProvider>
-    </ExamProvider>
+      <ExamProvider>
+        <AuthProvider>
+          <StatusProvider>
+            {/* 
+              Global providers tanpa props = timer tidak aktif
+              Timer hanya aktif di exam page dengan props yang sesuai
+            */}
+            <UserPurchaseProvider>
+              <AllProductProvider>
+                <ActiveUserProvider>
+                  <Component {...pageProps} />
+                </ActiveUserProvider>
+              </AllProductProvider>
+            </UserPurchaseProvider>
+          </StatusProvider>
+        </AuthProvider>
+      </ExamProvider>
     </DrillProvider>
   );
 }

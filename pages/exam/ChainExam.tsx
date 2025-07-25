@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import CryptoJS from 'crypto-js';
 import ChangeTabPrevention from '../../components/ChangeTabPrevention';
 import { useDistributedTimeSync } from '../../hooks/useDistributedTimeSync';
+import { useSecureTimer } from '../../hooks/useSecureTimer';
 
 // Import hidden timer contexts
 import { UserPurchaseProvider, useUserPurchase } from '../../context/UserPurchaseContext';
@@ -25,9 +26,9 @@ const BlockMath = dynamic(() => import('react-katex').then(mod => ({ default: mo
 const InlineMath = dynamic(() => import('react-katex').then(mod => ({ default: mod.InlineMath })), { ssr: false });
 const Latex = dynamic(() => import('react-latex-next'), { ssr: false });
 
-import { Container, Row, Col, ProgressBar, Card, Button, Modal, Alert, Toast } from 'react-bootstrap';
+import { Container, Row, Col, ProgressBar, Card, Button, Modal, Alert, Toast, Badge } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Clock, Loader2, Check, AlertCircle, FileCheck, ArrowRight } from 'lucide-react';
+import { Clock, Loader2, Check, AlertCircle, FileCheck, ArrowRight, Eye, EyeOff, Shield, ShieldAlert, Activity } from 'lucide-react';
 
 interface Question {
   id: number;
@@ -59,74 +60,278 @@ interface ExamSession {
   question_elapsed_times?: Record<number, number>;
 }
 
-// Hidden Timer Validation Component
+// Enhanced Hidden Timer Validator with Web Worker Integration
 const HiddenTimerValidator: React.FC<{
-  mainTimer: number;
+  workerTimerValues: any;
   onSecurityBreach: () => void;
-}> = ({ mainTimer, onSecurityBreach }) => {
+}> = ({ workerTimerValues, onSecurityBreach }) => {
   const userPurchase = useUserPurchase();
   const activeUser = useActiveUser();
   const allProduct = useAllProduct();
   const timerAuthenticator = useRef(new RewardTimerAuthenticator(30));
+  const lastValidationRef = useRef<number>(0);
   
   useEffect(() => {
     const validateTimers = () => {
       try {
-        // Get hidden timer values from all contexts
+        const now = Date.now();
+        
+        // Rate limiting - validate every 2-3 minutes (less frequent)
+        const timeSinceLastValidation = now - lastValidationRef.current;
+        const minInterval = 2 * 60 * 1000; // 2 minutes
+        const maxInterval = 3 * 60 * 1000; // 3 minutes
+        const randomInterval = minInterval + Math.random() * (maxInterval - minInterval);
+        
+        if (timeSinceLastValidation < randomInterval) {
+          return;
+        }
+        
+        lastValidationRef.current = now;
+        
+        // Get all timer values
+        const mainTimer = workerTimerValues.mainTimer || 0;
         const purchaseTimer = userPurchase.getMarketResearchInterval();
         const userActivityTimer = activeUser.getUserActivityInterval();
         const inventoryTimer = allProduct.getInventoryUpdateInterval();
         
-        // Perform cross-validation using helper
-        const validationResult = timerAuthenticator.current.validateTimerConsistency([
+        // Get worker backup timers
+        const workerBackupTimers = workerTimerValues.backupTimers || {};
+        
+        // More lenient validation - only flag MAJOR discrepancies
+        const allTimers = [
           mainTimer,
           purchaseTimer,
           userActivityTimer,
-          inventoryTimer
-        ]);
+          inventoryTimer,
+          workerBackupTimers.purchase || 0,
+          workerBackupTimers.userActivity || 0,
+          workerBackupTimers.inventory || 0
+        ];
         
-        // Check individual context validations
+        // Cross-validation using helper
+        const validationResult = timerAuthenticator.current.validateTimerConsistency(allTimers);
+        
+        // Individual context validations
         const purchaseValid = userPurchase.validatePurchaseAuthority(mainTimer);
         const userActivityValid = activeUser.validateUserSessionIntegrity(mainTimer);
         const inventoryValid = allProduct.validateInventorySystemIntegrity(mainTimer);
         
-        // If any validation fails or confidence is too low, trigger security breach
-        if (!validationResult.isValid || 
-            validationResult.confidence < 0.7 ||
-            !purchaseValid || 
-            !userActivityValid || 
-            !inventoryValid) {
-          
-          console.warn('🚨 Timer integrity validation failed:', {
+        // Worker timer validation
+        const workerValid = workerTimerValues.sessionValid;
+        
+        // Calculate deviation between worker and context timers
+        const maxDeviation = Math.max(
+          Math.abs(mainTimer - purchaseTimer),
+          Math.abs(mainTimer - userActivityTimer),
+          Math.abs(mainTimer - inventoryTimer),
+          Math.abs(mainTimer - (workerBackupTimers.purchase || 0)),
+          Math.abs(mainTimer - (workerBackupTimers.userActivity || 0)),
+          Math.abs(mainTimer - (workerBackupTimers.inventory || 0))
+        );
+        
+        // FIXED: Much more lenient validation - only trigger on EXTREME discrepancies
+        const isValid = 
+          validationResult.isValid &&
+          validationResult.confidence >= 0.5 && // Lower threshold
+          purchaseValid &&
+          userActivityValid &&
+          inventoryValid &&
+          workerValid &&
+          maxDeviation <= 120; // Allow up to 2 minutes deviation
+        
+        if (!isValid) {
+          // FIXED: Only log warning, don't auto-submit unless EXTREME deviation
+          console.warn('⚠️ Timer validation warning (not critical):', {
             mainTimer,
-            hiddenTimers: {
-              purchase: purchaseTimer,
-              userActivity: userActivityTimer,
-              inventory: inventoryTimer
-            },
-            validationResult,
-            individualChecks: {
-              purchase: purchaseValid,
-              userActivity: userActivityValid,
-              inventory: inventoryValid
-            }
+            maxDeviation,
+            confidence: validationResult.confidence
           });
           
-          onSecurityBreach();
+          // FIXED: Only trigger auto-submit if deviation is EXTREME (>5 minutes)
+          if (maxDeviation > 300 || validationResult.confidence < 0.3) {
+            console.error('🚨 EXTREME timer discrepancy detected - auto-submit triggered');
+            onSecurityBreach();
+          }
+        } else {
+          console.log('✅ Timer validation passed', {
+            deviation: maxDeviation,
+            confidence: validationResult.confidence
+          });
         }
+        
       } catch (error) {
         console.error('Timer validation error:', error);
-        onSecurityBreach();
+        // FIXED: Don't auto-submit on validation errors, just log
       }
     };
     
-    // Validate every 10 seconds
-    const validationInterval = setInterval(validateTimers, 10000);
+    // FIXED: Much less frequent validation - every 2-3 minutes
+    const intervalId = setInterval(() => {
+      validateTimers();
+    }, 2 * 60 * 1000 + Math.random() * 60 * 1000);
     
-    return () => clearInterval(validationInterval);
-  }, [mainTimer, userPurchase, activeUser, allProduct, onSecurityBreach]);
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [workerTimerValues, userPurchase, activeUser, allProduct, onSecurityBreach]);
   
   return null; // Hidden component
+};
+
+// Enhanced Focus Detection with Web Worker Integration
+const FocusDetector: React.FC<{
+  onAutoSubmit: (reason: string) => void;
+  enabled: boolean;
+  timerRunning: boolean;
+}> = ({ onAutoSubmit, enabled, timerRunning }) => {
+  const focusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFocusTime = useRef<number>(Date.now());
+  const [isPageVisible, setIsPageVisible] = useState(true);
+  const [focusWarningTime, setFocusWarningTime] = useState(0);
+  const [showWarning, setShowWarning] = useState(false);
+  
+  useEffect(() => {
+    if (!enabled || !timerRunning) return;
+    
+    const handleVisibilityChange = () => {
+      const isVisible = !document.hidden;
+      console.log(`🔄 Visibility changed: ${isVisible ? 'visible' : 'hidden'}`);
+      setIsPageVisible(isVisible);
+      
+      if (isVisible) {
+        // Reset when page becomes visible
+        console.log('🎯 Page refocused - Reset warning');
+        lastFocusTime.current = Date.now();
+        setFocusWarningTime(0);
+        setShowWarning(false);
+        
+        if (focusTimeoutRef.current) {
+          clearTimeout(focusTimeoutRef.current);
+          focusTimeoutRef.current = null;
+        }
+      } else {
+        // Start countdown when page loses focus
+        console.log('👁️ Page unfocused - Starting 10 second countdown');
+        setShowWarning(true);
+        
+        let countdown = 10;
+        setFocusWarningTime(countdown);
+        
+        const countdownInterval = setInterval(() => {
+          countdown -= 1;
+          setFocusWarningTime(countdown);
+          
+          if (countdown <= 0) {
+            clearInterval(countdownInterval);
+            setShowWarning(false);
+          }
+        }, 1000);
+        
+        // Auto-submit after 10 seconds
+        focusTimeoutRef.current = setTimeout(() => {
+          console.log('🚨 Auto-submit triggered: Page unfocused for 10 seconds');
+          clearInterval(countdownInterval);
+          setShowWarning(false);
+          onAutoSubmit('focus_lost');
+        }, 10000);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+      
+      if (focusTimeoutRef.current) {
+        clearTimeout(focusTimeoutRef.current);
+      }
+    };
+  }, [enabled, timerRunning, onAutoSubmit]);
+  
+  // Show warning only if page is not visible and countdown is active
+  if (!enabled || !timerRunning || isPageVisible || focusWarningTime <= 0 || !showWarning) {
+    return null;
+  }
+  
+  return (
+    <div className="tw-fixed tw-top-0 tw-left-0 tw-right-0 tw-bg-red-600 tw-text-white tw-p-4 tw-text-center tw-z-50 tw-shadow-lg tw-animate-pulse">
+      <div className="tw-flex tw-items-center tw-justify-center tw-gap-2">
+        <EyeOff className="tw-h-5 tw-w-5" />
+        <span className="tw-font-bold">
+          WARNING: Return to exam page! Auto-submit in {focusWarningTime} seconds
+        </span>
+        <EyeOff className="tw-h-5 tw-w-5" />
+      </div>
+    </div>
+  );
+};
+
+// Security Status Display
+const SecurityStatusDisplay: React.FC<{
+  securityValidation: any;
+  timerState: any;
+}> = ({ securityValidation, timerState }) => {
+  const getSecurityColor = () => {
+    if (!securityValidation.consistent || !securityValidation.backupValid || !timerState.isValid) {
+      return 'danger';
+    }
+    if (!securityValidation.heartbeatActive || !securityValidation.checksumValid) {
+      return 'warning';
+    }
+    return 'success';
+  };
+  
+  const getSecurityIcon = () => {
+    const color = getSecurityColor();
+    if (color === 'danger') return <ShieldAlert className="tw-text-red-600" size={16} />;
+    if (color === 'warning') return <Shield className="tw-text-yellow-600" size={16} />;
+    return <Shield className="tw-text-green-600" size={16} />;
+  };
+  
+  const getSecurityText = () => {
+    const color = getSecurityColor();
+    if (color === 'danger') return 'Security Alert';
+    if (color === 'warning') return 'Security Warning';
+    return 'Security OK';
+  };
+  
+  return (
+    <div className="tw-fixed tw-top-4 tw-left-4 tw-z-40">
+      <div className="tw-bg-white tw-rounded-lg tw-shadow-lg tw-p-3 tw-border tw-max-w-xs">
+        <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
+          {getSecurityIcon()}
+          <span className="tw-font-semibold tw-text-sm">{getSecurityText()}</span>
+        </div>
+        
+        <div className="tw-space-y-1 tw-text-xs">
+          <div className="tw-flex tw-items-center tw-gap-2">
+            <div className={`tw-w-2 tw-h-2 tw-rounded-full ${securityValidation.consistent ? 'tw-bg-green-500' : 'tw-bg-red-500'}`} />
+            <span>Timer Consistency</span>
+          </div>
+          <div className="tw-flex tw-items-center tw-gap-2">
+            <div className={`tw-w-2 tw-h-2 tw-rounded-full ${securityValidation.backupValid ? 'tw-bg-green-500' : 'tw-bg-red-500'}`} />
+            <span>Backup Validation</span>
+          </div>
+          <div className="tw-flex tw-items-center tw-gap-2">
+            <div className={`tw-w-2 tw-h-2 tw-rounded-full ${securityValidation.heartbeatActive ? 'tw-bg-green-500' : 'tw-bg-red-500'}`} />
+            <span>Worker Heartbeat</span>
+          </div>
+          <div className="tw-flex tw-items-center tw-gap-2">
+            <div className={`tw-w-2 tw-h-2 tw-rounded-full ${timerState.isValid ? 'tw-bg-green-500' : 'tw-bg-red-500'}`} />
+            <span>Timer Integrity</span>
+          </div>
+        </div>
+        
+        <Badge bg={getSecurityColor()} className="tw-mt-2 tw-text-xs">
+          Worker Timer Active
+        </Badge>
+      </div>
+    </div>
+  );
 };
 
 // Main Exam Component
@@ -140,7 +345,7 @@ const ExamContent: React.FC = () => {
   const params = useParams();
   const exam_string = params?.exam_string as string;
   
-  // Initialize distributed time sync
+  // Initialize distributed time sync with shorter intervals for better accuracy
   const {
     timeOffset,
     getServerTime,
@@ -150,10 +355,10 @@ const ExamContent: React.FC = () => {
     syncCount,
     getSyncStats
   } = useDistributedTimeSync({
-    minInterval: 15 * 60 * 1000,  // 15 minutes
-    maxInterval: 20 * 60 * 1000,  // 20 minutes
-    focusThreshold: 5 * 60 * 1000, // 5 minutes
-    jumpThreshold: 10 * 1000       // 10 seconds
+    minInterval: 2 * 60 * 1000,    // 2 minutes
+    maxInterval: 5 * 60 * 1000,    // 5 minutes  
+    focusThreshold: 1 * 60 * 1000, // 1 minute
+    jumpThreshold: 5 * 1000        // 5 seconds
   });
   
   const [examId, setExamId] = useState<number | null>(null);
@@ -165,6 +370,45 @@ const ExamContent: React.FC = () => {
   const [examDbService, setExamDbService] = useState<any>(null);
   const [useAuth, setUseAuth] = useState<any>(null);
   const [useExam, setUseExam] = useState<any>(null);
+
+  // Initialize secure timer with Web Worker
+  const {
+    timeLeft,
+    elapsed,
+    isRunning,
+    isValid: timerValid,
+    isInitialized: timerInitialized,
+    error: timerError,
+    backupTimers,
+    securityValidation,
+    startTimer,
+    stopTimer,
+    restoreTimer,
+    validateIntegrity,
+    getBackupTimerValues,
+    formatTime,
+    isExpired
+  } = useSecureTimer({
+    examId: exam_string || 'default',
+    onTimeout: () => {
+      // FIXED: This is the ONLY legitimate timer auto-submit
+      console.log('🚨 Web Worker timer expired (legitimate)');
+      handleAutoSubmit('timer_expired');
+    },
+    onSecurityBreach: (reason, details) => {
+      // FIXED: Only auto-submit on EXTREME security breaches
+      if (reason === 'extreme_time_jump' || reason === 'checksum_failed_with_timeout') {
+        console.error('🚨 EXTREME security breach - auto-submit:', reason, details);
+        handleAutoSubmit(`extreme_security_breach_${reason}`);
+      } else {
+        console.warn('⚠️ Security warning logged (no auto-submit):', reason, details);
+      }
+    },
+    onValidationFailure: (reason) => {
+      // FIXED: Don't auto-submit on validation failures, just log
+      console.warn('⚠️ Timer validation issue (no auto-submit):', reason);
+    }
+  });
 
   useEffect(() => {
     if (isClient) {
@@ -210,7 +454,6 @@ const ExamContent: React.FC = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [duration, setDuration] = useState<number>(0);
-  const [timeLeft, setTimeLeft] = useState<number>(0);
   const [answers, setAnswers] = useState<Answers>({});
   const [error, setError] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<boolean>(false);
@@ -231,20 +474,11 @@ const ExamContent: React.FC = () => {
   const [originPath, setOriginPath] = useState<string>('/');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const timerRef = useRef<NodeJS.Timeout>();
-  const lastTickRef = useRef<number>(0);
   const autoSaveRef = useRef<NodeJS.Timeout>();
   const submissionInProgress = useRef<boolean>(false);
 
   const examOrder = contextExamOrder || [];
   const currentExamIndex = examOrder.findIndex((exam: ExamOrder) => exam.exam_string === exam_string);
-
-  // Initialize lastTickRef with server time
-  useEffect(() => {
-    if (timeOffset !== 0 && lastTickRef.current === 0) {
-      lastTickRef.current = getServerTime();
-    }
-  }, [timeOffset, getServerTime]);
 
   useEffect(() => {
     if (!isClient) return;
@@ -296,7 +530,6 @@ const ExamContent: React.FC = () => {
     if (!isClient) return;
     
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
       if (autoSaveRef.current) clearInterval(autoSaveRef.current);
       
       if (examDbService && exam_string && questions.length > 0) {
@@ -489,16 +722,16 @@ const ExamContent: React.FC = () => {
         const endTime = new Date(sessionData.end_time).getTime();
         const remainingTime = Math.max(0, Math.floor((endTime - serverNow) / 1000));
         
-        setTimeLeft(remainingTime);
-        lastTickRef.current = serverNow;
-        
-        setExamSession(sessionData);
-        
-        if (remainingTime <= 0) {
+        // Start Web Worker timer with remaining time
+        if (remainingTime > 0) {
+          console.log(`🚀 Starting Web Worker timer with ${remainingTime} seconds remaining`);
+          startTimer(remainingTime);
+        } else {
           setIsTimeExpired(true);
-          handleAutoSubmit();
+          handleAutoSubmit('session_expired');
         }
         
+        setExamSession(sessionData);
         return;
       }
     } catch (error) {
@@ -508,19 +741,25 @@ const ExamContent: React.FC = () => {
       }
       
       if (duration > 0) {
-        setTimeLeft(duration * 60);
-        lastTickRef.current = getServerTime();
+        // Start fresh timer with full duration
+        console.log(`🚀 Starting fresh Web Worker timer with ${duration * 60} seconds`);
+        startTimer(duration * 60);
       }
     }
   };
 
   // Modified submission handler - auto submit immediately when time expires
-  const handleAutoSubmit = useCallback(async () => {
+  const handleAutoSubmit = useCallback(async (reason = 'time_expired') => {
     if (submissionInProgress.current) return;
     
     submissionInProgress.current = true;
     setIsTimeExpired(true);
     setIsSubmitting(true);
+    
+    console.log(`🚨 Auto-submit triggered: ${reason}`);
+    
+    // Stop the Web Worker timer
+    stopTimer();
     
     // Submit to server immediately
     const shouldScore = !nextExam;
@@ -549,13 +788,13 @@ const ExamContent: React.FC = () => {
     
     setIsSubmitting(false);
     submissionInProgress.current = false;
-  }, [examDbService, exam_string, currentExamIndex, examOrder, nextExam, clearExamData, router, originPath]);
+  }, [examDbService, exam_string, currentExamIndex, examOrder, nextExam, clearExamData, router, originPath, stopTimer]);
 
   const handleSubmit = useCallback((e?: React.FormEvent, skipConfirmation = false) => {
     if (e) e.preventDefault();
     
     if (isTimeExpired || skipConfirmation) {
-      handleAutoSubmit();
+      handleAutoSubmit('manual_submit');
     } else {
       setShowConfirmationModal(true);
     }
@@ -563,7 +802,7 @@ const ExamContent: React.FC = () => {
 
   const confirmSubmit = useCallback(async () => {
     setShowConfirmationModal(false);
-    await handleAutoSubmit();
+    await handleAutoSubmit('confirmed_submit');
   }, [handleAutoSubmit]);
 
   useEffect(() => {
@@ -590,7 +829,6 @@ const ExamContent: React.FC = () => {
     setLoading(true);
     setQuestions([]);
     setDuration(0);
-    setTimeLeft(0);
     setAnswers({});
     setError(false);
     setSubmitError(false);
@@ -619,50 +857,9 @@ const ExamContent: React.FC = () => {
     return () => clearTimeout(retryTimeout);
   }, [isClient, error, isInitializing]);
 
-  // Modified timer with server time and time jump detection
+  // Auto-save mechanism
   useEffect(() => {
-    if (!isClient || loading || timeLeft <= 0 || lastTickRef.current === 0) return;
-    
-    const updateTimer = () => {
-      const serverNow = getServerTime();
-      const deltaTime = Math.floor((serverNow - lastTickRef.current) / 1000);
-      
-      // Detect time manipulation
-      if (detectTimeJump(serverNow, lastTickRef.current)) {
-        forceSyncNow();
-        
-        const safeDelta = 1;
-        setTimeLeft(prevTime => Math.max(0, prevTime - safeDelta));
-        lastTickRef.current = serverNow - ((safeDelta - 1) * 1000);
-        
-        return;
-      }
-
-      // Normal timer update
-      if (deltaTime >= 1) {
-        setTimeLeft(prevTime => {
-          const newTime = Math.max(0, prevTime - deltaTime);
-          if (newTime <= 0) {
-            handleAutoSubmit();
-            return 0;
-          }
-          return newTime;
-        });
-        lastTickRef.current = serverNow;
-      }
-    };
-
-    timerRef.current = setInterval(updateTimer, 100);
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [isClient, loading, timeLeft, getServerTime, detectTimeJump, forceSyncNow, handleAutoSubmit]);
-
-  useEffect(() => {
-    if (!isClient || loading || timeLeft <= 0 || timeLeft % 120 !== 0) return;
+    if (!isClient || loading || !isRunning || timeLeft <= 0 || timeLeft % 120 !== 0) return;
     
     if (autoSaveRef.current) {
       clearInterval(autoSaveRef.current);
@@ -679,7 +876,7 @@ const ExamContent: React.FC = () => {
         clearInterval(autoSaveRef.current);
       }
     };
-  }, [isClient, loading, answers, timeLeft]);
+  }, [isClient, loading, answers, timeLeft, isRunning]);
 
   const saveExamSession = async () => {
     if (!isClient || !examDbService) return false;
@@ -715,12 +912,6 @@ const ExamContent: React.FC = () => {
       setAutoSaving(false);
       return false;
     }
-  };
-
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   };
 
   const handleChange = async (id: number, value: any) => {
@@ -781,7 +972,7 @@ const ExamContent: React.FC = () => {
   };
 
   const handleRetrySubmit = () => {
-    handleAutoSubmit();
+    handleAutoSubmit('retry');
   };
 
   const handleNavigation = async (index: number) => {
@@ -826,7 +1017,7 @@ const ExamContent: React.FC = () => {
         }
       );
 
-if (!nextExam && selectedTopicId){
+      if (!nextExam && selectedTopicId){
         try{
           await axios.post(
             `${process.env.NEXT_PUBLIC_API_URL}/userCourse/`,{
@@ -949,6 +1140,7 @@ if (!nextExam && selectedTopicId){
   };
 
   const handleClose = async () => {
+    stopTimer();
     clearExamData();
     router.push(originPath || '/');
   };
@@ -1007,9 +1199,11 @@ if (!nextExam && selectedTopicId){
           <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">Loading Exam...</h2>
           <p className="tw-text-violet-600 tw-mt-2">Please wait while we prepare your questions</p>
           {process.env.NODE_ENV === 'development' && (
-            <p className="tw-text-sm tw-text-gray-500 tw-mt-2">
-              Time sync: {syncCount} syncs, offset: {timeOffset}ms
-            </p>
+            <div className="tw-text-sm tw-text-gray-500 tw-mt-2 tw-space-y-1">
+              <p>Time sync: {syncCount} syncs, offset: {timeOffset}ms</p>
+              <p>Worker timer: {timerInitialized ? 'Initialized' : 'Loading...'}</p>
+              {timerError && <p className="tw-text-red-600">Timer error: {timerError}</p>}
+            </div>
           )}
         </div>
       </div>
@@ -1070,14 +1264,31 @@ if (!nextExam && selectedTopicId){
 
   return (
     <>
-      {/* Hidden Timer Validator */}
-      <HiddenTimerValidator 
-        mainTimer={timeLeft}
-        onSecurityBreach={handleAutoSubmit}
+      {/* Enhanced Hidden Timer Validator */}
+  <HiddenTimerValidator 
+    workerTimerValues={getBackupTimerValues()}
+    onSecurityBreach={() => {
+      // FIXED: Only auto-submit if this is called (which now only happens on EXTREME issues)
+      console.log('🚨 EXTREME security breach from validator - auto-submit');
+      handleAutoSubmit('extreme_security_breach');
+    }}
+  />
+
+      {/* Enhanced Focus Detector */}
+      <FocusDetector 
+        onAutoSubmit={handleAutoSubmit}
+        enabled={!loading && !error && isExamAccessible && questions.length > 0 && !isSubmitting}
+        timerRunning={isRunning}
+      />
+
+      {/* Security Status Display */}
+      <SecurityStatusDisplay 
+        securityValidation={securityValidation}
+        timerState={{ isValid: timerValid, isRunning }}
       />
 
       <ChangeTabPrevention 
-        onAutoSubmit={handleAutoSubmit}
+        onAutoSubmit={() => handleAutoSubmit('tab_change')}
         enabled={!loading && !error && isExamAccessible && questions.length > 0}
       >
         <div className="tw-min-h-screen tw-bg-violet-50">
@@ -1094,13 +1305,21 @@ if (!nextExam && selectedTopicId){
                     </p>
                   )}
                   {process.env.NODE_ENV === 'development' && (
-                    <p className="tw-text-xs tw-text-violet-300">
-                      Sync: {syncCount}x | Offset: {timeOffset}ms | {isOnline ? '🟢' : '🔴'}
-                    </p>
+                    <div className="tw-text-xs tw-text-violet-300 tw-space-y-1">
+                      <p>Sync: {syncCount}x | Offset: {timeOffset}ms | {isOnline ? '🟢' : '🔴'}</p>
+                      <p>
+                        Worker: {timerInitialized ? '🟢' : '🔴'} | 
+                        Valid: {timerValid ? '🟢' : '🔴'} | 
+                        Security: {securityValidation.consistent ? '🟢' : '🔴'}
+                      </p>
+                    </div>
                   )}
                 </div>
                 <div className="tw-flex tw-items-center tw-gap-3 tw-bg-violet-700 tw-rounded-lg tw-px-6 tw-py-3 tw-flex-shrink-0">
-                  <Clock size={28} className="tw-text-violet-200" />
+                  <div className="tw-flex tw-items-center tw-gap-1">
+                    <Clock size={28} className="tw-text-violet-200" />
+                    {isRunning && <Activity size={16} className="tw-text-green-400 tw-animate-pulse" />}
+                  </div>
                   <div className="tw-flex tw-flex-col tw-items-start">
                     <span className="tw-text-violet-200 tw-text-sm">Time Remaining</span>
                     <span className="tw-text-3xl tw-font-mono tw-font-bold">{formatTime(timeLeft)}</span>
@@ -1302,7 +1521,7 @@ if (!nextExam && selectedTopicId){
                           {index + 1}
                         </Button>
                       ))}
-                    </div>
+                      </div>
                   </div>
 
                   {currentQuestion === questions.length - 1 && (
@@ -1347,6 +1566,9 @@ if (!nextExam && selectedTopicId){
                   </div>
                   <p className="tw-text-violet-700 tw-mb-2">
                     <span className="tw-font-medium">Completed:</span> {getFilledAnswersCount()} of {questions.length} questions
+                  </p>
+                  <p className="tw-text-violet-700 tw-mb-2">
+                    <span className="tw-font-medium">Time Remaining:</span> {formatTime(timeLeft)}
                   </p>
                   {getFilledAnswersCount() < questions.length && (
                     <div className="tw-bg-amber-50 tw-p-2 tw-rounded tw-border tw-border-amber-200 tw-text-amber-800 tw-text-sm">
@@ -1418,7 +1640,7 @@ if (!nextExam && selectedTopicId){
                     <Clock className="tw-h-16 tw-w-16 tw-text-violet-600 tw-mx-auto tw-mb-2" />
                     <p className="tw-text-xl tw-font-medium tw-text-violet-800 tw-mb-2">Exam time has expired!</p>
                     <p className="tw-text-violet-700">
-                      Your answers have been submitted automatically.
+                      Your answers have been submitted automatically by the Web Worker timer.
                     </p>
                   </div>
                   <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
@@ -1428,6 +1650,9 @@ if (!nextExam && selectedTopicId){
                     </div>
                     <p className="tw-text-violet-700 tw-mb-2">
                       <span className="tw-font-medium">Answered:</span> {getFilledAnswersCount()} of {questions.length} questions
+                    </p>
+                    <p className="tw-text-violet-700 tw-mb-2">
+                      <span className="tw-font-medium">Elapsed Time:</span> {formatTime(elapsed)}
                     </p>
                   </div>
                 </div>
@@ -1552,19 +1777,76 @@ if (!nextExam && selectedTopicId){
               </Button>
             </Modal.Footer>
           </Modal>
+
+          {/* Timer Error Modal */}
+          {timerError && (
+            <Modal 
+              show={!!timerError} 
+              onHide={() => {}}
+              centered
+              backdrop="static"
+              keyboard={false}
+            >
+              <Modal.Header className="tw-bg-red-50">
+                <Modal.Title className="tw-text-red-800 tw-flex tw-items-center">
+                  <ShieldAlert className="tw-mr-2 tw-text-red-600" size={20} />
+                  Timer System Error
+                </Modal.Title>
+              </Modal.Header>
+              <Modal.Body>
+                <div className="tw-p-2 tw-text-center">
+                  <ShieldAlert className="tw-h-16 tw-w-16 tw-text-red-600 tw-mx-auto tw-mb-4" />
+                  <p className="tw-text-lg tw-font-medium tw-text-red-800 tw-mb-2">
+                    Web Worker Timer Error
+                  </p>
+                  <p className="tw-text-red-700 tw-mb-4">
+                    {timerError}
+                  </p>
+                  <div className="tw-bg-red-50 tw-p-4 tw-rounded-lg tw-mb-4 tw-text-left">
+                    <h4 className="tw-font-semibold tw-text-red-800 tw-mb-2">Possible causes:</h4>
+                    <ul className="tw-text-sm tw-text-red-700 tw-space-y-1">
+                      <li>• Web Worker not supported in this browser</li>
+                      <li>• Local storage is disabled or full</li>
+                      <li>• Browser security settings blocking workers</li>
+                      <li>• Timer data corruption detected</li>
+                    </ul>
+                  </div>
+                  <p className="tw-text-gray-600 tw-text-sm">
+                    The exam will be automatically submitted for your security.
+                  </p>
+                </div>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button 
+                  variant="primary" 
+                  className="tw-bg-red-600 tw-border-0 hover:tw-bg-red-700"
+                  onClick={() => handleAutoSubmit('timer_error')}
+                >
+                  Submit Exam Now
+                </Button>
+              </Modal.Footer>
+            </Modal>
+          )}
         </div>
       </ChangeTabPrevention>
     </>
   );
 };
 
-// Main ChainExam Component with All Providers
+// Main ChainExam Component with All Providers and Web Worker Integration
 const ChainExam: React.FC = () => {
   const [isClient, setIsClient] = useState(false);
   const [examDuration, setExamDuration] = useState<number>(0);
+  const [mainTimer, setMainTimer] = useState<number>(0);
   
   useEffect(() => {
     setIsClient(true);
+  }, []);
+
+  // Callback untuk menerima timer updates dari ExamContent
+  const handleTimerUpdate = useCallback((currentTime: number) => {
+    setMainTimer(currentTime);
+    setExamDuration(currentTime);
   }, []);
 
   if (!isClient) {
@@ -1573,20 +1855,20 @@ const ChainExam: React.FC = () => {
 
   return (
     <UserPurchaseProvider 
-      examDuration={examDuration} 
+      examDuration={mainTimer} 
       onSecurityBreach={() => {
         console.log('🚨 Purchase context security breach detected');
       }}
     >
       <ActiveUserProvider 
-        examDuration={examDuration}
-        onSessionAnomaly={() => {
+        examDuration={mainTimer}
+        onSecurityBreach={() => {
           console.log('🚨 User activity context anomaly detected');
         }}
       >
         <AllProductProvider 
-          examDuration={examDuration}
-          onInventoryBreach={() => {
+          examDuration={mainTimer}
+          onSecurityBreach={() => {
             console.log('🚨 Product context inventory breach detected');
           }}
         >
