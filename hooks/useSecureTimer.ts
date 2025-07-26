@@ -1,4 +1,4 @@
-// hooks/useSecureTimer.ts - ENHANCED FINAL VERSION
+// hooks/useSecureTimer.ts - FIXED VERSION
 import { useState, useEffect, useRef, useCallback } from 'react';
 import CryptoJS from 'crypto-js';
 
@@ -64,7 +64,7 @@ export const useSecureTimer = ({
     noTimeJump: true,
     backupValid: true,
     checksumValid: true,
-    heartbeatActive: true,
+    heartbeatActive: false, // Start as false
     networkQuality: 'GOOD'
   });
   
@@ -83,6 +83,7 @@ export const useSecureTimer = ({
   const heartbeatTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const storageKeyRef = useRef<string>('');
   const securityAlertsRef = useRef<string[]>([]);
+  const initializationAttemptRef = useRef<boolean>(false);
   
   // Generate secure session key
   const generateSessionKey = useCallback(() => {
@@ -96,21 +97,34 @@ export const useSecureTimer = ({
   
   // Initialize Web Worker
   const initializeWorker = useCallback(() => {
-    if (typeof window === 'undefined') return false;
+    if (typeof window === 'undefined' || initializationAttemptRef.current) return false;
+    
+    initializationAttemptRef.current = true;
     
     try {
+      // Create worker with error handling
       workerRef.current = new Worker('/secure-exam-timer.js');
       sessionKeyRef.current = generateSessionKey();
       storageKeyRef.current = `exam_timer_${examId}_${sessionKeyRef.current.substring(0, 8)}`;
       
-      console.log('🚀 Enhanced Web Worker timer initialized with advanced security');
+      console.log('🚀 Enhanced Web Worker timer initializing...');
+      
+      // Set a timeout to mark as initialized even if worker doesn't respond immediately
+      setTimeout(() => {
+        if (workerRef.current && !isInitialized) {
+          console.log('✅ Worker initialization timeout - marking as initialized');
+          setIsInitialized(true);
+        }
+      }, 2000);
+      
       return true;
     } catch (error) {
       console.error('❌ Failed to initialize enhanced worker:', error);
       setError('Enhanced worker initialization failed');
+      setIsInitialized(true); // Still mark as initialized so UI doesn't hang
       return false;
     }
-  }, [examId, generateSessionKey]);
+  }, [examId, generateSessionKey, isInitialized]);
 
   // Update worker with network information for adaptive security
   const updateWorkerNetworkInfo = useCallback((networkData: NetworkInfo) => {
@@ -139,7 +153,6 @@ export const useSecureTimer = ({
     const alerts = [];
     let riskLevel = 'LOW';
 
-    // Check various security factors
     if (!validation.consistent) {
       alerts.push('Timer consistency issues detected');
       riskLevel = 'MEDIUM';
@@ -163,7 +176,6 @@ export const useSecureTimer = ({
       if (riskLevel === 'LOW') riskLevel = 'MEDIUM';
     }
 
-    // Update security alerts history
     securityAlertsRef.current = [...securityAlertsRef.current, ...alerts].slice(-10);
 
     return { riskLevel, alerts };
@@ -174,6 +186,12 @@ export const useSecureTimer = ({
     if (workerRef.current) {
       workerRef.current.onmessage = (e) => {
         const { type, ...data } = e.data;
+        
+        // Mark as initialized on first message
+        if (!isInitialized) {
+          console.log('✅ Worker first message received - marking as initialized');
+          setIsInitialized(true);
+        }
         
         switch (type) {
           case 'tick':
@@ -198,7 +216,6 @@ export const useSecureTimer = ({
             break;
             
           case 'timeout':
-            // Only auto-submit on legitimate timeout
             console.log('🚨 Timer expired (legitimate):', data.reason);
             setTimerState(prev => ({
               ...prev,
@@ -209,7 +226,6 @@ export const useSecureTimer = ({
             break;
             
           case 'store':
-            // Store encrypted timer data
             try {
               localStorage.setItem(storageKeyRef.current, JSON.stringify(data.data));
               console.log('✅ Enhanced timer data stored securely');
@@ -228,18 +244,15 @@ export const useSecureTimer = ({
               isRunning: true,
               isValid: data.integrity === 'verified'
             }));
-            setIsInitialized(true);
             break;
             
           case 'invalid':
-            // Don't auto-submit on validation failures, just mark as invalid
             console.warn('⚠️ Enhanced timer validation failed (not auto-submitting):', data.reason);
             setError(`Enhanced timer validation issue: ${data.reason}`);
             setTimerState(prev => ({ ...prev, isValid: false }));
             break;
             
           case 'time_anomaly':
-            // NEW: Handle minor time inconsistencies (don't auto-submit)
             console.warn('⚠️ Time anomaly detected (adaptive handling):', data);
             
             const assessment = assessSecurityLevel(data);
@@ -259,7 +272,6 @@ export const useSecureTimer = ({
             break;
             
           case 'security_breach':
-            // Enhanced security breach handling with adaptive response
             const riskAssessment = assessSecurityLevel(data.details || {});
             
             if (data.reason === 'extreme_time_jump' || 
@@ -283,7 +295,6 @@ export const useSecureTimer = ({
             break;
             
           case 'heartbeat_request':
-            // Respond to worker heartbeat with network quality info
             lastHeartbeatRef.current = Date.now();
             workerRef.current?.postMessage({
               action: 'heartbeat_response',
@@ -301,9 +312,8 @@ export const useSecureTimer = ({
             break;
             
           case 'main_thread_unresponsive':
-            // Enhanced main thread monitoring with adaptive thresholds
             const responseTime = Date.now() - lastHeartbeatRef.current;
-            const adaptiveThreshold = Math.max(15000, networkInfo.latency * 10); // Adaptive based on network
+            const adaptiveThreshold = Math.max(15000, networkInfo.latency * 10);
             
             if (responseTime > adaptiveThreshold) {
               console.warn('⚠️ Main thread unresponsive (adaptive threshold):', {
@@ -320,7 +330,6 @@ export const useSecureTimer = ({
             break;
             
           case 'validation_result':
-            // Enhanced validation with adaptive security assessment
             const validationAssessment = assessSecurityLevel(data.validation);
             
             setSecurityValidation(prev => ({
@@ -335,7 +344,6 @@ export const useSecureTimer = ({
                              networkInfo.reliability > 0.4 ? 'FAIR' : 'POOR'
             }));
             
-            // Only log significant validation issues
             if (validationAssessment.riskLevel === 'HIGH' || validationAssessment.riskLevel === 'CRITICAL') {
               console.warn('🚨 Significant validation issues detected:', {
                 riskLevel: validationAssessment.riskLevel,
@@ -369,8 +377,8 @@ export const useSecureTimer = ({
       workerRef.current.onerror = (error) => {
         console.error('❌ Enhanced worker error:', error);
         setError('Enhanced worker error');
+        setIsInitialized(true); // Mark as initialized even on error
         
-        // Assess if this is a critical error that should trigger auto-submit
         const isCriticalError = error.message?.includes('security') || 
                                error.message?.includes('corruption') ||
                                error.message?.includes('manipulation');
@@ -381,7 +389,7 @@ export const useSecureTimer = ({
         }
       };
     }
-  }, [examId, onTimeout, onSecurityBreach, onValidationFailure, assessSecurityLevel, networkInfo, securityValidation.networkQuality]);
+  }, [examId, onTimeout, onSecurityBreach, onValidationFailure, assessSecurityLevel, networkInfo, securityValidation.networkQuality, isInitialized]);
   
   // Start timer with enhanced initialization
   const startTimer = useCallback((durationInSeconds: number) => {
@@ -464,8 +472,8 @@ export const useSecureTimer = ({
       sessionValid: timerState.isValid && securityValidation.consistent,
       networkQuality: securityValidation.networkQuality,
       reliability: networkInfo.reliability,
-      adaptiveThreshold: Math.max(120, networkInfo.latency * 3 / 1000), // in seconds
-      securityAlerts: securityAlertsRef.current.slice(-5) // Last 5 alerts
+      adaptiveThreshold: Math.max(120, networkInfo.latency * 3 / 1000),
+      securityAlerts: securityAlertsRef.current.slice(-5)
     };
   }, [backupTimers, timerState.timeLeft, timerState.isValid, securityValidation.consistent, securityValidation.networkQuality, networkInfo.reliability]);
   
@@ -500,11 +508,13 @@ export const useSecureTimer = ({
   useEffect(() => {
     const success = initializeWorker();
     if (success) {
-      // Try to restore timer first
-      const restored = restoreTimer();
-      if (restored) {
-        console.log('🔄 Enhanced timer restoration attempted');
-      }
+      // Small delay before trying to restore
+      setTimeout(() => {
+        const restored = restoreTimer();
+        if (restored) {
+          console.log('🔄 Enhanced timer restoration attempted');
+        }
+      }, 1000);
     }
     
     return () => {
@@ -526,7 +536,7 @@ export const useSecureTimer = ({
   useEffect(() => {
     const checkHeartbeat = () => {
       const timeSinceLastHeartbeat = Date.now() - lastHeartbeatRef.current;
-      const adaptiveTimeout = Math.max(15000, networkInfo.latency * 10); // Adaptive based on network
+      const adaptiveTimeout = Math.max(15000, networkInfo.latency * 10);
       
       if (timeSinceLastHeartbeat > adaptiveTimeout) {
         console.warn('⚠️ Enhanced worker heartbeat timeout:', {
@@ -541,7 +551,6 @@ export const useSecureTimer = ({
           heartbeatActive: false
         }));
         
-        // Only consider this critical if network quality is good but heartbeat fails
         if (networkInfo.reliability > 0.7 && timeSinceLastHeartbeat > adaptiveTimeout * 2) {
           console.error('🚨 Critical heartbeat failure with good network - potential security issue');
         }
@@ -556,7 +565,6 @@ export const useSecureTimer = ({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // Clean up storage on component unmount (optional)
       try {
         localStorage.removeItem(storageKeyRef.current);
       } catch (error) {

@@ -1,5 +1,5 @@
 // File: public/secure-exam-timer.js
-// Advanced Web Worker Timer with Multiple Security Layers
+// Enhanced Web Worker Timer with Multiple Security Layers
 
 let timerInterval;
 let startTime;
@@ -9,6 +9,7 @@ let backupTimers = {};
 let validationInterval;
 let heartbeatInterval;
 let lastHeartbeat = Date.now();
+let networkInfo = { latency: 0, reliability: 1.0 };
 
 // Advanced obfuscation with multiple layers
 function createObfuscationKey(sessionKey, timestamp) {
@@ -21,7 +22,7 @@ function createObfuscationKey(sessionKey, timestamp) {
 }
 
 function obfuscate(value, key, salt = 0x12345678) {
-  const keyNum = parseInt(key.substring(0, 8), 16);
+  const keyNum = parseInt(key.substring(0, 8), 16) || 0x12345678;
   const timestampNum = parseInt(key.substring(8, 16), 36) || Date.now();
   const complexKey = keyNum ^ timestampNum ^ salt;
   
@@ -35,7 +36,7 @@ function obfuscate(value, key, salt = 0x12345678) {
 
 function deobfuscate(obfuscated, key, salt = 0x12345678) {
   try {
-    const keyNum = parseInt(key.substring(0, 8), 16);
+    const keyNum = parseInt(key.substring(0, 8), 16) || 0x12345678;
     const timestampNum = parseInt(key.substring(8, 16), 36) || Date.now();
     const complexKey = keyNum ^ timestampNum ^ salt;
     
@@ -104,6 +105,8 @@ function validateBackupTimers(stored, sessionKey) {
 
 // Heartbeat mechanism to detect if main thread is responsive
 function startHeartbeat() {
+  if (heartbeatInterval) clearInterval(heartbeatInterval);
+  
   heartbeatInterval = setInterval(() => {
     const now = Date.now();
     
@@ -112,15 +115,16 @@ function startHeartbeat() {
       timestamp: now
     });
     
-    // If no response within 5 seconds, assume main thread is compromised
+    // If no response within adaptive timeout, assume main thread is compromised
+    const adaptiveTimeout = Math.max(5000, networkInfo.latency * 5);
     setTimeout(() => {
-      if (Date.now() - lastHeartbeat > 5000) {
+      if (Date.now() - lastHeartbeat > adaptiveTimeout) {
         self.postMessage({
           type: 'main_thread_unresponsive',
           message: 'Main thread not responding - potential manipulation detected'
         });
       }
-    }, 5000);
+    }, adaptiveTimeout);
   }, 3000); // Every 3 seconds
 }
 
@@ -133,6 +137,7 @@ self.onmessage = function(e) {
       startTime = Date.now();
       duration = payload.duration;
       sessionKey = payload.sessionKey;
+      networkInfo = payload.networkInfo || { latency: 0, reliability: 1.0 };
       
       // Generate all backup timer data
       backupTimers = generateBackupTimers(startTime, duration, sessionKey);
@@ -164,6 +169,7 @@ self.onmessage = function(e) {
       try {
         const { stored, sessionKey: providedKey } = payload;
         sessionKey = providedKey;
+        networkInfo = payload.networkInfo || { latency: 0, reliability: 1.0 };
         
         // Validate main data
         const mainValid = validateMainData(stored.main, sessionKey);
@@ -230,6 +236,11 @@ self.onmessage = function(e) {
       performIntegrityValidation();
       break;
       
+    case 'update_network_info':
+      networkInfo = { ...networkInfo, ...payload };
+      self.postMessage({ type: 'network_info_updated', networkInfo });
+      break;
+      
     case 'stop':
       cleanup();
       break;
@@ -241,7 +252,8 @@ self.onmessage = function(e) {
 
 function validateMainData(mainData, sessionKey) {
   try {
-    const obfuscationKey = createObfuscationKey(sessionKey, parseInt(mainData.v.substring(4), 36));
+    const timestampFromValidation = parseInt(mainData.v.substring(4), 36);
+    const obfuscationKey = createObfuscationKey(sessionKey, timestampFromValidation);
     
     const restoredStart = deobfuscate(mainData.s, obfuscationKey);
     const restoredEnd = deobfuscate(mainData.e, obfuscationKey);
@@ -312,9 +324,15 @@ function startTimerLoop() {
 }
 
 function startValidationLoop() {
+  if (validationInterval) clearInterval(validationInterval);
+  
+  // Adaptive validation interval based on network quality
+  const baseInterval = 10000; // 10 seconds
+  const adaptiveInterval = Math.max(baseInterval, baseInterval * (2 - networkInfo.reliability));
+  
   validationInterval = setInterval(() => {
     performIntegrityValidation();
-  }, 10000); // Every 10 seconds
+  }, adaptiveInterval);
 }
 
 function performIntegrityValidation() {
@@ -331,7 +349,8 @@ function performIntegrityValidation() {
     duration: duration,
     backupConsistency: validateBackupConsistency(),
     timeJump: detectTimeJump(now),
-    checksumValid: validateCurrentChecksum()
+    checksumValid: validateCurrentChecksum(),
+    networkQuality: getNetworkQuality()
   };
   
   self.postMessage({
@@ -339,14 +358,15 @@ function performIntegrityValidation() {
     validation: validation
   });
   
-  // FIXED: Only auto-trigger timeout on EXTREME inconsistencies
-  // Don't auto-submit on minor validation failures
-  if (validation.timeJump && Math.abs(now - lastValidationTime) > 60000) {
-    // Only if time jump is more than 1 minute
+  // Enhanced: Only auto-trigger timeout on EXTREME inconsistencies with adaptive thresholds
+  const adaptiveThreshold = Math.max(60000, networkInfo.latency * 10); // At least 1 minute or 10x latency
+  
+  if (validation.timeJump && Math.abs(now - lastValidationTime) > adaptiveThreshold) {
+    // Only if time jump is more than adaptive threshold
     self.postMessage({
       type: 'security_breach',
       reason: 'extreme_time_jump',
-      details: validation
+      details: { ...validation, adaptiveThreshold }
     });
   } else if (!validation.checksumValid && remaining <= 0) {
     // Only if checksum fails AND time is actually expired
@@ -355,9 +375,16 @@ function performIntegrityValidation() {
       reason: 'checksum_failed_with_timeout',
       details: validation
     });
+  } else if (validation.timeJump || !validation.backupConsistency) {
+    // Log minor anomalies without auto-submit
+    self.postMessage({
+      type: 'time_anomaly',
+      details: validation,
+      severity: Math.abs(now - lastValidationTime) > adaptiveThreshold ? 'EXTREME' : 'MODERATE'
+    });
   }
-  // FIXED: Remove other auto-submit triggers
 }
+
 function validateBackupConsistency() {
   if (!backupTimers) return false;
   
@@ -366,7 +393,7 @@ function validateBackupConsistency() {
     const expectedRemaining = Math.max(0, duration - Math.floor((now - startTime) / 1000));
     
     // All backup timers should show the same remaining time
-    const tolerance = 2; // 2 seconds tolerance
+    const tolerance = Math.max(2, networkInfo.latency / 1000); // Adaptive tolerance based on network
     
     return Math.abs(expectedRemaining - expectedRemaining) <= tolerance;
   } catch (error) {
@@ -378,7 +405,7 @@ let lastValidationTime = Date.now();
 function detectTimeJump(currentTime) {
   const timeDiff = currentTime - lastValidationTime;
   const expectedDiff = 10000; // 10 seconds between validations
-  const tolerance = 2000; // 2 seconds tolerance
+  const tolerance = Math.max(2000, networkInfo.latency * 2); // Adaptive tolerance
   
   const isTimeJump = Math.abs(timeDiff - expectedDiff) > tolerance;
   lastValidationTime = currentTime;
@@ -389,8 +416,19 @@ function detectTimeJump(currentTime) {
 function validateCurrentChecksum() {
   if (!startTime || !duration || !sessionKey) return false;
   
-  const expectedChecksum = generateChecksum(startTime, duration, sessionKey);
-  return expectedChecksum.length > 0;
+  try {
+    const expectedChecksum = generateChecksum(startTime, duration, sessionKey);
+    return expectedChecksum.length > 0;
+  } catch (error) {
+    return false;
+  }
+}
+
+function getNetworkQuality() {
+  if (networkInfo.reliability > 0.8 && networkInfo.latency < 1000) return 'EXCELLENT';
+  if (networkInfo.reliability > 0.6 && networkInfo.latency < 2000) return 'GOOD';
+  if (networkInfo.reliability > 0.4) return 'FAIR';
+  return 'POOR';
 }
 
 function validateTimerIntegrity() {
@@ -399,7 +437,7 @@ function validateTimerIntegrity() {
   
   return {
     consistent: elapsed >= 0 && elapsed <= duration + 10,
-    noTimeJump: Math.abs(now - lastHeartbeat) < 10000,
+    noTimeJump: Math.abs(now - lastHeartbeat) < Math.max(10000, networkInfo.latency * 5),
     backupValid: validateBackupConsistency()
   };
 }
@@ -424,8 +462,16 @@ function cleanup() {
   duration = null;
   sessionKey = null;
   backupTimers = {};
+  networkInfo = { latency: 0, reliability: 1.0 };
 }
 
 // Handle worker termination
 self.addEventListener('beforeunload', cleanup);
 self.addEventListener('unload', cleanup);
+
+// Send initialization confirmation
+self.postMessage({ 
+  type: 'worker_ready',
+  message: 'Enhanced secure timer worker initialized successfully',
+  timestamp: Date.now()
+});

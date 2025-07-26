@@ -353,7 +353,11 @@ const ExamContent: React.FC = () => {
     forceSyncNow,
     isOnline,
     syncCount,
-    getSyncStats
+    getSyncStats,
+    networkLatency,
+    reliability,
+    offsetStdDev,
+    timezoneOffset
   } = useDistributedTimeSync({
     minInterval: 2 * 60 * 1000,    // 2 minutes
     maxInterval: 5 * 60 * 1000,    // 5 minutes  
@@ -387,7 +391,8 @@ const ExamContent: React.FC = () => {
     validateIntegrity,
     getBackupTimerValues,
     formatTime,
-    isExpired
+    isExpired,
+    updateNetworkInfo 
   } = useSecureTimer({
     examId: exam_string || 'default',
     onTimeout: () => {
@@ -409,6 +414,53 @@ const ExamContent: React.FC = () => {
       console.warn('⚠️ Timer validation issue (no auto-submit):', reason);
     }
   });
+
+  useEffect(() => {
+    // Update secure timer with latest network information from time sync
+    updateNetworkInfo({
+      latency: networkLatency || 0,
+      timezoneOffset: timezoneOffset || 0,
+      reliability: reliability || 1.0,
+      offsetStdDev: offsetStdDev || 0
+    });
+    
+    console.log('🔗 Network sync integration updated:', {
+      latency: Math.round(networkLatency || 0) + 'ms',
+      reliability: Math.round((reliability || 1.0) * 100) + '%',
+      timezoneOffset: Math.round((timezoneOffset || 0) / 1000 / 60) + 'min',
+      offsetStdDev: Math.round(offsetStdDev || 0) + 'ms'
+    });
+  }, [networkLatency, reliability, offsetStdDev, timezoneOffset, updateNetworkInfo]);
+
+  useEffect(() => {
+    let lastCheckTime = Date.now();
+    
+    const timeJumpChecker = setInterval(() => {
+      const currentTime = Date.now();
+      const hasTimeJump = detectTimeJump(currentTime, lastCheckTime);
+      
+      if (hasTimeJump) {
+        console.warn('🚨 Time jump detected by distributed sync - validating timer integrity');
+        validateIntegrity();
+        
+        // If time sync detects extreme jump, force sync
+        const deviation = Math.abs(currentTime - lastCheckTime - 1000);
+        if (deviation > 30000) { // 30 seconds
+          console.log('🔄 Extreme time jump - forcing sync and timer validation');
+          forceSyncNow();
+        }
+      }
+      
+      lastCheckTime = currentTime;
+    }, 1000);
+    
+    return () => clearInterval(timeJumpChecker);
+  }, [detectTimeJump, validateIntegrity, forceSyncNow]);
+
+  const enhancedGetServerTime = useCallback(() => {
+    return getServerTime(); // This now includes all compensations from time sync
+  }, [getServerTime]);
+
 
   useEffect(() => {
     if (isClient) {
@@ -542,7 +594,7 @@ const ExamContent: React.FC = () => {
     if (!isClient || isExamAccessible || !examStartTime) return;
     
     const timer = setInterval(() => {
-      const now = getServerTime();
+      const now = enhancedGetServerTime(); // 🔗 USE ENHANCED SERVER TIME
       const startTime = new Date(examStartTime).getTime();
       const diff = startTime - now;
       
@@ -560,7 +612,7 @@ const ExamContent: React.FC = () => {
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [isClient, isExamAccessible, examStartTime, getServerTime]);
+  }, [isClient, isExamAccessible, examStartTime, enhancedGetServerTime]);
 
   const decryptData = (encryptedData: string) => {
     try {
@@ -662,7 +714,7 @@ const ExamContent: React.FC = () => {
     }
   };
 
-  const loadExistingSession = async (currentExamId?: number) => {
+const loadExistingSession = async (currentExamId?: number) => {
     if (!isClient || !examDbService) return;
     
     const examIdToUse = currentExamId || examId;
@@ -694,7 +746,8 @@ const ExamContent: React.FC = () => {
         
         setExamName(sessionData.name);
         
-        if (!sessionData.is_auto_move && getServerTime() < new Date(sessionData.start_time).getTime()) {
+        // 🔗 USE ENHANCED SERVER TIME
+        if (!sessionData.is_auto_move && enhancedGetServerTime() < new Date(sessionData.start_time).getTime()) {
           setExamStartTime(sessionData.start_time);
           setShowNotAccessibleModal(true);
           setIsExamAccessible(false);
@@ -709,7 +762,7 @@ const ExamContent: React.FC = () => {
         if (sessionData.question_elapsed_times) {
           const examData = await examDbService.getExamData(exam_string) || { 
             answers: sessionData.answers || {}, 
-            startTime: getServerTime(),
+            startTime: enhancedGetServerTime(), // 🔗 ENHANCED SERVER TIME
             questionElapsedTimes: {},
             lastQuestionVisit: null
           };
@@ -718,13 +771,13 @@ const ExamContent: React.FC = () => {
           await db.put('examData', examData, exam_string);
         }
         
-        const serverNow = getServerTime();
+        // 🔗 USE ENHANCED SERVER TIME for remaining time calculation
+        const serverNow = enhancedGetServerTime();
         const endTime = new Date(sessionData.end_time).getTime();
         const remainingTime = Math.max(0, Math.floor((endTime - serverNow) / 1000));
         
-        // Start Web Worker timer with remaining time
         if (remainingTime > 0) {
-          console.log(`🚀 Starting Web Worker timer with ${remainingTime} seconds remaining`);
+          console.log(`🚀 Starting Web Worker timer with ${remainingTime} seconds remaining (server-synced)`);
           startTimer(remainingTime);
         } else {
           setIsTimeExpired(true);
@@ -741,8 +794,7 @@ const ExamContent: React.FC = () => {
       }
       
       if (duration > 0) {
-        // Start fresh timer with full duration
-        console.log(`🚀 Starting fresh Web Worker timer with ${duration * 60} seconds`);
+        console.log(`🚀 Starting fresh Web Worker timer with ${duration * 60} seconds (server-synced)`);
         startTimer(duration * 60);
       }
     }
@@ -1145,7 +1197,7 @@ const ExamContent: React.FC = () => {
     router.push(originPath || '/');
   };
 
-  const handleRetryAccess = async () => {
+const handleRetryAccess = async () => {
     if (!isClient) return;
     
     try {
@@ -1169,7 +1221,8 @@ const ExamContent: React.FC = () => {
       if (response.data.status === 'success' && response.data.data) {
         const sessionData = response.data.data;
         
-        if (!sessionData.is_auto_move && getServerTime() >= new Date(sessionData.start_time).getTime()) {
+        // 🔗 USE ENHANCED SERVER TIME
+        if (!sessionData.is_auto_move && enhancedGetServerTime() >= new Date(sessionData.start_time).getTime()) {
           setShowNotAccessibleModal(false);
           setIsExamAccessible(true);
           fetchQuestions();
@@ -1179,14 +1232,14 @@ const ExamContent: React.FC = () => {
         }
       }
     } catch (error) {
-      if (examStartTime && getServerTime() >= new Date(examStartTime).getTime()) {
+      // 🔗 USE ENHANCED SERVER TIME for fallback
+      if (examStartTime && enhancedGetServerTime() >= new Date(examStartTime).getTime()) {
         setIsExamAccessible(true);
         setShowNotAccessibleModal(false);
         fetchQuestions();
       }
     }
   };
-
   if (!isClient) {
     return null;
   }
@@ -1262,575 +1315,866 @@ const ExamContent: React.FC = () => {
     );
   }
 
-  return (
-    <>
-      {/* Enhanced Hidden Timer Validator */}
-  <HiddenTimerValidator 
-    workerTimerValues={getBackupTimerValues()}
-    onSecurityBreach={() => {
-      // FIXED: Only auto-submit if this is called (which now only happens on EXTREME issues)
-      console.log('🚨 EXTREME security breach from validator - auto-submit');
-      handleAutoSubmit('extreme_security_breach');
-    }}
-  />
+return (
+  <>
+    {/* Enhanced Hidden Timer Validator */}
+    <HiddenTimerValidator 
+      workerTimerValues={{
+        ...getBackupTimerValues(),
+        // 🔗 ADD SYNC INTEGRATION DATA
+        timeSync: {
+          offset: timeOffset,
+          reliability: reliability,
+          syncCount: syncCount,
+          networkLatency: networkLatency
+        }
+      }}
+      onSecurityBreach={() => {
+        console.log('🚨 EXTREME security breach from validator - auto-submit');
+        handleAutoSubmit('extreme_security_breach');
+      }}
+    />
 
-      {/* Enhanced Focus Detector */}
-      <FocusDetector 
-        onAutoSubmit={handleAutoSubmit}
-        enabled={!loading && !error && isExamAccessible && questions.length > 0 && !isSubmitting}
-        timerRunning={isRunning}
-      />
+    {/* Enhanced Focus Detector with network-aware thresholds */}
+    <FocusDetector 
+      onAutoSubmit={handleAutoSubmit}
+      enabled={!loading && !error && isExamAccessible && questions.length > 0 && !isSubmitting}
+      timerRunning={isRunning}
+    />
 
-      {/* Security Status Display */}
-      <SecurityStatusDisplay 
-        securityValidation={securityValidation}
-        timerState={{ isValid: timerValid, isRunning }}
-      />
+    {/* Enhanced Security Status Display with time sync info */}
+    <SecurityStatusDisplay 
+      securityValidation={{
+        ...securityValidation,
+        timeSyncActive: isOnline,
+        networkQuality: securityValidation.networkQuality,
+        syncReliability: Math.round((reliability || 0) * 100)
+      }}
+      timerState={{ 
+        isValid: timerValid, 
+        isRunning,
+        networkLatency: Math.round(networkLatency || 0),
+        timeOffset: Math.round(timeOffset || 0)
+      }}
+    />
 
-      <ChangeTabPrevention 
-        onAutoSubmit={() => handleAutoSubmit('tab_change')}
-        enabled={!loading && !error && isExamAccessible && questions.length > 0}
-      >
-        <div className="tw-min-h-screen tw-bg-violet-50">
-          <div className="tw-bg-violet-600 tw-text-white tw-py-4 tw-shadow-lg tw-mb-6">
-            <Container>
-              <div className="tw-flex tw-justify-between tw-items-center">
-                <div className="tw-flex-1 tw-min-w-0">
-                  <h1 className="tw-text-2xl tw-font-bold tw-mb-1 tw-break-words tw-pr-4">
-                    {examName || 'Loading...'}
-                  </h1>
-                  {examSession && (
-                    <p className="tw-text-sm tw-text-violet-200">
-                      End time: {new Date(examSession.end_time).toLocaleTimeString()}
+    <ChangeTabPrevention 
+      onAutoSubmit={() => handleAutoSubmit('tab_change')}
+      enabled={!loading && !error && isExamAccessible && questions.length > 0}
+    >
+      <div className="tw-min-h-screen tw-bg-violet-50">
+        {/* Enhanced Header with integrated time sync and timer info */}
+        <div className="tw-bg-violet-600 tw-text-white tw-py-4 tw-shadow-lg tw-mb-6">
+          <Container>
+            <div className="tw-flex tw-justify-between tw-items-center">
+              <div className="tw-flex-1 tw-min-w-0">
+                <h1 className="tw-text-2xl tw-font-bold tw-mb-1 tw-break-words tw-pr-4">
+                  {examName || 'Loading...'}
+                </h1>
+                {examSession && (
+                  <p className="tw-text-sm tw-text-violet-200">
+                    End time: {new Date(examSession.end_time).toLocaleTimeString()}
+                  </p>
+                )}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="tw-text-xs tw-text-violet-300 tw-space-y-1">
+                    <p>Sync: {syncCount}x | Offset: {timeOffset}ms | {isOnline ? '🟢' : '🔴'}</p>
+                    <p>Reliability: {Math.round((reliability || 0) * 100)}% | Network: {Math.round(networkLatency || 0)}ms</p>
+                    <p>
+                      Worker: {timerInitialized ? '🟢' : '🔴'} | 
+                      Valid: {timerValid ? '🟢' : '🔴'} | 
+                      Security: {securityValidation.consistent ? '🟢' : '🔴'} |
+                      Quality: {securityValidation.networkQuality}
                     </p>
-                  )}
-                  {process.env.NODE_ENV === 'development' && (
-                    <div className="tw-text-xs tw-text-violet-300 tw-space-y-1">
-                      <p>Sync: {syncCount}x | Offset: {timeOffset}ms | {isOnline ? '🟢' : '🔴'}</p>
-                      <p>
-                        Worker: {timerInitialized ? '🟢' : '🔴'} | 
-                        Valid: {timerValid ? '🟢' : '🔴'} | 
-                        Security: {securityValidation.consistent ? '🟢' : '🔴'}
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <div className="tw-flex tw-items-center tw-gap-3 tw-bg-violet-700 tw-rounded-lg tw-px-6 tw-py-3 tw-flex-shrink-0">
-                  <div className="tw-flex tw-items-center tw-gap-1">
-                    <Clock size={28} className="tw-text-violet-200" />
-                    {isRunning && <Activity size={16} className="tw-text-green-400 tw-animate-pulse" />}
+                    <p>
+                      StdDev: {Math.round(offsetStdDev || 0)}ms | 
+                      TZ Offset: {Math.round((timezoneOffset || 0) / 1000 / 60)}min |
+                      Heartbeat: {securityValidation.heartbeatActive ? '🟢' : '🔴'}
+                    </p>
                   </div>
-                  <div className="tw-flex tw-flex-col tw-items-start">
-                    <span className="tw-text-violet-200 tw-text-sm">Time Remaining</span>
-                    <span className="tw-text-3xl tw-font-mono tw-font-bold">{formatTime(timeLeft)}</span>
-                  </div>
-                </div>
+                )}
               </div>
-            </Container>
-          </div>
-
-          {/* Auto-Submit Loading Overlay */}
-          {isSubmitting && (
-            <div className="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-flex tw-items-center tw-justify-center tw-z-50">
-              <div className="tw-bg-white tw-p-8 tw-rounded-lg tw-text-center tw-max-w-md">
-                <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
-                <h3 className="tw-text-xl tw-font-semibold tw-text-violet-800 tw-mb-2">
-                  Submitting Exam
-                </h3>
-                <p className="tw-text-violet-600">
-                  Please wait while we process your answers...
-                </p>
+              <div className="tw-flex tw-items-center tw-gap-3 tw-bg-violet-700 tw-rounded-lg tw-px-6 tw-py-3 tw-flex-shrink-0">
+                <div className="tw-flex tw-items-center tw-gap-1">
+                  <Clock size={28} className="tw-text-violet-200" />
+                  {isRunning && <Activity size={16} className="tw-text-green-400 tw-animate-pulse" />}
+                  {isOnline && <div className="tw-w-2 tw-h-2 tw-bg-green-400 tw-rounded-full tw-animate-pulse" />}
+                </div>
+                <div className="tw-flex tw-flex-col tw-items-start">
+                  <span className="tw-text-violet-200 tw-text-sm">Time Remaining</span>
+                  <span className="tw-text-3xl tw-font-mono tw-font-bold">{formatTime(timeLeft)}</span>
+                  {process.env.NODE_ENV === 'development' && (
+                    <span className="tw-text-xs tw-text-violet-300">
+                      Server: {formatTime(Math.floor((enhancedGetServerTime()) / 1000) % 86400)}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-          )}
+          </Container>
+        </div>
 
-          <div 
-            className="tw-fixed tw-top-4 tw-right-4 tw-z-50"
-            style={{ display: showCheckpointToast ? 'block' : 'none' }}
-          >
-            <Toast 
-              onClose={() => setShowCheckpointToast(false)} 
-              show={showCheckpointToast} 
-              delay={3000} 
-              autohide
-              className="tw-bg-violet-100 tw-border-violet-300 tw-border"
-            >
-              <Toast.Header className="tw-bg-violet-200 tw-text-violet-800">
-                <Check className="tw-mr-2 tw-text-violet-600" size={16} />
-                <strong className="tw-mr-auto">Checkpoint Saved</strong>
-              </Toast.Header>
-              <Toast.Body className="tw-text-violet-700">
-                Your answers have been saved to the server.
-              </Toast.Body>
-            </Toast>
+        {/* Auto-Submit Loading Overlay with enhanced info */}
+        {isSubmitting && (
+          <div className="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-flex tw-items-center tw-justify-center tw-z-50">
+            <div className="tw-bg-white tw-p-8 tw-rounded-lg tw-text-center tw-max-w-md">
+              <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
+              <h3 className="tw-text-xl tw-font-semibold tw-text-violet-800 tw-mb-2">
+                Submitting Exam
+              </h3>
+              <p className="tw-text-violet-600 tw-mb-4">
+                Please wait while we process your answers...
+              </p>
+              {process.env.NODE_ENV === 'development' && (
+                <div className="tw-text-xs tw-text-gray-500 tw-bg-gray-50 tw-p-2 tw-rounded">
+                  Sync Quality: {Math.round((reliability || 0) * 100)}% | 
+                  Network: {Math.round(networkLatency || 0)}ms |
+                  Security: {securityValidation.networkQuality}
+                </div>
+              )}
+            </div>
           </div>
+        )}
 
-          <Container className="tw-mb-8">
-            <Row>
-              <Col lg={8} className="tw-mb-4">
-                <Card className="tw-shadow-md tw-border-0 tw-rounded-xl
-                  [&_p_img]:tw-max-w-full 
-                  [&_p_img]:tw-h-auto 
-                  [&_p_img]:tw-block 
-                  [&_p_img]:tw-mx-auto 
-                  [&_p_img]:tw-my-4
-                  [&_img]:tw-max-w-full 
-                  [&_img]:tw-h-auto 
-                  [&_img]:tw-block 
-                  [&_img]:tw-mx-auto 
-                  [&_img]:tw-my-4">
-                  <Card.Body className="tw-p-6">
-                    {questions.length > 0 && currentQuestion < questions.length ? (
-                      <>
-                        <div className="tw-flex tw-justify-between tw-items-center tw-mb-6">
-                          <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">
-                            Question {currentQuestion + 1} of {questions.length}
-                          </h2>
+        {/* Enhanced Checkpoint Toast with sync info */}
+        <div 
+          className="tw-fixed tw-top-4 tw-right-4 tw-z-50"
+          style={{ display: showCheckpointToast ? 'block' : 'none' }}
+        >
+          <Toast 
+            onClose={() => setShowCheckpointToast(false)} 
+            show={showCheckpointToast} 
+            delay={3000} 
+            autohide
+            className="tw-bg-violet-100 tw-border-violet-300 tw-border"
+          >
+            <Toast.Header className="tw-bg-violet-200 tw-text-violet-800">
+              <Check className="tw-mr-2 tw-text-violet-600" size={16} />
+              <strong className="tw-mr-auto">Checkpoint Saved</strong>
+              {process.env.NODE_ENV === 'development' && (
+                <Badge bg="success" className="tw-text-xs">
+                  Sync: {Math.round((reliability || 0) * 100)}%
+                </Badge>
+              )}
+            </Toast.Header>
+            <Toast.Body className="tw-text-violet-700">
+              Your answers have been saved to the server.
+              {process.env.NODE_ENV === 'development' && (
+                <div className="tw-text-xs tw-text-violet-600 tw-mt-1">
+                  Server time sync: {timeOffset > 0 ? '+' : ''}{Math.round(timeOffset)}ms
+                </div>
+              )}
+            </Toast.Body>
+          </Toast>
+        </div>
+
+        {/* Main Content Container */}
+        <Container className="tw-mb-8">
+          <Row>
+            <Col lg={8} className="tw-mb-4">
+              <Card className="tw-shadow-md tw-border-0 tw-rounded-xl
+                [&_p_img]:tw-max-w-full 
+                [&_p_img]:tw-h-auto 
+                [&_p_img]:tw-block 
+                [&_p_img]:tw-mx-auto 
+                [&_p_img]:tw-my-4
+                [&_img]:tw-max-w-full 
+                [&_img]:tw-h-auto 
+                [&_img]:tw-block 
+                [&_img]:tw-mx-auto 
+                [&_img]:tw-my-4">
+                <Card.Body className="tw-p-6">
+                  {questions.length > 0 && currentQuestion < questions.length ? (
+                    <>
+                      <div className="tw-flex tw-justify-between tw-items-center tw-mb-6">
+                        <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">
+                          Question {currentQuestion + 1} of {questions.length}
+                        </h2>
+                        <div className="tw-flex tw-items-center tw-gap-2">
                           {autoSaving && (
                             <div className="tw-flex tw-items-center tw-text-violet-600">
                               <Loader2 className="tw-h-4 tw-w-4 tw-animate-spin tw-mr-2" />
                               <span className="tw-text-sm">Saving...</span>
                             </div>
                           )}
-                        </div>
-                        
-                        <div className="tw-mb-6">
-                          {renderQuestion(questions[currentQuestion])}
-                        </div>
-
-                        <div className="tw-flex tw-justify-between tw-mt-8">
-                          <Button
-                            variant="outline-secondary"
-                            className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
-                            disabled={currentQuestion === 0}
-                            onClick={() => handleNavigation(currentQuestion - 1)}
-                          >
-                            Previous
-                          </Button>
-                          <Button
-                            className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700"
-                            disabled={currentQuestion === questions.length - 1}
-                            onClick={() => handleNavigation(currentQuestion + 1)}
-                          >
-                            Next
-                          </Button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="tw-text-center tw-py-8">
-                        <p className="tw-text-gray-500">No questions available</p>
-                      </div>
-                    )}
-                  </Card.Body>
-                </Card>
-              </Col>
-
-              <Col lg={4} className="tw-hidden md:tw-block">
-                <Card className="tw-shadow-md tw-border-0 tw-rounded-xl tw-sticky tw-top-4">
-                  <Card.Body className="tw-p-4">
-                    <h3 className="tw-text-lg tw-font-semibold tw-text-violet-800 tw-mb-4">Question Navigator</h3>
-                    {questions.length > 0 ? (
-                      <>
-                        <div className="tw-grid tw-grid-cols-5 tw-gap-2 tw-mb-6">
-                          {questions.map((q, index) => (
-                            <Button
-                              key={q.id}
-                              variant={currentQuestion === index ? "primary" : "outline-secondary"}
-                              className={`tw-w-10 tw-h-10 tw-rounded-lg tw-flex tw-items-center tw-justify-center 
-                                ${currentQuestion === index 
-                                  ? 'tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700' 
-                                  : 'tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50'}
-                                ${isAnswered(q.id) ? 'tw-bg-violet-200' : ''}`}
-                              onClick={() => handleNavigation(index)}
+                          {process.env.NODE_ENV === 'development' && (
+                            <Badge 
+                              bg={securityValidation.networkQuality === 'EXCELLENT' ? 'success' : 
+                                  securityValidation.networkQuality === 'GOOD' ? 'primary' :
+                                  securityValidation.networkQuality === 'FAIR' ? 'warning' : 'danger'}
+                              className="tw-text-xs"
                             >
-                              {index + 1}
-                            </Button>
-                          ))}
+                              {securityValidation.networkQuality}
+                            </Badge>
+                          )}
                         </div>
+                      </div>
+                      
+                      <div className="tw-mb-6">
+                        {renderQuestion(questions[currentQuestion])}
+                      </div>
 
-                        <div className="tw-mb-4">
-                          <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
-                            <span>Progress</span>
-                            <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
-                          </div>
-                          <ProgressBar 
-                            now={(getFilledAnswersCount() / questions.length) * 100} 
-                            className="tw-h-2 tw-bg-violet-100"
-                          >
-                            <ProgressBar 
-                              now={(getFilledAnswersCount()/ questions.length) * 100} 
-                              className="tw-bg-violet-600"
-                            />
-                          </ProgressBar>
+                      <div className="tw-flex tw-justify-between tw-mt-8">
+                        <Button
+                          variant="outline-secondary"
+                          className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
+                          disabled={currentQuestion === 0}
+                          onClick={() => handleNavigation(currentQuestion - 1)}
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700"
+                          disabled={currentQuestion === questions.length - 1}
+                          onClick={() => handleNavigation(currentQuestion + 1)}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="tw-text-center tw-py-8">
+                      <p className="tw-text-gray-500">No questions available</p>
+                      {process.env.NODE_ENV === 'development' && (
+                        <div className="tw-text-xs tw-text-gray-400 tw-mt-2">
+                          Sync Status: {isOnline ? 'Online' : 'Offline'} | 
+                          Timer: {timerInitialized ? 'Ready' : 'Loading'}
                         </div>
+                      )}
+                    </div>
+                  )}
+                </Card.Body>
+              </Card>
+            </Col>
 
-                        {currentQuestion === questions.length - 1 && (
-                          <Button 
-                            variant="primary" 
-                            className="tw-w-full tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
-                            onClick={handleSubmit}
-                          >
-                            Submit Exam
-                          </Button>
-                        )}
-                      </>
-                    ) : (
-                      <div className="tw-text-center tw-text-gray-500">
-                        <p>No questions loaded</p>
+            {/* Enhanced Right Sidebar with sync info */}
+            <Col lg={4} className="tw-hidden md:tw-block">
+              <Card className="tw-shadow-md tw-border-0 tw-rounded-xl tw-sticky tw-top-4">
+                <Card.Body className="tw-p-4">
+                  <div className="tw-flex tw-items-center tw-justify-between tw-mb-4">
+                    <h3 className="tw-text-lg tw-font-semibold tw-text-violet-800">Question Navigator</h3>
+                    {process.env.NODE_ENV === 'development' && (
+                      <div className="tw-flex tw-items-center tw-gap-1">
+                        <div className={`tw-w-2 tw-h-2 tw-rounded-full ${isOnline ? 'tw-bg-green-500' : 'tw-bg-red-500'}`} />
+                        <span className="tw-text-xs tw-text-gray-500">
+                          {Math.round((reliability || 0) * 100)}%
+                        </span>
                       </div>
                     )}
-                  </Card.Body>
-                </Card>
-              </Col>
-            </Row>
-          </Container>
+                  </div>
+                  {questions.length > 0 ? (
+                    <>
+                      <div className="tw-grid tw-grid-cols-5 tw-gap-2 tw-mb-6">
+                        {questions.map((q, index) => (
+                          <Button
+                            key={q.id}
+                            variant={currentQuestion === index ? "primary" : "outline-secondary"}
+                            className={`tw-w-10 tw-h-10 tw-rounded-lg tw-flex tw-items-center tw-justify-center 
+                              ${currentQuestion === index 
+                                ? 'tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700' 
+                                : 'tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50'}
+                              ${isAnswered(q.id) ? 'tw-bg-violet-200' : ''}`}
+                            onClick={() => handleNavigation(index)}
+                          >
+                            {index + 1}
+                          </Button>
+                        ))}
+                      </div>
 
-          <div className="tw-block md:tw-hidden tw-fixed tw-bottom-0 tw-left-0 tw-right-0 tw-bg-white tw-shadow-lg tw-border-t tw-border-gray-200 tw-z-50">
-            <div className="tw-p-4">
-              {questions.length > 0 ? (
-                <>
-                  <div className="tw-mb-3">
-                    <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
-                      <span>Progress</span>
-                      <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
+                      <div className="tw-mb-4">
+                        <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
+                          <span>Progress</span>
+                          <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
+                        </div>
+                        <ProgressBar 
+                          now={(getFilledAnswersCount() / questions.length) * 100} 
+                          className="tw-h-2 tw-bg-violet-100"
+                        >
+                          <ProgressBar 
+                            now={(getFilledAnswersCount()/ questions.length) * 100} 
+                            className="tw-bg-violet-600"
+                          />
+                        </ProgressBar>
+                      </div>
+
+                      {/* Enhanced Timer Display */}
+                      <div className="tw-bg-violet-50 tw-p-3 tw-rounded-lg tw-mb-4">
+                        <div className="tw-flex tw-items-center tw-justify-between tw-mb-2">
+                          <span className="tw-text-sm tw-font-medium tw-text-violet-800">Timer Status</span>
+                          <div className="tw-flex tw-items-center tw-gap-1">
+                            {timerValid && <Shield className="tw-text-green-600" size={14} />}
+                            {isRunning && <Activity className="tw-text-blue-600 tw-animate-pulse" size={14} />}
+                          </div>
+                        </div>
+                        <p className="tw-text-lg tw-font-mono tw-font-bold tw-text-violet-700">
+                          {formatTime(timeLeft)}
+                        </p>
+                        {process.env.NODE_ENV === 'development' && (
+                          <div className="tw-text-xs tw-text-violet-600 tw-space-y-1 tw-mt-2">
+                            <p>Elapsed: {formatTime(elapsed)}</p>
+                            <p>Network: {Math.round(networkLatency || 0)}ms</p>
+                            <p>Offset: {timeOffset > 0 ? '+' : ''}{Math.round(timeOffset)}ms</p>
+                            <p>Quality: {securityValidation.networkQuality}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {currentQuestion === questions.length - 1 && (
+                        <Button 
+                          variant="primary" 
+                          className="tw-w-full tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
+                          onClick={handleSubmit}
+                        >
+                          Submit Exam
+                        </Button>
+                      )}
+                    </>
+                  ) : (
+                    <div className="tw-text-center tw-text-gray-500">
+                      <p>No questions loaded</p>
+                      {process.env.NODE_ENV === 'development' && (
+                        <div className="tw-text-xs tw-text-gray-400 tw-mt-2">
+                          Sync: {syncCount}x | Network: {isOnline ? 'Online' : 'Offline'}
+                        </div>
+                      )}
                     </div>
+                  )}
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+        </Container>
+
+        {/* Enhanced Mobile Bottom Navigation */}
+        <div className="tw-block md:tw-hidden tw-fixed tw-bottom-0 tw-left-0 tw-right-0 tw-bg-white tw-shadow-lg tw-border-t tw-border-gray-200 tw-z-50">
+          <div className="tw-p-4">
+            {questions.length > 0 ? (
+              <>
+                <div className="tw-mb-3">
+                  <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
+                    <span>Progress</span>
+                    <div className="tw-flex tw-items-center tw-gap-2">
+                      <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
+                      {process.env.NODE_ENV === 'development' && (
+                        <Badge 
+                          bg={isOnline ? 'success' : 'danger'}
+                          className="tw-text-xs"
+                        >
+                          {Math.round((reliability || 0) * 100)}%
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <ProgressBar 
+                    now={(getFilledAnswersCount() / questions.length) * 100} 
+                    className="tw-h-2 tw-bg-violet-100"
+                  >
                     <ProgressBar 
                       now={(getFilledAnswersCount() / questions.length) * 100} 
-                      className="tw-h-2 tw-bg-violet-100"
-                    >
-                      <ProgressBar 
-                        now={(getFilledAnswersCount() / questions.length) * 100} 
-                        className="tw-bg-violet-600"
-                      />
-                    </ProgressBar>
-                  </div>
-                  
-                  <div className="tw-overflow-x-auto tw-pb-2">
-                    <div className="tw-flex tw-gap-2 tw-min-w-max">
-                      {questions.map((q, index) => (
-                        <Button
-                          key={q.id}
-                          variant={currentQuestion === index ? "primary" : "outline-secondary"}
-                          className={`tw-w-10 tw-h-10 tw-rounded-lg tw-flex-shrink-0 tw-flex tw-items-center tw-justify-center 
-                            ${currentQuestion === index 
-                              ? 'tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700' 
-                              : 'tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50'}
-                            ${isAnswered(q.id) ? 'tw-bg-violet-200' : ''}`}
-                          onClick={() => handleNavigation(index)}
-                        >
-                          {index + 1}
-                        </Button>
-                      ))}
-                      </div>
-                  </div>
-
-                  {currentQuestion === questions.length - 1 && (
-                    <Button 
-                      variant="primary" 
-                      className="tw-w-full tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
-                      onClick={handleSubmit}
-                    >
-                      Submit Exam
-                    </Button>
-                  )}
-                </>
-              ) : (
-                <div className="tw-text-center tw-text-gray-500">
-                  <p>No questions available</p>
+                      className="tw-bg-violet-600"
+                    />
+                  </ProgressBar>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Confirmation Modal */}
-          <Modal 
-            show={showConfirmationModal} 
-            onHide={() => setShowConfirmationModal(false)}
-            centered
-            backdrop="static"
-          >
-            <Modal.Header className="tw-bg-violet-50">
-              <Modal.Title className="tw-text-violet-800 tw-flex tw-items-center">
-                <AlertCircle className="tw-mr-2 tw-text-violet-600" size={20} />
-                Confirm Submission
-              </Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <div className="tw-p-2">
-                <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-violet-900">Are you sure you want to end this exam?</p>
                 
+                <div className="tw-overflow-x-auto tw-pb-2">
+                  <div className="tw-flex tw-gap-2 tw-min-w-max">
+                    {questions.map((q, index) => (
+                      <Button
+                        key={q.id}
+                        variant={currentQuestion === index ? "primary" : "outline-secondary"}
+                        className={`tw-w-10 tw-h-10 tw-rounded-lg tw-flex-shrink-0 tw-flex tw-items-center tw-justify-center 
+                          ${currentQuestion === index 
+                            ? 'tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700' 
+                            : 'tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50'}
+                          ${isAnswered(q.id) ? 'tw-bg-violet-200' : ''}`}
+                        onClick={() => handleNavigation(index)}
+                      >
+                        {index + 1}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {currentQuestion === questions.length - 1 && (
+                  <Button 
+                    variant="primary" 
+                    className="tw-w-full tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
+                    onClick={handleSubmit}
+                  >
+                    Submit Exam
+                  </Button>
+                )}
+              </>
+            ) : (
+              <div className="tw-text-center tw-text-gray-500">
+                <p>No questions available</p>
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="tw-text-xs tw-text-gray-400 tw-mt-2">
+                    Sync: {syncCount}x | Timer: {timerInitialized ? 'Ready' : 'Loading'}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Confirmation Modal - Enhanced */}
+        <Modal 
+          show={showConfirmationModal} 
+          onHide={() => setShowConfirmationModal(false)}
+          centered
+          backdrop="static"
+        >
+          <Modal.Header className="tw-bg-violet-50">
+            <Modal.Title className="tw-text-violet-800 tw-flex tw-items-center">
+              <AlertCircle className="tw-mr-2 tw-text-violet-600" size={20} />
+              Confirm Submission
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <div className="tw-p-2">
+              <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-violet-900">Are you sure you want to end this exam?</p>
+              
+              <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
+                <div className="tw-flex tw-items-center tw-mb-2">
+                  <FileCheck className="tw-text-violet-600 tw-mr-2" size={18} />
+                  <span className="tw-font-medium tw-text-violet-800">Exam Summary</span>
+                </div>
+                <p className="tw-text-violet-700 tw-mb-2">
+                  <span className="tw-font-medium">Completed:</span> {getFilledAnswersCount()} of {questions.length} questions
+                </p>
+                <p className="tw-text-violet-700 tw-mb-2">
+                  <span className="tw-font-medium">Time Remaining:</span> {formatTime(timeLeft)}
+                </p>
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="tw-text-xs tw-text-violet-600 tw-bg-violet-100 tw-p-2 tw-rounded tw-mt-2">
+                    <p>Sync Quality: {Math.round((reliability || 0) * 100)}%</p>
+                    <p>Network Latency: {Math.round(networkLatency || 0)}ms</p>
+                    <p>Time Offset: {timeOffset > 0 ? '+' : ''}{Math.round(timeOffset)}ms</p>
+                  </div>
+                )}
+                {getFilledAnswersCount() < questions.length && (
+                  <div className="tw-bg-amber-50 tw-p-2 tw-rounded tw-border tw-border-amber-200 tw-text-amber-800 tw-text-sm tw-mt-2">
+                    Warning: You have {questions.length - getFilledAnswersCount()} unanswered questions.
+                  </div>
+                )}
+              </div>
+              
+              <p className="tw-text-gray-600 tw-text-sm">
+                Once submitted, you won&apos;t be able to change your answers for this section.
+              </p>
+            </div>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button 
+              variant="outline-secondary" 
+              onClick={() => setShowConfirmationModal(false)}
+              className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
+            >
+              Continue Exam
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={confirmSubmit}
+              className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center"
+            >
+              <ArrowRight className="tw-mr-1" size={16} /> End Exam
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      
+        {/* Next Exam Modal - Enhanced */}
+        <Modal 
+          show={showModalNext} 
+          onHide={() => {}}
+          centered
+          backdrop="static"
+          keyboard={false}
+        >
+          <Modal.Header className="tw-bg-violet-50">
+            <Modal.Title className="tw-text-violet-800">
+              {submitLoading ? (
+                <div className="tw-flex tw-items-center">
+                  <Loader2 className="tw-h-5 tw-w-5 tw-animate-spin tw-mr-2 tw-text-violet-600" />
+                  Processing Submission...
+                </div>
+              ) : isTimeExpired ? (
+                "Time Expired"
+              ) : nextExam ? "Continue to Next Exam?" : "Completed"}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {submitLoading ? (
+              <div className="tw-text-center tw-py-4">
+                <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
+                <p className="tw-text-lg tw-font-medium">Processing your answers...</p>
+                <p className="tw-text-gray-600">Please wait a moment</p>
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="tw-text-xs tw-text-gray-500 tw-bg-gray-50 tw-p-2 tw-rounded tw-mt-3">
+                    Sync: {Math.round((reliability || 0) * 100)}% | 
+                    Network: {Math.round(networkLatency || 0)}ms |
+                    Offset: {timeOffset > 0 ? '+' : ''}{Math.round(timeOffset)}ms
+                  </div>
+                )}
+              </div>
+            ) : submitError ? (
+              <div className="tw-py-2">
+                <Alert variant="danger" className="tw-mb-4">
+                  <p className="tw-font-bold tw-mb-2">Submission failed</p>
+                  <p>Please try submitting again.</p>
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="tw-text-xs tw-mt-2">
+                      Network Status: {isOnline ? 'Online' : 'Offline'} | 
+                      Quality: {securityValidation.networkQuality}
+                    </div>
+                  )}
+                </Alert>
+              </div>
+            ) : isTimeExpired ? (
+              <div className="tw-p-2 tw-text-center">
+                <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
+                  <Clock className="tw-h-16 tw-w-16 tw-text-violet-600 tw-mx-auto tw-mb-2" />
+                  <p className="tw-text-xl tw-font-medium tw-text-violet-800 tw-mb-2">Exam time has expired!</p>
+                  <p className="tw-text-violet-700">
+                    Your answers have been submitted automatically by the enhanced Web Worker timer.
+                  </p>
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="tw-text-xs tw-text-violet-600 tw-bg-violet-100 tw-p-2 tw-rounded tw-mt-2">
+                      Final sync quality: {Math.round((reliability || 0) * 100)}% | 
+                      Network stability: {securityValidation.networkQuality}
+                    </div>
+                  )}
+                </div>
                 <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
                   <div className="tw-flex tw-items-center tw-mb-2">
                     <FileCheck className="tw-text-violet-600 tw-mr-2" size={18} />
                     <span className="tw-font-medium tw-text-violet-800">Exam Summary</span>
                   </div>
                   <p className="tw-text-violet-700 tw-mb-2">
-                    <span className="tw-font-medium">Completed:</span> {getFilledAnswersCount()} of {questions.length} questions
+                    <span className="tw-font-medium">Answered:</span> {getFilledAnswersCount()} of {questions.length} questions
                   </p>
                   <p className="tw-text-violet-700 tw-mb-2">
-                    <span className="tw-font-medium">Time Remaining:</span> {formatTime(timeLeft)}
+                    <span className="tw-font-medium">Elapsed Time:</span> {formatTime(elapsed)}
                   </p>
-                  {getFilledAnswersCount() < questions.length && (
-                    <div className="tw-bg-amber-50 tw-p-2 tw-rounded tw-border tw-border-amber-200 tw-text-amber-800 tw-text-sm">
-                      Warning: You have {questions.length - getFilledAnswersCount()} unanswered questions.
+                </div>
+              </div>
+            ) : nextExam ? (
+              <div className="tw-p-2">
+                <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4 tw-text-center">
+                  <FileCheck className="tw-h-12 tw-w-12 tw-text-violet-600 tw-mx-auto tw-mb-2" />
+                  <p className="tw-text-lg tw-font-medium tw-text-violet-800 tw-mb-2">Section completed!</p>
+                  <p className="tw-text-violet-700">
+                    Continue to <span className="tw-font-semibold">{nextExam}</span>.
+                  </p>
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="tw-text-xs tw-text-violet-600 tw-bg-violet-100 tw-p-2 tw-rounded tw-mt-2">
+                      Session sync quality: {Math.round((reliability || 0) * 100)}%
                     </div>
                   )}
                 </div>
-                
-                <p className="tw-text-gray-600 tw-text-sm">
-                  Once submitted, you won&apos;t be able to change your answers for this section.
-                </p>
+                <p className="tw-text-center tw-text-gray-600">Are you ready to continue?</p>
               </div>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button 
-                variant="outline-secondary" 
-                onClick={() => setShowConfirmationModal(false)}
-                className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
-              >
-                Continue Exam
-              </Button>
-              <Button 
-                variant="primary" 
-                onClick={confirmSubmit}
-                className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center"
-              >
-                <ArrowRight className="tw-mr-1" size={16} /> End Exam
-              </Button>
-            </Modal.Footer>
-          </Modal>
-        
-          {/* Next Exam Modal */}
+            ) : (
+              <div className="tw-p-2 tw-text-center">
+                <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
+                  <Check className="tw-h-16 tw-w-16 tw-text-violet-600 tw-mx-auto tw-mb-2" />
+                  <p className="tw-text-xl tw-font-medium tw-text-violet-800 tw-mb-2">Congratulations!</p>
+                  <p className="tw-text-violet-700">
+                    You have completed all exams successfully.
+                  </p>
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="tw-text-xs tw-text-violet-600 tw-bg-violet-100 tw-p-2 tw-rounded tw-mt-2">
+                      Total sync sessions: {syncCount} | 
+                      Final quality: {Math.round((reliability || 0) * 100)}% |
+                      Security: {securityValidation.networkQuality}
+                    </div>
+                  )}
+                </div>
+                <p className="tw-text-gray-600">Thank you for your participation!</p>
+              </div>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            {submitLoading ? null : (
+              <>
+                {submitError ? (
+                  <Button 
+                    variant="primary" 
+                    className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700"
+                    onClick={handleRetrySubmit}
+                  >
+                    Retry Submission
+                  </Button>
+                ) : (
+                  <>
+                    <Button 
+                      variant="secondary" 
+                      onClick={handleClose}
+                    >
+                      Back to Home
+                    </Button>
+                    {nextExam && (
+                      <Button 
+                        variant="primary" 
+                        className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center"
+                        onClick={handleNextExam}
+                      >
+                        Continue <ArrowRight className="tw-ml-1" size={16} />
+                      </Button>
+                    )}
+                  </>
+                )}
+              </>
+            )}
+          </Modal.Footer>
+        </Modal>
+
+        {/* Not Accessible Modal - Enhanced */}
+        <Modal 
+          show={showNotAccessibleModal} 
+          onHide={() => setShowNotAccessibleModal(false)}
+          centered
+          backdrop="static"
+        >
+          <Modal.Header className="tw-bg-violet-50">
+            <Modal.Title className="tw-text-violet-800 tw-flex tw-items-center">
+              <Clock className="tw-mr-2 tw-text-violet-600" size={20} />
+              Exam Not Available
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <div className="tw-p-2 tw-text-center">
+              <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-violet-900">
+                This exam is not available yet.
+              </p>
+              
+              {examStartTime && (
+                <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
+                  <p className="tw-text-violet-700 tw-mb-2">
+                    Scheduled start time:
+                  </p>
+                  <p className="tw-text-lg tw-font-medium tw-text-violet-800">
+                    {new Date(examStartTime).toLocaleString()}
+                  </p>
+                  
+                  <div className="tw-mt-4">
+                    <p className="tw-text-violet-600">Available in:</p>
+                    <div className="tw-text-2xl tw-font-mono tw-font-bold tw-text-violet-700 tw-mt-2">
+                      {countdown}
+                    </div>
+                  </div>
+                  
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="tw-text-xs tw-text-violet-600 tw-bg-violet-100 tw-p-2 tw-rounded tw-mt-2">
+                      Server time sync: {timeOffset > 0 ? '+' : ''}{Math.round(timeOffset)}ms | 
+                      Network: {Math.round(networkLatency || 0)}ms |
+                      Quality: {Math.round((reliability || 0) * 100)}%
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <p className="tw-text-gray-600 tw-text-sm">
+                Please wait until the scheduled time to access this exam.
+              </p>
+            </div>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button 
+              variant="outline-secondary" 
+              onClick={() => {
+                setShowNotAccessibleModal(false);
+                router.push(originPath || '/');
+              }}
+              className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
+            >
+              Back to Home
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={handleRetryAccess}
+              className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700"
+            >
+              Check Again
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Enhanced Timer Error Modal with detailed diagnostics */}
+        {timerError && (
           <Modal 
-            show={showModalNext} 
+            show={!!timerError} 
             onHide={() => {}}
             centered
             backdrop="static"
             keyboard={false}
           >
-            <Modal.Header className="tw-bg-violet-50">
-              <Modal.Title className="tw-text-violet-800">
-                {submitLoading ? (
-                  <div className="tw-flex tw-items-center">
-                    <Loader2 className="tw-h-5 tw-w-5 tw-animate-spin tw-mr-2 tw-text-violet-600" />
-                    Processing Submission...
-                  </div>
-                ) : isTimeExpired ? (
-                  "Time Expired"
-                ) : nextExam ? "Continue to Next Exam?" : "Completed"}
-              </Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              {submitLoading ? (
-                <div className="tw-text-center tw-py-4">
-                  <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
-                  <p className="tw-text-lg tw-font-medium">Processing your answers...</p>
-                  <p className="tw-text-gray-600">Please wait a moment</p>
-                </div>
-              ) : submitError ? (
-                <div className="tw-py-2">
-                  <Alert variant="danger" className="tw-mb-4">
-                    <p className="tw-font-bold tw-mb-2">Submission failed</p>
-                    <p>Please try submitting again.</p>
-                  </Alert>
-                </div>
-              ) : isTimeExpired ? (
-                <div className="tw-p-2 tw-text-center">
-                  <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
-                    <Clock className="tw-h-16 tw-w-16 tw-text-violet-600 tw-mx-auto tw-mb-2" />
-                    <p className="tw-text-xl tw-font-medium tw-text-violet-800 tw-mb-2">Exam time has expired!</p>
-                    <p className="tw-text-violet-700">
-                      Your answers have been submitted automatically by the Web Worker timer.
-                    </p>
-                  </div>
-                  <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
-                    <div className="tw-flex tw-items-center tw-mb-2">
-                      <FileCheck className="tw-text-violet-600 tw-mr-2" size={18} />
-                      <span className="tw-font-medium tw-text-violet-800">Exam Summary</span>
-                    </div>
-                    <p className="tw-text-violet-700 tw-mb-2">
-                      <span className="tw-font-medium">Answered:</span> {getFilledAnswersCount()} of {questions.length} questions
-                    </p>
-                    <p className="tw-text-violet-700 tw-mb-2">
-                      <span className="tw-font-medium">Elapsed Time:</span> {formatTime(elapsed)}
-                    </p>
-                  </div>
-                </div>
-              ) : nextExam ? (
-                <div className="tw-p-2">
-                  <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4 tw-text-center">
-                    <FileCheck className="tw-h-12 tw-w-12 tw-text-violet-600 tw-mx-auto tw-mb-2" />
-                    <p className="tw-text-lg tw-font-medium tw-text-violet-800 tw-mb-2">Section completed!</p>
-                    <p className="tw-text-violet-700">
-                      Continue to <span className="tw-font-semibold">{nextExam}</span>.
-                    </p>
-                  </div>
-                  <p className="tw-text-center tw-text-gray-600">Are you ready to continue?</p>
-                </div>
-              ) : (
-                <div className="tw-p-2 tw-text-center">
-                  <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
-                    <Check className="tw-h-16 tw-w-16 tw-text-violet-600 tw-mx-auto tw-mb-2" />
-                    <p className="tw-text-xl tw-font-medium tw-text-violet-800 tw-mb-2">Congratulations!</p>
-                    <p className="tw-text-violet-700">
-                      You have completed all exams successfully.
-                    </p>
-                  </div>
-                  <p className="tw-text-gray-600">Thank you for your participation!</p>
-                </div>
-              )}
-            </Modal.Body>
-            <Modal.Footer>
-              {submitLoading ? null : (
-                <>
-                  {submitError ? (
-                    <Button 
-                      variant="primary" 
-                      className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700"
-                      onClick={handleRetrySubmit}
-                    >
-                      Retry Submission
-                    </Button>
-                  ) : (
-                    <>
-                      <Button 
-                        variant="secondary" 
-                        onClick={handleClose}
-                      >
-                        Back to Home
-                      </Button>
-                      {nextExam && (
-                        <Button 
-                          variant="primary" 
-                          className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center"
-                          onClick={handleNextExam}
-                        >
-                          Continue <ArrowRight className="tw-ml-1" size={16} />
-                        </Button>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
-            </Modal.Footer>
-          </Modal>
-
-          {/* Not Accessible Modal */}
-          <Modal 
-            show={showNotAccessibleModal} 
-            onHide={() => setShowNotAccessibleModal(false)}
-            centered
-            backdrop="static"
-          >
-            <Modal.Header className="tw-bg-violet-50">
-              <Modal.Title className="tw-text-violet-800 tw-flex tw-items-center">
-                <Clock className="tw-mr-2 tw-text-violet-600" size={20} />
-                Exam Not Available
+            <Modal.Header className="tw-bg-red-50">
+              <Modal.Title className="tw-text-red-800 tw-flex tw-items-center">
+                <ShieldAlert className="tw-mr-2 tw-text-red-600" size={20} />
+                Enhanced Timer System Error
               </Modal.Title>
             </Modal.Header>
             <Modal.Body>
               <div className="tw-p-2 tw-text-center">
-                <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-violet-900">
-                  This exam is not available yet.
+                <ShieldAlert className="tw-h-16 tw-w-16 tw-text-red-600 tw-mx-auto tw-mb-4" />
+                <p className="tw-text-lg tw-font-medium tw-text-red-800 tw-mb-2">
+                  Enhanced Web Worker Timer Error
+                </p>
+                <p className="tw-text-red-700 tw-mb-4">
+                  {timerError}
                 </p>
                 
-                {examStartTime && (
-                  <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
-                    <p className="tw-text-violet-700 tw-mb-2">
-                      Scheduled start time:
-                    </p>
-                    <p className="tw-text-lg tw-font-medium tw-text-violet-800">
-                      {new Date(examStartTime).toLocaleString()}
-                    </p>
-                    
-                    <div className="tw-mt-4">
-                      <p className="tw-text-violet-600">Available in:</p>
-                      <div className="tw-text-2xl tw-font-mono tw-font-bold tw-text-violet-700 tw-mt-2">
-                        {countdown}
-                      </div>
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="tw-bg-red-50 tw-p-4 tw-rounded-lg tw-mb-4 tw-text-left">
+                    <h4 className="tw-font-semibold tw-text-red-800 tw-mb-2">System Diagnostics:</h4>
+                    <div className="tw-text-sm tw-text-red-700 tw-space-y-1">
+                      <p>• Network Status: {isOnline ? 'Online' : 'Offline'}</p>
+                      <p>• Sync Quality: {Math.round((reliability || 0) * 100)}%</p>
+                      <p>• Network Latency: {Math.round(networkLatency || 0)}ms</p>
+                      <p>• Time Offset: {timeOffset > 0 ? '+' : ''}{Math.round(timeOffset)}ms</p>
+                      <p>• Security Level: {securityValidation.networkQuality}</p>
+                      <p>• Timer Initialized: {timerInitialized ? 'Yes' : 'No'}</p>
+                      <p>• Worker Valid: {timerValid ? 'Yes' : 'No'}</p>
                     </div>
                   </div>
                 )}
                 
+                <div className="tw-bg-red-50 tw-p-4 tw-rounded-lg tw-mb-4 tw-text-left">
+                  <h4 className="tw-font-semibold tw-text-red-800 tw-mb-2">Possible causes:</h4>
+                  <ul className="tw-text-sm tw-text-red-700 tw-space-y-1">
+                    <li>• Enhanced Web Worker not supported in this browser</li>
+                    <li>• Local storage is disabled or corrupted</li>
+                    <li>• Browser security settings blocking workers</li>
+                    <li>• Network instability affecting timer synchronization</li>
+                    <li>• Timer data corruption detected by security validation</li>
+                    <li>• System clock manipulation detected</li>
+                  </ul>
+                </div>
                 <p className="tw-text-gray-600 tw-text-sm">
-                  Please wait until the scheduled time to access this exam.
+                  The exam will be automatically submitted for your security with current progress saved.
                 </p>
               </div>
             </Modal.Body>
             <Modal.Footer>
               <Button 
-                variant="outline-secondary" 
-                onClick={() => {
-                  setShowNotAccessibleModal(false);
-                  router.push(originPath || '/');
-                }}
-                className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
-              >
-                Back to Home
-              </Button>
-              <Button 
                 variant="primary" 
-                onClick={handleRetryAccess}
-                className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700"
+                className="tw-bg-red-600 tw-border-0 hover:tw-bg-red-700"
+                onClick={() => handleAutoSubmit('enhanced_timer_error')}
               >
-                Check Again
+                Submit Exam Now
               </Button>
             </Modal.Footer>
           </Modal>
+        )}
 
-          {/* Timer Error Modal */}
-          {timerError && (
-            <Modal 
-              show={!!timerError} 
-              onHide={() => {}}
-              centered
-              backdrop="static"
-              keyboard={false}
-            >
-              <Modal.Header className="tw-bg-red-50">
-                <Modal.Title className="tw-text-red-800 tw-flex tw-items-center">
-                  <ShieldAlert className="tw-mr-2 tw-text-red-600" size={20} />
-                  Timer System Error
-                </Modal.Title>
-              </Modal.Header>
-              <Modal.Body>
-                <div className="tw-p-2 tw-text-center">
-                  <ShieldAlert className="tw-h-16 tw-w-16 tw-text-red-600 tw-mx-auto tw-mb-4" />
-                  <p className="tw-text-lg tw-font-medium tw-text-red-800 tw-mb-2">
-                    Web Worker Timer Error
-                  </p>
-                  <p className="tw-text-red-700 tw-mb-4">
-                    {timerError}
-                  </p>
-                  <div className="tw-bg-red-50 tw-p-4 tw-rounded-lg tw-mb-4 tw-text-left">
-                    <h4 className="tw-font-semibold tw-text-red-800 tw-mb-2">Possible causes:</h4>
-                    <ul className="tw-text-sm tw-text-red-700 tw-space-y-1">
-                      <li>• Web Worker not supported in this browser</li>
-                      <li>• Local storage is disabled or full</li>
-                      <li>• Browser security settings blocking workers</li>
-                      <li>• Timer data corruption detected</li>
-                    </ul>
-                  </div>
-                  <p className="tw-text-gray-600 tw-text-sm">
-                    The exam will be automatically submitted for your security.
-                  </p>
+        {/* Enhanced Network Status Indicator (only in development) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="tw-fixed tw-bottom-4 tw-left-4 tw-z-40">
+            <div className="tw-bg-white tw-rounded-lg tw-shadow-lg tw-p-3 tw-border tw-max-w-xs">
+              <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
+                <div className={`tw-w-3 tw-h-3 tw-rounded-full ${isOnline ? 'tw-bg-green-500' : 'tw-bg-red-500'}`} />
+                <span className="tw-font-semibold tw-text-sm">
+                  Network: {isOnline ? 'Online' : 'Offline'}
+                </span>
+              </div>
+              
+              <div className="tw-space-y-1 tw-text-xs">
+                <div className="tw-flex tw-justify-between">
+                  <span>Sync Count:</span>
+                  <span>{syncCount}x</span>
                 </div>
-              </Modal.Body>
-              <Modal.Footer>
-                <Button 
-                  variant="primary" 
-                  className="tw-bg-red-600 tw-border-0 hover:tw-bg-red-700"
-                  onClick={() => handleAutoSubmit('timer_error')}
-                >
-                  Submit Exam Now
-                </Button>
-              </Modal.Footer>
-            </Modal>
-          )}
-        </div>
-      </ChangeTabPrevention>
-    </>
-  );
+                <div className="tw-flex tw-justify-between">
+                  <span>Reliability:</span>
+                  <span>{Math.round((reliability || 0) * 100)}%</span>
+                </div>
+                <div className="tw-flex tw-justify-between">
+                  <span>Latency:</span>
+                  <span>{Math.round(networkLatency || 0)}ms</span>
+                </div>
+                <div className="tw-flex tw-justify-between">
+                  <span>Time Offset:</span>
+                  <span>{timeOffset > 0 ? '+' : ''}{Math.round(timeOffset)}ms</span>
+                </div>
+                <div className="tw-flex tw-justify-between">
+                  <span>Quality:</span>
+                  <span className={`${
+                    securityValidation.networkQuality === 'EXCELLENT' ? 'tw-text-green-600' :
+                    securityValidation.networkQuality === 'GOOD' ? 'tw-text-blue-600' :
+                    securityValidation.networkQuality === 'FAIR' ? 'tw-text-yellow-600' : 'tw-text-red-600'
+                  }`}>
+                    {securityValidation.networkQuality}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="tw-mt-2 tw-pt-2 tw-border-t tw-border-gray-200">
+                <div className="tw-text-xs tw-font-medium tw-mb-1">Timer Status:</div>
+                <div className="tw-flex tw-items-center tw-gap-2 tw-text-xs">
+                  <div className={`tw-w-2 tw-h-2 tw-rounded-full ${timerInitialized ? 'tw-bg-green-500' : 'tw-bg-red-500'}`} />
+                  <span>Worker: {timerInitialized ? 'Ready' : 'Loading'}</span>
+                </div>
+                <div className="tw-flex tw-items-center tw-gap-2 tw-text-xs tw-mt-1">
+                  <div className={`tw-w-2 tw-h-2 tw-rounded-full ${timerValid ? 'tw-bg-green-500' : 'tw-bg-red-500'}`} />
+                  <span>Valid: {timerValid ? 'Yes' : 'No'}</span>
+                </div>
+                <div className="tw-flex tw-items-center tw-gap-2 tw-text-xs tw-mt-1">
+                  <div className={`tw-w-2 tw-h-2 tw-rounded-full ${securityValidation.heartbeatActive ? 'tw-bg-green-500' : 'tw-bg-red-500'}`} />
+                  <span>Heartbeat: {securityValidation.heartbeatActive ? 'Active' : 'Inactive'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Enhanced Adaptive Security Notice (only shown when network quality is poor) */}
+        {securityValidation.networkQuality === 'POOR' && (
+          <div className="tw-fixed tw-top-20 tw-right-4 tw-z-40 tw-max-w-sm">
+            <Alert variant="warning" className="tw-border-yellow-300 tw-bg-yellow-50">
+              <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
+                <ShieldAlert className="tw-text-yellow-600" size={16} />
+                <span className="tw-font-semibold tw-text-yellow-800">Network Quality Alert</span>
+              </div>
+              <p className="tw-text-sm tw-text-yellow-700">
+                Poor network conditions detected. Security thresholds have been automatically adjusted 
+                to prevent false positives while maintaining exam integrity.
+              </p>
+              {process.env.NODE_ENV === 'development' && (
+                <div className="tw-text-xs tw-text-yellow-600 tw-mt-2 tw-bg-yellow-100 tw-p-2 tw-rounded">
+                  Adaptive threshold: {Math.max(120, (networkLatency || 0) * 3 / 1000)}s | 
+                  Base reliability: {Math.round((reliability || 0) * 100)}%
+                </div>
+              )}
+            </Alert>
+          </div>
+        )}
+
+        {/* Enhanced Time Sync Status Indicator (only when sync issues detected) */}
+        {Math.abs(timeOffset) > 10000 && ( // Show only if offset > 10 seconds
+          <div className="tw-fixed tw-top-32 tw-right-4 tw-z-40 tw-max-w-sm">
+            <Alert variant="info" className="tw-border-blue-300 tw-bg-blue-50">
+              <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
+                <Clock className="tw-text-blue-600" size={16} />
+                <span className="tw-font-semibold tw-text-blue-800">Time Sync Active</span>
+              </div>
+              <p className="tw-text-sm tw-text-blue-700">
+                Large time difference detected ({timeOffset > 0 ? '+' : ''}{Math.round(timeOffset / 1000)}s). 
+                Enhanced time synchronization is compensating automatically.
+              </p>
+              {process.env.NODE_ENV === 'development' && (
+                <div className="tw-text-xs tw-text-blue-600 tw-mt-2 tw-bg-blue-100 tw-p-2 tw-rounded">
+                  Raw offset: {Math.round(timeOffset)}ms | 
+                  Timezone: {Math.round((timezoneOffset || 0) / 1000 / 60)}min |
+                  StdDev: {Math.round(offsetStdDev || 0)}ms
+                </div>
+              )}
+            </Alert>
+          </div>
+        )}
+      </div>
+    </ChangeTabPrevention>
+  </>
+);
 };
 
 // Main ChainExam Component with All Providers and Web Worker Integration
