@@ -4,5 +4,11 @@
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
   "/api/users/check-auth": "pages/api/users/check-auth.js",
-  "/api/users/status": "pages/api/users/status.js"
+  "/try-out": "pages/try-out.js",
+  "/api/exam-schedules/type/[examtype]": "pages/api/exam-schedules/type/[examtype].js",
+  "/api/exam-schedules/[id]": "pages/api/exam-schedules/[id].js",
+  "/api/exam-schedules/checkAccess": "pages/api/exam-schedules/checkAccess.js",
+  "/api/examOrder/getExamOrder": "pages/api/examOrder/getExamOrder.js",
+  "/api/examSession/examSchedule": "pages/api/examSession/examSchedule.js",
+  "/exam/[exam_string]": "pages/exam/[exam_string].js"
 }
