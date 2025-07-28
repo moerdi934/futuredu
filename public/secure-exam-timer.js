@@ -1,723 +1,832 @@
-// File: public/secure-exam-timer.js
-// Enhanced Web Worker Timer with Improved Error Handling
+// hooks/useSecureTimer.ts - FIXED VERSION WITH PROPER ERROR HANDLING
+import { useState, useEffect, useRef, useCallback } from 'react';
+import CryptoJS from 'crypto-js';
 
-console.log('🚀 Enhanced Web Worker Timer Script Loading...');
-
-let timerInterval;
-let startTime;
-let duration;
-let sessionKey;
-let backupTimers = {};
-let validationInterval;
-let heartbeatInterval;
-let lastHeartbeat = Date.now();
-let networkInfo = { latency: 0, reliability: 1.0, offsetStdDev: 0 };
-let workerReady = false;
-
-// Debug logging function
-function debugLog(message, data = null) {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] WORKER: ${message}`, data || '');
+interface TimerState {
+  timeLeft: number;
+  elapsed: number;
+  isRunning: boolean;
+  isValid: boolean;
+  lastUpdate: number;
 }
 
-debugLog('Worker script loaded successfully');
-
-// Enhanced obfuscation with multiple layers
-function createObfuscationKey(sessionKey, timestamp) {
-  try {
-    const keyParts = [
-      sessionKey.substring(0, 8),
-      timestamp.toString(36),
-      sessionKey.substring(8, 16) || 'default'
-    ];
-    return keyParts.join('');
-  } catch (error) {
-    debugLog('Error creating obfuscation key', error);
-    return 'fallback' + timestamp.toString(36);
-  }
+interface BackupTimers {
+  purchase: number;
+  userActivity: number;
+  inventory: number;
 }
 
-function obfuscate(value, key, salt = 0x12345678) {
-  try {
-    const keyNum = parseInt(key.substring(0, 8), 16) || 0x12345678;
-    const timestampNum = parseInt(key.substring(8, 16), 36) || Date.now();
-    const complexKey = keyNum ^ timestampNum ^ salt;
-    
-    // Multiple XOR passes for better security
-    let obfuscated = value ^ complexKey;
-    obfuscated = obfuscated ^ parseInt(key.substring(16, 24) || '87654321', 16);
-    obfuscated = obfuscated ^ 0xABCDEF12;
-    
-    return obfuscated.toString(36);
-  } catch (error) {
-    debugLog('Obfuscation error', error);
-    return value.toString(36); // Fallback
-  }
+interface SecurityValidation {
+  consistent: boolean;
+  noTimeJump: boolean;
+  backupValid: boolean;
+  checksumValid: boolean;
+  heartbeatActive: boolean;
+  networkQuality: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR';
 }
 
-function deobfuscate(obfuscated, key, salt = 0x12345678) {
-  try {
-    const keyNum = parseInt(key.substring(0, 8), 16) || 0x12345678;
-    const timestampNum = parseInt(key.substring(8, 16), 36) || Date.now();
-    const complexKey = keyNum ^ timestampNum ^ salt;
-    
-    let value = parseInt(obfuscated, 36);
-    if (isNaN(value)) throw new Error('Invalid obfuscated value');
-    
-    value = value ^ 0xABCDEF12;
-    value = value ^ parseInt(key.substring(16, 24) || '87654321', 16);
-    value = value ^ complexKey;
-    
-    return value;
-  } catch (error) {
-    debugLog('Deobfuscation failed', error);
-    throw new Error('Deobfuscation failed');
-  }
+interface UseSecureTimerOptions {
+  examId: string;
+  onTimeout: () => void;
+  onSecurityBreach: (reason: string, details?: any) => void;
+  onValidationFailure: (reason: string) => void;
 }
 
-// Generate backup timer data with different obfuscation
-function generateBackupTimers(startTime, duration, sessionKey) {
-  const timestamp = Date.now();
-  debugLog('Generating backup timers', { startTime, duration, timestamp });
+interface NetworkInfo {
+  latency: number;
+  timezoneOffset: number;
+  reliability: number;
+  offsetStdDev: number;
+}
+
+export const useSecureTimer = ({
+  examId,
+  onTimeout,
+  onSecurityBreach,
+  onValidationFailure
+}: UseSecureTimerOptions) => {
+  const [timerState, setTimerState] = useState<TimerState>({
+    timeLeft: 0,
+    elapsed: 0,
+    isRunning: false,
+    isValid: true,
+    lastUpdate: Date.now()
+  });
   
-  try {
-    return {
-      purchase: {
-        marketResearch: obfuscate(duration, sessionKey + 'purchase', 0x11111111),
-        analytics: obfuscate(startTime, sessionKey + 'analytics', 0x22222222),
-        validation: sessionKey.substring(0, 4) + timestamp.toString(36).substring(-4)
-      },
-      userActivity: {
-        behaviorPattern: obfuscate(duration, sessionKey + 'behavior', 0x33333333),
-        neuralNetwork: obfuscate(startTime, sessionKey + 'neural', 0x44444444),
-        validation: sessionKey.substring(4, 8) + timestamp.toString(36).substring(-4)
-      },
-      inventory: {
-        quantum: obfuscate(duration, sessionKey + 'quantum', 0x55555555),
-        blockchain: obfuscate(startTime, sessionKey + 'blockchain', 0x66666666),
-        validation: sessionKey.substring(8, 12) + timestamp.toString(36).substring(-4)
-      }
-    };
-  } catch (error) {
-    debugLog('Error generating backup timers', error);
-    return {};
-  }
-}
-
-// Validate backup timers integrity
-function validateBackupTimers(stored, sessionKey) {
-  try {
-    debugLog('Validating backup timers');
-    
-    if (!stored || !sessionKey) {
-      debugLog('Invalid backup timer parameters');
-      return null;
-    }
-    
-    const purchaseDuration = deobfuscate(stored.purchase.marketResearch, sessionKey + 'purchase', 0x11111111);
-    const purchaseStart = deobfuscate(stored.purchase.analytics, sessionKey + 'analytics', 0x22222222);
-    
-    const userActivityDuration = deobfuscate(stored.userActivity.behaviorPattern, sessionKey + 'behavior', 0x33333333);
-    const userActivityStart = deobfuscate(stored.userActivity.neuralNetwork, sessionKey + 'neural', 0x44444444);
-    
-    const inventoryDuration = deobfuscate(stored.inventory.quantum, sessionKey + 'quantum', 0x55555555);
-    const inventoryStart = deobfuscate(stored.inventory.blockchain, sessionKey + 'blockchain', 0x66666666);
-    
-    // Cross-validate all backup timers
-    const durations = [purchaseDuration, userActivityDuration, inventoryDuration];
-    const starts = [purchaseStart, userActivityStart, inventoryStart];
-    
-    debugLog('Backup timer validation results', { durations, starts });
-    
-    // Check if all durations match within tolerance
-    const durationValid = durations.every(d => Math.abs(d - durations[0]) <= 1);
-    const startValid = starts.every(s => Math.abs(s - starts[0]) <= 1000); // 1 second tolerance
-    
-    return durationValid && startValid ? {
-      duration: durations[0],
-      startTime: starts[0]
-    } : null;
-  } catch (error) {
-    debugLog('Backup timer validation error', error);
-    return null;
-  }
-}
-
-// Heartbeat mechanism to detect if main thread is responsive
-function startHeartbeat() {
-  debugLog('Starting heartbeat mechanism');
+  const [backupTimers, setBackupTimers] = useState<BackupTimers>({
+    purchase: 0,
+    userActivity: 0,
+    inventory: 0
+  });
   
-  if (heartbeatInterval) clearInterval(heartbeatInterval);
+  const [securityValidation, setSecurityValidation] = useState<SecurityValidation>({
+    consistent: true,
+    noTimeJump: true,
+    backupValid: true,
+    checksumValid: true,
+    heartbeatActive: false,
+    networkQuality: 'GOOD'
+  });
   
-  heartbeatInterval = setInterval(() => {
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [networkInfo, setNetworkInfo] = useState<NetworkInfo>({
+    latency: 0,
+    timezoneOffset: 0,
+    reliability: 1.0,
+    offsetStdDev: 0
+  });
+  
+  const workerRef = useRef<Worker | null>(null);
+  const sessionKeyRef = useRef<string>('');
+  const lastHeartbeatRef = useRef<number>(Date.now());
+  const heartbeatTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const storageKeyRef = useRef<string>('');
+  const securityAlertsRef = useRef<string[]>([]);
+  const workerReadyRef = useRef<boolean>(false);
+  const pendingStartRef = useRef<number | null>(null);
+  const fallbackTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const workerInitAttempts = useRef<number>(0);
+  const workerFailedRef = useRef<boolean>(false);
+
+  const debugLog = useCallback((message: string, data?: any) => {
+    console.log(`[${new Date().toISOString()}] TIMER: ${message}`, data || '');
+  }, []);
+  
+  // Generate secure session key
+  const generateSessionKey = useCallback(() => {
+    const timestamp = Date.now().toString(36);
+    const random1 = Math.random().toString(36).substring(2, 15);
+    const random2 = Math.random().toString(36).substring(2, 15);
+    const examHash = CryptoJS.MD5(examId).toString().substring(0, 8);
+    
+    return `${examHash}${timestamp}${random1}${random2}`;
+  }, [examId]);
+  
+  // Check if Web Workers are supported
+  const isWorkerSupported = useCallback(() => {
+    if (typeof window === 'undefined') return false;
+    if (typeof Worker === 'undefined') return false;
+    
     try {
-      const now = Date.now();
-      
-      self.postMessage({
-        type: 'heartbeat_request',
-        timestamp: now
-      });
-      
-      // If no response within adaptive timeout, assume main thread is compromised
-      const adaptiveTimeout = Math.max(5000, (networkInfo.latency || 0) * 5);
-      setTimeout(() => {
-        if (Date.now() - lastHeartbeat > adaptiveTimeout) {
-          debugLog('Main thread unresponsive detected');
-          self.postMessage({
-            type: 'main_thread_unresponsive',
-            message: 'Main thread not responding - potential manipulation detected',
-            timeout: adaptiveTimeout
-          });
-        }
-      }, adaptiveTimeout);
+      // Try to create a simple test worker
+      const testWorker = new Worker('data:text/javascript,self.postMessage("test");');
+      testWorker.terminate();
+      return true;
     } catch (error) {
-      debugLog('Heartbeat error', error);
+      debugLog('Web Worker support test failed', error);
+      return false;
     }
-  }, 3000); // Every 3 seconds
-}
+  }, [debugLog]);
 
-// Enhanced message handler with better error handling
-self.onmessage = function(e) {
-  try {
-    const { action, payload } = e.data;
-    debugLog(`Received message: ${action}`, payload);
-    
-    switch (action) {
-      case 'ping':
-        debugLog('Ping received - responding with worker_ready');
-        workerReady = true;
-        self.postMessage({ 
-          type: 'worker_ready',
-          message: 'Enhanced secure timer worker initialized successfully',
-          timestamp: Date.now(),
-          capabilities: ['obfuscation', 'heartbeat', 'validation', 'backup_timers']
-        });
-        break;
-        
-      case 'start':
-        handleStart(payload);
-        break;
-        
-      case 'restore':
-        handleRestore(payload);
-        break;
-        
-      case 'heartbeat_response':
-        debugLog('Heartbeat response received');
-        lastHeartbeat = Date.now();
-        break;
-        
-      case 'validate_request':
-        debugLog('Validation request received');
-        performIntegrityValidation();
-        break;
-        
-      case 'update_network_info':
-        debugLog('Network info update received', payload);
-        networkInfo = { ...networkInfo, ...payload };
-        self.postMessage({ type: 'network_info_updated', networkInfo });
-        break;
-        
-      case 'stop':
-        debugLog('Stop command received');
-        cleanup();
-        break;
-        
-      default:
-        debugLog('Unknown action received', action);
-        self.postMessage({ type: 'unknown_action', action });
-    }
-  } catch (error) {
-    debugLog('Message handling error', error);
-    self.postMessage({ 
-      type: 'worker_error', 
-      error: error.message,
-      action: e.data?.action || 'unknown'
-    });
-  }
-};
-
-function handleStart(payload) {
-  try {
-    debugLog('Starting timer', payload);
-    startTime = Date.now();
-    duration = payload.duration || 0;
-    sessionKey = payload.sessionKey || 'default';
-    networkInfo = payload.networkInfo || { latency: 0, reliability: 1.0 };
-    
-    if (duration <= 0) {
-      throw new Error('Invalid duration provided');
-    }
-    
-    debugLog('Timer parameters set', { 
-      startTime, 
-      duration, 
-      sessionKey: sessionKey.substring(0, 8) + '***' 
-    });
-    
-    // Generate all backup timer data
-    backupTimers = generateBackupTimers(startTime, duration, sessionKey);
-    
-    // Create main obfuscated data
-    const obfuscationKey = createObfuscationKey(sessionKey, startTime);
-    const obfuscatedData = {
-      main: {
-        s: obfuscate(startTime, obfuscationKey),
-        e: obfuscate(startTime + (duration * 1000), obfuscationKey),
-        d: obfuscate(duration, obfuscationKey),
-        v: sessionKey.substring(12, 16) + startTime.toString(36).substring(-4)
-      },
-      backup: backupTimers,
-      checksum: generateChecksum(startTime, duration, sessionKey),
-      metadata: {
-        created: Date.now(),
-        networkInfo: networkInfo
-      }
-    };
-    
-    debugLog('Sending store message');
-    self.postMessage({
-      type: 'store',
-      data: obfuscatedData
-    });
-    
-    debugLog('Starting timer loop and heartbeat');
-    startTimerLoop();
-    startHeartbeat();
-    startValidationLoop();
-    
-  } catch (error) {
-    debugLog('Start handler error', error);
-    self.postMessage({ 
-      type: 'worker_error', 
-      error: 'Failed to start timer: ' + error.message 
-    });
-  }
-}
-
-function handleRestore(payload) {
-  try {
-    debugLog('Attempting to restore timer');
-    const { stored, sessionKey: providedKey } = payload;
-    
-    if (!stored || !providedKey) {
-      throw new Error('Invalid restore parameters');
-    }
-    
-    sessionKey = providedKey;
-    networkInfo = payload.networkInfo || { latency: 0, reliability: 1.0 };
-    
-    // Validate main data
-    const mainValid = validateMainData(stored.main, sessionKey);
-    if (!mainValid) {
-      debugLog('Main data validation failed');
-      self.postMessage({ type: 'invalid', reason: 'main_data_corrupted' });
-      return;
-    }
-    
-    // Validate backup timers if they exist
-    let backupValid = null;
-    if (stored.backup) {
-      backupValid = validateBackupTimers(stored.backup, sessionKey);
-      if (!backupValid) {
-        debugLog('Backup data validation failed - continuing with main data only');
-      }
-    }
-    
-    // Cross-validate main vs backup if backup exists
-    if (backupValid) {
-      if (Math.abs(mainValid.startTime - backupValid.startTime) > 2000 || 
-          Math.abs(mainValid.duration - backupValid.duration) > 1) {
-        debugLog('Data mismatch detected');
-        self.postMessage({ type: 'invalid', reason: 'data_mismatch' });
-        return;
-      }
-    }
-    
-    // Validate checksum if exists
-    if (stored.checksum) {
-      const expectedChecksum = generateChecksum(mainValid.startTime, mainValid.duration, sessionKey);
-      if (stored.checksum !== expectedChecksum) {
-        debugLog('Checksum validation failed - continuing anyway');
-      }
-    }
-    
-    startTime = mainValid.startTime;
-    duration = mainValid.duration;
-    backupTimers = stored.backup || {};
-    
-    const now = Date.now();
-    const elapsed = Math.floor((now - startTime) / 1000);
-    const remaining = Math.max(0, duration - elapsed);
-    
-    debugLog('Timer restored successfully', { elapsed, remaining });
-    
-    if (remaining <= 0) {
-      debugLog('Timer already expired');
-      self.postMessage({ type: 'timeout', reason: 'time_expired' });
-      return;
-    }
-    
-    self.postMessage({
-      type: 'restored',
-      remaining: remaining,
-      elapsed: elapsed,
-      integrity: 'verified'
-    });
-    
-    startTimerLoop();
-    startHeartbeat();
-    startValidationLoop();
-    
-  } catch (error) {
-    debugLog('Restore error', error);
-    self.postMessage({ 
-      type: 'invalid', 
-      reason: 'restore_error', 
-      error: error.message 
-    });
-  }
-}
-
-function validateMainData(mainData, sessionKey) {
-  try {
-    debugLog('Validating main data');
-    
-    if (!mainData || !sessionKey) {
-      debugLog('Invalid main data parameters');
-      return null;
-    }
-    
-    const timestampFromValidation = parseInt(mainData.v?.substring(4) || '0', 36);
-    const obfuscationKey = createObfuscationKey(sessionKey, timestampFromValidation || Date.now());
-    
-    const restoredStart = deobfuscate(mainData.s, obfuscationKey);
-    const restoredEnd = deobfuscate(mainData.e, obfuscationKey);
-    const restoredDuration = deobfuscate(mainData.d, obfuscationKey);
-    
-    debugLog('Main data validation results', { restoredStart, restoredEnd, restoredDuration });
-    
-    // Sanity checks
-    const now = Date.now();
-    if (restoredStart > now || 
-        restoredStart < now - (24 * 60 * 60 * 1000) ||
-        restoredDuration <= 0 || 
-        restoredDuration > (24 * 60 * 60) ||
-        Math.abs((restoredEnd - restoredStart) / 1000 - restoredDuration) > 5) { // More lenient
-      debugLog('Main data sanity check failed');
-      return null;
-    }
-    
-    return {
-      startTime: restoredStart,
-      duration: restoredDuration,
-      endTime: restoredEnd
-    };
-  } catch (error) {
-    debugLog('Main data validation error', error);
-    return null;
-  }
-}
-
-function generateChecksum(startTime, duration, sessionKey) {
-  try {
-    const data = `${startTime}-${duration}-${sessionKey}`;
-    let hash = 0;
-    for (let i = 0; i < data.length; i++) {
-      const char = data.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32bit integer
-    }
-    return Math.abs(hash).toString(36);
-  } catch (error) {
-    debugLog('Checksum generation error', error);
-    return 'fallback';
-  }
-}
-
-function startTimerLoop() {
-  debugLog('Starting timer loop');
-  
-  if (timerInterval) {
-    debugLog('Clearing existing timer interval');
-    clearInterval(timerInterval);
-  }
-  
-  timerInterval = setInterval(() => {
+  // Check if worker file exists
+  const checkWorkerFile = useCallback(async (): Promise<boolean> => {
     try {
-      const now = Date.now();
-      const elapsed = Math.floor((now - startTime) / 1000);
-      const remaining = Math.max(0, duration - elapsed);
-      
-      // Send timer update with backup timer values
-      self.postMessage({
-        type: 'tick',
-        remaining: remaining,
-        elapsed: elapsed,
-        backupTimers: {
-          purchase: Math.max(0, duration - elapsed),
-          userActivity: Math.max(0, duration - elapsed),
-          inventory: Math.max(0, duration - elapsed)
-        },
-        timestamp: now,
-        integrity: validateTimerIntegrity()
+      debugLog('Checking if worker file exists...');
+      const response = await fetch('/secure-exam-timer.js', { 
+        method: 'HEAD',
+        cache: 'no-cache'
       });
       
-      // Debug log every 30 seconds to reduce noise
-      if (elapsed % 30 === 0) {
-        debugLog(`Timer tick - Remaining: ${remaining}s, Elapsed: ${elapsed}s`);
+      const exists = response.ok;
+      debugLog(`Worker file check result: ${exists ? 'EXISTS' : 'NOT FOUND'}`, {
+        status: response.status,
+        statusText: response.statusText
+      });
+      
+      return exists;
+    } catch (error) {
+      debugLog('Worker file check failed', error);
+      return false;
+    }
+  }, [debugLog]);
+  
+  // Initialize Web Worker with comprehensive error handling and retry logic
+  const initializeWorker = useCallback(async () => {
+    if (typeof window === 'undefined') {
+      debugLog('Cannot initialize worker - not in browser environment');
+      return false;
+    }
+    
+    if (workerFailedRef.current) {
+      debugLog('Worker marked as failed - skipping initialization');
+      return false;
+    }
+    
+    if (workerRef.current && workerReadyRef.current) {
+      debugLog('Worker already exists and ready');
+      return true;
+    }
+    
+    // Check if workers are supported
+    if (!isWorkerSupported()) {
+      debugLog('Web Workers not supported - using fallback');
+      workerFailedRef.current = true;
+      setError('Web Workers not supported');
+      setIsInitialized(true);
+      return false;
+    }
+
+    // FIXED: Check if worker file exists before creating worker
+    const workerFileExists = await checkWorkerFile();
+    if (!workerFileExists) {
+      debugLog('Worker file not found - using fallback timer');
+      workerFailedRef.current = true;
+      setError('Worker file not found - using fallback timer');
+      setIsInitialized(true);
+      
+      // Execute pending start with fallback if exists
+      if (pendingStartRef.current) {
+        debugLog('Executing pending start with fallback (no worker file)', { duration: pendingStartRef.current });
+        startFallbackTimer(pendingStartRef.current);
+        pendingStartRef.current = null;
       }
+      
+      return false;
+    }
+    
+    workerInitAttempts.current++;
+    debugLog(`Starting worker initialization attempt ${workerInitAttempts.current}...`);
+    
+    try {
+      // Clean up existing worker
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+        workerReadyRef.current = false;
+      }
+      
+      // Clear any existing timeout
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+        initTimeoutRef.current = null;
+      }
+      
+      // Try to create the worker
+      debugLog('Creating new worker instance...');
+      workerRef.current = new Worker('/secure-exam-timer.js');
+      sessionKeyRef.current = generateSessionKey();
+      storageKeyRef.current = `exam_timer_${examId}_${sessionKeyRef.current.substring(0, 8)}`;
+      
+      debugLog('Worker created successfully', { 
+        sessionKey: sessionKeyRef.current.substring(0, 8) + '***'
+      });
+      
+      // Set up error handlers FIRST
+      workerRef.current.onerror = (error) => {
+        debugLog('Worker error occurred', error);
+        workerFailedRef.current = true;
+        setError('Worker error: ' + error.message);
+        
+        // FIXED: Don't retry on worker errors - use fallback immediately
+        debugLog('Worker error detected - switching to fallback mode');
+        setIsInitialized(true);
+        
+        // Execute pending start with fallback if exists
+        if (pendingStartRef.current && !timerState.isRunning) {
+          debugLog('Executing pending start with fallback (worker error)', { duration: pendingStartRef.current });
+          startFallbackTimer(pendingStartRef.current);
+          pendingStartRef.current = null;
+        }
+      };
+      
+      workerRef.current.onmessageerror = (error) => {
+        debugLog('Worker message error', error);
+        workerFailedRef.current = true;
+        setError('Worker communication error');
+        setIsInitialized(true);
+      };
+      
+      // Set up initialization timeout - SHORTER timeout
+      initTimeoutRef.current = setTimeout(() => {
+        if (!workerReadyRef.current && !workerFailedRef.current) {
+          debugLog('Worker initialization timeout - switching to fallback');
+          workerFailedRef.current = true;
+          setError('Worker timeout - using fallback');
+          setIsInitialized(true);
+          
+          // Execute pending start with fallback if exists
+          if (pendingStartRef.current) {
+            debugLog('Executing pending start with fallback (timeout)', { duration: pendingStartRef.current });
+            startFallbackTimer(pendingStartRef.current);
+            pendingStartRef.current = null;
+          }
+        }
+      }, 2000); // REDUCED to 2 seconds
+      
+      // Set up message handler BEFORE sending ping
+      workerRef.current.onmessage = (e) => {
+        handleWorkerMessage(e);
+      };
+      
+      // Send initial ping to test worker
+      debugLog('Sending ping to worker...');
+      workerRef.current.postMessage({ action: 'ping' });
+      
+      return true;
+      
+    } catch (error) {
+      debugLog('Failed to create worker', error);
+      workerFailedRef.current = true;
+      setError('Worker creation failed - using fallback timer');
+      
+      // FIXED: Don't retry on creation failure - use fallback immediately
+      debugLog('Worker creation failed - switching to fallback mode');
+      setIsInitialized(true);
+      
+      // Execute pending start with fallback if exists
+      if (pendingStartRef.current) {
+        debugLog('Executing pending start with fallback (creation failed)', { duration: pendingStartRef.current });
+        startFallbackTimer(pendingStartRef.current);
+        pendingStartRef.current = null;
+      }
+      
+      return false;
+    }
+  }, [examId, generateSessionKey, isWorkerSupported, checkWorkerFile, debugLog, timerState.isRunning]);
+
+  // Fallback timer implementation
+  const startFallbackTimer = useCallback((durationInSeconds: number) => {
+    debugLog('Starting fallback timer', { duration: durationInSeconds });
+    
+    if (fallbackTimerRef.current) {
+      clearInterval(fallbackTimerRef.current);
+    }
+    
+    const startTime = Date.now();
+    let lastTick = startTime;
+    
+    setTimerState(prev => ({
+      ...prev,
+      timeLeft: durationInSeconds,
+      elapsed: 0,
+      isRunning: true,
+      isValid: true,
+      lastUpdate: startTime
+    }));
+    
+    setSecurityValidation(prev => ({
+      ...prev,
+      consistent: true,
+      networkQuality: 'FAIR' // Fallback mode has lower security
+    }));
+    
+    fallbackTimerRef.current = setInterval(() => {
+      const now = Date.now();
+      const totalElapsed = Math.floor((now - startTime) / 1000);
+      const remaining = Math.max(0, durationInSeconds - totalElapsed);
+      
+      // Detect potential time jumps in fallback mode
+      const timeSinceLastTick = now - lastTick;
+      if (timeSinceLastTick > 5000) { // More than 5 seconds since last tick
+        debugLog('Potential time jump detected in fallback timer', {
+          timeSinceLastTick,
+          expected: 1000
+        });
+        
+        setSecurityValidation(prev => ({
+          ...prev,
+          noTimeJump: false,
+          networkQuality: 'POOR'
+        }));
+      }
+      lastTick = now;
+      
+      setTimerState(prev => ({
+        ...prev,
+        timeLeft: remaining,
+        elapsed: totalElapsed,
+        isRunning: remaining > 0,
+        lastUpdate: now
+      }));
+      
+      // Update backup timers
+      setBackupTimers({
+        purchase: remaining,
+        userActivity: remaining,
+        inventory: remaining
+      });
       
       if (remaining <= 0) {
-        debugLog('Timer expired - stopping interval');
-        clearInterval(timerInterval);
-        self.postMessage({ 
-          type: 'timeout',
-          reason: 'time_expired',
-          finalCheck: true
-        });
+        debugLog('Fallback timer expired');
+        clearInterval(fallbackTimerRef.current!);
+        onTimeout();
+      }
+    }, 1000);
+    
+    debugLog('Fallback timer started successfully');
+  }, [onTimeout, debugLog]);
+
+  // FIXED: Enhanced message handler
+  const handleWorkerMessage = useCallback((e: MessageEvent) => {
+    const { type, ...data } = e.data;
+    debugLog(`Worker message received: ${type}`, data);
+    
+    try {
+      switch (type) {
+        case 'worker_ready':
+          debugLog('Worker ready confirmed');
+          workerReadyRef.current = true;
+          setIsInitialized(true);
+          setError(null);
+          
+          if (initTimeoutRef.current) {
+            clearTimeout(initTimeoutRef.current);
+            initTimeoutRef.current = null;
+          }
+          
+          // If there's a pending start, execute it now
+          if (pendingStartRef.current) {
+            debugLog('Executing pending start with worker', { duration: pendingStartRef.current });
+            startTimerWithWorker(pendingStartRef.current);
+            pendingStartRef.current = null;
+          }
+          break;
+          
+        case 'tick':
+          setTimerState(prev => ({
+            ...prev,
+            timeLeft: data.remaining,
+            elapsed: data.elapsed,
+            isRunning: data.remaining > 0,
+            lastUpdate: data.timestamp
+          }));
+          
+          setBackupTimers(data.backupTimers || { purchase: 0, userActivity: 0, inventory: 0 });
+          
+          if (data.integrity) {
+            setSecurityValidation(prev => ({
+              ...prev,
+              consistent: data.integrity.consistent,
+              noTimeJump: data.integrity.noTimeJump,
+              backupValid: data.integrity.backupValid
+            }));
+          }
+          break;
+          
+        case 'timeout':
+          debugLog('Worker timer expired', data.reason);
+          setTimerState(prev => ({
+            ...prev,
+            timeLeft: 0,
+            isRunning: false
+          }));
+          onTimeout();
+          break;
+          
+        case 'store':
+          try {
+            localStorage.setItem(storageKeyRef.current, JSON.stringify(data.data));
+            debugLog('Timer data stored successfully');
+          } catch (error) {
+            debugLog('Failed to store timer data', error);
+            setError('Storage failed');
+          }
+          break;
+          
+        case 'restored':
+          debugLog('Timer restored from storage', data);
+          setTimerState(prev => ({
+            ...prev,
+            timeLeft: data.remaining,
+            elapsed: data.elapsed,
+            isRunning: true,
+            isValid: data.integrity === 'verified'
+          }));
+          break;
+          
+        case 'invalid':
+          debugLog('Timer validation failed', data.reason);
+          setError(`Timer validation issue: ${data.reason}`);
+          setTimerState(prev => ({ ...prev, isValid: false }));
+          onValidationFailure(data.reason);
+          break;
+          
+        case 'security_breach':
+          debugLog('Security breach detected', data);
+          securityAlertsRef.current.push(`${Date.now()}: ${data.reason}`);
+          
+          // Only trigger callback for extreme breaches
+          if (data.reason === 'extreme_time_jump' || data.reason === 'checksum_failed_with_timeout') {
+            onSecurityBreach(data.reason, data.details);
+          }
+          break;
+          
+        case 'time_anomaly':
+          debugLog('Time anomaly detected (no action)', data);
+          securityAlertsRef.current.push(`${Date.now()}: anomaly_${data.severity}`);
+          
+          setSecurityValidation(prev => ({
+            ...prev,
+            noTimeJump: data.severity !== 'EXTREME',
+            networkQuality: data.severity === 'EXTREME' ? 'POOR' : prev.networkQuality
+          }));
+          break;
+          
+        case 'heartbeat_request':
+          lastHeartbeatRef.current = Date.now();
+          if (workerRef.current && workerReadyRef.current) {
+            workerRef.current.postMessage({
+              action: 'heartbeat_response',
+              payload: { 
+                timestamp: data.timestamp,
+                networkQuality: securityValidation.networkQuality,
+                reliability: networkInfo.reliability
+              }
+            });
+          }
+          
+          setSecurityValidation(prev => ({
+            ...prev,
+            heartbeatActive: true
+          }));
+          break;
+          
+        case 'worker_error':
+          debugLog('Worker reported error', data);
+          setError(data.error);
+          
+          // If worker fails and we have pending start, use fallback
+          if (pendingStartRef.current && !timerState.isRunning) {
+            debugLog('Worker failed with pending start - using fallback');
+            startFallbackTimer(pendingStartRef.current);
+            pendingStartRef.current = null;
+          }
+          break;
+          
+        case 'validation_result':
+          debugLog('Validation result received', data.validation);
+          
+          setSecurityValidation(prev => ({
+            ...prev,
+            consistent: data.validation.backupConsistency,
+            noTimeJump: !data.validation.timeJump,
+            checksumValid: data.validation.checksumValid,
+            networkQuality: data.validation.networkQuality
+          }));
+          break;
+          
+        default:
+          debugLog('Unknown worker message type', { type, data });
+          break;
       }
     } catch (error) {
-      debugLog('Timer loop error', error);
-      self.postMessage({ 
-        type: 'worker_error', 
-        error: 'Timer loop error: ' + error.message 
-      });
+      debugLog('Error handling worker message', error);
+      setError('Message handling error: ' + (error as Error).message);
     }
-  }, 1000);
+  }, [onTimeout, onSecurityBreach, onValidationFailure, securityValidation.networkQuality, networkInfo.reliability, startFallbackTimer, timerState.isRunning, debugLog]);
   
-  debugLog('Timer loop started successfully');
-}
-
-function startValidationLoop() {
-  debugLog('Starting validation loop');
-  
-  if (validationInterval) clearInterval(validationInterval);
-  
-  // Adaptive validation interval based on network quality
-  const baseInterval = 30000; // 30 seconds - less frequent
-  const adaptiveInterval = Math.max(baseInterval, baseInterval * (2 - (networkInfo.reliability || 1)));
-  
-  debugLog(`Validation interval set to ${adaptiveInterval}ms`);
-  
-  validationInterval = setInterval(() => {
+  // Start timer with worker
+  const startTimerWithWorker = useCallback((durationInSeconds: number) => {
+    if (!workerRef.current || !workerReadyRef.current || workerFailedRef.current) {
+      debugLog('Worker not ready for start');
+      return false;
+    }
+    
+    debugLog('Starting timer with worker', { duration: durationInSeconds });
+    
     try {
-      performIntegrityValidation();
+      workerRef.current.postMessage({
+        action: 'start',
+        payload: {
+          duration: durationInSeconds,
+          sessionKey: sessionKeyRef.current,
+          networkInfo: networkInfo,
+          enhancedSecurity: true
+        }
+      });
+      
+      return true;
     } catch (error) {
-      debugLog('Validation loop error', error);
+      debugLog('Error starting worker timer', error);
+      setError('Failed to start worker timer');
+      return false;
     }
-  }, adaptiveInterval);
-}
-
-let lastValidationTime = Date.now();
-
-function performIntegrityValidation() {
-  try {
-    const now = Date.now();
-    const elapsed = Math.floor((now - startTime) / 1000);
-    const remaining = Math.max(0, duration - elapsed);
-    
-    // Validate timer consistency
-    const validation = {
-      timestamp: now,
-      remaining: remaining,
-      elapsed: elapsed,
-      startTime: startTime,
-      duration: duration,
-      backupConsistency: validateBackupConsistency(),
-      timeJump: detectTimeJump(now),
-      checksumValid: validateCurrentChecksum(),
-      networkQuality: getNetworkQuality()
-    };
-    
-    debugLog('Integrity validation completed', validation);
-    
-    self.postMessage({
-      type: 'validation_result',
-      validation: validation
+  }, [networkInfo, debugLog]);
+  
+  // Main start timer function with smart fallback
+  const startTimer = useCallback((durationInSeconds: number) => {
+    debugLog('Start timer requested', { 
+      duration: durationInSeconds,
+      workerReady: workerReadyRef.current,
+      workerFailed: workerFailedRef.current,
+      initialized: isInitialized 
     });
     
-    // Much more lenient auto-trigger - only on EXTREME inconsistencies
-    const adaptiveThreshold = Math.max(300000, (networkInfo.latency || 0) * 50); // At least 5 minutes
-    
-    if (validation.timeJump && Math.abs(now - lastValidationTime) > adaptiveThreshold) {
-      debugLog('Extreme time jump detected');
-      self.postMessage({
-        type: 'security_breach',
-        reason: 'extreme_time_jump',
-        details: { ...validation, adaptiveThreshold }
-      });
-    } else if (!validation.checksumValid && remaining <= 0) {
-      debugLog('Checksum failed with timeout');
-      self.postMessage({
-        type: 'security_breach',
-        reason: 'checksum_failed_with_timeout',
-        details: validation
-      });
-    } else if (validation.timeJump || !validation.backupConsistency) {
-      debugLog('Minor anomaly detected - no action taken');
-      // Just log, don't trigger auto-submit
-      self.postMessage({
-        type: 'time_anomaly',
-        details: validation,
-        severity: Math.abs(now - lastValidationTime) > adaptiveThreshold ? 'EXTREME' : 'MODERATE'
-      });
-    }
-  } catch (error) {
-    debugLog('Integrity validation error', error);
-  }
-}
-
-function validateBackupConsistency() {
-  if (!backupTimers || !startTime || !duration) return false;
-  
-  try {
-    const now = Date.now();
-    const expectedRemaining = Math.max(0, duration - Math.floor((now - startTime) / 1000));
-    
-    // All backup timers should show the same remaining time
-    const tolerance = Math.max(5, (networkInfo.latency || 0) / 1000); // More lenient tolerance
-    
-    return Math.abs(expectedRemaining - expectedRemaining) <= tolerance;
-  } catch (error) {
-    debugLog('Backup consistency validation error', error);
-    return false;
-  }
-}
-
-function detectTimeJump(currentTime) {
-  try {
-    const timeDiff = currentTime - lastValidationTime;
-    const expectedDiff = 30000; // 30 seconds between validations
-    const tolerance = Math.max(10000, (networkInfo.latency || 0) * 10); // Much more lenient tolerance
-    
-    const isTimeJump = Math.abs(timeDiff - expectedDiff) > tolerance;
-    lastValidationTime = currentTime;
-    
-    if (isTimeJump) {
-      debugLog('Time jump detected', { timeDiff, expectedDiff, tolerance });
+    if (durationInSeconds <= 0) {
+      debugLog('Invalid duration provided');
+      setError('Invalid timer duration');
+      return false;
     }
     
-    return isTimeJump;
-  } catch (error) {
-    debugLog('Time jump detection error', error);
-    return false;
-  }
-}
-
-function validateCurrentChecksum() {
-  if (!startTime || !duration || !sessionKey) return false;
+    // Clear any existing fallback timer
+    if (fallbackTimerRef.current) {
+      clearInterval(fallbackTimerRef.current);
+      fallbackTimerRef.current = null;
+    }
+    
+    // If worker failed or not supported, use fallback immediately
+    if (workerFailedRef.current) {
+      debugLog('Worker failed - using fallback timer immediately');
+      startFallbackTimer(durationInSeconds);
+      return true;
+    }
+    
+    // If worker is ready, use it
+    if (workerRef.current && workerReadyRef.current) {
+      debugLog('Using worker timer');
+      return startTimerWithWorker(durationInSeconds);
+    }
+    
+    // If not initialized yet, store pending start
+    if (!isInitialized) {
+      debugLog('Timer not initialized, storing pending start');
+      pendingStartRef.current = durationInSeconds;
+      return true;
+    }
+    
+    // Use fallback timer
+    debugLog('Using fallback timer');
+    startFallbackTimer(durationInSeconds);
+    return true;
+  }, [isInitialized, startTimerWithWorker, startFallbackTimer, debugLog]);
   
-  try {
-    const expectedChecksum = generateChecksum(startTime, duration, sessionKey);
-    return expectedChecksum.length > 0;
-  } catch (error) {
-    debugLog('Checksum validation error', error);
-    return false;
-  }
-}
-
-function getNetworkQuality() {
-  try {
-    const reliability = networkInfo.reliability || 1.0;
-    const latency = networkInfo.latency || 0;
+  // Stop timer
+  const stopTimer = useCallback(() => {
+    debugLog('Stop timer requested');
     
-    if (reliability > 0.8 && latency < 1000) return 'EXCELLENT';
-    if (reliability > 0.6 && latency < 2000) return 'GOOD';
-    if (reliability > 0.4) return 'FAIR';
-    return 'POOR';
-  } catch (error) {
-    debugLog('Network quality assessment error', error);
-    return 'UNKNOWN';
-  }
-}
-
-function validateTimerIntegrity() {
-  try {
-    const now = Date.now();
-    const elapsed = Math.floor((now - startTime) / 1000);
+    if (workerRef.current && workerReadyRef.current && !workerFailedRef.current) {
+      try {
+        workerRef.current.postMessage({ action: 'stop' });
+      } catch (error) {
+        debugLog('Error stopping worker', error);
+      }
+    }
     
+    if (fallbackTimerRef.current) {
+      clearInterval(fallbackTimerRef.current);
+      fallbackTimerRef.current = null;
+    }
+    
+    setTimerState(prev => ({ ...prev, isRunning: false }));
+    debugLog('Timer stopped');
+  }, [debugLog]);
+  
+  // Restore timer from storage
+  const restoreTimer = useCallback(() => {
+    if (!workerRef.current || !workerReadyRef.current || workerFailedRef.current) {
+      debugLog('Cannot restore - worker not ready or failed');
+      return false;
+    }
+    
+    try {
+      const storedData = localStorage.getItem(storageKeyRef.current);
+      if (!storedData) {
+        debugLog('No stored timer data found');
+        return false;
+      }
+      
+      const parsedData = JSON.parse(storedData);
+      debugLog('Attempting to restore timer from storage');
+      
+      workerRef.current.postMessage({
+        action: 'restore',
+        payload: {
+          stored: parsedData,
+          sessionKey: sessionKeyRef.current,
+          networkInfo: networkInfo,
+          enhancedValidation: true
+        }
+      });
+      
+      return true;
+    } catch (error) {
+      debugLog('Failed to restore timer', error);
+      setError('Timer restoration failed');
+      return false;
+    }
+  }, [networkInfo, debugLog]);
+  
+  // Get backup timer values
+  const getBackupTimerValues = useCallback(() => {
     return {
-      consistent: elapsed >= 0 && elapsed <= duration + 30, // More lenient
-      noTimeJump: Math.abs(now - lastHeartbeat) < Math.max(15000, (networkInfo.latency || 0) * 10),
-      backupValid: validateBackupConsistency()
+      purchaseTimer: backupTimers.purchase,
+      userActivityTimer: backupTimers.userActivity,
+      inventoryTimer: backupTimers.inventory,
+      mainTimer: timerState.timeLeft,
+      sessionValid: timerState.isValid && securityValidation.consistent,
+      networkQuality: securityValidation.networkQuality,
+      reliability: networkInfo.reliability,
+      adaptiveThreshold: Math.max(120, networkInfo.latency * 3 / 1000),
+      securityAlerts: securityAlertsRef.current.slice(-5),
+      workerReady: workerReadyRef.current,
+      fallbackActive: !!fallbackTimerRef.current,
+      initAttempts: workerInitAttempts.current,
+      workerFailed: workerFailedRef.current
     };
-  } catch (error) {
-    debugLog('Timer integrity validation error', error);
-    return {
-      consistent: false,
-      noTimeJump: false,
-      backupValid: false
-    };
-  }
-}
-
-function cleanup() {
-  debugLog('Cleanup called');
+  }, [backupTimers, timerState.timeLeft, timerState.isValid, securityValidation.consistent, securityValidation.networkQuality, networkInfo.reliability, networkInfo.latency]);
   
-  try {
-    if (timerInterval) {
-      clearInterval(timerInterval);
-      timerInterval = null;
-      debugLog('Timer interval cleared');
+  // Validate timer integrity
+  const validateIntegrity = useCallback(() => {
+    if (workerRef.current && workerReadyRef.current && !workerFailedRef.current) {
+      try {
+        workerRef.current.postMessage({ 
+          action: 'validate_request',
+          payload: {
+            networkInfo: networkInfo,
+            enhancedChecks: true
+          }
+        });
+        debugLog('Integrity validation requested');
+      } catch (error) {
+        debugLog('Error requesting validation', error);
+      }
+    } else {
+      debugLog('Cannot validate - worker not ready or failed');
+    }
+  }, [networkInfo, debugLog]);
+
+  // Update network info
+  const updateNetworkInfo = useCallback((newNetworkInfo: Partial<NetworkInfo>) => {
+    const updatedInfo = { ...networkInfo, ...newNetworkInfo };
+    setNetworkInfo(updatedInfo);
+    
+    if (workerRef.current && workerReadyRef.current && !workerFailedRef.current) {
+      try {
+        workerRef.current.postMessage({
+          action: 'update_network_info',
+          payload: updatedInfo
+        });
+      } catch (error) {
+        debugLog('Error updating network info', error);
+      }
     }
     
-    if (validationInterval) {
-      clearInterval(validationInterval);
-      validationInterval = null;
-      debugLog('Validation interval cleared');
-    }
+    debugLog('Network info updated', {
+      latency: Math.round(updatedInfo.latency) + 'ms',
+      reliability: Math.round(updatedInfo.reliability * 100) + '%'
+    });
+  }, [networkInfo, debugLog]);
+  
+  // Initialize worker on mount with retry logic
+  useEffect(() => {
+    debugLog('Initializing timer hook');
     
-    if (heartbeatInterval) {
-      clearInterval(heartbeatInterval);
-      heartbeatInterval = null;
-      debugLog('Heartbeat interval cleared');
-    }
+    let mounted = true;
     
-    startTime = null;
-    duration = null;
-    sessionKey = null;
-    backupTimers = {};
-    networkInfo = { latency: 0, reliability: 1.0 };
-    workerReady = false;
+    const initWithTimeout = async () => {
+      try {
+        const success = await initializeWorker();
+        
+        if (!success && mounted && !workerFailedRef.current) {
+          debugLog('Worker initialization failed - fallback mode enabled');
+        }
+        
+        // Try to restore after initialization (with delay for worker readiness)
+        if (success && mounted && workerReadyRef.current) {
+          setTimeout(() => {
+            if (mounted && workerReadyRef.current && !workerFailedRef.current) {
+              debugLog('Attempting timer restoration');
+              restoreTimer();
+            }
+          }, 500);
+        }
+      } catch (error) {
+        debugLog('Initialization error', error);
+        if (mounted) {
+          workerFailedRef.current = true;
+          setIsInitialized(true);
+          setError('Initialization failed - using fallback');
+        }
+      }
+    };
     
-    debugLog('Cleanup completed');
-  } catch (error) {
-    debugLog('Cleanup error', error);
-  }
-}
-
-// Handle worker termination
-self.addEventListener('beforeunload', cleanup);
-self.addEventListener('unload', cleanup);
-
-// Error handling
-self.addEventListener('error', function(error) {
-  debugLog('Worker error event', error);
-  self.postMessage({ 
-    type: 'worker_error', 
-    error: 'Worker error: ' + error.message 
-  });
-});
-
-self.addEventListener('unhandledrejection', function(event) {
-  debugLog('Worker unhandled rejection', event.reason);
-  self.postMessage({ 
-    type: 'worker_error', 
-    error: 'Worker unhandled rejection: ' + event.reason 
-  });
-});
-
-// Send initialization confirmation
-debugLog('Worker script initialization complete - sending ready message');
-setTimeout(() => {
-  workerReady = true;
-  self.postMessage({ 
-    type: 'worker_ready',
-    message: 'Enhanced secure timer worker initialized successfully',
-    timestamp: Date.now(),
-    version: '2.0.0'
-  });
-}, 100); // Small delay to ensure everything is ready
-
-debugLog('Worker script fully loaded and ready');
+    initWithTimeout();
+    
+    return () => {
+      mounted = false;
+      debugLog('Cleaning up timer hook');
+      
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+      }
+      
+      if (workerRef.current) {
+        try {
+          workerRef.current.postMessage({ action: 'stop' });
+          workerRef.current.terminate();
+        } catch (error) {
+          debugLog('Error during worker cleanup', error);
+        }
+        workerRef.current = null;
+      }
+      
+      if (fallbackTimerRef.current) {
+        clearInterval(fallbackTimerRef.current);
+        fallbackTimerRef.current = null;
+      }
+      
+      if (heartbeatTimeoutRef.current) {
+        clearTimeout(heartbeatTimeoutRef.current);
+      }
+      
+      // Clear storage
+      try {
+        localStorage.removeItem(storageKeyRef.current);
+      } catch (error) {
+        debugLog('Failed to cleanup storage', error);
+      }
+    };
+  }, [initializeWorker, restoreTimer, debugLog]);
+  
+  return {
+    // Timer state
+    timeLeft: timerState.timeLeft,
+    elapsed: timerState.elapsed,
+    isRunning: timerState.isRunning,
+    isValid: timerState.isValid,
+    isInitialized,
+    error,
+    
+    // Backup timers
+    backupTimers,
+    
+    // Security validation
+    securityValidation,
+    
+    // Network info
+    networkInfo,
+    
+    // Control functions
+    startTimer,
+    stopTimer,
+    restoreTimer,
+    validateIntegrity,
+    getBackupTimerValues,
+    updateNetworkInfo,
+    
+    // Utility functions
+    formatTime: (seconds: number) => {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+    },
+    
+    getTimeRemaining: () => timerState.timeLeft,
+    getElapsedTime: () => timerState.elapsed,
+    isExpired: () => timerState.timeLeft <= 0,
+    
+    // Debug info
+    getDebugInfo: () => ({
+      workerReady: workerReadyRef.current,
+      workerFailed: workerFailedRef.current,
+      fallbackActive: !!fallbackTimerRef.current,
+      pendingStart: pendingStartRef.current,
+      sessionKey: sessionKeyRef.current.substring(0, 8) + '***',
+      storageKey: storageKeyRef.current,
+      initAttempts: workerInitAttempts.current,
+      workerSupported: isWorkerSupported()
+    })
+  };
+};
