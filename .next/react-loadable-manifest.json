@@ -11,20 +11,6 @@
       "static/chunks/_pages-dir-browser_node_modules_next_dist_pages__error_js.js"
     ]
   },
-  "pages\\exam\\ChainExam.tsx -> ../../context/AuthContext": {
-    "id": "pages\\exam\\ChainExam.tsx -> ../../context/AuthContext",
-    "files": []
-  },
-  "pages\\exam\\ChainExam.tsx -> ../../context/ExamContext": {
-    "id": "pages\\exam\\ChainExam.tsx -> ../../context/ExamContext",
-    "files": []
-  },
-  "pages\\exam\\ChainExam.tsx -> ../../utils/ExamDBService": {
-    "id": "pages\\exam\\ChainExam.tsx -> ../../utils/ExamDBService",
-    "files": [
-      "static/chunks/_pages-dir-browser_utils_ExamDBService_ts.js"
-    ]
-  },
   "pages\\exam\\ChainExam.tsx -> ./MultipleChoice": {
     "id": "pages\\exam\\ChainExam.tsx -> ./MultipleChoice",
     "files": [

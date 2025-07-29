@@ -2,15 +2,11 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/": "pages/index.js",
+  "/api/users/check-auth": "pages/api/users/check-auth.js",
   "/try-out": "pages/try-out.js",
   "/exam/[exam_string]": "pages/exam/[exam_string].js",
+  "/api/score/schedule/[examScheduleId]": "pages/api/score/schedule/[examScheduleId].js",
+  "/api/examSession/submit": "pages/api/examSession/submit.js",
   "/api/time": "pages/api/time.js",
-  "/api/exam-schedules/type/[examtype]": "pages/api/exam-schedules/type/[examtype].js",
-  "/api/users/check-auth": "pages/api/users/check-auth.js",
-  "/api/exam-schedules/[id]": "pages/api/exam-schedules/[id].js",
-  "/api/exam-schedules/checkAccess": "pages/api/exam-schedules/checkAccess.js",
-  "/api/examOrder/getExamOrder": "pages/api/examOrder/getExamOrder.js",
-  "/api/examSession/examSchedule": "pages/api/examSession/examSchedule.js",
-  "/api/questions/byExamString": "pages/api/questions/byExamString.js"
+  "/": "pages/index.js"
 }

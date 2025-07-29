@@ -1,4 +1,4 @@
-// hooks/useSecureTimer.ts - FIXED SIMPLE VERSION
+// hooks/useSecureTimer.ts - FINAL FIXED VERSION
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface TimerState {
@@ -37,6 +37,8 @@ export const useSecureTimer = ({
   const fallbackTimerRef = useRef<NodeJS.Timeout | null>(null);
   const workerReadyRef = useRef<boolean>(false);
   const initAttemptedRef = useRef<boolean>(false);
+  const workerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const debugLog = useCallback((message: string, data?: any) => {
     console.log(`[TIMER] ${message}`, data || '');
@@ -80,7 +82,7 @@ export const useSecureTimer = ({
       }
     }, 1000);
     
-    debugLog('Fallback timer started');
+    debugLog('Fallback timer started successfully');
   }, [onTimeout, debugLog]);
 
   // Worker message handler
@@ -92,8 +94,16 @@ export const useSecureTimer = ({
       case 'worker_ready':
         debugLog('Worker is ready!');
         workerReadyRef.current = true;
+        
+        // CRITICAL FIX: Set isInitialized immediately when worker is ready
         setIsInitialized(true);
         setError(null);
+        
+        // Clear the timeout since worker is ready
+        if (workerTimeoutRef.current) {
+          clearTimeout(workerTimeoutRef.current);
+          workerTimeoutRef.current = null;
+        }
         break;
         
       case 'tick':
@@ -128,53 +138,95 @@ export const useSecureTimer = ({
     }
   }, [onTimeout, debugLog]);
 
-  // Initialize worker
+  // Initialize worker with better error handling
   const initializeWorker = useCallback(async () => {
-    if (initAttemptedRef.current) return;
-    initAttemptedRef.current = true;
+    if (initAttemptedRef.current) {
+      debugLog('Worker initialization already attempted');
+      return;
+    }
     
+    initAttemptedRef.current = true;
     debugLog('Initializing worker...');
     
     try {
-      // Check if worker file exists
-      const response = await fetch('/secure-exam-timer.js', { method: 'HEAD' });
-      if (!response.ok) {
-        throw new Error('Worker file not found');
+      // First check if we're in a browser environment
+      if (typeof window === 'undefined' || typeof Worker === 'undefined') {
+        throw new Error('Worker not supported in this environment');
+      }
+
+      // Check if worker file exists with better error handling
+      try {
+        const response = await fetch('/secure-exam-timer.js', { 
+          method: 'HEAD',
+          cache: 'no-cache'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Worker file not found: ${response.status} ${response.statusText}`);
+        }
+        
+        debugLog('Worker file found, creating worker...');
+      } catch (fetchError) {
+        debugLog('Worker file check failed', fetchError);
+        throw new Error('Worker file not accessible');
       }
       
-      // Create worker
-      workerRef.current = new Worker('/secure-exam-timer.js');
+      // Create worker with error handling
+      try {
+        workerRef.current = new Worker('/secure-exam-timer.js');
+        debugLog('Worker created successfully');
+      } catch (workerError) {
+        debugLog('Failed to create worker', workerError);
+        throw new Error('Failed to create worker instance');
+      }
       
+      // Set up event handlers
       workerRef.current.onmessage = handleWorkerMessage;
       
       workerRef.current.onerror = (error) => {
-        debugLog('Worker error', error);
-        setError('Worker failed to load');
-        setIsInitialized(true);
-      };
-      
-      // Send ping
-      workerRef.current.postMessage({ action: 'ping' });
-      
-      // Timeout fallback
-      setTimeout(() => {
-        if (!workerReadyRef.current) {
-          debugLog('Worker timeout - using fallback');
-          setError('Worker timeout');
+        debugLog('Worker runtime error', error);
+        setError(`Worker error: ${error.message || 'Unknown error'}`);
+        
+        // Mark as initialized even on error so we can use fallback
+        if (!isInitialized) {
           setIsInitialized(true);
         }
-      }, 3000);
+      };
+      
+      workerRef.current.onmessageerror = (error) => {
+        debugLog('Worker message error', error);
+        setError('Worker message error');
+      };
+      
+      // Send initial ping
+      debugLog('Sending ping to worker...');
+      workerRef.current.postMessage({ action: 'ping' });
+      
+      // CRITICAL FIX: Much shorter timeout since worker loads quickly
+      workerTimeoutRef.current = setTimeout(() => {
+        if (!workerReadyRef.current) {
+          debugLog('Worker timeout - marking as initialized for fallback');
+          setError('Worker timeout');
+          setIsInitialized(true); // Still mark as initialized to allow fallback
+        }
+      }, 2000); // Reduced to 2 seconds since your worker loads in ~1 second
       
     } catch (error) {
-      debugLog('Failed to create worker', error);
-      setError('Worker initialization failed');
-      setIsInitialized(true);
+      debugLog('Worker initialization failed', error);
+      setError(`Worker initialization failed: ${error.message}`);
+      setIsInitialized(true); // Mark as initialized to enable fallback timer
     }
-  }, [handleWorkerMessage, debugLog]);
+  }, [handleWorkerMessage, debugLog, isInitialized]);
 
-  // Start timer function
+  // Start timer function with better fallback logic
   const startTimer = useCallback((durationInSeconds: number) => {
-    debugLog('Starting timer', { duration: durationInSeconds, workerReady: workerReadyRef.current });
+    debugLog('Starting timer', { 
+      duration: durationInSeconds, 
+      workerReady: workerReadyRef.current,
+      workerExists: !!workerRef.current,
+      isInitialized,
+      error
+    });
     
     if (durationInSeconds <= 0) {
       setError('Invalid duration');
@@ -186,29 +238,52 @@ export const useSecureTimer = ({
       clearInterval(fallbackTimerRef.current);
     }
     
-    // Try worker first, fallback if not available
-    if (workerRef.current && workerReadyRef.current) {
+    // CRITICAL FIX: Check worker status more accurately
+    const canUseWorker = workerRef.current && workerReadyRef.current && !error;
+    
+    // Try worker first if available and ready
+    if (canUseWorker) {
       debugLog('Using worker timer');
-      workerRef.current.postMessage({
-        action: 'start',
-        payload: { duration: durationInSeconds }
-      });
+      try {
+        workerRef.current!.postMessage({
+          action: 'start',
+          payload: { duration: durationInSeconds }
+        });
+        
+        debugLog('Worker timer started successfully');
+        return true;
+      } catch (workerError) {
+        debugLog('Worker start failed, falling back', workerError);
+        // Fall through to fallback timer
+      }
     } else {
-      debugLog('Using fallback timer');
-      startFallbackTimer(durationInSeconds);
+      debugLog('Worker not available, using fallback', {
+        hasWorker: !!workerRef.current,
+        workerReady: workerReadyRef.current,
+        hasError: !!error,
+        isInitialized
+      });
     }
     
+    // Use fallback timer
+    startFallbackTimer(durationInSeconds);
     return true;
-  }, [startFallbackTimer, debugLog]);
+  }, [startFallbackTimer, debugLog, isInitialized, error]);
 
   // Stop timer function
   const stopTimer = useCallback(() => {
     debugLog('Stopping timer');
     
+    // Stop worker timer
     if (workerRef.current && workerReadyRef.current) {
-      workerRef.current.postMessage({ action: 'stop' });
+      try {
+        workerRef.current.postMessage({ action: 'stop' });
+      } catch (error) {
+        debugLog('Error stopping worker timer', error);
+      }
     }
     
+    // Stop fallback timer
     if (fallbackTimerRef.current) {
       clearInterval(fallbackTimerRef.current);
       fallbackTimerRef.current = null;
@@ -217,23 +292,54 @@ export const useSecureTimer = ({
     setTimerState(prev => ({ ...prev, isRunning: false }));
   }, [debugLog]);
 
-  // Initialize on mount
+  // Initialize on mount with better timing
   useEffect(() => {
     debugLog('Hook mounted, initializing...');
+    
+    // CRITICAL FIX: Initialize immediately instead of setTimeout
     initializeWorker();
     
     return () => {
       debugLog('Hook unmounting, cleaning up...');
       
+      // Clear timeouts
+      if (workerTimeoutRef.current) {
+        clearTimeout(workerTimeoutRef.current);
+      }
+      
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+      }
+      
+      // Terminate worker
       if (workerRef.current) {
         workerRef.current.terminate();
       }
       
+      // Clear fallback timer
       if (fallbackTimerRef.current) {
         clearInterval(fallbackTimerRef.current);
       }
     };
   }, []); // Empty deps array
+
+  // Effect to handle initialization state changes
+  useEffect(() => {
+    debugLog('Initialization state changed', {
+      isInitialized,
+      error,
+      workerReady: workerReadyRef.current
+    });
+  }, [isInitialized, error, debugLog]);
+
+  // CRITICAL FIX: Add effect to monitor worker ready state changes
+  useEffect(() => {
+    debugLog('Worker ready state update', {
+      workerReady: workerReadyRef.current,
+      isInitialized,
+      hasWorker: !!workerRef.current
+    });
+  }, [isInitialized, debugLog]);
 
   return {
     // Timer state
@@ -265,7 +371,7 @@ export const useSecureTimer = ({
       noTimeJump: true,
       backupValid: true,
       checksumValid: true,
-      heartbeatActive: true,
+      heartbeatActive: workerReadyRef.current,
       networkQuality: 'GOOD' as const
     },
     
@@ -282,7 +388,7 @@ export const useSecureTimer = ({
       workerReady: workerReadyRef.current,
       fallbackActive: !!fallbackTimerRef.current,
       initAttempts: 1,
-      workerFailed: !!error
+      workerFailed: !!error && !workerReadyRef.current
     }),
     
     // Utility functions

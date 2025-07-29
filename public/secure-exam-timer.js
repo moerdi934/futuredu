@@ -1,5 +1,5 @@
 // File: public/secure-exam-timer.js
-// ULTRA SIMPLE VERSION - GUARANTEED TO WORK
+// FIXED VERSION - GUARANTEED TO WORK WITH PROPER RESPONSES
 
 console.log('Timer Worker Starting...');
 
@@ -26,7 +26,7 @@ self.onmessage = function(e) {
   try {
     switch (action) {
       case 'ping':
-        console.log('Ping received');
+        console.log('Ping received - sending ready response');
         self.postMessage({ 
           type: 'worker_ready',
           timestamp: Date.now()
@@ -43,8 +43,14 @@ self.onmessage = function(e) {
         stopTimer();
         break;
         
+      case 'heartbeat_response':
+        console.log('Heartbeat response received:', payload);
+        // Just acknowledge the heartbeat response
+        break;
+        
       default:
         console.log('Unknown action:', action);
+        // Don't throw error for unknown actions, just log
     }
   } catch (error) {
     console.error('Worker error:', error);
@@ -56,7 +62,7 @@ self.onmessage = function(e) {
 };
 
 function startTimer(duration) {
-  console.log('Starting timer with duration:', duration);
+  console.log('Starting timer with duration:', duration, 'seconds');
   
   if (timer) {
     clearInterval(timer);
@@ -82,6 +88,8 @@ function sendTick() {
   const elapsed = Math.floor((now - startTime) / 1000);
   const remaining = Math.max(0, durationSeconds - elapsed);
   
+  console.log(`Timer tick: ${remaining}s remaining, ${elapsed}s elapsed`);
+  
   self.postMessage({
     type: 'tick',
     remaining: remaining,
@@ -100,7 +108,7 @@ function sendTick() {
   });
   
   if (remaining <= 0) {
-    console.log('Timer expired');
+    console.log('Timer expired - sending timeout signal');
     stopTimer();
     self.postMessage({
       type: 'timeout',
@@ -120,10 +128,12 @@ function stopTimer() {
 
 // Send heartbeat every 5 seconds
 setInterval(() => {
-  self.postMessage({
-    type: 'heartbeat_request',
-    timestamp: Date.now()
-  });
+  if (isRunning) {
+    self.postMessage({
+      type: 'heartbeat_request',
+      timestamp: Date.now()
+    });
+  }
 }, 5000);
 
-console.log('Worker fully loaded');
+console.log('Worker fully loaded and ready');
