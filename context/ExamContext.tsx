@@ -1,7 +1,7 @@
 // context/ExamContext.tsx
 'use client';
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 // Types
 interface ExamOrder {
@@ -75,8 +75,63 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [examType, setExamType] = useState<string>('Try-Out');
   const [originPath, setOriginPath] = useState<string | null>(null);
   
+  // Logging untuk setiap perubahan state
+  useEffect(() => {
+    console.log('🆔 ExamContext: topicId updated:', topicId);
+  }, [topicId]);
+
+  useEffect(() => {
+    console.log('📅 ExamContext: examScheduleId updated:', examScheduleId);
+  }, [examScheduleId]);
+
+  useEffect(() => {
+    console.log('📝 ExamContext: examOrder updated:', {
+      count: examOrder.length,
+      data: examOrder
+    });
+  }, [examOrder]);
+
+  useEffect(() => {
+    console.log('💾 ExamContext: examSessions updated:', {
+      count: examSessions.length,
+      data: examSessions
+    });
+  }, [examSessions]);
+
+  useEffect(() => {
+    console.log('🎯 ExamContext: activeSession updated:', activeSession);
+  }, [activeSession]);
+
+  useEffect(() => {
+    console.log('📋 ExamContext: selectedSchedule updated:', selectedSchedule);
+  }, [selectedSchedule]);
+
+  useEffect(() => {
+    console.log('🏷️ ExamContext: examType updated:', examType);
+  }, [examType]);
+
+  useEffect(() => {
+    console.log('🛤️ ExamContext: originPath updated:', originPath);
+  }, [originPath]);
+
+  // Log comprehensive context state when any critical data changes
+  useEffect(() => {
+    console.log('🔄 ExamContext: Context state summary:', {
+      topicId,
+      examScheduleId,
+      examOrderCount: examOrder.length,
+      examSessionsCount: examSessions.length,
+      hasActiveSession: !!activeSession,
+      hasSelectedSchedule: !!selectedSchedule,
+      examType,
+      originPath,
+      isComplete: examScheduleId !== null && examOrder.length > 0
+    });
+  }, [topicId, examScheduleId, examOrder, examSessions, activeSession, selectedSchedule, examType, originPath]);
+  
   // Utilities
   const clearExamData = useCallback(() => {
+    console.log('🗑️ ExamContext: Clearing all exam data');
     setTopicId(null);
     setExamScheduleId(null);
     setExamOrder([]);
@@ -85,11 +140,59 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSelectedSchedule(null);
     setExamType('Try-Out');
     setOriginPath(null);
+    console.log('✅ ExamContext: All exam data cleared');
   }, []);
   
   const isDataComplete = useCallback(() => {
-    return examScheduleId !== null && examOrder.length > 0;
+    const complete = examScheduleId !== null && examOrder.length > 0;
+    console.log('🔍 ExamContext: Data completeness check:', {
+      examScheduleId,
+      examOrderLength: examOrder.length,
+      isComplete: complete
+    });
+    return complete;
   }, [examScheduleId, examOrder]);
+
+  // Enhanced setters dengan logging
+  const enhancedSetTopicId = useCallback((id: number | null) => {
+    console.log('🔄 ExamContext: Setting topicId from', topicId, 'to', id);
+    setTopicId(id);
+  }, [topicId]);
+
+  const enhancedSetExamScheduleId = useCallback((id: number | null) => {
+    console.log('🔄 ExamContext: Setting examScheduleId from', examScheduleId, 'to', id);
+    setExamScheduleId(id);
+  }, [examScheduleId]);
+
+  const enhancedSetExamOrder = useCallback((order: ExamOrder[]) => {
+    console.log('🔄 ExamContext: Setting examOrder from', examOrder.length, 'items to', order.length, 'items');
+    setExamOrder(order);
+  }, [examOrder.length]);
+
+  const enhancedSetExamSessions = useCallback((sessions: ExamSession[]) => {
+    console.log('🔄 ExamContext: Setting examSessions from', examSessions.length, 'items to', sessions.length, 'items');
+    setExamSessions(sessions);
+  }, [examSessions.length]);
+
+  const enhancedSetActiveSession = useCallback((session: ExamSession | null) => {
+    console.log('🔄 ExamContext: Setting activeSession from', activeSession?.id, 'to', session?.id);
+    setActiveSession(session);
+  }, [activeSession?.id]);
+
+  const enhancedSetSelectedSchedule = useCallback((schedule: ExamSchedule | null) => {
+    console.log('🔄 ExamContext: Setting selectedSchedule from', selectedSchedule?.id, 'to', schedule?.id);
+    setSelectedSchedule(schedule);
+  }, [selectedSchedule?.id]);
+
+  const enhancedSetExamType = useCallback((type: string) => {
+    console.log('🔄 ExamContext: Setting examType from', examType, 'to', type);
+    setExamType(type);
+  }, [examType]);
+
+  const enhancedSetOriginPath = useCallback((path: string | null) => {
+    console.log('🔄 ExamContext: Setting originPath from', originPath, 'to', path);
+    setOriginPath(path);
+  }, [originPath]);
   
   const contextValue: ExamContextType = {
     // Data
@@ -102,15 +205,15 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     examType,
     originPath,
     
-    // Setters
-    setTopicId,
-    setExamScheduleId,
-    setExamOrder,
-    setExamSessions,
-    setActiveSession,
-    setSelectedSchedule,
-    setExamType,
-    setOriginPath,
+    // Enhanced setters with logging
+    setTopicId: enhancedSetTopicId,
+    setExamScheduleId: enhancedSetExamScheduleId,
+    setExamOrder: enhancedSetExamOrder,
+    setExamSessions: enhancedSetExamSessions,
+    setActiveSession: enhancedSetActiveSession,
+    setSelectedSchedule: enhancedSetSelectedSchedule,
+    setExamType: enhancedSetExamType,
+    setOriginPath: enhancedSetOriginPath,
     
     // Utilities
     clearExamData,
