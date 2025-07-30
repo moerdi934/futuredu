@@ -2,13 +2,16 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/exam/[exam_string]": "pages/exam/[exam_string].js",
-  "/try-out": "pages/try-out.js",
   "/login": "pages/login.js",
+  "/try-out": "pages/try-out.js",
+  "/exam/[exam_string]": "pages/exam/[exam_string].js",
+  "/api/exam-schedules/[id]": "pages/api/exam-schedules/[id].js",
+  "/api/exam-schedules/checkAccess": "pages/api/exam-schedules/checkAccess.js",
+  "/api/examSession/examSchedule": "pages/api/examSession/examSchedule.js",
+  "/api/examOrder/getExamOrder": "pages/api/examOrder/getExamOrder.js",
   "/api/examSession/create": "pages/api/examSession/create.js",
-  "/api/time": "pages/api/time.js",
   "/api/users/check-auth": "pages/api/users/check-auth.js",
-  "/api/questions/byExamString": "pages/api/questions/byExamString.js",
+  "/api/time": "pages/api/time.js",
   "/api/examSession/active": "pages/api/examSession/active.js",
-  "/api/examSession/submit": "pages/api/examSession/submit.js"
+  "/api/questions/byExamString": "pages/api/questions/byExamString.js"
 }

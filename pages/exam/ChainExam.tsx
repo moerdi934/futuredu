@@ -1111,12 +1111,19 @@ const ExamContent: React.FC = () => {
 
       // Fetch the latest answers from ExamDBService
       const savedAnswers = await ExamDBService.getAnswers(exam_string) || answers;
+      const finalElapsedTimes = await ExamDBService.finalizeCurrentQuestionTime(exam_string, elapsed);
 
       const axios = (await import('axios')).default;
       const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
       
-      const finalElapsedTimes = await ExamDBService.finalizeCurrentQuestionTime(exam_string);
-      
+      console.log('📤 Submitting to server:', {
+      exam_string,
+      examIdToSubmit,
+      savedAnswers,
+      finalElapsedTimes
+    });
+
+
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/examSession/submit`,
         { 
@@ -1493,6 +1500,8 @@ const ExamContent: React.FC = () => {
     }
   };
 
+  
+
   // Di dalam ExamProvider (context/ExamContext.tsx)
   useEffect(() => {
     console.log('📝 ExamContext: examOrder updated:', {
@@ -1507,16 +1516,21 @@ const ExamContent: React.FC = () => {
 
   // Question elapsed time tracking
   useEffect(() => {
-    if (!isClient || loading || questions.length === 0 || currentQuestion >= questions.length) return;
+    if (!isClient || loading || questions.length === 0 || currentQuestion >= questions.length || !isRunning) return;
     
     const currentQuestionData = questions[currentQuestion];
     if (!currentQuestionData || !currentQuestionData.id) {
       return;
     }
     
-    if (exam_string) {
-      ExamDBService.updateQuestionElapsedTime(exam_string, currentQuestionData.id, elapsed);
-    }
+if (exam_string && Number.isFinite(elapsed)) {
+    console.log('⏱ Updating question elapsed time:', { exam_string, questionId: currentQuestionData.id, elapsed });
+    ExamDBService.updateQuestionElapsedTime(exam_string, currentQuestionData.id, elapsed).catch(err => {
+      console.error('🚨 Error updating question elapsed time:', err);
+    });
+  } else {
+    console.warn('⚠ Skipping updateQuestionElapsedTime due to invalid elapsed:', { elapsed, isRunning });
+  }
   }, [isClient, loading, questions, currentQuestion, exam_string,elapsed, isRunning]);
 
   // Cleanup effect
@@ -1526,9 +1540,14 @@ const ExamContent: React.FC = () => {
     return () => {
       if (autoSaveRef.current) clearInterval(autoSaveRef.current);
       
-      if (exam_string && questions.length > 0 && isRunning) {
-        ExamDBService.finalizeCurrentQuestionTime(exam_string, elapsed);
-      }
+      if (exam_string && questions.length > 0 && isRunning && Number.isFinite(elapsed)) {
+      console.log('⏱ Finalizing question elapsed time:', { exam_string, elapsed });
+      ExamDBService.finalizeCurrentQuestionTime(exam_string, elapsed).catch(err => {
+        console.error('🚨 Error finalizing question elapsed time:', err);
+      });
+    } else {
+      console.warn('⚠ Skipping finalizeCurrentQuestionTime:', { exam_string, questionsLength: questions.length, isRunning, elapsed });
+    }
     };
   }, [isClient, exam_string, questions, elapsed, isRunning]);
 

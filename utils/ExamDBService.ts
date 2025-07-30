@@ -92,25 +92,48 @@ private async initDatabase(): Promise<IDBPDatabase | StubDB> {
   }
 
   // Update the elapsed time for a question
+// Update the elapsed time for a question
 async updateQuestionElapsedTime(examString: string, questionId: number, timerElapsed: number): Promise<Record<number, number>> {
+  console.log('🔍 updateQuestionElapsedTime called:', { examString, questionId, timerElapsed });
+
+  // Validate timerElapsed
+  if (!Number.isFinite(timerElapsed) || timerElapsed < 0) {
+    console.error('🚨 Invalid timerElapsed value:', timerElapsed);
+    return {};
+  }
+
   const db = await this.db;
   const data = await this.getExamData(examString) || {
     answers: {},
-    startTime: timerElapsed, // Use timerElapsed as startTime
+    startTime: timerElapsed,
     questionElapsedTimes: {},
     lastQuestionVisit: null
   };
 
+  console.log('📊 Current exam data:', {
+    data,
+    questionElapsedTimes: data.questionElapsedTimes,
+    lastQuestionVisit: data.lastQuestionVisit
+  });
+
   // If there was a previously visited question, update elapsed time
   if (data.lastQuestionVisit && data.lastQuestionVisit.questionId !== questionId) {
     const previousQuestionId = data.lastQuestionVisit.questionId;
-    const timeSpent = timerElapsed - data.lastQuestionVisit.timerElapsed;
+    const previousTimerElapsed = data.lastQuestionVisit.timerElapsed;
 
-    // Initialize if not exists
-    data.questionElapsedTimes[previousQuestionId] = data.questionElapsedTimes[previousQuestionId] || 0;
+    // Validate previousTimerElapsed
+    if (!Number.isFinite(previousTimerElapsed)) {
+      console.error('🚨 Invalid previousTimerElapsed:', previousTimerElapsed);
+    } else {
+      const timeSpent = timerElapsed - previousTimerElapsed;
+      console.log('⏱ Calculating timeSpent:', { previousQuestionId, timeSpent, timerElapsed, previousTimerElapsed });
 
-    // Add the elapsed time (in seconds)
-    data.questionElapsedTimes[previousQuestionId] += Math.max(0, Math.floor(timeSpent));
+      // Initialize if not exists
+      data.questionElapsedTimes[previousQuestionId] = data.questionElapsedTimes[previousQuestionId] || 0;
+
+      // Add the elapsed time (in seconds)
+      data.questionElapsedTimes[previousQuestionId] += Math.max(0, Math.floor(timeSpent));
+    }
   }
 
   // Update last question visit with timer's elapsed time
@@ -122,6 +145,8 @@ async updateQuestionElapsedTime(examString: string, questionId: number, timerEla
   // Make sure current question has an entry
   data.questionElapsedTimes[questionId] = data.questionElapsedTimes[questionId] || 0;
 
+  console.log('💾 Saving updated exam data:', { questionElapsedTimes: data.questionElapsedTimes });
+
   await db.put('examData', data, examString);
 
   return data.questionElapsedTimes;
@@ -130,50 +155,63 @@ async updateQuestionElapsedTime(examString: string, questionId: number, timerEla
   // Get elapsed times for all questions
 async getQuestionElapsedTimes(examString: string): Promise<Record<number, number>> {
   const data = await this.getExamData(examString);
+  console.log('🔍 getQuestionElapsedTimes:', { examString, questionElapsedTimes: data?.questionElapsedTimes });
 
-  // If we have data but no visit record, return the stored elapsed times
-  if (data && !data.questionElapsedTimes) {
+  if (!data) {
+    console.warn('⚠ No exam data found for:', examString);
     return {};
   }
 
-  // If we have a last visit record, update the current question time
-  if (data && data.lastQuestionVisit) {
-    const questionId = data.lastQuestionVisit.questionId;
-
-    // Create a copy to avoid modifying the stored data
-    const updatedTimes = { ...data.questionElapsedTimes };
-
-    // Note: Since we don't have the current timer's elapsed time here,
-    // we return the stored times without updating. The update should happen via updateQuestionElapsedTime or finalizeCurrentQuestionTime.
-    return updatedTimes;
+  if (!data.questionElapsedTimes) {
+    console.warn('⚠ No questionElapsedTimes in data:', data);
+    return {};
   }
 
-  return data?.questionElapsedTimes || {};
+  return data.questionElapsedTimes;
 }
   
   // Record the current time for when a user leaves a question
 async finalizeCurrentQuestionTime(examString: string, timerElapsed: number): Promise<Record<number, number>> {
+  console.log('🔍 finalizeCurrentQuestionTime called:', { examString, timerElapsed });
+
+  // Validate timerElapsed
+  if (!Number.isFinite(timerElapsed) || timerElapsed < 0) {
+    console.error('🚨 Invalid timerElapsed value:', timerElapsed);
+    return {};
+  }
+
   const db = await this.db;
   const data = await this.getExamData(examString);
 
   if (data && data.lastQuestionVisit) {
     const questionId = data.lastQuestionVisit.questionId;
-    const timeSpent = timerElapsed - data.lastQuestionVisit.timerElapsed;
+    const previousTimerElapsed = data.lastQuestionVisit.timerElapsed;
 
-    // Initialize if not exists
-    data.questionElapsedTimes[questionId] = data.questionElapsedTimes[questionId] || 0;
+    // Validate previousTimerElapsed
+    if (!Number.isFinite(previousTimerElapsed)) {
+      console.error('🚨 Invalid previousTimerElapsed:', previousTimerElapsed);
+    } else {
+      const timeSpent = timerElapsed - previousTimerElapsed;
+      console.log('⏱ Finalizing timeSpent:', { questionId, timeSpent, timerElapsed, previousTimerElapsed });
 
-    // Add the elapsed time (in seconds)
-    data.questionElapsedTimes[questionId] += Math.max(0, Math.floor(timeSpent));
+      // Initialize if not exists
+      data.questionElapsedTimes[questionId] = data.questionElapsedTimes[questionId] || 0;
 
-    // Reset last visit
-    data.lastQuestionVisit = null;
+      // Add the elapsed time (in seconds)
+      data.questionElapsedTimes[questionId] += Math.max(0, Math.floor(timeSpent));
 
-    await db.put('examData', data, examString);
+      // Reset last visit
+      data.lastQuestionVisit = null;
+
+      console.log('💾 Saving finalized exam data:', { questionElapsedTimes: data.questionElapsedTimes });
+
+      await db.put('examData', data, examString);
+    }
 
     return data.questionElapsedTimes;
   }
 
+  console.warn('⚠ No lastQuestionVisit or data found:', { data });
   return data?.questionElapsedTimes || {};
 }
 
