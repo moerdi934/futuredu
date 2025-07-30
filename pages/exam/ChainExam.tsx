@@ -1,4 +1,4 @@
-// ChainExam Component - COMPLETE FIXED VERSION
+// ChainExam Component - ENHANCED WITH BETTER LOADING CONTROL
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
@@ -344,7 +344,7 @@ const SecurityStatusDisplay: React.FC<{
 
 SecurityStatusDisplay.displayName = 'SecurityStatusDisplay';
 
-// Main Exam Component - FIXED: All hooks at top level
+// Main Exam Component - ENHANCED WITH BETTER LOADING CONTROL
 const ExamContent: React.FC = () => {
   const [isClient, setIsClient] = useState(false);
   
@@ -381,7 +381,7 @@ const ExamContent: React.FC = () => {
     timezoneOffset
   } = useDistributedTimeSync(timeSyncConfig);
   
-  // FIXED: All state initialization at top level
+  // ENHANCED: More granular loading states
   const [examId, setExamId] = useState<number | null>(null);
   const [examScheduleId, setExamScheduleId] = useState<string | null>(null);
   const [examName, setExamName] = useState<string | null>(null);
@@ -409,6 +409,18 @@ const ExamContent: React.FC = () => {
   const [selectedTopicId, setSelectedTopicId] = useState<number|null>(null);
   const [originPath, setOriginPath] = useState<string>('/');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // NEW: Enhanced loading control states
+  const [questionsForCurrentExam, setQuestionsForCurrentExam] = useState<Question[]>([]);
+  const [currentExamQuestionIds, setCurrentExamQuestionIds] = useState<Set<number>>(new Set());
+  const [isQuestionsReady, setIsQuestionsReady] = useState(false);
+  const [lastLoadedExamString, setLastLoadedExamString] = useState<string | null>(null);
+  const [examDataConsistency, setExamDataConsistency] = useState({
+    examStringMatch: false,
+    examIdMatch: false,
+    questionsMatch: false,
+    sessionMatch: false
+  });
 
   const autoSaveRef = useRef<NodeJS.Timeout>();
   const submissionInProgress = useRef<boolean>(false);
@@ -446,6 +458,110 @@ const ExamContent: React.FC = () => {
     examOrder.findIndex((exam: ExamOrder) => exam.exam_string === exam_string),
     [examOrder, exam_string]
   );
+
+  // NEW: Enhanced validation for exam readiness
+  const validateExamReadiness = useCallback((
+    targetExamString: string,
+    targetExamId: number,
+    targetQuestions: Question[],
+    targetExamName: string
+  ) => {
+    console.log('🔍 Validating exam readiness:', {
+      targetExamString,
+      targetExamId,
+      questionsCount: targetQuestions.length,
+      targetExamName,
+      currentExamString: exam_string,
+      currentExamId: examId
+    });
+
+    // Check 1: Exam string must match current route
+    const examStringMatch = targetExamString === exam_string;
+    
+    // Check 2: Exam ID must match the one from examOrder
+    const currentExam = examOrder.find(exam => exam.exam_string === targetExamString);
+    const examIdMatch = currentExam && currentExam.exam_id === targetExamId;
+    
+    // Check 3: Questions must exist and be non-empty
+    const questionsMatch = targetQuestions.length > 0;
+    
+    // Check 4: Exam name must match
+    const examNameMatch = targetExamName && targetExamName.trim().length > 0;
+
+    const consistency = {
+      examStringMatch,
+      examIdMatch: !!examIdMatch,
+      questionsMatch,
+      sessionMatch: examNameMatch
+    };
+
+    setExamDataConsistency(consistency);
+
+    const isReady = examStringMatch && examIdMatch && questionsMatch && examNameMatch;
+    
+    console.log('✅ Exam readiness validation result:', {
+      isReady,
+      consistency,
+      currentExam: currentExam ? {
+        exam_string: currentExam.exam_string,
+        exam_id: currentExam.exam_id,
+        name: currentExam.name
+      } : 'not_found'
+    });
+
+    return isReady;
+  }, [exam_string, examId, examOrder]);
+
+  // NEW: Enhanced questions setter with validation
+  const setQuestionsWithValidation = useCallback((
+    newQuestions: Question[],
+    forExamString: string,
+    forExamId: number,
+    forExamName: string
+  ) => {
+    console.log('📝 Setting questions with validation:', {
+      forExamString,
+      forExamId,
+      forExamName,
+      questionsCount: newQuestions.length,
+      currentExamString: exam_string
+    });
+
+    // Validate that these questions are for the current exam
+    const isReady = validateExamReadiness(forExamString, forExamId, newQuestions, forExamName);
+
+    if (isReady) {
+      console.log('✅ Questions validation passed - setting questions');
+      
+      // Set the question IDs for this exam
+      const questionIds = new Set(newQuestions.map(q => q.id));
+      setCurrentExamQuestionIds(questionIds);
+      
+      // Set questions for current exam
+      setQuestionsForCurrentExam(newQuestions);
+      setQuestions(newQuestions);
+      setLastLoadedExamString(forExamString);
+      setIsQuestionsReady(true);
+      setLoading(false);
+      setError(false);
+      
+      console.log('🎯 Questions successfully set for exam:', forExamString);
+    } else {
+      console.warn('⚠️ Questions validation failed - keeping in loading state');
+      
+      // Keep in loading state until proper questions arrive
+      setIsQuestionsReady(false);
+      setLoading(true);
+      
+      // Clear any existing questions that don't match
+      if (lastLoadedExamString !== forExamString) {
+        console.log('🗑️ Clearing previous exam questions');
+        setQuestions([]);
+        setQuestionsForCurrentExam([]);
+        setCurrentExamQuestionIds(new Set());
+      }
+    }
+  }, [exam_string, validateExamReadiness, lastLoadedExamString]);
 
   // FIXED: Stable timer configuration with memoized callbacks
   const handleAutoSubmit = useCallback(async (reason = 'time_expired') => {
@@ -553,28 +669,33 @@ const ExamContent: React.FC = () => {
     });
   }, [networkLatency, reliability, offsetStdDev, timezoneOffset, updateNetworkInfo]);
 
+  // ENHANCED: Exam string change handler with better state management
   useEffect(() => {
-    console.log('🔄 Exam string changed, resetting component state:', {
+    console.log('🔄 Exam string changed, enhanced reset:', {
       newExamString: exam_string,
-      previousState: {
-        loading,
-        questions: questions.length,
-        currentQuestion,
-        isRunning
-      }
+      previousExamString: lastLoadedExamString,
+      currentQuestionsCount: questions.length,
+      isQuestionsReady,
+      examDataConsistency
     });
 
-    if (exam_string) {
+    if (exam_string && exam_string !== lastLoadedExamString) {
       // Stop current timer
       console.log('⏹️ Stopping current timer for exam change');
       stopTimer();
       
-      // Reset all exam-specific state
-      console.log('🔄 Resetting exam state for new exam');
+      // Enhanced state reset for exam change
+      console.log('🔄 Enhanced exam state reset for new exam');
       setLoading(true);
       setError(false);
       setSubmitError(false);
+      
+      // NEW: Clear previous exam data immediately
       setQuestions([]);
+      setQuestionsForCurrentExam([]);
+      setCurrentExamQuestionIds(new Set());
+      setIsQuestionsReady(false);
+      
       setAnswers({});
       setCurrentQuestion(0);
       setExamSession(null);
@@ -582,13 +703,21 @@ const ExamContent: React.FC = () => {
       setExamName(null);
       setDuration(0);
       
+      // Reset validation states
+      setExamDataConsistency({
+        examStringMatch: false,
+        examIdMatch: false,
+        questionsMatch: false,
+        sessionMatch: false
+      });
+      
       // Reset initialization flags
       initializationAttempted.current = false;
       submissionInProgress.current = false;
       
-      console.log('✅ Component state reset completed for exam:', exam_string);
+      console.log('✅ Enhanced state reset completed for exam:', exam_string);
     }
-  }, [exam_string, stopTimer]);
+  }, [exam_string, lastLoadedExamString, questions.length, isQuestionsReady, examDataConsistency, stopTimer]);
 
   // FIXED: Stable effect for time jump detection
   useEffect(() => {
@@ -754,12 +883,13 @@ const ExamContent: React.FC = () => {
     return false;
   }, [isClient, examOrder, exam_string, router]);
 
-  // FIXED: Simplified loadExistingSession that ALWAYS uses the passed currentExamId
-  const loadExistingSession = useCallback(async (currentExamId: number) => {
+  // ENHANCED: loadExistingSession with validation
+  const loadExistingSession = useCallback(async (currentExamId: number, expectedExamString: string) => {
     console.log('🔄 loadExistingSession called with EXPLICIT exam_id:', {
       currentExamId,
+      expectedExamString,
       examScheduleId,
-      exam_string,
+      currentExamString: exam_string,
       timerInitialized
     });
     
@@ -771,8 +901,17 @@ const ExamContent: React.FC = () => {
       });
       return false;
     }
+
+    // VALIDATION: Ensure we're loading session for the correct exam
+    if (expectedExamString !== exam_string) {
+      console.warn('⚠️ loadExistingSession: Exam string mismatch, aborting session load', {
+        expectedExamString,
+        currentExamString: exam_string
+      });
+      return false;
+    }
     
-    console.log('🌐 Making API call with EXPLICIT exam_id:', currentExamId);
+    console.log('🌐 Making API call with EXPLICIT exam_id:', currentExamId, 'for exam:', expectedExamString);
     
     try {
       const axios = (await import('axios')).default;
@@ -794,6 +933,12 @@ const ExamContent: React.FC = () => {
         
       console.log('✅ API response for exam_id:', currentExamId, '- status:', response.data.status);
       console.log('📝 API URL was:', `${process.env.NEXT_PUBLIC_API_URL}/examSession/active?exam_schedule_id=${examScheduleId}&exam_id=${currentExamId}`);
+      
+      // DOUBLE CHECK: Ensure current exam hasn't changed during API call
+      if (expectedExamString !== exam_string) {
+        console.warn('⚠️ Exam changed during session loading, discarding result');
+        return false;
+      }
         
       if (response.data.status === 'success' && response.data.data) {
         const sessionData = response.data.data;
@@ -804,6 +949,12 @@ const ExamContent: React.FC = () => {
           startTime: sessionData.start_time,
           endTime: sessionData.end_time
         });
+        
+        // FINAL CHECK: Ensure exam hasn't changed
+        if (expectedExamString !== exam_string) {
+          console.warn('⚠️ Exam changed before applying session data, discarding');
+          return false;
+        }
         
         setExamName(sessionData.name);
         
@@ -824,11 +975,11 @@ const ExamContent: React.FC = () => {
         
         // Set answers
         setAnswers(sessionData.answers || {});
-        await ExamDBService.saveAnswers(exam_string, sessionData.answers || {});
+        await ExamDBService.saveAnswers(expectedExamString, sessionData.answers || {});
         
         // Handle question elapsed times
         if (sessionData.question_elapsed_times) {
-          const examData = await ExamDBService.getExamData(exam_string) || { 
+          const examData = await ExamDBService.getExamData(expectedExamString) || { 
             answers: sessionData.answers || {}, 
             startTime: enhancedGetServerTime(),
             questionElapsedTimes: {},
@@ -836,7 +987,7 @@ const ExamContent: React.FC = () => {
           };
           examData.questionElapsedTimes = sessionData.question_elapsed_times;
           const db = await ExamDBService.db;
-          await db.put('examData', examData, exam_string);
+          await db.put('examData', examData, expectedExamString);
         }
         
         // Calculate remaining time
@@ -854,7 +1005,7 @@ const ExamContent: React.FC = () => {
           console.log('🚀 Attempting to start timer for exam_id:', currentExamId, 'with remaining time:', remainingTime);
           
           const startTimerWithRetry = () => {
-            if (timerInitialized) {
+            if (timerInitialized && expectedExamString === exam_string) {
               console.log('✅ Timer ready, starting for exam_id:', currentExamId);
               const success = startTimer(remainingTime);
               console.log('Timer start result for exam_id:', currentExamId, { success });
@@ -874,6 +1025,13 @@ const ExamContent: React.FC = () => {
               attempts++;
               console.log(`⏳ Timer retry ${attempts}/${maxAttempts} for exam_id:`, currentExamId);
               
+              // Check if exam has changed during retry
+              if (expectedExamString !== exam_string) {
+                console.warn('⚠️ Exam changed during timer retry, aborting');
+                clearInterval(waitForTimer);
+                return;
+              }
+              
               if (startTimerWithRetry()) {
                 clearInterval(waitForTimer);
                 console.log('✅ Timer started after retry for exam_id:', currentExamId);
@@ -882,11 +1040,13 @@ const ExamContent: React.FC = () => {
                 console.warn('❌ Timer start failed for exam_id:', currentExamId);
                 
                 // Force start with fallback
-                try {
-                  const success = startTimer(remainingTime);
-                  console.log('Fallback timer result for exam_id:', currentExamId, { success });
-                } catch (error) {
-                  console.error('❌ Even fallback timer failed for exam_id:', currentExamId, error);
+                if (expectedExamString === exam_string) {
+                  try {
+                    const success = startTimer(remainingTime);
+                    console.log('Fallback timer result for exam_id:', currentExamId, { success });
+                  } catch (error) {
+                    console.error('❌ Even fallback timer failed for exam_id:', currentExamId, error);
+                  }
                 }
               }
             }, 500);
@@ -908,15 +1068,17 @@ const ExamContent: React.FC = () => {
     } catch (error) {
       console.error('❌ loadExistingSession API error for exam_id:', currentExamId, error);
       
-      // Fallback: load saved answers
-      try {
-        const savedAnswers = await ExamDBService.getAnswers(exam_string);
-        if (savedAnswers) {
-          console.log('📂 Using saved answers fallback for exam_id:', currentExamId);
-          setAnswers(savedAnswers);
+      // Fallback: load saved answers (but only if exam hasn't changed)
+      if (expectedExamString === exam_string) {
+        try {
+          const savedAnswers = await ExamDBService.getAnswers(expectedExamString);
+          if (savedAnswers) {
+            console.log('📂 Using saved answers fallback for exam_id:', currentExamId);
+            setAnswers(savedAnswers);
+          }
+        } catch (fallbackError) {
+          console.error('❌ Fallback failed for exam_id:', currentExamId, fallbackError);
         }
-      } catch (fallbackError) {
-        console.error('❌ Fallback failed for exam_id:', currentExamId, fallbackError);
       }
       
       return false;
@@ -924,21 +1086,22 @@ const ExamContent: React.FC = () => {
   }, [
     isClient, 
     examScheduleId, 
+    exam_string,
     enhancedGetServerTime, 
-    exam_string, 
     timerInitialized, 
-    timerError,
     startTimer, 
     handleAutoSubmit
   ]);
 
-  // FIXED: fetchQuestions with immediate exam_id synchronization
+  // ENHANCED: fetchQuestions with strict validation and loading control
   const fetchQuestions = useCallback(async () => {
-    console.log('🔄 fetchQuestions called:', {
+    console.log('🔄 Enhanced fetchQuestions called:', {
       isClient,
       exam_string,
       examOrder: examOrder.length,
-      examScheduleId
+      examScheduleId,
+      lastLoadedExamString,
+      isQuestionsReady
     });
     
     if (!isClient) {
@@ -960,6 +1123,12 @@ const ExamContent: React.FC = () => {
       });
       setError(true);
       setLoading(false);
+      return;
+    }
+
+    // CHECK: Avoid duplicate requests for the same exam
+    if (lastLoadedExamString === exam_string && isQuestionsReady && questions.length > 0) {
+      console.log('✅ Questions already loaded for this exam, skipping fetch');
       return;
     }
     
@@ -999,6 +1168,12 @@ const ExamContent: React.FC = () => {
 
       console.log('✅ API response received:', response.status);
 
+      // CHECK: Ensure exam hasn't changed during API call
+      if (exam_string !== (params?.exam_string as string)) {
+        console.warn('⚠️ Exam changed during question fetch, discarding response');
+        return;
+      }
+
       if (!response.data || !response.data.encryptedData) {
         throw new Error('Invalid API response - no encrypted data');
       }
@@ -1018,6 +1193,12 @@ const ExamContent: React.FC = () => {
       if (!parsedData.questions || parsedData.questions.length === 0) {
         throw new Error('No questions found in response');
       }
+
+      // FINAL CHECK: Ensure exam is still the same
+      if (exam_string !== (params?.exam_string as string)) {
+        console.warn('⚠️ Exam changed before setting questions, discarding');
+        return;
+      }
       
       // Check if exam is accessible BEFORE setting questions
       if (examSession && !examSession.is_auto_move && enhancedGetServerTime() < new Date(examSession.start_time).getTime()) {
@@ -1029,45 +1210,51 @@ const ExamContent: React.FC = () => {
         return;
       }
 
-      // Set questions and duration FIRST
-      console.log('📝 Setting questions and duration...');
-      setQuestions(parsedData.questions);
+      // Set duration first
+      console.log('📝 Setting duration...');
       setDuration(parsedData.duration);
       
-      console.log('✅ Questions and duration set successfully');
+      // ENHANCED: Use validation-based question setter
+      console.log('📝 Setting questions with enhanced validation...');
+      setQuestionsWithValidation(
+        parsedData.questions,
+        exam_string,
+        currentExam.exam_id,
+        currentExam.name
+      );
       
-      // IMMEDIATELY set loading to false - DON'T wait for session loading
-      console.log('🚨 FORCING loading to false immediately');
-      setLoading(false);
-      setError(false);
+      console.log('✅ Questions validation and setting completed');
       
-      // CRITICAL FIX: Load session IMMEDIATELY with the CORRECT exam_id
-      console.log('🔄 Loading session IMMEDIATELY with CORRECT exam_id:', currentExam.exam_id);
-      
-      // Execute session loading immediately with CORRECT exam_id
-      try {
-        const sessionLoaded = await loadExistingSession(currentExam.exam_id);
+      // Load session ONLY if questions were successfully validated and set
+      if (validateExamReadiness(exam_string, currentExam.exam_id, parsedData.questions, currentExam.name)) {
+        console.log('🔄 Loading session for validated exam:', exam_string);
         
-        if (!sessionLoaded) {
-          console.log('⚠️ No session loaded for exam_id:', currentExam.exam_id, ', starting fresh timer');
-          if (parsedData.duration > 0 && timerInitialized) {
+        try {
+          const sessionLoaded = await loadExistingSession(currentExam.exam_id, exam_string);
+          
+          if (!sessionLoaded) {
+            console.log('⚠️ No session loaded for exam_id:', currentExam.exam_id, ', starting fresh timer');
+            if (parsedData.duration > 0 && timerInitialized && exam_string === (params?.exam_string as string)) {
+              const timerDuration = parsedData.duration * 60;
+              console.log('🚀 Starting fresh timer for exam_id:', currentExam.exam_id, 'duration:', timerDuration);
+              const success = startTimer(timerDuration);
+              console.log('Fresh timer start result:', { success });
+            }
+          } else {
+            console.log('✅ Session loaded successfully for exam_id:', currentExam.exam_id);
+          }
+        } catch (sessionError) {
+          console.error('❌ Session loading failed for exam_id:', currentExam.exam_id, sessionError);
+          // Still try to start fresh timer if exam hasn't changed
+          if (parsedData.duration > 0 && timerInitialized && exam_string === (params?.exam_string as string)) {
             const timerDuration = parsedData.duration * 60;
-            console.log('🚀 Starting fresh timer for exam_id:', currentExam.exam_id, 'duration:', timerDuration);
+            console.log('🚀 Starting fresh timer after session error for exam_id:', currentExam.exam_id);
             const success = startTimer(timerDuration);
             console.log('Fresh timer start result:', { success });
           }
-        } else {
-          console.log('✅ Session loaded successfully for exam_id:', currentExam.exam_id);
         }
-      } catch (sessionError) {
-        console.error('❌ Session loading failed for exam_id:', currentExam.exam_id, sessionError);
-        // Still try to start fresh timer
-        if (parsedData.duration > 0 && timerInitialized) {
-          const timerDuration = parsedData.duration * 60;
-          console.log('🚀 Starting fresh timer after session error for exam_id:', currentExam.exam_id);
-          const success = startTimer(timerDuration);
-          console.log('Fresh timer start result:', { success });
-        }
+      } else {
+        console.warn('⚠️ Questions validation failed, not loading session');
       }
       
       console.log('✅ fetchQuestions completed for exam_id:', currentExam.exam_id);
@@ -1081,15 +1268,22 @@ const ExamContent: React.FC = () => {
       });
       setError(true);
       setLoading(false);
+      setIsQuestionsReady(false);
     }
   }, [
     isClient, 
     exam_string,
     examOrder,
     examScheduleId,
-    examId, // Keep this dependency to track changes
+    examId,
+    lastLoadedExamString,
+    isQuestionsReady,
+    questions.length,
+    params?.exam_string,
     examSession, 
     enhancedGetServerTime, 
+    setQuestionsWithValidation,
+    validateExamReadiness,
     loadExistingSession, 
     timerInitialized, 
     startTimer
@@ -1208,16 +1402,28 @@ const ExamContent: React.FC = () => {
 
   // Handle change
   const handleChange = useCallback(async (id: number, value: any) => {
+    // VALIDATION: Only allow changes for current exam's questions
+    if (!currentExamQuestionIds.has(id)) {
+      console.warn('⚠️ Ignoring answer change for question not in current exam:', id);
+      return;
+    }
+
     const updatedAnswers = {
       ...answers,
       [id]: value
     };
     setAnswers(updatedAnswers);
     await ExamDBService.saveAnswers(exam_string, updatedAnswers);
-  }, [answers, exam_string]);
+  }, [answers, exam_string, currentExamQuestionIds]);
 
   // Handle true/false change
   const handleTrueFalseChange = useCallback(async (id: number, index: number, value: any) => {
+    // VALIDATION: Only allow changes for current exam's questions
+    if (!currentExamQuestionIds.has(id)) {
+      console.warn('⚠️ Ignoring true/false answer change for question not in current exam:', id);
+      return;
+    }
+
     const updatedAnswers = [...(answers[id] || [])];
     updatedAnswers[index] = value;
     const newAnswers = {
@@ -1226,7 +1432,7 @@ const ExamContent: React.FC = () => {
     };
     setAnswers(newAnswers);
     await ExamDBService.saveAnswers(exam_string, newAnswers);
-  }, [answers, exam_string]);
+  }, [answers, exam_string, currentExamQuestionIds]);
 
   // Utility functions
   const isAnswerFilled = (answer: any): boolean => {
@@ -1289,12 +1495,15 @@ const ExamContent: React.FC = () => {
         console.warn('⚠️ Failed to clear IndexedDB:', error);
       }
       
-      // Reset component state immediately
-      console.log('🔄 Resetting state before navigation');
+      // Enhanced state reset before navigation
+      console.log('🔄 Enhanced state reset before navigation');
       setLoading(true);
       setError(false);
       setSubmitError(false);
       setQuestions([]);
+      setQuestionsForCurrentExam([]);
+      setCurrentExamQuestionIds(new Set());
+      setIsQuestionsReady(false);
       setAnswers({});
       setCurrentQuestion(0);
       setExamSession(null);
@@ -1302,6 +1511,15 @@ const ExamContent: React.FC = () => {
       setExamName(null);
       setDuration(0);
       setIsInitializing(false);
+      setLastLoadedExamString(null);
+      
+      // Reset validation states
+      setExamDataConsistency({
+        examStringMatch: false,
+        examIdMatch: false,
+        questionsMatch: false,
+        sessionMatch: false
+      });
       
       // Reset refs
       initializationAttempted.current = false;
@@ -1539,25 +1757,35 @@ const ExamContent: React.FC = () => {
     return () => clearInterval(timer);
   }, [isClient, isExamAccessible, examStartTime, enhancedGetServerTime, handleRetryAccess]);
 
-  // Add debug effect to track loading state changes
-// Add debug effect to track loading state changes
+  // ENHANCED loading state validation
   useEffect(() => {
-    console.log('🔄 Loading state comprehensive check:', {
+    console.log('🔄 Enhanced loading state validation:', {
       loading,
       isInitializing,
       questionsLength: questions.length,
+      isQuestionsReady,
       isClient,
       exam_string,
       examScheduleId,
       contextExamScheduleId,
       timerInitialized,
-      timerError
+      timerError,
+      examDataConsistency,
+      lastLoadedExamString
     });
     
-    // Force loading to false if we have all required data
-    if (loading && questions.length > 0 && isClient && exam_string && examScheduleId) {
-      console.log('🚨 All data ready, forcing loading to false');
-      setLoading(false);
+    // Enhanced condition: only set loading to false if questions are properly validated
+    if (loading && isQuestionsReady && questions.length > 0 && isClient && exam_string && examScheduleId) {
+      console.log('🚨 Enhanced: All data ready and validated, confirming loading state');
+      
+      // Double check that questions belong to current exam
+      const currentExam = examOrder.find(exam => exam.exam_string === exam_string);
+      if (currentExam && examDataConsistency.examIdMatch && examDataConsistency.questionsMatch) {
+        console.log('✅ Questions validation confirmed, setting loading to false');
+        setLoading(false);
+      } else {
+        console.warn('⚠️ Questions validation failed, keeping loading state');
+      }
     }
     
     // Additional check for timer readiness
@@ -1568,12 +1796,16 @@ const ExamContent: React.FC = () => {
     loading, 
     isInitializing, 
     questions.length, 
+    isQuestionsReady,
     isClient, 
     exam_string, 
     examScheduleId, 
     contextExamScheduleId,
     timerInitialized,
-    timerError
+    timerError,
+    examDataConsistency,
+    lastLoadedExamString,
+    examOrder
   ]);
 
   // Auto-save effect
@@ -1597,9 +1829,9 @@ const ExamContent: React.FC = () => {
     };
   }, [isClient, loading, answers, timeLeft, isRunning, saveExamSession]);
 
-  // FIXED - Main initialization effect - ONLY runs when examScheduleId is available
+  // ENHANCED main initialization effect
   useEffect(() => {
-    console.log('🔍 Main init effect triggered:', {
+    console.log('🔍 Enhanced main init effect triggered:', {
       isClient,
       exam_string,
       examScheduleId,
@@ -1609,7 +1841,9 @@ const ExamContent: React.FC = () => {
       loading,
       isInitializing,
       timerInitialized,
-      questionsLength: questions.length
+      questionsLength: questions.length,
+      isQuestionsReady,
+      lastLoadedExamString
     });
     
     if (!isClient) {
@@ -1632,6 +1866,12 @@ const ExamContent: React.FC = () => {
       console.log('❌ Exam order not ready yet');
       return;
     }
+
+    // ENHANCED: Check if we already have valid questions for this exam
+    if (lastLoadedExamString === exam_string && isQuestionsReady && questions.length > 0) {
+      console.log('✅ Questions already loaded and validated for this exam, skipping initialization');
+      return;
+    }
     
     // Prevent multiple initialization attempts for the SAME exam
     const initKey = `${exam_string}-${examScheduleId}`;
@@ -1642,7 +1882,7 @@ const ExamContent: React.FC = () => {
     
     initializationAttempted.current = initKey; // Store unique key instead of boolean
     
-    console.log('🚀 Main initialization starting for exam:', exam_string, 'with scheduleId:', examScheduleId);
+    console.log('🚀 Enhanced initialization starting for exam:', exam_string, 'with scheduleId:', examScheduleId);
     
     setIsInitializing(true);
     
@@ -1655,6 +1895,7 @@ const ExamContent: React.FC = () => {
         console.error('❌ Initialization failed:', error);
         setError(true);
         setLoading(false);
+        setIsQuestionsReady(false);
       } finally {
         console.log('🏁 Setting isInitializing to false');
         setIsInitializing(false);
@@ -1667,20 +1908,24 @@ const ExamContent: React.FC = () => {
     exam_string, 
     examScheduleId,
     examOrder.length,
+    lastLoadedExamString,
+    isQuestionsReady,
+    questions.length,
     fetchQuestions
   ]);
 
-  // FIXED: Better timer state logging in useEffect
+  // Timer state logging
   useEffect(() => {
-    console.log('🔍 Timer state changed:', {
+    console.log('🔍 Enhanced timer state changed:', {
       timerInitialized,
       timerError,
       isRunning,
       timeLeft,
       workerReady: getBackupTimerValues().workerReady,
-      fallbackActive: getBackupTimerValues().fallbackActive
+      fallbackActive: getBackupTimerValues().fallbackActive,
+      examDataConsistency
     });
-  }, [timerInitialized, timerError, isRunning, timeLeft, getBackupTimerValues]);
+  }, [timerInitialized, timerError, isRunning, timeLeft, getBackupTimerValues, examDataConsistency]);
 
   // Retry on error
   useEffect(() => {
@@ -1688,22 +1933,26 @@ const ExamContent: React.FC = () => {
     
     const retryTimeout = setTimeout(() => {
       initializationAttempted.current = false; // Reset for retry
+      setIsQuestionsReady(false);
+      setLastLoadedExamString(null);
       fetchQuestions();
     }, 5000);
 
     return () => clearTimeout(retryTimeout);
   }, [isClient, error, isInitializing, fetchQuestions]);
 
-  // Show loading while waiting for context or during initialization
-  if (!isClient || loading || isInitializing) {
+  // ENHANCED loading screen with more detailed status
+  if (!isClient || loading || isInitializing || !isQuestionsReady) {
     return (
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <div className="tw-text-center">
           <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
           <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">
-            {isInitializing ? 'Initializing Exam...' : 'Loading Exam...'}
+            {isInitializing ? 'Initializing Exam...' : !isQuestionsReady ? 'Validating Questions...' : 'Loading Exam...'}
           </h2>
-          <p className="tw-text-violet-600 tw-mt-2">Please wait while we prepare your questions</p>
+          <p className="tw-text-violet-600 tw-mt-2">
+            {!isQuestionsReady ? 'Ensuring questions match current exam...' : 'Please wait while we prepare your questions'}
+          </p>
           <div className="tw-text-sm tw-text-gray-500 tw-mt-2 tw-space-y-1">
             <p>Current Exam: {exam_string || 'Loading...'}</p>
             <p>Context Schedule ID: {contextExamScheduleId || 'Loading...'}</p>
@@ -1711,8 +1960,19 @@ const ExamContent: React.FC = () => {
             <p>Time sync: {syncCount} syncs, offset: {Math.round(timeOffset)}ms</p>
             <p>Worker timer: {timerInitialized ? 'Initialized' : 'Loading...'}</p>
             <p>Questions: {questions.length} loaded</p>
-            <p>Status: {isInitializing ? 'Initializing' : loading ? 'Loading' : 'Ready'}</p>
+            <p>Questions Ready: {isQuestionsReady ? 'Yes' : 'No'}</p>
+            <p>Last Loaded: {lastLoadedExamString || 'None'}</p>
+            <p>Status: {isInitializing ? 'Initializing' : loading ? 'Loading' : !isQuestionsReady ? 'Validating' : 'Ready'}</p>
             <p>Init Key: {initializationAttempted.current || 'None'}</p>
+            {process.env.NODE_ENV === 'development' && (
+              <div className="tw-text-xs tw-text-gray-400 tw-mt-2 tw-bg-gray-100 tw-p-2 tw-rounded">
+                <p>Data Consistency:</p>
+                <p>📝 String Match: {examDataConsistency.examStringMatch ? '✅' : '❌'}</p>
+                <p>🆔 ID Match: {examDataConsistency.examIdMatch ? '✅' : '❌'}</p>
+                <p>❓ Questions Match: {examDataConsistency.questionsMatch ? '✅' : '❌'}</p>
+                <p>📋 Session Match: {examDataConsistency.sessionMatch ? '✅' : '❌'}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1732,6 +1992,8 @@ const ExamContent: React.FC = () => {
             className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
             onClick={() => {
               initializationAttempted.current = false;
+              setIsQuestionsReady(false);
+              setLastLoadedExamString(null);
               fetchQuestions();
             }}
           >
@@ -1796,7 +2058,7 @@ const ExamContent: React.FC = () => {
       {/* Enhanced Focus Detector with network-aware thresholds */}
       <FocusDetector 
         onAutoSubmit={handleAutoSubmit}
-        enabled={!loading && !error && isExamAccessible && questions.length > 0 && !isSubmitting}
+        enabled={!loading && !error && isExamAccessible && questions.length > 0 && !isSubmitting && isQuestionsReady}
         timerRunning={isRunning}
       />
 
@@ -1819,7 +2081,7 @@ const ExamContent: React.FC = () => {
 
       <ChangeTabPrevention 
         onAutoSubmit={() => handleAutoSubmit('tab_change')}
-        enabled={!loading && !error && isExamAccessible && questions.length > 0}
+        enabled={!loading && !error && isExamAccessible && questions.length > 0 && isQuestionsReady}
       >
         <div className="tw-min-h-screen tw-bg-violet-50">
           {/* Enhanced Header with integrated time sync and timer info */}
@@ -1852,6 +2114,8 @@ const ExamContent: React.FC = () => {
                       </p>
                       <p>Context: {contextExamScheduleId} → Component: {examScheduleId}</p>
                       <p>Fallback: {getBackupTimerValues().fallbackActive ? '🟡' : '🟢'}</p>
+                      <p>Questions Ready: {isQuestionsReady ? '🟢' : '🔴'} | Loaded: {lastLoadedExamString}</p>
+                      <p>Consistency: S:{examDataConsistency.examStringMatch ? '✅' : '❌'} | ID:{examDataConsistency.examIdMatch ? '✅' : '❌'} | Q:{examDataConsistency.questionsMatch ? '✅' : '❌'} | Sess:{examDataConsistency.sessionMatch ? '✅' : '❌'}</p>
                     </div>
                   )}
                 </div>
@@ -1860,6 +2124,7 @@ const ExamContent: React.FC = () => {
                     <Clock size={28} className="tw-text-violet-200" />
                     {isRunning && <Activity size={16} className="tw-text-green-400 tw-animate-pulse" />}
                     {isOnline ? <Wifi size={16} className="tw-text-green-400" /> : <WifiOff size={16} className="tw-text-red-400" />}
+                    {isQuestionsReady && <Check size={16} className="tw-text-green-400" />}
                   </div>
                   <div className="tw-flex tw-flex-col tw-items-start">
                     <span className="tw-text-violet-200 tw-text-sm">Time Remaining</span>
@@ -1891,7 +2156,8 @@ const ExamContent: React.FC = () => {
                     Sync Quality: {Math.round((reliability || 0) * 100)}% | 
                     Network: {Math.round(networkLatency || 0)}ms |
                     Security: {securityValidation.networkQuality} |
-                    Schedule ID: {examScheduleId}
+                    Schedule ID: {examScheduleId} |
+                    Questions Ready: {isQuestionsReady ? 'Yes' : 'No'}
                   </div>
                 )}
               </div>
@@ -1946,7 +2212,7 @@ const ExamContent: React.FC = () => {
                   [&_img]:tw-mx-auto 
                   [&_img]:tw-my-4">
                   <Card.Body className="tw-p-6">
-                    {questions.length > 0 && currentQuestion < questions.length ? (
+                    {questions.length > 0 && currentQuestion < questions.length && isQuestionsReady ? (
                       <>
                         <div className="tw-flex tw-justify-between tw-items-center tw-mb-6">
                           <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">
@@ -1967,6 +2233,11 @@ const ExamContent: React.FC = () => {
                                 className="tw-text-xs"
                               >
                                 {securityValidation.networkQuality}
+                              </Badge>
+                            )}
+                            {isQuestionsReady && (
+                              <Badge bg="success" className="tw-text-xs">
+                                ✅ Validated
                               </Badge>
                             )}
                           </div>
@@ -1996,12 +2267,16 @@ const ExamContent: React.FC = () => {
                       </>
                     ) : (
                       <div className="tw-text-center tw-py-8">
-                        <p className="tw-text-gray-500">No questions available</p>
+                        <p className="tw-text-gray-500">
+                          {!isQuestionsReady ? 'Validating questions for current exam...' : 'No questions available'}
+                        </p>
                         {process.env.NODE_ENV === 'development' && (
                           <div className="tw-text-xs tw-text-gray-400 tw-mt-2">
                             Sync Status: {isOnline ? 'Online' : 'Offline'} | 
                             Timer: {timerInitialized ? 'Ready' : 'Loading'} |
-                            Schedule ID: {examScheduleId || 'NULL'}
+                            Schedule ID: {examScheduleId || 'NULL'} |
+                            Questions Ready: {isQuestionsReady ? 'Yes' : 'No'} |
+                            Loaded Exam: {lastLoadedExamString || 'None'}
                           </div>
                         )}
                       </div>
@@ -2022,10 +2297,11 @@ const ExamContent: React.FC = () => {
                           <span className="tw-text-xs tw-text-gray-500">
                             {Math.round((reliability || 0) * 100)}%
                           </span>
+                          {isQuestionsReady && <Check size={12} className="tw-text-green-500" />}
                         </div>
                       )}
                     </div>
-                    {questions.length > 0 ? (
+                    {questions.length > 0 && isQuestionsReady ? (
                       <>
                         <div className="tw-grid tw-grid-cols-5 tw-gap-2 tw-mb-6">
                           {questions.map((q, index) => (
@@ -2068,6 +2344,7 @@ const ExamContent: React.FC = () => {
                               {timerValid && <Shield className="tw-text-green-600" size={14} />}
                               {isRunning && <Activity className="tw-text-blue-600 tw-animate-pulse" size={14} />}
                               {getBackupTimerValues().fallbackActive && <AlertCircle className="tw-text-yellow-600" size={14} />}
+                              {isQuestionsReady && <Check className="tw-text-green-600" size={14} />}
                             </div>
                           </div>
                           <p className="tw-text-lg tw-font-mono tw-font-bold tw-text-violet-700">
@@ -2081,6 +2358,8 @@ const ExamContent: React.FC = () => {
                               <p>Quality: {securityValidation.networkQuality}</p>
                               <p>Schedule ID: {examScheduleId || 'NULL'}</p>
                               <p>Mode: {getBackupTimerValues().fallbackActive ? 'Fallback' : 'Worker'}</p>
+                              <p>Q-Ready: {isQuestionsReady ? 'Yes' : 'No'}</p>
+                              <p>Q-Count: {currentExamQuestionIds.size}</p>
                             </div>
                           )}
                         </div>
@@ -2097,10 +2376,13 @@ const ExamContent: React.FC = () => {
                       </>
                     ) : (
                       <div className="tw-text-center tw-text-gray-500">
-                        <p>No questions loaded</p>
+                        <p>{!isQuestionsReady ? 'Validating questions...' : 'No questions loaded'}</p>
                         {process.env.NODE_ENV === 'development' && (
                           <div className="tw-text-xs tw-text-gray-400 tw-mt-2">
-                            Sync: {syncCount}x | Network: {isOnline ? 'Online' : 'Offline'} | Schedule ID: {examScheduleId || 'NULL'}
+                            Sync: {syncCount}x | Network: {isOnline ? 'Online' : 'Offline'} | 
+                            Schedule ID: {examScheduleId || 'NULL'} |
+                            Q-Ready: {isQuestionsReady ? 'Yes' : 'No'} |
+                            Loaded: {lastLoadedExamString || 'None'}
                           </div>
                         )}
                       </div>
@@ -2114,7 +2396,7 @@ const ExamContent: React.FC = () => {
           {/* Enhanced Mobile Bottom Navigation */}
           <div className="tw-block md:tw-hidden tw-fixed tw-bottom-0 tw-left-0 tw-right-0 tw-bg-white tw-shadow-lg tw-border-t tw-border-gray-200 tw-z-50">
             <div className="tw-p-4">
-              {questions.length > 0 ? (
+              {questions.length > 0 && isQuestionsReady ? (
                 <>
                   <div className="tw-mb-3">
                     <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
@@ -2122,12 +2404,17 @@ const ExamContent: React.FC = () => {
                       <div className="tw-flex tw-items-center tw-gap-2">
                         <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
                         {process.env.NODE_ENV === 'development' && (
-                          <Badge 
-                            bg={isOnline ? 'success' : 'danger'}
-                            className="tw-text-xs"
-                          >
-                            {Math.round((reliability || 0) * 100)}%
-                          </Badge>
+                          <>
+                            <Badge 
+                              bg={isOnline ? 'success' : 'danger'}
+                              className="tw-text-xs"
+                            >
+                              {Math.round((reliability || 0) * 100)}%
+                            </Badge>
+                            {isQuestionsReady && (
+                              <Badge bg="success" className="tw-text-xs">✅</Badge>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -2173,10 +2460,13 @@ const ExamContent: React.FC = () => {
                 </>
               ) : (
                 <div className="tw-text-center tw-text-gray-500">
-                  <p>No questions available</p>
+                  <p>{!isQuestionsReady ? 'Validating questions...' : 'No questions available'}</p>
                   {process.env.NODE_ENV === 'development' && (
                     <div className="tw-text-xs tw-text-gray-400 tw-mt-2">
-                      Sync: {syncCount}x | Timer: {timerInitialized ? 'Ready' : 'Loading'} | Schedule ID: {examScheduleId || 'NULL'}
+                      Sync: {syncCount}x | Timer: {timerInitialized ? 'Ready' : 'Loading'} | 
+                      Schedule ID: {examScheduleId || 'NULL'} |
+                      Q-Ready: {isQuestionsReady ? 'Yes' : 'No'} |
+                      Loaded: {lastLoadedExamString || 'None'}
                     </div>
                   )}
                 </div>
@@ -2219,6 +2509,8 @@ const ExamContent: React.FC = () => {
                       <p>Time Offset: {timeOffset > 0 ? '+' : ''}{Math.round(timeOffset)}ms</p>
                       <p>Schedule ID: {examScheduleId || 'NULL'}</p>
                       <p>Timer Mode: {getBackupTimerValues().fallbackActive ? 'Fallback' : 'Worker'}</p>
+                      <p>Questions Ready: {isQuestionsReady ? 'Yes' : 'No'}</p>
+                      <p>Questions Validated: {currentExamQuestionIds.size} IDs</p>
                     </div>
                   )}
                   {getFilledAnswersCount() < questions.length && (
@@ -2422,8 +2714,8 @@ const ChainExam: React.FC = () => {
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <div className="tw-text-center">
           <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
-          <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">Initializing Exam System...</h2>
-          <p className="tw-text-violet-600 tw-mt-2">Please wait while we prepare the enhanced timer system</p>
+          <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">Initializing Enhanced Exam System...</h2>
+          <p className="tw-text-violet-600 tw-mt-2">Please wait while we prepare the enhanced timer and validation system</p>
         </div>
       </div>
     );
