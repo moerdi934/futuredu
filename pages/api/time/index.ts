@@ -1,4 +1,4 @@
-// pages/api/time.ts - Enhanced Time API with Fixed Async Handler
+// pages/api/time.ts - FIXED VERSION WITH PROPER TIMEZONE HANDLING
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 interface ServerTimeResponse {
@@ -22,6 +22,11 @@ interface ServerTimeResponse {
       userAgent: string;
       clientTime: number | null;
     };
+    timezoneCalculation: {
+      serverUtcOffset: number;
+      serverLocalTime: string;
+      utcTime: string;
+    };
   };
 }
 
@@ -35,7 +40,6 @@ interface ErrorResponse {
   };
 }
 
-// FIXED: Mark function as async
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ServerTimeResponse | ErrorResponse>
@@ -69,24 +73,25 @@ export default async function handler(
     
     // Simulate variable server processing time (real-world scenario)
     const processingDelay = Math.random() * 10; // 0-10ms random delay
-    
-    // FIXED: Now we can use await because function is async
     await new Promise(resolve => setTimeout(resolve, processingDelay));
     
-    const serverTime = Date.now();
-    const serverDate = new Date(serverTime);
+    // CRITICAL FIX: Always use UTC time for consistency
+    const serverTime = Date.now(); // This is always UTC timestamp
+    const utcDate = new Date(serverTime);
     
-    // Get timezone information safely
+    // FIXED: Get server's UTC offset correctly
+    // getTimezoneOffset() returns offset in minutes, negative for UTC+ timezones
+    const serverUtcOffsetMinutes = utcDate.getTimezoneOffset();
+    
+    // CRITICAL: Don't include timezone offset in the main serverTime
+    // serverTime should always be UTC timestamp for consistency
+    
     let timezone: string;
-    let utcOffset: number;
     
     try {
       timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      utcOffset = serverDate.getTimezoneOffset(); // in minutes (negative for UTC+)
     } catch (error) {
-      // Fallback if Intl is not available
       timezone = 'UTC';
-      utcOffset = 0;
       console.warn('Timezone detection failed, using UTC fallback:', error);
     }
     
@@ -97,12 +102,14 @@ export default async function handler(
     const serverLoad = Math.min(100, Math.max(0, Math.random() * 15 + processingTime * 2));
 
     const response: ServerTimeResponse = {
+      // CRITICAL: serverTime is always UTC timestamp
       serverTime: serverTime,
       requestTime: requestStartTime,
       responseTime: responseTime,
-      iso: serverDate.toISOString(),
+      iso: utcDate.toISOString(),
       timezone: timezone,
-      utcOffset: utcOffset,
+      // FIXED: Return UTC offset in minutes (standard format)
+      utcOffset: serverUtcOffsetMinutes,
       success: true,
       networkInfo: {
         requestId: requestId,
@@ -114,16 +121,21 @@ export default async function handler(
     // Add debug info if in development
     if (process.env.NODE_ENV === 'development') {
       const userAgent = req.headers['user-agent'];
-      const timezoneString = serverDate.toLocaleString('en', { timeZoneName: 'short' });
+      const timezoneString = utcDate.toLocaleString('en', { timeZoneName: 'short' });
       const timezoneAbbr = timezoneString.split(' ').pop();
       
       response.debug = {
         clientTime: clientTime,
-        serverLocalTime: serverDate.toLocaleString(),
+        serverLocalTime: utcDate.toLocaleString(),
         timezoneAbbr: timezoneAbbr,
         requestHeaders: {
           userAgent: userAgent ? userAgent.substring(0, 50) + '...' : 'Unknown',
           clientTime: clientTime
+        },
+        timezoneCalculation: {
+          serverUtcOffset: serverUtcOffsetMinutes,
+          serverLocalTime: new Date(serverTime - (serverUtcOffsetMinutes * 60 * 1000)).toISOString(),
+          utcTime: utcDate.toISOString()
         }
       };
     }
@@ -151,5 +163,4 @@ export default async function handler(
   }
 }
 
-// Optional: Export type definitions for use in other files
 export type { ServerTimeResponse, ErrorResponse };

@@ -1,4 +1,4 @@
-// ChainExam Component - ENHANCED WITH BETTER LOADING CONTROL
+// ChainExam Component - COMPLETE FIXED VERSION WITH TIMEZONE HANDLING
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
@@ -80,7 +80,7 @@ const HiddenTimerValidator: React.FC<{
       try {
         const now = Date.now();
         
-        // Rate limiting - validate every 3-5 minutes (even less frequent)
+        // Rate limiting - validate every 3-5 minutes
         const timeSinceLastValidation = now - lastValidationRef.current;
         const minInterval = 3 * 60 * 1000; // 3 minutes
         const maxInterval = 5 * 60 * 1000; // 5 minutes
@@ -344,7 +344,7 @@ const SecurityStatusDisplay: React.FC<{
 
 SecurityStatusDisplay.displayName = 'SecurityStatusDisplay';
 
-// Main Exam Component - ENHANCED WITH BETTER LOADING CONTROL
+// Main Exam Component - COMPLETE FIXED VERSION
 const ExamContent: React.FC = () => {
   const [isClient, setIsClient] = useState(false);
   
@@ -745,8 +745,9 @@ const ExamContent: React.FC = () => {
     return () => clearInterval(timeJumpChecker);
   }, [detectTimeJump, validateIntegrity, forceSyncNow]);
 
+  // CRITICAL FIX: Use FIXED getServerTime for all time calculations
   const enhancedGetServerTime = useCallback(() => {
-    return getServerTime(); // This now includes all compensations from time sync
+    return getServerTime(); // This now returns pure UTC + network offset (no timezone confusion)
   }, [getServerTime]);
 
   // FIXED: Stable client-side initialization
@@ -883,9 +884,9 @@ const ExamContent: React.FC = () => {
     return false;
   }, [isClient, examOrder, exam_string, router]);
 
-  // ENHANCED: loadExistingSession with validation
+  // CRITICAL FIX: loadExistingSession with proper timezone handling
   const loadExistingSession = useCallback(async (currentExamId: number, expectedExamString: string) => {
-    console.log('🔄 loadExistingSession called with EXPLICIT exam_id:', {
+    console.log('🔄 FIXED loadExistingSession called:', {
       currentExamId,
       expectedExamString,
       examScheduleId,
@@ -958,7 +959,7 @@ const ExamContent: React.FC = () => {
         
         setExamName(sessionData.name);
         
-        // Check accessibility
+        // CRITICAL FIX: Use enhancedGetServerTime() for all time calculations
         const serverNow = enhancedGetServerTime();
         const sessionStartTime = new Date(sessionData.start_time).getTime();
         
@@ -981,7 +982,7 @@ const ExamContent: React.FC = () => {
         if (sessionData.question_elapsed_times) {
           const examData = await ExamDBService.getExamData(expectedExamString) || { 
             answers: sessionData.answers || {}, 
-            startTime: enhancedGetServerTime(),
+            startTime: serverNow, // FIXED: Use serverNow
             questionElapsedTimes: {},
             lastQuestionVisit: null
           };
@@ -990,15 +991,19 @@ const ExamContent: React.FC = () => {
           await db.put('examData', examData, expectedExamString);
         }
         
-        // Calculate remaining time
+        // CRITICAL FIX: Proper time calculation with synchronized time
         const endTime = new Date(sessionData.end_time).getTime();
+        
+        // FIXED: Both serverNow and endTime are now properly synchronized
         const remainingTime = Math.max(0, Math.floor((endTime - serverNow) / 1000));
         
-        console.log('⏱️ Time calculation for exam_id:', currentExamId, {
-          endTime,
-          serverNow,
-          remainingTime,
-          timerInitialized
+        console.log('⏱️ FIXED time calculation for exam_id:', currentExamId, {
+          endTime: new Date(endTime).toISOString(),
+          serverNow: new Date(serverNow).toISOString(),
+          remainingTime: remainingTime + ' seconds',
+          remainingMinutes: Math.floor(remainingTime / 60) + ' minutes',
+          timerInitialized,
+          timeSyncOffset: Math.round(timeOffset) + 'ms'
         });
         
         if (remainingTime > 0) {
@@ -1058,7 +1063,7 @@ const ExamContent: React.FC = () => {
         }
         
         setExamSession(sessionData);
-        console.log('✅ loadExistingSession completed successfully for exam_id:', currentExamId);
+        console.log('✅ FIXED loadExistingSession completed successfully for exam_id:', currentExamId);
         return true;
         
       } else {
@@ -1090,7 +1095,8 @@ const ExamContent: React.FC = () => {
     enhancedGetServerTime, 
     timerInitialized, 
     startTimer, 
-    handleAutoSubmit
+    handleAutoSubmit,
+    timeOffset
   ]);
 
   // ENHANCED: fetchQuestions with strict validation and loading control
@@ -1288,7 +1294,6 @@ const ExamContent: React.FC = () => {
     timerInitialized, 
     startTimer
   ]);
-
   // Save exam session
   const saveExamSession = useCallback(async () => {
     if (!isClient) return false;
@@ -1584,7 +1589,7 @@ const ExamContent: React.FC = () => {
     router.push(originPath || '/');
   }, [stopTimer, clearExamData, router, originPath]);
 
-  // Handle retry access
+  // CRITICAL FIX: Handle retry access with proper timezone handling
   const handleRetryAccess = useCallback(async () => {
     if (!isClient) return;
     
@@ -1609,20 +1614,39 @@ const ExamContent: React.FC = () => {
       if (response.data.status === 'success' && response.data.data) {
         const sessionData = response.data.data;
         
-        if (!sessionData.is_auto_move && enhancedGetServerTime() >= new Date(sessionData.start_time).getTime()) {
+        // FIXED: Use enhancedGetServerTime() for time comparison
+        const serverNow = enhancedGetServerTime();
+        const sessionStartTime = new Date(sessionData.start_time).getTime();
+        
+        if (!sessionData.is_auto_move && serverNow >= sessionStartTime) {
+          console.log('✅ Exam is now accessible - server time check passed');
           setShowNotAccessibleModal(false);
           setIsExamAccessible(true);
           fetchQuestions();
         } else {
+          console.log('⏰ Exam still not accessible:', {
+            serverNow: new Date(serverNow).toISOString(),
+            startTime: new Date(sessionStartTime).toISOString(),
+            isAutoMove: sessionData.is_auto_move
+          });
           setExamStartTime(sessionData.start_time);
           setIsExamAccessible(false);
         }
       }
     } catch (error) {
-      if (examStartTime && enhancedGetServerTime() >= new Date(examStartTime).getTime()) {
-        setIsExamAccessible(true);
-        setShowNotAccessibleModal(false);
-        fetchQuestions();
+      console.error('Error checking exam access:', error);
+      
+      // Fallback: check if examStartTime is past current server time
+      if (examStartTime) {
+        const serverNow = enhancedGetServerTime();
+        const startTime = new Date(examStartTime).getTime();
+        
+        if (serverNow >= startTime) {
+          console.log('✅ Fallback: Exam should be accessible based on time');
+          setIsExamAccessible(true);
+          setShowNotAccessibleModal(false);
+          fetchQuestions();
+        }
       }
     }
   }, [isClient, examScheduleId, examId, enhancedGetServerTime, examStartTime, fetchQuestions]);
@@ -1732,17 +1756,19 @@ const ExamContent: React.FC = () => {
     };
   }, [isClient, exam_string, questions]);
 
-  // Countdown effect for exam access
+  // CRITICAL FIX: Countdown effect for exam access with proper timezone handling
   useEffect(() => {
     if (!isClient || isExamAccessible || !examStartTime) return;
     
     const timer = setInterval(() => {
+      // FIXED: Use enhancedGetServerTime() for countdown
       const now = enhancedGetServerTime();
       const startTime = new Date(examStartTime).getTime();
       const diff = startTime - now;
       
       if (diff <= 0) {
         clearInterval(timer);
+        console.log('⏰ Countdown finished - attempting to access exam');
         handleRetryAccess();
         return;
       }
@@ -1923,9 +1949,10 @@ const ExamContent: React.FC = () => {
       timeLeft,
       workerReady: getBackupTimerValues().workerReady,
       fallbackActive: getBackupTimerValues().fallbackActive,
-      examDataConsistency
+      examDataConsistency,
+      timeOffset: Math.round(timeOffset) + 'ms'
     });
-  }, [timerInitialized, timerError, isRunning, timeLeft, getBackupTimerValues, examDataConsistency]);
+  }, [timerInitialized, timerError, isRunning, timeLeft, getBackupTimerValues, examDataConsistency, timeOffset]);
 
   // Retry on error
   useEffect(() => {
@@ -1940,7 +1967,6 @@ const ExamContent: React.FC = () => {
 
     return () => clearTimeout(retryTimeout);
   }, [isClient, error, isInitializing, fetchQuestions]);
-
   // ENHANCED loading screen with more detailed status
   if (!isClient || loading || isInitializing || !isQuestionsReady) {
     return (
@@ -1971,6 +1997,8 @@ const ExamContent: React.FC = () => {
                 <p>🆔 ID Match: {examDataConsistency.examIdMatch ? '✅' : '❌'}</p>
                 <p>❓ Questions Match: {examDataConsistency.questionsMatch ? '✅' : '❌'}</p>
                 <p>📋 Session Match: {examDataConsistency.sessionMatch ? '✅' : '❌'}</p>
+                <p>⏰ Time Offset: {Math.round(timeOffset)}ms</p>
+                <p>🌐 Reliability: {Math.round((reliability || 0) * 100)}%</p>
               </div>
             )}
           </div>
@@ -1999,6 +2027,15 @@ const ExamContent: React.FC = () => {
           >
             Retry Now
           </Button>
+          {process.env.NODE_ENV === 'development' && (
+            <div className="tw-text-xs tw-text-gray-400 tw-mt-4 tw-bg-gray-100 tw-p-2 tw-rounded">
+              <p>Debug Info:</p>
+              <p>Time Offset: {Math.round(timeOffset)}ms</p>
+              <p>Schedule ID: {examScheduleId || 'NULL'}</p>
+              <p>Exam String: {exam_string || 'NULL'}</p>
+              <p>Timer State: {timerInitialized ? 'Ready' : 'Loading'}</p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -2021,10 +2058,18 @@ const ExamContent: React.FC = () => {
               <p className="tw-text-sm tw-text-violet-500 tw-mt-2">
                 Scheduled at: {new Date(examStartTime).toLocaleString()}
               </p>
+              {process.env.NODE_ENV === 'development' && (
+                <div className="tw-text-xs tw-text-violet-400 tw-mt-2 tw-bg-violet-100 tw-p-2 tw-rounded">
+                  <p>Server Time: {new Date(enhancedGetServerTime()).toISOString()}</p>
+                  <p>Start Time: {new Date(examStartTime).toISOString()}</p>
+                  <p>Time Offset: {Math.round(timeOffset)}ms</p>
+                  <p>Time Sync: {Math.round((reliability || 0) * 100)}% reliable</p>
+                </div>
+              )}
             </div>
           )}
           
-          <Button 
+         <Button 
             variant="primary" 
             className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
             onClick={handleRetryAccess}
@@ -2157,7 +2202,8 @@ const ExamContent: React.FC = () => {
                     Network: {Math.round(networkLatency || 0)}ms |
                     Security: {securityValidation.networkQuality} |
                     Schedule ID: {examScheduleId} |
-                    Questions Ready: {isQuestionsReady ? 'Yes' : 'No'}
+                    Questions Ready: {isQuestionsReady ? 'Yes' : 'No'} |
+                    Time Offset: {Math.round(timeOffset)}ms
                   </div>
                 )}
               </div>
@@ -2276,7 +2322,8 @@ const ExamContent: React.FC = () => {
                             Timer: {timerInitialized ? 'Ready' : 'Loading'} |
                             Schedule ID: {examScheduleId || 'NULL'} |
                             Questions Ready: {isQuestionsReady ? 'Yes' : 'No'} |
-                            Loaded Exam: {lastLoadedExamString || 'None'}
+                            Loaded Exam: {lastLoadedExamString || 'None'} |
+                            Time Offset: {Math.round(timeOffset)}ms
                           </div>
                         )}
                       </div>
@@ -2360,6 +2407,7 @@ const ExamContent: React.FC = () => {
                               <p>Mode: {getBackupTimerValues().fallbackActive ? 'Fallback' : 'Worker'}</p>
                               <p>Q-Ready: {isQuestionsReady ? 'Yes' : 'No'}</p>
                               <p>Q-Count: {currentExamQuestionIds.size}</p>
+                              <p>Reliability: {Math.round((reliability || 0) * 100)}%</p>
                             </div>
                           )}
                         </div>
@@ -2382,7 +2430,8 @@ const ExamContent: React.FC = () => {
                             Sync: {syncCount}x | Network: {isOnline ? 'Online' : 'Offline'} | 
                             Schedule ID: {examScheduleId || 'NULL'} |
                             Q-Ready: {isQuestionsReady ? 'Yes' : 'No'} |
-                            Loaded: {lastLoadedExamString || 'None'}
+                            Loaded: {lastLoadedExamString || 'None'} |
+                            Offset: {Math.round(timeOffset)}ms
                           </div>
                         )}
                       </div>
@@ -2466,7 +2515,8 @@ const ExamContent: React.FC = () => {
                       Sync: {syncCount}x | Timer: {timerInitialized ? 'Ready' : 'Loading'} | 
                       Schedule ID: {examScheduleId || 'NULL'} |
                       Q-Ready: {isQuestionsReady ? 'Yes' : 'No'} |
-                      Loaded: {lastLoadedExamString || 'None'}
+                      Loaded: {lastLoadedExamString || 'None'} |
+                      Offset: {Math.round(timeOffset)}ms
                     </div>
                   )}
                 </div>
@@ -2661,6 +2711,14 @@ const ExamContent: React.FC = () => {
                       <div className="tw-text-2xl tw-font-mono tw-font-bold tw-text-amber-700 tw-mt-2">
                         {countdown}
                       </div>
+                      {process.env.NODE_ENV === 'development' && (
+                        <div className="tw-text-xs tw-text-amber-600 tw-bg-amber-100 tw-p-2 tw-rounded tw-mt-2">
+                          <p>Server Time: {new Date(enhancedGetServerTime()).toISOString()}</p>
+                          <p>Start Time: {new Date(examStartTime).toISOString()}</p>
+                          <p>Time Offset: {Math.round(timeOffset)}ms</p>
+                          <p>Reliability: {Math.round((reliability || 0) * 100)}%</p>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -2716,6 +2774,16 @@ const ChainExam: React.FC = () => {
           <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
           <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">Initializing Enhanced Exam System...</h2>
           <p className="tw-text-violet-600 tw-mt-2">Please wait while we prepare the enhanced timer and validation system</p>
+          {process.env.NODE_ENV === 'development' && (
+            <div className="tw-text-xs tw-text-violet-400 tw-mt-4 tw-bg-violet-100 tw-p-2 tw-rounded">
+              <p>⚡ Fixed Version Features:</p>
+              <p>✅ Pure UTC Time Synchronization</p>
+              <p>✅ No Timezone Confusion</p>
+              <p>✅ Enhanced Timer Validation</p>
+              <p>✅ Statistical Network Analysis</p>
+              <p>✅ Proper Question Loading Control</p>
+            </div>
+          )}
         </div>
       </div>
     );

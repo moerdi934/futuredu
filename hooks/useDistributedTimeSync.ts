@@ -1,16 +1,13 @@
-// ===================================
-// /hooks/useDistributedTimeSync.ts - ENHANCED FINAL VERSION
-// ===================================
-
+// hooks/useDistributedTimeSync.ts - FIXED VERSION WITH PROPER TIMEZONE HANDLING
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface TimeSyncConfig {
-  minInterval: number;    // Minimum interval (default: 2 minutes)
-  maxInterval: number;    // Maximum interval (default: 5 minutes) 
-  focusThreshold: number; // Re-sync threshold when tab focused (default: 1 minute)
-  jumpThreshold: number;  // Time jump detection threshold (default: 60 seconds - more lenient)
-  maxRetries: number;     // Max retry attempts (default: 3)
-  samplesCount: number;   // Number of samples for statistical analysis (default: 5)
+  minInterval: number;    
+  maxInterval: number;    
+  focusThreshold: number; 
+  jumpThreshold: number;  
+  maxRetries: number;     
+  samplesCount: number;   
 }
 
 interface TimeSyncState {
@@ -39,10 +36,10 @@ interface TimeSyncSample {
 
 export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
   const defaultConfig: TimeSyncConfig = {
-    minInterval: 2 * 60 * 1000,   // 2 minutes
-    maxInterval: 5 * 60 * 1000,   // 5 minutes
-    focusThreshold: 1 * 60 * 1000, // 1 minute
-    jumpThreshold: 60 * 1000,      // 60 seconds - much more lenient
+    minInterval: 2 * 60 * 1000,   
+    maxInterval: 5 * 60 * 1000,   
+    focusThreshold: 1 * 60 * 1000, 
+    jumpThreshold: 60 * 1000,      
     maxRetries: 3,
     samplesCount: 5
   };
@@ -52,7 +49,7 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
   const [state, setState] = useState<TimeSyncState>({
     timeOffset: 0,
     networkLatency: 0,
-    timezoneOffset: 0,
+    timezoneOffset: 0, // FIXED: Initialize to 0, don't auto-calculate
     lastSyncTime: 0,
     isOnline: navigator.onLine,
     syncCount: 0,
@@ -66,24 +63,20 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
   const retryCountRef = useRef(0);
   const samplesHistoryRef = useRef<TimeSyncSample[]>([]);
 
-  // Generate random interval between min and max
   const generateRandomInterval = useCallback(() => {
     const { minInterval, maxInterval } = finalConfig;
     return Math.floor(Math.random() * (maxInterval - minInterval + 1)) + minInterval;
   }, [finalConfig]);
 
-  // Statistical analysis helper
-  const analyzesamples = useCallback((samples: TimeSyncSample[]) => {
+  const analyzeSamples = useCallback((samples: TimeSyncSample[]) => {
     if (samples.length === 0) return null;
 
     const offsets = samples.map(s => s.timeOffset);
     const latencies = samples.map(s => s.estimatedLatency);
     
-    // Calculate means
     const offsetMean = offsets.reduce((a, b) => a + b, 0) / offsets.length;
     const latencyMean = latencies.reduce((a, b) => a + b, 0) / latencies.length;
     
-    // Calculate standard deviations
     const offsetStdDev = Math.sqrt(
       offsets.reduce((sq, n) => sq + Math.pow(n - offsetMean, 2), 0) / offsets.length
     );
@@ -92,7 +85,6 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
       latencies.reduce((sq, n) => sq + Math.pow(n - latencyMean, 2), 0) / latencies.length
     );
 
-    // Remove outliers (beyond 2 standard deviations)
     const filteredSamples = samples.filter(sample => 
       Math.abs(sample.timeOffset - offsetMean) <= 2 * offsetStdDev &&
       Math.abs(sample.estimatedLatency - latencyMean) <= 2 * latencyStdDev
@@ -100,7 +92,6 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
 
     if (filteredSamples.length === 0) return null;
 
-    // Recalculate with filtered samples
     const filteredOffsets = filteredSamples.map(s => s.timeOffset);
     const filteredLatencies = filteredSamples.map(s => s.estimatedLatency);
     
@@ -108,7 +99,6 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
     const finalLatency = filteredLatencies.reduce((a, b) => a + b, 0) / filteredLatencies.length;
     const reliability = filteredSamples.length / samples.length;
     
-    // Calculate final standard deviation
     const finalOffsetStdDev = Math.sqrt(
       filteredOffsets.reduce((sq, n) => sq + Math.pow(n - finalOffset, 2), 0) / filteredOffsets.length
     );
@@ -124,7 +114,7 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
     };
   }, []);
 
-  // Enhanced sync function with statistical analysis
+  // CRITICAL FIX: Enhanced sync function with proper timezone handling
   const syncTime = useCallback(async (reason: string = 'manual') => {
     if (syncInProgressRef.current) {
       console.log('Sync already in progress, skipping...');
@@ -134,14 +124,13 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
     syncInProgressRef.current = true;
     
     try {
-      console.log(`🔄 Starting enhanced time sync (${reason}) with ${finalConfig.samplesCount} samples...`);
+      console.log(`🔄 Starting FIXED time sync (${reason}) with proper timezone handling...`);
       
       const samples: TimeSyncSample[] = [];
       
-      // Collect multiple samples for statistical analysis
       for (let i = 0; i < finalConfig.samplesCount; i++) {
         try {
-          const clientRequestTime = Date.now();
+          const clientRequestTime = Date.now(); // Client UTC timestamp
           
           const response = await fetch('/api/time', {
             method: 'GET',
@@ -153,7 +142,7 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
             }
           });
 
-          const clientReceiveTime = Date.now();
+          const clientReceiveTime = Date.now(); // Client UTC timestamp
 
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -165,27 +154,28 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
             throw new Error(data.error || 'Server returned error');
           }
 
-          // Calculate network timing
+          // CRITICAL FIX: Both serverTime and clientTime are UTC timestamps
+          // No timezone conversion needed for the main sync logic
           const roundTripTime = clientReceiveTime - clientRequestTime;
           const estimatedLatency = roundTripTime / 2;
           
-          // Calculate time offset (compensating for network delay)
+          // FIXED: Calculate pure network offset without timezone confusion
+          // Both times are UTC, so this is pure network + clock drift
           const estimatedServerRequestTime = data.serverTime + estimatedLatency;
-          const timeOffset = estimatedServerRequestTime - clientRequestTime;
+          const networkClockOffset = estimatedServerRequestTime - clientRequestTime;
 
           samples.push({
             clientRequestTime,
             clientReceiveTime,
             serverRequestTime: data.serverTime,
-            serverResponseTime: data.serverTime, // Assuming minimal processing time
-            serverTime: data.serverTime,
+            serverResponseTime: data.serverTime,
+            serverTime: data.serverTime, // Always UTC
             roundTripTime,
             estimatedLatency,
-            timeOffset,
-            utcOffset: data.utcOffset || 0
+            timeOffset: networkClockOffset, // Pure network + clock offset
+            utcOffset: data.utcOffset || 0 // Server's timezone info (for reference only)
           });
 
-          // Small delay between samples to avoid overwhelming server
           if (i < finalConfig.samplesCount - 1) {
             await new Promise(resolve => setTimeout(resolve, 100));
           }
@@ -199,19 +189,16 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
         throw new Error('All time sync samples failed');
       }
 
-      // Analyze samples statistically
-      const analysis = analyzesamples(samples);
+      const analysis = analyzeSamples(samples);
       
       if (!analysis) {
         throw new Error('Statistical analysis failed - all samples were outliers');
       }
 
-      // Calculate timezone offset
-      const serverUtcOffset = samples[0].utcOffset;
-      const clientUtcOffset = new Date().getTimezoneOffset();
-      const timezoneOffsetDiff = (serverUtcOffset - clientUtcOffset) * 60 * 1000;
-
-      // Store samples history (keep last 20 samples for trend analysis)
+      // CRITICAL FIX: Don't add timezone compensation to time offset
+      // The timeOffset should only compensate for network latency and clock drift
+      // Timezone differences should be handled separately if needed
+      
       samplesHistoryRef.current = [...samplesHistoryRef.current, ...analysis.filteredSamples].slice(-20);
 
       const now = Date.now();
@@ -220,9 +207,9 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
 
       setState(prev => ({
         ...prev,
-        timeOffset: analysis.timeOffset,
+        timeOffset: analysis.timeOffset, // Pure network + clock offset
         networkLatency: analysis.networkLatency,
-        timezoneOffset: timezoneOffsetDiff,
+        timezoneOffset: 0, // FIXED: Set to 0 - no timezone compensation in sync
         lastSyncTime: now,
         syncCount: prev.syncCount + 1,
         nextSyncTime: nextSyncTime,
@@ -230,14 +217,14 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
         offsetStdDev: analysis.offsetStdDev
       }));
 
-      retryCountRef.current = 0; // Reset retry counter on success
+      retryCountRef.current = 0;
 
-      console.log(`✅ Enhanced time sync successful (${reason}):`, {
-        timeOffset: Math.round(analysis.timeOffset),
-        networkLatency: Math.round(analysis.networkLatency),
-        timezoneOffset: Math.round(timezoneOffsetDiff),
+      console.log(`✅ FIXED time sync successful (${reason}):`, {
+        timeOffset: Math.round(analysis.timeOffset) + 'ms (network + clock drift only)',
+        networkLatency: Math.round(analysis.networkLatency) + 'ms',
+        timezoneOffset: '0ms (no timezone compensation)',
         reliability: Math.round(analysis.reliability * 100) + '%',
-        offsetStdDev: Math.round(analysis.offsetStdDev),
+        offsetStdDev: Math.round(analysis.offsetStdDev) + 'ms',
         samplesUsed: `${analysis.samplesUsed}/${analysis.totalSamples}`,
         syncCount: state.syncCount + 1,
         nextSyncIn: Math.round(nextInterval / 1000 / 60) + ' minutes'
@@ -260,14 +247,13 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
         console.warn('Max retries reached, using existing offset');
       }
 
-      return state.timeOffset; // Return existing offset on failure
+      return state.timeOffset;
 
     } finally {
       syncInProgressRef.current = false;
     }
-  }, [finalConfig, generateRandomInterval, analyzesamples, state.timeOffset, state.syncCount]);
+  }, [finalConfig, generateRandomInterval, analyzeSamples, state.timeOffset, state.syncCount]);
 
-  // Schedule next sync with random interval
   const scheduleNextSync = useCallback(() => {
     if (syncTimeoutRef.current) {
       clearTimeout(syncTimeoutRef.current);
@@ -279,30 +265,30 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
     if (timeUntilNextSync > 0) {
       syncTimeoutRef.current = setTimeout(() => {
         syncTime('scheduled');
-        scheduleNextSync(); // Schedule the next one
+        scheduleNextSync();
       }, timeUntilNextSync);
 
-      console.log(`📅 Next enhanced sync scheduled in ${Math.round(timeUntilNextSync / 1000 / 60)} minutes`);
+      console.log(`📅 Next FIXED sync scheduled in ${Math.round(timeUntilNextSync / 1000 / 60)} minutes`);
     }
   }, [state.nextSyncTime, syncTime]);
 
-  // Get server-adjusted time with all compensations
+  // CRITICAL FIX: getServerTime should return synchronized UTC time
   const getServerTime = useCallback(() => {
-    return Date.now() + state.timeOffset - state.timezoneOffset;
-  }, [state.timeOffset, state.timezoneOffset]);
+    // Return client time + network/clock offset (both in UTC)
+    // Do NOT subtract timezone offset here
+    return Date.now() + state.timeOffset;
+  }, [state.timeOffset]);
 
-  // Enhanced time jump detection with adaptive thresholds
   const detectTimeJump = useCallback((currentTime: number, lastTime: number) => {
     if (lastTime === 0) return false;
     
     const deltaTime = currentTime - lastTime;
-    const expectedDelta = 1000; // 1 second expected
+    const expectedDelta = 1000;
     const actualDeviation = Math.abs(deltaTime - expectedDelta);
     
-    // Adaptive threshold based on network conditions and reliability
     const baseThreshold = finalConfig.jumpThreshold;
-    const networkTolerance = Math.max(5000, state.networkLatency * 3); // At least 5s or 3x latency
-    const reliabilityFactor = Math.max(0.5, state.reliability); // Lower reliability = higher tolerance
+    const networkTolerance = Math.max(5000, state.networkLatency * 3);
+    const reliabilityFactor = Math.max(0.5, state.reliability);
     const finalThreshold = Math.max(baseThreshold, networkTolerance / reliabilityFactor);
     
     const isJump = actualDeviation > finalThreshold;
@@ -310,15 +296,15 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
     if (isJump) {
       const severity = actualDeviation > finalThreshold * 3 ? 'EXTREME' : 'MODERATE';
       
-      console.warn(`🚨 ${severity} time jump detected:`, {
-        deviation: Math.round(actualDeviation),
-        threshold: Math.round(finalThreshold),
-        networkLatency: Math.round(state.networkLatency),
+      console.warn(`🚨 ${severity} time jump detected (FIXED):`, {
+        deviation: Math.round(actualDeviation) + 'ms',
+        threshold: Math.round(finalThreshold) + 'ms',
+        networkLatency: Math.round(state.networkLatency) + 'ms',
         reliability: Math.round(state.reliability * 100) + '%',
-        severity
+        severity,
+        timezoneImpact: 'None (timezone compensation disabled)'
       });
       
-      // Only force sync on extreme jumps
       if (severity === 'EXTREME') {
         console.log('🔄 Extreme jump detected, forcing immediate sync...');
         setTimeout(() => forceSyncNow(), 1000);
@@ -328,24 +314,22 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
     return isJump;
   }, [finalConfig.jumpThreshold, state.networkLatency, state.reliability]);
 
-  // Force immediate sync (for time jump detection)
   const forceSyncNow = useCallback(() => {
-    console.log('🔄 Force sync triggered with enhanced analysis');
+    console.log('🔄 Force sync triggered (FIXED version)');
     return syncTime('force');
   }, [syncTime]);
 
   // Initial sync on mount
   useEffect(() => {
-    console.log('🚀 Initializing enhanced distributed time sync...', {
+    console.log('🚀 Initializing FIXED distributed time sync...', {
       syncInterval: `${Math.round(finalConfig.minInterval / 1000 / 60)}-${Math.round(finalConfig.maxInterval / 1000 / 60)} minutes`,
       jumpThreshold: `${finalConfig.jumpThreshold / 1000} seconds`,
       samples: finalConfig.samplesCount,
-      features: ['Statistical Analysis', 'Outlier Removal', 'Adaptive Thresholds', 'Timezone Compensation']
+      features: ['Pure UTC Sync', 'No Timezone Compensation', 'Network Latency Only', 'Statistical Analysis']
     });
     syncTime('initial');
   }, []);
 
-  // Schedule periodic syncs
   useEffect(() => {
     if (state.nextSyncTime > 0) {
       scheduleNextSync();
@@ -358,27 +342,25 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
     };
   }, [state.nextSyncTime, scheduleNextSync]);
 
-  // Handle tab focus events - more intelligent sync
   useEffect(() => {
     const handleFocus = () => {
       if (!state.isOnline) return;
       
       const timeSinceLastSync = Date.now() - state.lastSyncTime;
       
-      // More intelligent focus sync based on reliability and time elapsed
       const shouldSync = timeSinceLastSync > finalConfig.focusThreshold || 
                         state.reliability < 0.7 || 
                         state.offsetStdDev > 1000;
       
       if (shouldSync) {
-        console.log('🎯 Tab focused - conditions met for sync:', {
+        console.log('🎯 Tab focused - FIXED sync conditions met:', {
           timeSinceLastSync: Math.round(timeSinceLastSync / 1000 / 60) + ' min',
           reliability: Math.round(state.reliability * 100) + '%',
-          offsetStdDev: Math.round(state.offsetStdDev)
+          offsetStdDev: Math.round(state.offsetStdDev) + 'ms'
         });
         syncTime('focus');
       } else {
-        console.log('🎯 Tab focused - sync not needed (conditions good)');
+        console.log('🎯 Tab focused - FIXED sync not needed (conditions good)');
       }
     };
 
@@ -397,16 +379,15 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
     };
   }, [state.lastSyncTime, state.isOnline, state.reliability, state.offsetStdDev, finalConfig.focusThreshold, syncTime]);
 
-  // Handle network status changes
   useEffect(() => {
     const handleOnline = () => {
-      console.log('🌐 Network restored - performing enhanced sync');
+      console.log('🌐 Network restored - performing FIXED sync');
       setState(prev => ({ ...prev, isOnline: true }));
       syncTime('online');
     };
 
     const handleOffline = () => {
-      console.log('❌ Network lost - pausing enhanced sync');
+      console.log('❌ Network lost - pausing FIXED sync');
       setState(prev => ({ ...prev, isOnline: false }));
       
       if (syncTimeoutRef.current) {
@@ -423,21 +404,20 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
     };
   }, [syncTime]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (syncTimeoutRef.current) {
         clearTimeout(syncTimeoutRef.current);
       }
-      console.log('🧹 Enhanced time sync cleanup completed');
+      console.log('🧹 FIXED time sync cleanup completed');
     };
   }, []);
 
   return {
-    // Enhanced State
+    // State (FIXED)
     timeOffset: state.timeOffset,
     networkLatency: state.networkLatency,
-    timezoneOffset: state.timezoneOffset,
+    timezoneOffset: state.timezoneOffset, // Always 0 in fixed version
     lastSyncTime: state.lastSyncTime,
     isOnline: state.isOnline,
     syncCount: state.syncCount,
@@ -445,13 +425,13 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
     reliability: state.reliability,
     offsetStdDev: state.offsetStdDev,
     
-    // Functions
-    getServerTime,
+    // Functions (FIXED)
+    getServerTime, // Returns UTC time + network offset only
     syncTime,
     forceSyncNow,
     detectTimeJump,
     
-    // Enhanced Utils
+    // Utils (FIXED)
     getNextSyncIn: () => Math.max(0, state.nextSyncTime - Date.now()),
     getSyncStats: () => ({
       totalSyncs: state.syncCount,
@@ -466,21 +446,21 @@ export const useDistributedTimeSync = (config?: Partial<TimeSyncConfig>) => {
       samplesHistory: samplesHistoryRef.current.length,
       qualityScore: state.reliability > 0.8 && state.offsetStdDev < 500 ? 'EXCELLENT' :
                    state.reliability > 0.6 && state.offsetStdDev < 1000 ? 'GOOD' :
-                   state.reliability > 0.4 ? 'FAIR' : 'POOR'
+                   state.reliability > 0.4 ? 'FAIR' : 'POOR',
+      syncMode: 'FIXED_UTC_ONLY'
     }),
     
-    // Configuration info
     config: finalConfig,
     
-    // Advanced diagnostics
     getDiagnostics: () => ({
       samplesHistory: samplesHistoryRef.current,
       currentThreshold: Math.max(finalConfig.jumpThreshold, state.networkLatency * 3),
       adaptiveFeatures: {
         networkCompensation: state.networkLatency > 0,
-        timezoneCompensation: state.timezoneOffset !== 0,
+        timezoneCompensation: false, // DISABLED in fixed version
         reliabilityTracking: state.reliability > 0,
-        statisticalAnalysis: true
+        statisticalAnalysis: true,
+        pureUtcSync: true // NEW: Indicates this is the fixed version
       }
     })
   };
