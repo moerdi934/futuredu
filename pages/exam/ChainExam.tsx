@@ -1,4 +1,4 @@
-// ChainExam Component - FIXED HOOKS COMPLIANCE & CONTEXT SYNC
+// ChainExam Component - COMPLETE FIXED VERSION
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
@@ -8,9 +8,9 @@ import CryptoJS from 'crypto-js';
 import ChangeTabPrevention from '../../components/ChangeTabPrevention';
 import { useDistributedTimeSync } from '../../hooks/useDistributedTimeSync';
 import { useSecureTimer } from '../../hooks/useSecureTimer';
-import { useExam } from '../../context/ExamContext'; // FIXED: Import at top level
-import { useAuth } from '../../context/AuthContext'; // FIXED: Import at top level
-import ExamDBService from '../../utils/ExamDBService'; // FIXED: Import at top level
+import { useExam } from '../../context/ExamContext';
+import { useAuth } from '../../context/AuthContext';
+import ExamDBService from '../../utils/ExamDBService';
 
 // Import hidden timer contexts
 import { UserPurchaseProvider, useUserPurchase } from '../../context/UserPurchaseContext';
@@ -505,35 +505,35 @@ const ExamContent: React.FC = () => {
   }, []);
 
   // FIXED: Memoize timer options to prevent re-initialization
-const timerOptions = useMemo(() => ({
-  examId: exam_string || 'default',
-  onTimeout: () => {
-    console.log('🚨 Timer timeout callback triggered');
-    handleAutoSubmit('timer_expired');
-  },
-  onSecurityBreach,
-  onValidationFailure
-}), [exam_string, handleAutoSubmit, onSecurityBreach, onValidationFailure]);
+  const timerOptions = useMemo(() => ({
+    examId: exam_string || 'default',
+    onTimeout: () => {
+      console.log('🚨 Timer timeout callback triggered');
+      handleAutoSubmit('timer_expired');
+    },
+    onSecurityBreach,
+    onValidationFailure
+  }), [exam_string, handleAutoSubmit, onSecurityBreach, onValidationFailure]);
 
   // Initialize secure timer with Web Worker
-const {
-  timeLeft,
-  elapsed,
-  isRunning,
-  isValid: timerValid,
-  isInitialized: timerInitialized,
-  error: timerError,
-  backupTimers,
-  securityValidation,
-  startTimer,
-  stopTimer,
-  restoreTimer,
-  validateIntegrity,
-  getBackupTimerValues,
-  formatTime,
-  isExpired,
-  updateNetworkInfo 
-} = useSecureTimer(timerOptions);
+  const {
+    timeLeft,
+    elapsed,
+    isRunning,
+    isValid: timerValid,
+    isInitialized: timerInitialized,
+    error: timerError,
+    backupTimers,
+    securityValidation,
+    startTimer,
+    stopTimer,
+    restoreTimer,
+    validateIntegrity,
+    getBackupTimerValues,
+    formatTime,
+    isExpired,
+    updateNetworkInfo 
+  } = useSecureTimer(timerOptions);
 
   // FIXED: Stable effect for network info updates
   useEffect(() => {
@@ -553,44 +553,42 @@ const {
     });
   }, [networkLatency, reliability, offsetStdDev, timezoneOffset, updateNetworkInfo]);
 
-
   useEffect(() => {
-  console.log('🔄 Exam string changed, resetting component state:', {
-    newExamString: exam_string,
-    previousState: {
-      loading,
-      questions: questions.length,
-      currentQuestion,
-      isRunning
+    console.log('🔄 Exam string changed, resetting component state:', {
+      newExamString: exam_string,
+      previousState: {
+        loading,
+        questions: questions.length,
+        currentQuestion,
+        isRunning
+      }
+    });
+
+    if (exam_string) {
+      // Stop current timer
+      console.log('⏹️ Stopping current timer for exam change');
+      stopTimer();
+      
+      // Reset all exam-specific state
+      console.log('🔄 Resetting exam state for new exam');
+      setLoading(true);
+      setError(false);
+      setSubmitError(false);
+      setQuestions([]);
+      setAnswers({});
+      setCurrentQuestion(0);
+      setExamSession(null);
+      setIsTimeExpired(false);
+      setExamName(null);
+      setDuration(0);
+      
+      // Reset initialization flags
+      initializationAttempted.current = false;
+      submissionInProgress.current = false;
+      
+      console.log('✅ Component state reset completed for exam:', exam_string);
     }
-  });
-
-  if (exam_string) {
-    // Stop current timer
-    console.log('⏹️ Stopping current timer for exam change');
-    stopTimer();
-    
-    // Reset all exam-specific state
-    console.log('🔄 Resetting exam state for new exam');
-    setLoading(true);
-    setError(false);
-    setSubmitError(false);
-    setQuestions([]);
-    setAnswers({});
-    setCurrentQuestion(0);
-    setExamSession(null);
-    setIsTimeExpired(false);
-    setExamName(null);
-    setDuration(0);
-    
-    // Reset initialization flags
-    initializationAttempted.current = false;
-    submissionInProgress.current = false;
-    
-    console.log('✅ Component state reset completed for exam:', exam_string);
-  }
-}, [exam_string, stopTimer]); // Key dependency on exam_string
-
+  }, [exam_string, stopTimer]);
 
   // FIXED: Stable effect for time jump detection
   useEffect(() => {
@@ -684,25 +682,23 @@ const {
   ]);
 
   useEffect(() => {
-  return () => {
-    console.log('🧹 ChainExam component unmounting, cleaning up...');
-    
-    // Stop timer
-    stopTimer();
-    
-    // Clear any pending timeouts/intervals
-    if (autoSaveRef.current) {
-      clearInterval(autoSaveRef.current);
-    }
-    
-    // Finalize current question time if needed
-    if (exam_string && questions.length > 0) {
-      ExamDBService.finalizeCurrentQuestionTime(exam_string).catch(console.error);
-    }
-  };
-}, [exam_string, questions.length, stopTimer]);
-
-
+    return () => {
+      console.log('🧹 ChainExam component unmounting, cleaning up...');
+      
+      // Stop timer
+      stopTimer();
+      
+      // Clear any pending timeouts/intervals
+      if (autoSaveRef.current) {
+        clearInterval(autoSaveRef.current);
+      }
+      
+      // Finalize current question time if needed
+      if (exam_string && questions.length > 0) {
+        ExamDBService.finalizeCurrentQuestionTime(exam_string).catch(console.error);
+      }
+    };
+  }, [exam_string, questions.length, stopTimer]);
 
   // Decryption function
   const decryptData = (encryptedData: string) => {
@@ -758,360 +754,346 @@ const {
     return false;
   }, [isClient, examOrder, exam_string, router]);
 
-  // FIXED: Load existing session WITH better debug and error handling
-const loadExistingSession = useCallback(async (currentExamId?: number) => {
-  console.log('🔄 loadExistingSession called:', {
-    isClient,
-    currentExamId,
-    examId,
-    examScheduleId,
-    timerInitialized // Add this to debug
-  });
-  
-  if (!isClient) {
-    console.log('❌ loadExistingSession: Prerequisites not met');
-    return false;
-  }
-  
-  const examIdToUse = currentExamId || examId;
-  
-  if (!examScheduleId || !examIdToUse) {
-    console.log('❌ loadExistingSession: Missing IDs', { examScheduleId, examIdToUse });
-    return false;
-  }
-  
-  console.log('🔄 loadExistingSession: Starting API call...');
-  
-  try {
-    const axios = (await import('axios')).default;
-    const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+  // FIXED: Simplified loadExistingSession that ALWAYS uses the passed currentExamId
+  const loadExistingSession = useCallback(async (currentExamId: number) => {
+    console.log('🔄 loadExistingSession called with EXPLICIT exam_id:', {
+      currentExamId,
+      examScheduleId,
+      exam_string,
+      timerInitialized
+    });
     
-    const response = await axios.get(
-      `${process.env.NEXT_PUBLIC_API_URL}/examSession/active`,
-      {
-        params: {
-          exam_schedule_id: examScheduleId,
-          exam_id: examIdToUse
-        },
-        withCredentials: true,
-        headers: {
-          Authorization: `Bearer ${authToken}`
-        }
-      }
-    );
-      
-    console.log('✅ loadExistingSession API response:', response.data.status);
-      
-    if (response.data.status === 'success' && response.data.data) {
-      const sessionData = response.data.data;
-      
-      console.log('✅ Session data loaded:', {
-        name: sessionData.name,
-        isAutoMove: sessionData.is_auto_move,
-        startTime: sessionData.start_time,
-        endTime: sessionData.end_time
+    if (!isClient || !examScheduleId || !currentExamId) {
+      console.log('❌ loadExistingSession: Missing prerequisites', {
+        isClient,
+        examScheduleId, 
+        currentExamId
       });
-      
-      setExamName(sessionData.name);
-      
-      // Check accessibility
-      const serverNow = enhancedGetServerTime();
-      const sessionStartTime = new Date(sessionData.start_time).getTime();
-      
-      if (!sessionData.is_auto_move && serverNow < sessionStartTime) {
-        console.log('⏰ Exam not yet accessible');
-        setExamStartTime(sessionData.start_time);
-        setShowNotAccessibleModal(true);
-        setIsExamAccessible(false);
-        return false;
-      }
-      
-      console.log('✅ Exam is accessible');
-      setIsExamAccessible(true);
-      
-      // Set answers
-      setAnswers(sessionData.answers || {});
-      await ExamDBService.saveAnswers(exam_string, sessionData.answers || {});
-      
-      // Handle question elapsed times
-      if (sessionData.question_elapsed_times) {
-        const examData = await ExamDBService.getExamData(exam_string) || { 
-          answers: sessionData.answers || {}, 
-          startTime: enhancedGetServerTime(),
-          questionElapsedTimes: {},
-          lastQuestionVisit: null
-        };
-        examData.questionElapsedTimes = sessionData.question_elapsed_times;
-        const db = await ExamDBService.db;
-        await db.put('examData', examData, exam_string);
-      }
-      
-      // Calculate remaining time
-      const endTime = new Date(sessionData.end_time).getTime();
-      const remainingTime = Math.max(0, Math.floor((endTime - serverNow) / 1000));
-      
-      console.log('⏱️ Time calculation:', {
-        endTime,
-        serverNow,
-        remainingTime,
-        timerInitialized
-      });
-      
-      if (remainingTime > 0) {
-        console.log('🚀 Attempting to start timer with remaining time:', remainingTime);
-        
-        // CRITICAL FIX: Use a more reliable timer initialization check
-        const startTimerWithRetry = () => {
-          console.log('🔄 Attempting timer start, current state:', {
-            timerInitialized,
-            remainingTime,
-            timerError
-          });
-          
-          if (timerInitialized) {
-            console.log('✅ Timer ready, starting immediately');
-            const success = startTimer(remainingTime);
-            console.log('Timer start result:', { success });
-            return true;
-          }
-          
-          return false;
-        };
-        
-        // Try to start immediately
-        if (startTimerWithRetry()) {
-          console.log('✅ Timer started immediately');
-        } else {
-          console.log('⚠️ Timer not ready, implementing retry mechanism...');
-          
-          let attempts = 0;
-          const maxAttempts = 20; // Increased attempts
-          
-          const waitForTimer = setInterval(() => {
-            attempts++;
-            console.log(`⏳ Timer retry attempt ${attempts}/${maxAttempts}`, {
-              timerInitialized,
-              timerError,
-              remainingTime
-            });
-            
-            if (startTimerWithRetry()) {
-              clearInterval(waitForTimer);
-              console.log('✅ Timer started after retry');
-            } else if (attempts >= maxAttempts) {
-              clearInterval(waitForTimer);
-              console.warn('❌ Timer start failed after max attempts - starting fallback');
-              
-              // Force start with fallback (this should always work)
-              try {
-                const success = startTimer(remainingTime);
-                console.log('Fallback timer result:', { success });
-              } catch (error) {
-                console.error('❌ Even fallback timer failed:', error);
-              }
-            }
-          }, 500); // Check every 500ms instead of 1s
-        }
-      } else {
-        console.log('❌ Time already expired', { remainingTime });
-        setIsTimeExpired(true);
-        handleAutoSubmit('session_expired');
-      }
-      
-      setExamSession(sessionData);
-      console.log('✅ loadExistingSession completed successfully');
-      return true;
-      
-    } else {
-      console.log('ℹ️ No active session found');
       return false;
     }
-  } catch (error) {
-    console.error('❌ loadExistingSession: API error', error);
     
-    // Fallback: load saved answers
+    console.log('🌐 Making API call with EXPLICIT exam_id:', currentExamId);
+    
     try {
-      const savedAnswers = await ExamDBService.getAnswers(exam_string);
-      if (savedAnswers) {
-        console.log('📂 Using saved answers fallback');
-        setAnswers(savedAnswers);
-      }
-    } catch (fallbackError) {
-      console.error('❌ Fallback failed:', fallbackError);
-    }
-    
-    return false;
-  }
-}, [
-  isClient, 
-  examId, 
-  examScheduleId, 
-  enhancedGetServerTime, 
-  exam_string, 
-  timerInitialized, 
-  timerError, // Add this dependency
-  startTimer, 
-  handleAutoSubmit
-]);
-
-  // FIXED: Fetch questions with GUARANTEED loading=false
-const fetchQuestions = useCallback(async () => {
-  console.log('🔄 fetchQuestions called:', {
-    isClient,
-    exam_string,
-    examOrder: examOrder.length,
-    examScheduleId
-  });
-  
-  if (!isClient) {
-    console.log('❌ fetchQuestions: Not client side');
-    return;
-  }
-  
-  if (!exam_string) {
-    console.log('❌ fetchQuestions: No exam_string');
-    return;
-  }
-  
-  // CRITICAL: Validate that this exam_string exists in examOrder
-  const currentExam = examOrder.find((exam) => exam.exam_string === exam_string);
-  if (!currentExam) {
-    console.error('❌ fetchQuestions: exam_string not found in examOrder:', {
-      exam_string,
-      availableExams: examOrder.map(e => e.exam_string)
-    });
-    setError(true);
-    setLoading(false);
-    return;
-  }
-  
-  console.log('🔄 fetchQuestions: Starting API call for exam:', currentExam.name);
-  
-  try {
-    const axios = (await import('axios')).default;
-    
-    console.log('✅ Found current exam', { 
-      examId: currentExam.exam_id,
-      examName: currentExam.name
-    });
-    setExamId(currentExam.exam_id);
-    setExamName(currentExam.name); // Set exam name immediately
-    
-    const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-    
-    console.log('🌐 Making API call to fetch questions...');
-    
-    const response = await axios.get(
-      `${process.env.NEXT_PUBLIC_API_URL}/questions/byExamString?exam_string=${exam_string}`,
-      {
-        withCredentials: true,
-        headers: {
-          Authorization: `Bearer ${authToken}`
+      const axios = (await import('axios')).default;
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/examSession/active`,
+        {
+          params: {
+            exam_schedule_id: examScheduleId,
+            exam_id: currentExamId // ALWAYS use the passed exam_id
+          },
+          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${authToken}`
+          }
         }
+      );
+        
+      console.log('✅ API response for exam_id:', currentExamId, '- status:', response.data.status);
+      console.log('📝 API URL was:', `${process.env.NEXT_PUBLIC_API_URL}/examSession/active?exam_schedule_id=${examScheduleId}&exam_id=${currentExamId}`);
+        
+      if (response.data.status === 'success' && response.data.data) {
+        const sessionData = response.data.data;
+        
+        console.log('✅ Session data loaded for exam_id:', currentExamId, {
+          name: sessionData.name,
+          isAutoMove: sessionData.is_auto_move,
+          startTime: sessionData.start_time,
+          endTime: sessionData.end_time
+        });
+        
+        setExamName(sessionData.name);
+        
+        // Check accessibility
+        const serverNow = enhancedGetServerTime();
+        const sessionStartTime = new Date(sessionData.start_time).getTime();
+        
+        if (!sessionData.is_auto_move && serverNow < sessionStartTime) {
+          console.log('⏰ Exam not yet accessible for exam_id:', currentExamId);
+          setExamStartTime(sessionData.start_time);
+          setShowNotAccessibleModal(true);
+          setIsExamAccessible(false);
+          return false;
+        }
+        
+        console.log('✅ Exam is accessible for exam_id:', currentExamId);
+        setIsExamAccessible(true);
+        
+        // Set answers
+        setAnswers(sessionData.answers || {});
+        await ExamDBService.saveAnswers(exam_string, sessionData.answers || {});
+        
+        // Handle question elapsed times
+        if (sessionData.question_elapsed_times) {
+          const examData = await ExamDBService.getExamData(exam_string) || { 
+            answers: sessionData.answers || {}, 
+            startTime: enhancedGetServerTime(),
+            questionElapsedTimes: {},
+            lastQuestionVisit: null
+          };
+          examData.questionElapsedTimes = sessionData.question_elapsed_times;
+          const db = await ExamDBService.db;
+          await db.put('examData', examData, exam_string);
+        }
+        
+        // Calculate remaining time
+        const endTime = new Date(sessionData.end_time).getTime();
+        const remainingTime = Math.max(0, Math.floor((endTime - serverNow) / 1000));
+        
+        console.log('⏱️ Time calculation for exam_id:', currentExamId, {
+          endTime,
+          serverNow,
+          remainingTime,
+          timerInitialized
+        });
+        
+        if (remainingTime > 0) {
+          console.log('🚀 Attempting to start timer for exam_id:', currentExamId, 'with remaining time:', remainingTime);
+          
+          const startTimerWithRetry = () => {
+            if (timerInitialized) {
+              console.log('✅ Timer ready, starting for exam_id:', currentExamId);
+              const success = startTimer(remainingTime);
+              console.log('Timer start result for exam_id:', currentExamId, { success });
+              return true;
+            }
+            return false;
+          };
+          
+          // Try to start immediately
+          if (!startTimerWithRetry()) {
+            console.log('⚠️ Timer not ready for exam_id:', currentExamId, ', implementing retry...');
+            
+            let attempts = 0;
+            const maxAttempts = 10;
+            
+            const waitForTimer = setInterval(() => {
+              attempts++;
+              console.log(`⏳ Timer retry ${attempts}/${maxAttempts} for exam_id:`, currentExamId);
+              
+              if (startTimerWithRetry()) {
+                clearInterval(waitForTimer);
+                console.log('✅ Timer started after retry for exam_id:', currentExamId);
+              } else if (attempts >= maxAttempts) {
+                clearInterval(waitForTimer);
+                console.warn('❌ Timer start failed for exam_id:', currentExamId);
+                
+                // Force start with fallback
+                try {
+                  const success = startTimer(remainingTime);
+                  console.log('Fallback timer result for exam_id:', currentExamId, { success });
+                } catch (error) {
+                  console.error('❌ Even fallback timer failed for exam_id:', currentExamId, error);
+                }
+              }
+            }, 500);
+          }
+        } else {
+          console.log('❌ Time already expired for exam_id:', currentExamId, { remainingTime });
+          setIsTimeExpired(true);
+          handleAutoSubmit('session_expired');
+        }
+        
+        setExamSession(sessionData);
+        console.log('✅ loadExistingSession completed successfully for exam_id:', currentExamId);
+        return true;
+        
+      } else {
+        console.log('ℹ️ No active session found for exam_id:', currentExamId);
+        return false;
       }
-    );
-
-    console.log('✅ API response received:', response.status);
-
-    if (!response.data || !response.data.encryptedData) {
-      throw new Error('Invalid API response - no encrypted data');
+    } catch (error) {
+      console.error('❌ loadExistingSession API error for exam_id:', currentExamId, error);
+      
+      // Fallback: load saved answers
+      try {
+        const savedAnswers = await ExamDBService.getAnswers(exam_string);
+        if (savedAnswers) {
+          console.log('📂 Using saved answers fallback for exam_id:', currentExamId);
+          setAnswers(savedAnswers);
+        }
+      } catch (fallbackError) {
+        console.error('❌ Fallback failed for exam_id:', currentExamId, fallbackError);
+      }
+      
+      return false;
     }
+  }, [
+    isClient, 
+    examScheduleId, 
+    enhancedGetServerTime, 
+    exam_string, 
+    timerInitialized, 
+    timerError,
+    startTimer, 
+    handleAutoSubmit
+  ]);
 
-    const decryptedData = decryptData(response.data.encryptedData);
-    const parsedData = JSON.parse(decryptedData);
-    
-    console.log('✅ Data decrypted and parsed:', {
-      questionsCount: parsedData.questions?.length,
-      duration: parsedData.duration,
-      questionsExist: !!parsedData.questions,
-      firstQuestionId: parsedData.questions?.[0]?.id,
-      examName: currentExam.name
+  // FIXED: fetchQuestions with immediate exam_id synchronization
+  const fetchQuestions = useCallback(async () => {
+    console.log('🔄 fetchQuestions called:', {
+      isClient,
+      exam_string,
+      examOrder: examOrder.length,
+      examScheduleId
     });
     
-    if (!parsedData.questions || parsedData.questions.length === 0) {
-      throw new Error('No questions found in response');
+    if (!isClient) {
+      console.log('❌ fetchQuestions: Not client side');
+      return;
     }
     
-    // Check if exam is accessible BEFORE setting questions
-    if (examSession && !examSession.is_auto_move && enhancedGetServerTime() < new Date(examSession.start_time).getTime()) {
-      console.log('⏰ Exam not accessible yet');
-      setExamStartTime(examSession.start_time);
-      setShowNotAccessibleModal(true);
-      setIsExamAccessible(false);
+    if (!exam_string) {
+      console.log('❌ fetchQuestions: No exam_string');
+      return;
+    }
+    
+    // CRITICAL: Validate that this exam_string exists in examOrder
+    const currentExam = examOrder.find((exam) => exam.exam_string === exam_string);
+    if (!currentExam) {
+      console.error('❌ fetchQuestions: exam_string not found in examOrder:', {
+        exam_string,
+        availableExams: examOrder.map(e => e.exam_string)
+      });
+      setError(true);
       setLoading(false);
       return;
     }
+    
+    console.log('🔄 fetchQuestions: Starting API call for exam:', {
+      examString: exam_string,
+      examName: currentExam.name,
+      examId: currentExam.exam_id
+    });
+    
+    // CRITICAL FIX: Set examId IMMEDIATELY and SYNCHRONOUSLY
+    console.log('🚨 CRITICAL: Setting examId IMMEDIATELY from', examId, 'to', currentExam.exam_id);
+    setExamId(currentExam.exam_id);
+    setExamName(currentExam.name);
+    
+    try {
+      const axios = (await import('axios')).default;
+      
+      console.log('✅ Found current exam', { 
+        examId: currentExam.exam_id,
+        examName: currentExam.name,
+        examString: exam_string
+      });
+      
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      
+      console.log('🌐 Making API call to fetch questions...');
+      
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/questions/byExamString?exam_string=${exam_string}`,
+        {
+          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${authToken}`
+          }
+        }
+      );
 
-    // Set questions and duration FIRST
-    console.log('📝 Setting questions and duration...');
-    setQuestions(parsedData.questions);
-    setDuration(parsedData.duration);
-    
-    console.log('✅ Questions and duration set successfully');
-    
-    // IMMEDIATELY set loading to false - DON'T wait for session loading
-    console.log('🚨 FORCING loading to false immediately');
-    setLoading(false);
-    setError(false);
-    
-    // Load session in background WITHOUT blocking
-    console.log('🔄 Loading session in background...');
-    setTimeout(async () => {
+      console.log('✅ API response received:', response.status);
+
+      if (!response.data || !response.data.encryptedData) {
+        throw new Error('Invalid API response - no encrypted data');
+      }
+
+      const decryptedData = decryptData(response.data.encryptedData);
+      const parsedData = JSON.parse(decryptedData);
+      
+      console.log('✅ Data decrypted and parsed:', {
+        questionsCount: parsedData.questions?.length,
+        duration: parsedData.duration,
+        questionsExist: !!parsedData.questions,
+        firstQuestionId: parsedData.questions?.[0]?.id,
+        examName: currentExam.name,
+        examId: currentExam.exam_id
+      });
+      
+      if (!parsedData.questions || parsedData.questions.length === 0) {
+        throw new Error('No questions found in response');
+      }
+      
+      // Check if exam is accessible BEFORE setting questions
+      if (examSession && !examSession.is_auto_move && enhancedGetServerTime() < new Date(examSession.start_time).getTime()) {
+        console.log('⏰ Exam not accessible yet');
+        setExamStartTime(examSession.start_time);
+        setShowNotAccessibleModal(true);
+        setIsExamAccessible(false);
+        setLoading(false);
+        return;
+      }
+
+      // Set questions and duration FIRST
+      console.log('📝 Setting questions and duration...');
+      setQuestions(parsedData.questions);
+      setDuration(parsedData.duration);
+      
+      console.log('✅ Questions and duration set successfully');
+      
+      // IMMEDIATELY set loading to false - DON'T wait for session loading
+      console.log('🚨 FORCING loading to false immediately');
+      setLoading(false);
+      setError(false);
+      
+      // CRITICAL FIX: Load session IMMEDIATELY with the CORRECT exam_id
+      console.log('🔄 Loading session IMMEDIATELY with CORRECT exam_id:', currentExam.exam_id);
+      
+      // Execute session loading immediately with CORRECT exam_id
       try {
         const sessionLoaded = await loadExistingSession(currentExam.exam_id);
         
         if (!sessionLoaded) {
-          console.log('⚠️ No session loaded, starting fresh timer');
-          // Start fresh timer if no session found
+          console.log('⚠️ No session loaded for exam_id:', currentExam.exam_id, ', starting fresh timer');
           if (parsedData.duration > 0 && timerInitialized) {
             const timerDuration = parsedData.duration * 60;
-            console.log('🚀 Starting fresh timer with duration:', timerDuration);
+            console.log('🚀 Starting fresh timer for exam_id:', currentExam.exam_id, 'duration:', timerDuration);
             const success = startTimer(timerDuration);
             console.log('Fresh timer start result:', { success });
-          } else {
-            console.log('⚠️ Cannot start timer:', {
-              duration: parsedData.duration,
-              timerInitialized
-            });
           }
         } else {
-          console.log('✅ Session loaded successfully');
+          console.log('✅ Session loaded successfully for exam_id:', currentExam.exam_id);
         }
       } catch (sessionError) {
-        console.error('❌ Background session loading failed:', sessionError);
+        console.error('❌ Session loading failed for exam_id:', currentExam.exam_id, sessionError);
         // Still try to start fresh timer
         if (parsedData.duration > 0 && timerInitialized) {
           const timerDuration = parsedData.duration * 60;
-          console.log('🚀 Starting fresh timer after session error:', timerDuration);
+          console.log('🚀 Starting fresh timer after session error for exam_id:', currentExam.exam_id);
           const success = startTimer(timerDuration);
           console.log('Fresh timer start result:', { success });
         }
       }
-    }, 100); // Small delay to ensure UI updates first
-    
-    console.log('✅ fetchQuestions completed - UI should be ready now');
-    
-  } catch (error) {
-    console.error('❌ fetchQuestions failed:', error);
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      response: error.response?.data
-    });
-    setError(true);
-    setLoading(false);
-  }
-}, [
-  isClient, 
-  exam_string,
-  examOrder,
-  examScheduleId,
-  examSession, 
-  enhancedGetServerTime, 
-  loadExistingSession, 
-  timerInitialized, 
-  startTimer
-]);
+      
+      console.log('✅ fetchQuestions completed for exam_id:', currentExam.exam_id);
+      
+    } catch (error) {
+      console.error('❌ fetchQuestions failed for exam_id:', currentExam.exam_id, error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        response: error.response?.data
+      });
+      setError(true);
+      setLoading(false);
+    }
+  }, [
+    isClient, 
+    exam_string,
+    examOrder,
+    examScheduleId,
+    examId, // Keep this dependency to track changes
+    examSession, 
+    enhancedGetServerTime, 
+    loadExistingSession, 
+    timerInitialized, 
+    startTimer
+  ]);
 
   // Save exam session
   const saveExamSession = useCallback(async () => {
@@ -1281,80 +1263,81 @@ const fetchQuestions = useCallback(async () => {
   }, [handleAutoSubmit]);
 
   // Handle next exam
-const handleNextExam = useCallback(async () => {
-  console.log('🔄 handleNextExam called:', {
-    nextExam,
-    currentExamIndex,
-    examOrderLength: examOrder.length
-  });
+  const handleNextExam = useCallback(async () => {
+    console.log('🔄 handleNextExam called:', {
+      nextExam,
+      currentExamIndex,
+      examOrderLength: examOrder.length
+    });
 
-  if (nextExam) {
-    const nextExamString = examOrder[currentExamIndex + 1].exam_string;
-    console.log('➡️ Navigating to next exam:', nextExamString);
-    
-    // Close modal first
-    setShowModalNext(false);
-    
-    // CRITICAL: Stop current timer before navigation
-    console.log('⏹️ Stopping current timer before navigation');
-    stopTimer();
-    
-    // Clear current exam data from IndexedDB
-    try {
-      await ExamDBService.deleteExamData(exam_string);
-      console.log('🗑️ Cleared IndexedDB data for:', exam_string);
-    } catch (error) {
-      console.warn('⚠️ Failed to clear IndexedDB:', error);
+    if (nextExam) {
+      const nextExamString = examOrder[currentExamIndex + 1].exam_string;
+      console.log('➡️ Navigating to next exam:', nextExamString);
+      
+      // Close modal first
+      setShowModalNext(false);
+      
+      // CRITICAL: Stop current timer before navigation
+      console.log('⏹️ Stopping current timer before navigation');
+      stopTimer();
+      
+      // Clear current exam data from IndexedDB
+      try {
+        await ExamDBService.deleteExamData(exam_string);
+        console.log('🗑️ Cleared IndexedDB data for:', exam_string);
+      } catch (error) {
+        console.warn('⚠️ Failed to clear IndexedDB:', error);
+      }
+      
+      // Reset component state immediately
+      console.log('🔄 Resetting state before navigation');
+      setLoading(true);
+      setError(false);
+      setSubmitError(false);
+      setQuestions([]);
+      setAnswers({});
+      setCurrentQuestion(0);
+      setExamSession(null);
+      setIsTimeExpired(false);
+      setExamName(null);
+      setDuration(0);
+      setIsInitializing(false);
+      
+      // Reset refs
+      initializationAttempted.current = false;
+      submissionInProgress.current = false;
+      
+      // Small delay to ensure state is reset before navigation
+      setTimeout(() => {
+        console.log('🚀 Navigating to:', `/exam/${nextExamString}`);
+        router.push(`/exam/${nextExamString}`);
+      }, 100);
+      
+    } else {
+      console.log('🏠 No more exams, returning to home');
+      
+      // Stop timer
+      stopTimer();
+      
+      // Clear all exam data
+      if (clearExamData) {
+        clearExamData();
+      }
+      
+      // Navigate to origin
+      router.push(originPath || '/');
     }
-    
-    // Reset component state immediately
-    console.log('🔄 Resetting state before navigation');
-    setLoading(true);
-    setError(false);
-    setSubmitError(false);
-    setQuestions([]);
-    setAnswers({});
-    setCurrentQuestion(0);
-    setExamSession(null);
-    setIsTimeExpired(false);
-    setExamName(null);
-    setDuration(0);
-    setIsInitializing(false);
-    
-    // Reset refs
-    initializationAttempted.current = false;
-    submissionInProgress.current = false;
-    
-    // Small delay to ensure state is reset before navigation
-    setTimeout(() => {
-      console.log('🚀 Navigating to:', `/exam/${nextExamString}`);
-      router.push(`/exam/${nextExamString}`);
-    }, 100);
-    
-  } else {
-    console.log('🏠 No more exams, returning to home');
-    
-    // Stop timer
-    stopTimer();
-    
-    // Clear all exam data
-    if (clearExamData) {
-      clearExamData();
-    }
-    
-    // Navigate to origin
-    router.push(originPath || '/');
-  }
-}, [
-  nextExam, 
-  examOrder, 
-  currentExamIndex, 
-  clearExamData, 
-  router, 
-  originPath, 
-  exam_string,
-  stopTimer
-]);
+  }, [
+    nextExam, 
+    examOrder, 
+    currentExamIndex, 
+    clearExamData, 
+    router, 
+    originPath, 
+    exam_string,
+    stopTimer
+  ]);
+
   // Handle retry submit
   const handleRetrySubmit = () => {
     handleAutoSubmit('retry');
@@ -1557,40 +1540,41 @@ const handleNextExam = useCallback(async () => {
   }, [isClient, isExamAccessible, examStartTime, enhancedGetServerTime, handleRetryAccess]);
 
   // Add debug effect to track loading state changes
-useEffect(() => {
-  console.log('🔄 Loading state comprehensive check:', {
-    loading,
-    isInitializing,
-    questionsLength: questions.length,
-    isClient,
-    exam_string,
-    examScheduleId,
+// Add debug effect to track loading state changes
+  useEffect(() => {
+    console.log('🔄 Loading state comprehensive check:', {
+      loading,
+      isInitializing,
+      questionsLength: questions.length,
+      isClient,
+      exam_string,
+      examScheduleId,
+      contextExamScheduleId,
+      timerInitialized,
+      timerError
+    });
+    
+    // Force loading to false if we have all required data
+    if (loading && questions.length > 0 && isClient && exam_string && examScheduleId) {
+      console.log('🚨 All data ready, forcing loading to false');
+      setLoading(false);
+    }
+    
+    // Additional check for timer readiness
+    if (!loading && !isInitializing && questions.length > 0 && !timerInitialized && !timerError) {
+      console.log('⏰ Questions ready but timer still initializing...');
+    }
+  }, [
+    loading, 
+    isInitializing, 
+    questions.length, 
+    isClient, 
+    exam_string, 
+    examScheduleId, 
     contextExamScheduleId,
     timerInitialized,
     timerError
-  });
-  
-  // Force loading to false if we have all required data
-  if (loading && questions.length > 0 && isClient && exam_string && examScheduleId) {
-    console.log('🚨 All data ready, forcing loading to false');
-    setLoading(false);
-  }
-  
-  // Additional check for timer readiness
-  if (!loading && !isInitializing && questions.length > 0 && !timerInitialized && !timerError) {
-    console.log('⏰ Questions ready but timer still initializing...');
-  }
-}, [
-  loading, 
-  isInitializing, 
-  questions.length, 
-  isClient, 
-  exam_string, 
-  examScheduleId, 
-  contextExamScheduleId,
-  timerInitialized,
-  timerError
-]);
+  ]);
 
   // Auto-save effect
   useEffect(() => {
@@ -1614,90 +1598,89 @@ useEffect(() => {
   }, [isClient, loading, answers, timeLeft, isRunning, saveExamSession]);
 
   // FIXED - Main initialization effect - ONLY runs when examScheduleId is available
-useEffect(() => {
-  console.log('🔍 Main init effect triggered:', {
-    isClient,
-    exam_string,
-    examScheduleId,
-    contextExamScheduleId,
-    examOrder: examOrder.length,
-    initializationAttempted: initializationAttempted.current,
-    loading,
-    isInitializing,
-    timerInitialized,
-    questionsLength: questions.length
-  });
-  
-  if (!isClient) {
-    console.log('❌ Not client side yet');
-    return;
-  }
-  
-  if (!exam_string) {
-    console.log('❌ No exam_string yet');
-    return;
-  }
-  
-  // CRITICAL: Wait for examScheduleId to be available (from context sync)
-  if (!examScheduleId) {
-    console.log('❌ Exam schedule ID not ready yet - waiting for context sync');
-    return;
-  }
-  
-  if (examOrder.length === 0) {
-    console.log('❌ Exam order not ready yet');
-    return;
-  }
-  
-  // Prevent multiple initialization attempts for the SAME exam
-  const initKey = `${exam_string}-${examScheduleId}`;
-  if (initializationAttempted.current === initKey) {
-    console.log('⏸️ Initialization already attempted for this exam, skipping...');
-    return;
-  }
-  
-  initializationAttempted.current = initKey; // Store unique key instead of boolean
-  
-  console.log('🚀 Main initialization starting for exam:', exam_string, 'with scheduleId:', examScheduleId);
-  
-  setIsInitializing(true);
-  
-  const initExam = async () => {
-    try {
-      console.log('📚 About to fetch questions for exam:', exam_string);
-      await fetchQuestions();
-      console.log('✅ fetchQuestions completed');
-    } catch (error) {
-      console.error('❌ Initialization failed:', error);
-      setError(true);
-      setLoading(false);
-    } finally {
-      console.log('🏁 Setting isInitializing to false');
-      setIsInitializing(false);
+  useEffect(() => {
+    console.log('🔍 Main init effect triggered:', {
+      isClient,
+      exam_string,
+      examScheduleId,
+      contextExamScheduleId,
+      examOrder: examOrder.length,
+      initializationAttempted: initializationAttempted.current,
+      loading,
+      isInitializing,
+      timerInitialized,
+      questionsLength: questions.length
+    });
+    
+    if (!isClient) {
+      console.log('❌ Not client side yet');
+      return;
     }
-  };
-  
-  initExam();
-}, [
-  isClient, 
-  exam_string, 
-  examScheduleId,
-  examOrder.length,
-  fetchQuestions
-]);
+    
+    if (!exam_string) {
+      console.log('❌ No exam_string yet');
+      return;
+    }
+    
+    // CRITICAL: Wait for examScheduleId to be available (from context sync)
+    if (!examScheduleId) {
+      console.log('❌ Exam schedule ID not ready yet - waiting for context sync');
+      return;
+    }
+    
+    if (examOrder.length === 0) {
+      console.log('❌ Exam order not ready yet');
+      return;
+    }
+    
+    // Prevent multiple initialization attempts for the SAME exam
+    const initKey = `${exam_string}-${examScheduleId}`;
+    if (initializationAttempted.current === initKey) {
+      console.log('⏸️ Initialization already attempted for this exam, skipping...');
+      return;
+    }
+    
+    initializationAttempted.current = initKey; // Store unique key instead of boolean
+    
+    console.log('🚀 Main initialization starting for exam:', exam_string, 'with scheduleId:', examScheduleId);
+    
+    setIsInitializing(true);
+    
+    const initExam = async () => {
+      try {
+        console.log('📚 About to fetch questions for exam:', exam_string);
+        await fetchQuestions();
+        console.log('✅ fetchQuestions completed');
+      } catch (error) {
+        console.error('❌ Initialization failed:', error);
+        setError(true);
+        setLoading(false);
+      } finally {
+        console.log('🏁 Setting isInitializing to false');
+        setIsInitializing(false);
+      }
+    };
+    
+    initExam();
+  }, [
+    isClient, 
+    exam_string, 
+    examScheduleId,
+    examOrder.length,
+    fetchQuestions
+  ]);
 
   // FIXED: Better timer state logging in useEffect
-useEffect(() => {
-  console.log('🔍 Timer state changed:', {
-    timerInitialized,
-    timerError,
-    isRunning,
-    timeLeft,
-    workerReady: getBackupTimerValues().workerReady,
-    fallbackActive: getBackupTimerValues().fallbackActive
-  });
-}, [timerInitialized, timerError, isRunning, timeLeft, getBackupTimerValues]);
-
+  useEffect(() => {
+    console.log('🔍 Timer state changed:', {
+      timerInitialized,
+      timerError,
+      isRunning,
+      timeLeft,
+      workerReady: getBackupTimerValues().workerReady,
+      fallbackActive: getBackupTimerValues().fallbackActive
+    });
+  }, [timerInitialized, timerError, isRunning, timeLeft, getBackupTimerValues]);
 
   // Retry on error
   useEffect(() => {
@@ -1712,30 +1695,30 @@ useEffect(() => {
   }, [isClient, error, isInitializing, fetchQuestions]);
 
   // Show loading while waiting for context or during initialization
-if (!isClient || loading || isInitializing) {
-  return (
-    <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
-      <div className="tw-text-center">
-        <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
-        <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">
-          {isInitializing ? 'Initializing Exam...' : 'Loading Exam...'}
-        </h2>
-        <p className="tw-text-violet-600 tw-mt-2">Please wait while we prepare your questions</p>
-        <div className="tw-text-sm tw-text-gray-500 tw-mt-2 tw-space-y-1">
-          <p>Current Exam: {exam_string || 'Loading...'}</p>
-          <p>Context Schedule ID: {contextExamScheduleId || 'Loading...'}</p>
-          <p>Component Schedule ID: {examScheduleId || 'Loading...'}</p>
-          <p>Time sync: {syncCount} syncs, offset: {Math.round(timeOffset)}ms</p>
-          <p>Worker timer: {timerInitialized ? 'Initialized' : 'Loading...'}</p>
-          <p>Questions: {questions.length} loaded</p>
-          <p>Status: {isInitializing ? 'Initializing' : loading ? 'Loading' : 'Ready'}</p>
-          <p>Init Key: {initializationAttempted.current || 'None'}</p>
+  if (!isClient || loading || isInitializing) {
+    return (
+      <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
+        <div className="tw-text-center">
+          <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
+          <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">
+            {isInitializing ? 'Initializing Exam...' : 'Loading Exam...'}
+          </h2>
+          <p className="tw-text-violet-600 tw-mt-2">Please wait while we prepare your questions</p>
+          <div className="tw-text-sm tw-text-gray-500 tw-mt-2 tw-space-y-1">
+            <p>Current Exam: {exam_string || 'Loading...'}</p>
+            <p>Context Schedule ID: {contextExamScheduleId || 'Loading...'}</p>
+            <p>Component Schedule ID: {examScheduleId || 'Loading...'}</p>
+            <p>Time sync: {syncCount} syncs, offset: {Math.round(timeOffset)}ms</p>
+            <p>Worker timer: {timerInitialized ? 'Initialized' : 'Loading...'}</p>
+            <p>Questions: {questions.length} loaded</p>
+            <p>Status: {isInitializing ? 'Initializing' : loading ? 'Loading' : 'Ready'}</p>
+            <p>Init Key: {initializationAttempted.current || 'None'}</p>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
-  
+    );
+  }
+    
   if (error) {
     return (
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
@@ -1755,7 +1738,7 @@ if (!isClient || loading || isInitializing) {
             Retry Now
           </Button>
         </div>
-        </div>
+      </div>
     );
   }
   
