@@ -1,4 +1,4 @@
-// ChainExam Component - PRODUCTION CLEAN VERSION
+// ChainExam Component - COMPLETE FIXED VERSION WITH TIMEZONE HANDLING
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
@@ -32,7 +32,7 @@ const Latex = dynamic(() => import('react-latex-next'), { ssr: false });
 
 import { Container, Row, Col, ProgressBar, Card, Button, Modal, Alert, Toast, Badge } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Clock, Loader2, Check, AlertCircle, FileCheck, ArrowRight, Eye, EyeOff, Shield, ShieldAlert, Activity, Wifi, WifiOff, Home } from 'lucide-react';
+import { Clock, Loader2, Check, AlertCircle, FileCheck, ArrowRight, Eye, EyeOff, Shield, ShieldAlert, Activity, Wifi, WifiOff } from 'lucide-react';
 
 interface Question {
   id: number;
@@ -133,7 +133,7 @@ const HiddenTimerValidator: React.FC<{
           Math.abs(mainTimer - (workerBackupTimers.inventory || 0))
         );
         
-        // Even more lenient validation - only trigger on EXTREME discrepancies
+        // FIXED: Even more lenient validation - only trigger on EXTREME discrepancies
         const isValid = 
           validationResult.isValid &&
           validationResult.confidence >= 0.3 && // Even lower threshold
@@ -144,18 +144,32 @@ const HiddenTimerValidator: React.FC<{
           maxDeviation <= 300; // Allow up to 5 minutes deviation
         
         if (!isValid) {
-          // Only trigger auto-submit if deviation is EXTREME (>10 minutes)
+          // FIXED: Only log warning, don't auto-submit unless EXTREME deviation
+          console.warn('⚠️ Timer validation warning (not critical):', {
+            mainTimer,
+            maxDeviation,
+            confidence: validationResult.confidence
+          });
+          
+          // FIXED: Only trigger auto-submit if deviation is EXTREME (>10 minutes)
           if (maxDeviation > 600 || validationResult.confidence < 0.1) {
+            console.error('🚨 EXTREME timer discrepancy detected - auto-submit triggered');
             onSecurityBreach();
           }
+        } else {
+          console.log('✅ Timer validation passed', {
+            deviation: maxDeviation,
+            confidence: validationResult.confidence
+          });
         }
         
       } catch (error) {
-        // Don't auto-submit on validation errors, just log
+        console.error('Timer validation error:', error);
+        // FIXED: Don't auto-submit on validation errors, just log
       }
     };
     
-    // Even less frequent validation - every 3-5 minutes
+    // FIXED: Even less frequent validation - every 3-5 minutes
     const intervalId = setInterval(() => {
       validateTimers();
     }, 3 * 60 * 1000 + Math.random() * 2 * 60 * 1000);
@@ -187,10 +201,12 @@ const FocusDetector: React.FC<{
     
     const handleVisibilityChange = () => {
       const isVisible = !document.hidden;
+      console.log(`🔄 Visibility changed: ${isVisible ? 'visible' : 'hidden'}`);
       setIsPageVisible(isVisible);
       
       if (isVisible) {
         // Reset when page becomes visible
+        console.log('🎯 Page refocused - Reset warning');
         lastFocusTime.current = Date.now();
         setFocusWarningTime(0);
         setShowWarning(false);
@@ -201,6 +217,7 @@ const FocusDetector: React.FC<{
         }
       } else {
         // Start countdown when page loses focus - increased to 15 seconds
+        console.log('👁️ Page unfocused - Starting 15 second countdown');
         setShowWarning(true);
         
         let countdown = 15;
@@ -218,6 +235,7 @@ const FocusDetector: React.FC<{
         
         // Auto-submit after 15 seconds
         focusTimeoutRef.current = setTimeout(() => {
+          console.log('🚨 Auto-submit triggered: Page unfocused for 15 seconds');
           clearInterval(countdownInterval);
           setShowWarning(false);
           onAutoSubmit('focus_lost');
@@ -260,22 +278,88 @@ const FocusDetector: React.FC<{
 
 FocusDetector.displayName = 'FocusDetector';
 
-// Main Exam Component
+// Security Status Display
+const SecurityStatusDisplay: React.FC<{
+  securityValidation: any;
+  timerState: any;
+}> = React.memo(({ securityValidation, timerState }) => {
+  const getSecurityColor = () => {
+    if (!securityValidation.consistent || !securityValidation.backupValid || !timerState.isValid) {
+      return 'danger';
+    }
+    if (!securityValidation.heartbeatActive || !securityValidation.checksumValid) {
+      return 'warning';
+    }
+    return 'success';
+  };
+  
+  const getSecurityIcon = () => {
+    const color = getSecurityColor();
+    if (color === 'danger') return <ShieldAlert className="tw-text-red-600" size={16} />;
+    if (color === 'warning') return <Shield className="tw-text-yellow-600" size={16} />;
+    return <Shield className="tw-text-green-600" size={16} />;
+  };
+  
+  const getSecurityText = () => {
+    const color = getSecurityColor();
+    if (color === 'danger') return 'Security Alert';
+    if (color === 'warning') return 'Security Warning';
+    return 'Security OK';
+  };
+  
+  return (
+    <div className="tw-fixed tw-top-4 tw-left-4 tw-z-40">
+      <div className="tw-bg-white tw-rounded-lg tw-shadow-lg tw-p-3 tw-border tw-max-w-xs">
+        <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
+          {getSecurityIcon()}
+          <span className="tw-font-semibold tw-text-sm">{getSecurityText()}</span>
+        </div>
+        
+        <div className="tw-space-y-1 tw-text-xs">
+          <div className="tw-flex tw-items-center tw-gap-2">
+            <div className={`tw-w-2 tw-h-2 tw-rounded-full ${securityValidation.consistent ? 'tw-bg-green-500' : 'tw-bg-red-500'}`} />
+            <span>Timer Consistency</span>
+          </div>
+          <div className="tw-flex tw-items-center tw-gap-2">
+            <div className={`tw-w-2 tw-h-2 tw-rounded-full ${securityValidation.backupValid ? 'tw-bg-green-500' : 'tw-bg-red-500'}`} />
+            <span>Backup Validation</span>
+          </div>
+          <div className="tw-flex tw-items-center tw-gap-2">
+            <div className={`tw-w-2 tw-h-2 tw-rounded-full ${securityValidation.heartbeatActive ? 'tw-bg-green-500' : 'tw-bg-red-500'}`} />
+            <span>Worker Heartbeat</span>
+          </div>
+          <div className="tw-flex tw-items-center tw-gap-2">
+            <div className={`tw-w-2 tw-h-2 tw-rounded-full ${timerState.isValid ? 'tw-bg-green-500' : 'tw-bg-red-500'}`} />
+            <span>Timer Integrity</span>
+          </div>
+        </div>
+        
+        <Badge bg={getSecurityColor()} className="tw-mt-2 tw-text-xs">
+          {timerState.fallbackActive ? 'Fallback Mode' : 'Worker Timer Active'}
+        </Badge>
+      </div>
+    </div>
+  );
+});
+
+SecurityStatusDisplay.displayName = 'SecurityStatusDisplay';
+
+// Main Exam Component - COMPLETE FIXED VERSION
 const ExamContent: React.FC = () => {
   const [isClient, setIsClient] = useState(false);
   
-  // All hooks at TOP LEVEL - no conditional hooks
+  // FIXED: All hooks at TOP LEVEL - no conditional hooks
   const params = useParams();
   const router = useRouter();
   
-  // Context hooks at top level
+  // FIXED: Context hooks at top level
   const examContext = useExam();
   const authContext = useAuth();
   
-  // Memoize the exam_string to prevent re-initialization loops
+  // FIXED: Memoize the exam_string to prevent re-initialization loops
   const exam_string = useMemo(() => params?.exam_string as string, [params?.exam_string]);
 
-  // Initialize distributed time sync with stable config (memoized)
+  // FIXED: Initialize distributed time sync with stable config (memoized)
   const timeSyncConfig = useMemo(() => ({
     minInterval: 2 * 60 * 1000,    // 2 minutes
     maxInterval: 5 * 60 * 1000,    // 5 minutes  
@@ -297,7 +381,7 @@ const ExamContent: React.FC = () => {
     timezoneOffset
   } = useDistributedTimeSync(timeSyncConfig);
   
-  // More granular loading states
+  // ENHANCED: More granular loading states
   const [examId, setExamId] = useState<number | null>(null);
   const [examScheduleId, setExamScheduleId] = useState<string | null>(null);
   const [examName, setExamName] = useState<string | null>(null);
@@ -326,7 +410,7 @@ const ExamContent: React.FC = () => {
   const [originPath, setOriginPath] = useState<string>('/');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Enhanced loading control states
+  // NEW: Enhanced loading control states
   const [questionsForCurrentExam, setQuestionsForCurrentExam] = useState<Question[]>([]);
   const [currentExamQuestionIds, setCurrentExamQuestionIds] = useState<Set<number>>(new Set());
   const [isQuestionsReady, setIsQuestionsReady] = useState(false);
@@ -338,20 +422,11 @@ const ExamContent: React.FC = () => {
     sessionMatch: false
   });
 
-  // Fixed submission states
-  const [isLastExam, setIsLastExam] = useState(false);
-  const [finalSubmitSuccess, setFinalSubmitSuccess] = useState(false);
-  const [showFinalCompletionModal, setShowFinalCompletionModal] = useState(false);
-
-  // Fixed loading states for exam accessibility
-  const [isCheckingExamAccess, setIsCheckingExamAccess] = useState(true);
-  const [hasInitialAccessCheck, setHasInitialAccessCheck] = useState(false);
-
   const autoSaveRef = useRef<NodeJS.Timeout>();
   const submissionInProgress = useRef<boolean>(false);
   const initializationAttempted = useRef<boolean>(false);
 
-  // Get context data safely with proper checks
+  // FIXED: Get context data safely with proper checks
   const { 
     topicId: contextTopicId,
     examScheduleId: contextExamScheduleId,
@@ -374,29 +449,32 @@ const ExamContent: React.FC = () => {
     clearExamData: () => {}
   };
 
-  // Safe username extraction
+  // FIXED: Safe username extraction
   const { username, id: userId } = authContext || { username: null, id: null };
 
-  // Stable exam order
+  // FIXED: Stable exam order
   const examOrder = useMemo(() => contextExamOrder || [], [contextExamOrder]);
   const currentExamIndex = useMemo(() => 
     examOrder.findIndex((exam: ExamOrder) => exam.exam_string === exam_string),
     [examOrder, exam_string]
   );
 
-  // Check if this is the last exam
-  useEffect(() => {
-    const isLast = currentExamIndex === examOrder.length - 1;
-    setIsLastExam(isLast);
-  }, [currentExamIndex, examOrder.length, exam_string]);
-
-  // Enhanced validation for exam readiness
+  // NEW: Enhanced validation for exam readiness
   const validateExamReadiness = useCallback((
     targetExamString: string,
     targetExamId: number,
     targetQuestions: Question[],
     targetExamName: string
   ) => {
+    console.log('🔍 Validating exam readiness:', {
+      targetExamString,
+      targetExamId,
+      questionsCount: targetQuestions.length,
+      targetExamName,
+      currentExamString: exam_string,
+      currentExamId: examId
+    });
+
     // Check 1: Exam string must match current route
     const examStringMatch = targetExamString === exam_string;
     
@@ -420,21 +498,41 @@ const ExamContent: React.FC = () => {
     setExamDataConsistency(consistency);
 
     const isReady = examStringMatch && examIdMatch && questionsMatch && examNameMatch;
+    
+    console.log('✅ Exam readiness validation result:', {
+      isReady,
+      consistency,
+      currentExam: currentExam ? {
+        exam_string: currentExam.exam_string,
+        exam_id: currentExam.exam_id,
+        name: currentExam.name
+      } : 'not_found'
+    });
 
     return isReady;
   }, [exam_string, examId, examOrder]);
 
-  // Enhanced questions setter with validation
+  // NEW: Enhanced questions setter with validation
   const setQuestionsWithValidation = useCallback((
     newQuestions: Question[],
     forExamString: string,
     forExamId: number,
     forExamName: string
   ) => {
+    console.log('📝 Setting questions with validation:', {
+      forExamString,
+      forExamId,
+      forExamName,
+      questionsCount: newQuestions.length,
+      currentExamString: exam_string
+    });
+
     // Validate that these questions are for the current exam
     const isReady = validateExamReadiness(forExamString, forExamId, newQuestions, forExamName);
 
     if (isReady) {
+      console.log('✅ Questions validation passed - setting questions');
+      
       // Set the question IDs for this exam
       const questionIds = new Set(newQuestions.map(q => q.id));
       setCurrentExamQuestionIds(questionIds);
@@ -446,13 +544,18 @@ const ExamContent: React.FC = () => {
       setIsQuestionsReady(true);
       setLoading(false);
       setError(false);
+      
+      console.log('🎯 Questions successfully set for exam:', forExamString);
     } else {
+      console.warn('⚠️ Questions validation failed - keeping in loading state');
+      
       // Keep in loading state until proper questions arrive
       setIsQuestionsReady(false);
       setLoading(true);
       
       // Clear any existing questions that don't match
       if (lastLoadedExamString !== forExamString) {
+        console.log('🗑️ Clearing previous exam questions');
         setQuestions([]);
         setQuestionsForCurrentExam([]);
         setCurrentExamQuestionIds(new Set());
@@ -460,7 +563,7 @@ const ExamContent: React.FC = () => {
     }
   }, [exam_string, validateExamReadiness, lastLoadedExamString]);
 
-  // Enhanced auto-submit handler with proper final exam handling
+  // FIXED: Stable timer configuration with memoized callbacks
   const handleAutoSubmit = useCallback(async (reason = 'time_expired') => {
     if (submissionInProgress.current) return;
     
@@ -468,64 +571,60 @@ const ExamContent: React.FC = () => {
     setIsTimeExpired(true);
     setIsSubmitting(true);
     
+    console.log(`🚨 Auto-submit triggered: ${reason}`);
+    
     // Stop the Web Worker timer
     stopTimer();
     
-    // Always submit to server, but handle scoring based on exam position
-    const shouldScore = isLastExam && !nextExam;
-    
+    // Submit to server immediately
+    const shouldScore = !nextExam;
     const success = await submitToServer(shouldScore);
     
     if (success) {
       // Clear exam data
       await ExamDBService.deleteExamData(exam_string);
       
-      // Handle final exam completion vs next exam
-      if (isLastExam) {
-        setFinalSubmitSuccess(true);
-        setShowFinalCompletionModal(true);
+      // Determine next action
+      const nextExamIndex = currentExamIndex + 1;
+      const hasNextExam = nextExamIndex < examOrder.length;
+      
+      if (hasNextExam) {
+        setNextExam(examOrder[nextExamIndex]?.name || null);
+        setShowModalNext(true);
       } else {
-        // Determine next action for non-final exams
-        const nextExamIndex = currentExamIndex + 1;
-        const hasNextExam = nextExamIndex < examOrder.length;
-        
-        if (hasNextExam) {
-          setNextExam(examOrder[nextExamIndex]?.name || null);
-          setShowModalNext(true);
-        } else {
-          // Fallback: no more exams, go back to home
-          if (clearExamData) clearExamData();
-          router.push(originPath || '/try-out');
-        }
+        // No more exams, go back to home
+        if (clearExamData) clearExamData();
+        router.push(originPath || '/');
       }
     } else {
       setSubmitError(true);
-      if (isLastExam) {
-        setShowFinalCompletionModal(true);
-      } else {
-        setShowModalNext(true);
-      }
+      setShowModalNext(true);
     }
     
     setIsSubmitting(false);
     submissionInProgress.current = false;
-  }, [isLastExam, nextExam, currentExamIndex, examOrder, clearExamData, router, originPath, exam_string]);
+  }, [nextExam, currentExamIndex, examOrder, clearExamData, router, originPath, exam_string]);
 
   const onSecurityBreach = useCallback((reason: string, details?: any) => {
-    // Only auto-submit on EXTREME security breaches
+    // FIXED: Only auto-submit on EXTREME security breaches
     if (reason === 'extreme_time_jump' || reason === 'checksum_failed_with_timeout') {
+      console.error('🚨 EXTREME security breach - auto-submit:', reason, details);
       handleAutoSubmit(`extreme_security_breach_${reason}`);
+    } else {
+      console.warn('⚠️ Security warning logged (no auto-submit):', reason, details);
     }
   }, [handleAutoSubmit]);
 
   const onValidationFailure = useCallback((reason: string) => {
-    // Don't auto-submit on validation failures, just log
+    // FIXED: Don't auto-submit on validation failures, just log
+    console.warn('⚠️ Timer validation issue (no auto-submit):', reason);
   }, []);
 
-  // Memoize timer options to prevent re-initialization
+  // FIXED: Memoize timer options to prevent re-initialization
   const timerOptions = useMemo(() => ({
     examId: exam_string || 'default',
     onTimeout: () => {
+      console.log('🚨 Timer timeout callback triggered');
       handleAutoSubmit('timer_expired');
     },
     onSecurityBreach,
@@ -552,7 +651,7 @@ const ExamContent: React.FC = () => {
     updateNetworkInfo 
   } = useSecureTimer(timerOptions);
 
-  // Stable effect for network info updates
+  // FIXED: Stable effect for network info updates
   useEffect(() => {
     // Update secure timer with latest network information from time sync
     updateNetworkInfo({
@@ -561,20 +660,37 @@ const ExamContent: React.FC = () => {
       reliability: reliability || 1.0,
       offsetStdDev: offsetStdDev || 0
     });
+    
+    console.log('🔗 Network sync integration updated:', {
+      latency: Math.round(networkLatency || 0) + 'ms',
+      reliability: Math.round((reliability || 1.0) * 100) + '%',
+      timezoneOffset: Math.round((timezoneOffset || 0) / 1000 / 60) + 'min',
+      offsetStdDev: Math.round(offsetStdDev || 0) + 'ms'
+    });
   }, [networkLatency, reliability, offsetStdDev, timezoneOffset, updateNetworkInfo]);
 
-  // Exam string change handler with better state management
+  // ENHANCED: Exam string change handler with better state management
   useEffect(() => {
+    console.log('🔄 Exam string changed, enhanced reset:', {
+      newExamString: exam_string,
+      previousExamString: lastLoadedExamString,
+      currentQuestionsCount: questions.length,
+      isQuestionsReady,
+      examDataConsistency
+    });
+
     if (exam_string && exam_string !== lastLoadedExamString) {
       // Stop current timer
+      console.log('⏹️ Stopping current timer for exam change');
       stopTimer();
       
       // Enhanced state reset for exam change
+      console.log('🔄 Enhanced exam state reset for new exam');
       setLoading(true);
       setError(false);
       setSubmitError(false);
       
-      // Clear previous exam data immediately
+      // NEW: Clear previous exam data immediately
       setQuestions([]);
       setQuestionsForCurrentExam([]);
       setCurrentExamQuestionIds(new Set());
@@ -587,14 +703,6 @@ const ExamContent: React.FC = () => {
       setExamName(null);
       setDuration(0);
       
-      // Reset access check states
-      setIsCheckingExamAccess(true);
-      setHasInitialAccessCheck(false);
-      setIsExamAccessible(true);
-      setShowNotAccessibleModal(false);
-      setExamStartTime(null);
-      setCountdown("");
-      
       // Reset validation states
       setExamDataConsistency({
         examStringMatch: false,
@@ -606,10 +714,12 @@ const ExamContent: React.FC = () => {
       // Reset initialization flags
       initializationAttempted.current = false;
       submissionInProgress.current = false;
+      
+      console.log('✅ Enhanced state reset completed for exam:', exam_string);
     }
   }, [exam_string, lastLoadedExamString, questions.length, isQuestionsReady, examDataConsistency, stopTimer]);
 
-  // Stable effect for time jump detection
+  // FIXED: Stable effect for time jump detection
   useEffect(() => {
     let lastCheckTime = Date.now();
     
@@ -618,11 +728,13 @@ const ExamContent: React.FC = () => {
       const hasTimeJump = detectTimeJump(currentTime, lastCheckTime);
       
       if (hasTimeJump) {
+        console.warn('🚨 Time jump detected by distributed sync - validating timer integrity');
         validateIntegrity();
         
         // If time sync detects extreme jump, force sync
         const deviation = Math.abs(currentTime - lastCheckTime - 1000);
         if (deviation > 60000) { // 60 seconds - more lenient
+          console.log('🔄 Extreme time jump - forcing sync and timer validation');
           forceSyncNow();
         }
       }
@@ -633,19 +745,27 @@ const ExamContent: React.FC = () => {
     return () => clearInterval(timeJumpChecker);
   }, [detectTimeJump, validateIntegrity, forceSyncNow]);
 
-  // Use FIXED getServerTime for all time calculations
+  // CRITICAL FIX: Use FIXED getServerTime for all time calculations
   const enhancedGetServerTime = useCallback(() => {
     return getServerTime(); // This now returns pure UTC + network offset (no timezone confusion)
   }, [getServerTime]);
 
-  // Stable client-side initialization
+  // FIXED: Stable client-side initialization
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Stable context data sync - IMMEDIATE sync when context changes
+  // FIXED: Stable context data sync - IMMEDIATE sync when context changes
   useEffect(() => {
     if (!examContext) return;
+    
+    console.log('🔄 Context data changed, syncing to component state:', {
+      contextExamScheduleId,
+      contextTopicId,
+      contextExamType,
+      contextOriginPath,
+      examOrderLength: examOrder.length
+    });
     
     // IMMEDIATE synchronization - no delays
     if (contextOriginPath) {
@@ -660,9 +780,10 @@ const ExamContent: React.FC = () => {
       setExamType(contextExamType);
     }
     
-    // Set examScheduleId IMMEDIATELY when context updates
+    // CRITICAL: Set examScheduleId IMMEDIATELY when context updates
     if (contextExamScheduleId) {
       const scheduleIdStr = contextExamScheduleId.toString();
+      console.log('✅ IMMEDIATELY setting examScheduleId from context:', scheduleIdStr);
       setExamScheduleId(scheduleIdStr);
     }
     
@@ -674,6 +795,7 @@ const ExamContent: React.FC = () => {
       const currentExam = examOrder.find(exam => exam.exam_string === exam_string);
       
       if (currentExam && currentExam.exam_id) {
+        console.log('✅ Setting examId from examOrder:', currentExam.exam_id);
         setExamId(currentExam.exam_id);
         setExamType(currentExam.examType);
       }
@@ -691,6 +813,8 @@ const ExamContent: React.FC = () => {
 
   useEffect(() => {
     return () => {
+      console.log('🧹 ChainExam component unmounting, cleaning up...');
+      
       // Stop timer
       stopTimer();
       
@@ -760,16 +884,35 @@ const ExamContent: React.FC = () => {
     return false;
   }, [isClient, examOrder, exam_string, router]);
 
-  // Enhanced loadExistingSession with proper access control
+  // CRITICAL FIX: loadExistingSession with proper timezone handling
   const loadExistingSession = useCallback(async (currentExamId: number, expectedExamString: string) => {
+    console.log('🔄 FIXED loadExistingSession called:', {
+      currentExamId,
+      expectedExamString,
+      examScheduleId,
+      currentExamString: exam_string,
+      timerInitialized
+    });
+    
     if (!isClient || !examScheduleId || !currentExamId) {
+      console.log('❌ loadExistingSession: Missing prerequisites', {
+        isClient,
+        examScheduleId, 
+        currentExamId
+      });
       return false;
     }
 
     // VALIDATION: Ensure we're loading session for the correct exam
     if (expectedExamString !== exam_string) {
+      console.warn('⚠️ loadExistingSession: Exam string mismatch, aborting session load', {
+        expectedExamString,
+        currentExamString: exam_string
+      });
       return false;
     }
+    
+    console.log('🌐 Making API call with EXPLICIT exam_id:', currentExamId, 'for exam:', expectedExamString);
     
     try {
       const axios = (await import('axios')).default;
@@ -789,36 +932,47 @@ const ExamContent: React.FC = () => {
         }
       );
         
+      console.log('✅ API response for exam_id:', currentExamId, '- status:', response.data.status);
+      console.log('📝 API URL was:', `${process.env.NEXT_PUBLIC_API_URL}/examSession/active?exam_schedule_id=${examScheduleId}&exam_id=${currentExamId}`);
+      
       // DOUBLE CHECK: Ensure current exam hasn't changed during API call
       if (expectedExamString !== exam_string) {
+        console.warn('⚠️ Exam changed during session loading, discarding result');
         return false;
       }
         
       if (response.data.status === 'success' && response.data.data) {
         const sessionData = response.data.data;
         
+        console.log('✅ Session data loaded for exam_id:', currentExamId, {
+          name: sessionData.name,
+          isAutoMove: sessionData.is_auto_move,
+          startTime: sessionData.start_time,
+          endTime: sessionData.end_time
+        });
+        
+        // FINAL CHECK: Ensure exam hasn't changed
+        if (expectedExamString !== exam_string) {
+          console.warn('⚠️ Exam changed before applying session data, discarding');
+          return false;
+        }
+        
         setExamName(sessionData.name);
         
-        // Check exam accessibility FIRST before setting up timer
+        // CRITICAL FIX: Use enhancedGetServerTime() for all time calculations
         const serverNow = enhancedGetServerTime();
         const sessionStartTime = new Date(sessionData.start_time).getTime();
         
         if (!sessionData.is_auto_move && serverNow < sessionStartTime) {
-          // Set access state and show wait screen WITHOUT loading questions
+          console.log('⏰ Exam not yet accessible for exam_id:', currentExamId);
           setExamStartTime(sessionData.start_time);
-          setIsExamAccessible(false);
-          setIsCheckingExamAccess(false);
-          setHasInitialAccessCheck(true);
           setShowNotAccessibleModal(true);
-          setLoading(false); // Stop loading to show wait screen
-          
-          // Don't proceed with timer setup
+          setIsExamAccessible(false);
           return false;
         }
         
+        console.log('✅ Exam is accessible for exam_id:', currentExamId);
         setIsExamAccessible(true);
-        setIsCheckingExamAccess(false);
-        setHasInitialAccessCheck(true);
         
         // Set answers
         setAnswers(sessionData.answers || {});
@@ -828,7 +982,7 @@ const ExamContent: React.FC = () => {
         if (sessionData.question_elapsed_times) {
           const examData = await ExamDBService.getExamData(expectedExamString) || { 
             answers: sessionData.answers || {}, 
-            startTime: serverNow, // Use serverNow
+            startTime: serverNow, // FIXED: Use serverNow
             questionElapsedTimes: {},
             lastQuestionVisit: null
           };
@@ -837,16 +991,29 @@ const ExamContent: React.FC = () => {
           await db.put('examData', examData, expectedExamString);
         }
         
-        // Proper time calculation with synchronized time
+        // CRITICAL FIX: Proper time calculation with synchronized time
         const endTime = new Date(sessionData.end_time).getTime();
         
-        // Both serverNow and endTime are now properly synchronized
+        // FIXED: Both serverNow and endTime are now properly synchronized
         const remainingTime = Math.max(0, Math.floor((endTime - serverNow) / 1000));
         
+        console.log('⏱️ FIXED time calculation for exam_id:', currentExamId, {
+          endTime: new Date(endTime).toISOString(),
+          serverNow: new Date(serverNow).toISOString(),
+          remainingTime: remainingTime + ' seconds',
+          remainingMinutes: Math.floor(remainingTime / 60) + ' minutes',
+          timerInitialized,
+          timeSyncOffset: Math.round(timeOffset) + 'ms'
+        });
+        
         if (remainingTime > 0) {
+          console.log('🚀 Attempting to start timer for exam_id:', currentExamId, 'with remaining time:', remainingTime);
+          
           const startTimerWithRetry = () => {
             if (timerInitialized && expectedExamString === exam_string) {
+              console.log('✅ Timer ready, starting for exam_id:', currentExamId);
               const success = startTimer(remainingTime);
+              console.log('Timer start result for exam_id:', currentExamId, { success });
               return true;
             }
             return false;
@@ -854,62 +1021,68 @@ const ExamContent: React.FC = () => {
           
           // Try to start immediately
           if (!startTimerWithRetry()) {
+            console.log('⚠️ Timer not ready for exam_id:', currentExamId, ', implementing retry...');
+            
             let attempts = 0;
             const maxAttempts = 10;
             
             const waitForTimer = setInterval(() => {
               attempts++;
+              console.log(`⏳ Timer retry ${attempts}/${maxAttempts} for exam_id:`, currentExamId);
               
               // Check if exam has changed during retry
               if (expectedExamString !== exam_string) {
+                console.warn('⚠️ Exam changed during timer retry, aborting');
                 clearInterval(waitForTimer);
                 return;
               }
               
               if (startTimerWithRetry()) {
                 clearInterval(waitForTimer);
+                console.log('✅ Timer started after retry for exam_id:', currentExamId);
               } else if (attempts >= maxAttempts) {
                 clearInterval(waitForTimer);
+                console.warn('❌ Timer start failed for exam_id:', currentExamId);
                 
                 // Force start with fallback
                 if (expectedExamString === exam_string) {
                   try {
                     const success = startTimer(remainingTime);
+                    console.log('Fallback timer result for exam_id:', currentExamId, { success });
                   } catch (error) {
-                    // Error handling
+                    console.error('❌ Even fallback timer failed for exam_id:', currentExamId, error);
                   }
                 }
               }
             }, 500);
           }
         } else {
+          console.log('❌ Time already expired for exam_id:', currentExamId, { remainingTime });
           setIsTimeExpired(true);
           handleAutoSubmit('session_expired');
         }
         
         setExamSession(sessionData);
+        console.log('✅ FIXED loadExistingSession completed successfully for exam_id:', currentExamId);
         return true;
         
       } else {
-        // Even if no session, still check exam accessibility
-        setIsCheckingExamAccess(false);
-        setHasInitialAccessCheck(true);
+        console.log('ℹ️ No active session found for exam_id:', currentExamId);
         return false;
       }
     } catch (error) {
-      // Set access check complete even on error
-      setIsCheckingExamAccess(false);
-      setHasInitialAccessCheck(true);
+      console.error('❌ loadExistingSession API error for exam_id:', currentExamId, error);
       
       // Fallback: load saved answers (but only if exam hasn't changed)
       if (expectedExamString === exam_string) {
         try {
           const savedAnswers = await ExamDBService.getAnswers(expectedExamString);
           if (savedAnswers) {
+            console.log('📂 Using saved answers fallback for exam_id:', currentExamId);
             setAnswers(savedAnswers);
           }
         } catch (fallbackError) {
-          // Fallback error
+          console.error('❌ Fallback failed for exam_id:', currentExamId, fallbackError);
         }
       }
       
@@ -926,19 +1099,34 @@ const ExamContent: React.FC = () => {
     timeOffset
   ]);
 
-  // Enhanced fetchQuestions with strict validation and loading control
+  // ENHANCED: fetchQuestions with strict validation and loading control
   const fetchQuestions = useCallback(async () => {
+    console.log('🔄 Enhanced fetchQuestions called:', {
+      isClient,
+      exam_string,
+      examOrder: examOrder.length,
+      examScheduleId,
+      lastLoadedExamString,
+      isQuestionsReady
+    });
+    
     if (!isClient) {
+      console.log('❌ fetchQuestions: Not client side');
       return;
     }
     
     if (!exam_string) {
+      console.log('❌ fetchQuestions: No exam_string');
       return;
     }
     
-    // Validate that this exam_string exists in examOrder
+    // CRITICAL: Validate that this exam_string exists in examOrder
     const currentExam = examOrder.find((exam) => exam.exam_string === exam_string);
     if (!currentExam) {
+      console.error('❌ fetchQuestions: exam_string not found in examOrder:', {
+        exam_string,
+        availableExams: examOrder.map(e => e.exam_string)
+      });
       setError(true);
       setLoading(false);
       return;
@@ -946,17 +1134,33 @@ const ExamContent: React.FC = () => {
 
     // CHECK: Avoid duplicate requests for the same exam
     if (lastLoadedExamString === exam_string && isQuestionsReady && questions.length > 0) {
+      console.log('✅ Questions already loaded for this exam, skipping fetch');
       return;
     }
     
-    // Set examId IMMEDIATELY and SYNCHRONOUSLY
+    console.log('🔄 fetchQuestions: Starting API call for exam:', {
+      examString: exam_string,
+      examName: currentExam.name,
+      examId: currentExam.exam_id
+    });
+    
+    // CRITICAL FIX: Set examId IMMEDIATELY and SYNCHRONOUSLY
+    console.log('🚨 CRITICAL: Setting examId IMMEDIATELY from', examId, 'to', currentExam.exam_id);
     setExamId(currentExam.exam_id);
     setExamName(currentExam.name);
     
     try {
       const axios = (await import('axios')).default;
       
+      console.log('✅ Found current exam', { 
+        examId: currentExam.exam_id,
+        examName: currentExam.name,
+        examString: exam_string
+      });
+      
       const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      
+      console.log('🌐 Making API call to fetch questions...');
       
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/questions/byExamString?exam_string=${exam_string}`,
@@ -968,8 +1172,11 @@ const ExamContent: React.FC = () => {
         }
       );
 
+      console.log('✅ API response received:', response.status);
+
       // CHECK: Ensure exam hasn't changed during API call
       if (exam_string !== (params?.exam_string as string)) {
+        console.warn('⚠️ Exam changed during question fetch, discarding response');
         return;
       }
 
@@ -980,19 +1187,41 @@ const ExamContent: React.FC = () => {
       const decryptedData = decryptData(response.data.encryptedData);
       const parsedData = JSON.parse(decryptedData);
       
+      console.log('✅ Data decrypted and parsed:', {
+        questionsCount: parsedData.questions?.length,
+        duration: parsedData.duration,
+        questionsExist: !!parsedData.questions,
+        firstQuestionId: parsedData.questions?.[0]?.id,
+        examName: currentExam.name,
+        examId: currentExam.exam_id
+      });
+      
       if (!parsedData.questions || parsedData.questions.length === 0) {
         throw new Error('No questions found in response');
       }
 
       // FINAL CHECK: Ensure exam is still the same
       if (exam_string !== (params?.exam_string as string)) {
+        console.warn('⚠️ Exam changed before setting questions, discarding');
         return;
       }
       
+      // Check if exam is accessible BEFORE setting questions
+      if (examSession && !examSession.is_auto_move && enhancedGetServerTime() < new Date(examSession.start_time).getTime()) {
+        console.log('⏰ Exam not accessible yet');
+        setExamStartTime(examSession.start_time);
+        setShowNotAccessibleModal(true);
+        setIsExamAccessible(false);
+        setLoading(false);
+        return;
+      }
+
       // Set duration first
+      console.log('📝 Setting duration...');
       setDuration(parsedData.duration);
       
-      // Use validation-based question setter
+      // ENHANCED: Use validation-based question setter
+      console.log('📝 Setting questions with enhanced validation...');
       setQuestionsWithValidation(
         parsedData.questions,
         exam_string,
@@ -1000,32 +1229,49 @@ const ExamContent: React.FC = () => {
         currentExam.name
       );
       
-      // Load session ONLY after questions are set AND accessibility is confirmed
+      console.log('✅ Questions validation and setting completed');
+      
+      // Load session ONLY if questions were successfully validated and set
       if (validateExamReadiness(exam_string, currentExam.exam_id, parsedData.questions, currentExam.name)) {
+        console.log('🔄 Loading session for validated exam:', exam_string);
+        
         try {
           const sessionLoaded = await loadExistingSession(currentExam.exam_id, exam_string);
           
-          // If session loading indicated exam is not accessible, stop here
-          if (!isExamAccessible && hasInitialAccessCheck) {
-            return;
-          }
-          
-          if (!sessionLoaded && isExamAccessible) {
+          if (!sessionLoaded) {
+            console.log('⚠️ No session loaded for exam_id:', currentExam.exam_id, ', starting fresh timer');
             if (parsedData.duration > 0 && timerInitialized && exam_string === (params?.exam_string as string)) {
               const timerDuration = parsedData.duration * 60;
+              console.log('🚀 Starting fresh timer for exam_id:', currentExam.exam_id, 'duration:', timerDuration);
               const success = startTimer(timerDuration);
+              console.log('Fresh timer start result:', { success });
             }
+          } else {
+            console.log('✅ Session loaded successfully for exam_id:', currentExam.exam_id);
           }
         } catch (sessionError) {
-          // Only start fresh timer if exam is accessible
-          if (isExamAccessible && parsedData.duration > 0 && timerInitialized && exam_string === (params?.exam_string as string)) {
+          console.error('❌ Session loading failed for exam_id:', currentExam.exam_id, sessionError);
+          // Still try to start fresh timer if exam hasn't changed
+          if (parsedData.duration > 0 && timerInitialized && exam_string === (params?.exam_string as string)) {
             const timerDuration = parsedData.duration * 60;
+            console.log('🚀 Starting fresh timer after session error for exam_id:', currentExam.exam_id);
             const success = startTimer(timerDuration);
+            console.log('Fresh timer start result:', { success });
           }
         }
+      } else {
+        console.warn('⚠️ Questions validation failed, not loading session');
       }
       
+      console.log('✅ fetchQuestions completed for exam_id:', currentExam.exam_id);
+      
     } catch (error) {
+      console.error('❌ fetchQuestions failed for exam_id:', currentExam.exam_id, error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        response: error.response?.data
+      });
       setError(true);
       setLoading(false);
       setIsQuestionsReady(false);
@@ -1040,15 +1286,14 @@ const ExamContent: React.FC = () => {
     isQuestionsReady,
     questions.length,
     params?.exam_string,
-    hasInitialAccessCheck,
-    isExamAccessible,
+    examSession, 
+    enhancedGetServerTime, 
     setQuestionsWithValidation,
     validateExamReadiness,
     loadExistingSession, 
     timerInitialized, 
     startTimer
   ]);
-
   // Save exam session
   const saveExamSession = useCallback(async () => {
     if (!isClient) return false;
@@ -1086,7 +1331,7 @@ const ExamContent: React.FC = () => {
     }
   }, [isClient, exam_string, examScheduleId, examId, answers]);
 
-  // Enhanced submit to server with proper final exam handling
+  // Submit to server
   const submitToServer = useCallback(async (shouldScore = false): Promise<boolean> => {
     if (!isClient) return false;
     
@@ -1094,24 +1339,6 @@ const ExamContent: React.FC = () => {
     setSubmitError(false);
     
     try {
-      console.log('🔍 Current examOrder in context:', examOrder);
-      
-      const currentExam = examOrder.find(exam => exam.exam_string === exam_string);
-      if (!currentExam) {
-        console.error('🚨 Current exam not found in examOrder for exam_string:', exam_string);
-        throw new Error('Current exam not found');
-      }
-      
-      if (!currentExam.exam_id) {
-        console.error('🚨 Exam ID missing for exam:', currentExam);
-        throw new Error('Exam ID missing');
-      }
-      
-      const examIdToSubmit = currentExam.exam_id;
-
-      // Fetch the latest answers from ExamDBService
-      const savedAnswers = await ExamDBService.getAnswers(exam_string) || answers;
-
       const axios = (await import('axios')).default;
       const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
       
@@ -1121,8 +1348,8 @@ const ExamContent: React.FC = () => {
         `${process.env.NEXT_PUBLIC_API_URL}/examSession/submit`,
         { 
           exam_schedule_id: examScheduleId,
-          exam_id: examIdToSubmit,
-          answers: savedAnswers,
+          exam_id: examId,
+          answers: answers,
           question_elapsed_times: finalElapsedTimes
         },
         { 
@@ -1133,29 +1360,26 @@ const ExamContent: React.FC = () => {
         }
       );
 
-      // Handle user course submission for final exam
-      if (isLastExam && selectedTopicId) {
-        try {
+      if (!nextExam && selectedTopicId){
+        try{
           await axios.post(
-            `${process.env.NEXT_PUBLIC_API_URL}/userCourse/`,
-            {
-              topic_id: selectedTopicId,
+            `${process.env.NEXT_PUBLIC_API_URL}/userCourse/`,{
+              topic_id : selectedTopicId,
               quiz_id: examScheduleId
             },
             { 
-              withCredentials: true,
-              headers: {
-                Authorization: `Bearer ${authToken}`
+            withCredentials: true,
+            headers: {
+              Authorization: `Bearer ${authToken}`
               }
             }
-          );
-        } catch (error) {
-          // Error handling
+          )
+        }catch(error){
+          console.error('Error submitting user course', error);
         }
       }
       
-      // Handle scoring for final exam
-      if (shouldScore && isLastExam) {
+      if (shouldScore && !nextExam) {
         try {
           await axios.post(
             `${process.env.NEXT_PUBLIC_API_URL}/score/schedule/${examScheduleId}`,
@@ -1168,7 +1392,7 @@ const ExamContent: React.FC = () => {
             }
           );
         } catch (scoreError) {
-          // Score error handling
+          console.error('Error submitting for scoring', scoreError);
         }
       }
   
@@ -1179,12 +1403,13 @@ const ExamContent: React.FC = () => {
       setSubmitError(true);
       return false;
     }
-    }, [isClient, exam_string, examScheduleId, examId, answers, isLastExam, selectedTopicId,examOrder]);
+  }, [isClient, exam_string, examScheduleId, examId, answers, nextExam, selectedTopicId]);
 
   // Handle change
   const handleChange = useCallback(async (id: number, value: any) => {
     // VALIDATION: Only allow changes for current exam's questions
     if (!currentExamQuestionIds.has(id)) {
+      console.warn('⚠️ Ignoring answer change for question not in current exam:', id);
       return;
     }
 
@@ -1200,6 +1425,7 @@ const ExamContent: React.FC = () => {
   const handleTrueFalseChange = useCallback(async (id: number, index: number, value: any) => {
     // VALIDATION: Only allow changes for current exam's questions
     if (!currentExamQuestionIds.has(id)) {
+      console.warn('⚠️ Ignoring true/false answer change for question not in current exam:', id);
       return;
     }
 
@@ -1247,25 +1473,35 @@ const ExamContent: React.FC = () => {
     await handleAutoSubmit('confirmed_submit');
   }, [handleAutoSubmit]);
 
-  // Enhanced handleNextExam with proper final exam handling
+  // Handle next exam
   const handleNextExam = useCallback(async () => {
-    if (nextExam && !isLastExam) {
+    console.log('🔄 handleNextExam called:', {
+      nextExam,
+      currentExamIndex,
+      examOrderLength: examOrder.length
+    });
+
+    if (nextExam) {
       const nextExamString = examOrder[currentExamIndex + 1].exam_string;
+      console.log('➡️ Navigating to next exam:', nextExamString);
       
       // Close modal first
       setShowModalNext(false);
       
-      // Stop current timer before navigation
+      // CRITICAL: Stop current timer before navigation
+      console.log('⏹️ Stopping current timer before navigation');
       stopTimer();
       
       // Clear current exam data from IndexedDB
       try {
         await ExamDBService.deleteExamData(exam_string);
+        console.log('🗑️ Cleared IndexedDB data for:', exam_string);
       } catch (error) {
-        // Error handling
+        console.warn('⚠️ Failed to clear IndexedDB:', error);
       }
       
       // Enhanced state reset before navigation
+      console.log('🔄 Enhanced state reset before navigation');
       setLoading(true);
       setError(false);
       setSubmitError(false);
@@ -1296,13 +1532,12 @@ const ExamContent: React.FC = () => {
       
       // Small delay to ensure state is reset before navigation
       setTimeout(() => {
+        console.log('🚀 Navigating to:', `/exam/${nextExamString}`);
         router.push(`/exam/${nextExamString}`);
       }, 100);
       
     } else {
-      // Close any open modals
-      setShowModalNext(false);
-      setShowFinalCompletionModal(false);
+      console.log('🏠 No more exams, returning to home');
       
       // Stop timer
       stopTimer();
@@ -1312,15 +1547,13 @@ const ExamContent: React.FC = () => {
         clearExamData();
       }
       
-      // Navigate to origin or default to /try-out
-      router.push(originPath || '/try-out');
+      // Navigate to origin
+      router.push(originPath || '/');
     }
   }, [
     nextExam, 
     examOrder, 
     currentExamIndex, 
-    isLastExam,
-    finalSubmitSuccess,
     clearExamData, 
     router, 
     originPath, 
@@ -1353,10 +1586,10 @@ const ExamContent: React.FC = () => {
   const handleClose = useCallback(async () => {
     stopTimer();
     if (clearExamData) clearExamData();
-    router.push(originPath || '/try-out');
+    router.push(originPath || '/');
   }, [stopTimer, clearExamData, router, originPath]);
 
-  // Handle retry access with proper timezone handling
+  // CRITICAL FIX: Handle retry access with proper timezone handling
   const handleRetryAccess = useCallback(async () => {
     if (!isClient) return;
     
@@ -1381,34 +1614,37 @@ const ExamContent: React.FC = () => {
       if (response.data.status === 'success' && response.data.data) {
         const sessionData = response.data.data;
         
-        // Use enhancedGetServerTime() for time comparison
+        // FIXED: Use enhancedGetServerTime() for time comparison
         const serverNow = enhancedGetServerTime();
         const sessionStartTime = new Date(sessionData.start_time).getTime();
         
         if (!sessionData.is_auto_move && serverNow >= sessionStartTime) {
+          console.log('✅ Exam is now accessible - server time check passed');
           setShowNotAccessibleModal(false);
           setIsExamAccessible(true);
-          setIsCheckingExamAccess(true);
-          setLoading(true);
-          
-          // Fetch questions since exam is now accessible
           fetchQuestions();
         } else {
+          console.log('⏰ Exam still not accessible:', {
+            serverNow: new Date(serverNow).toISOString(),
+            startTime: new Date(sessionStartTime).toISOString(),
+            isAutoMove: sessionData.is_auto_move
+          });
           setExamStartTime(sessionData.start_time);
           setIsExamAccessible(false);
         }
       }
     } catch (error) {
+      console.error('Error checking exam access:', error);
+      
       // Fallback: check if examStartTime is past current server time
       if (examStartTime) {
         const serverNow = enhancedGetServerTime();
         const startTime = new Date(examStartTime).getTime();
         
         if (serverNow >= startTime) {
+          console.log('✅ Fallback: Exam should be accessible based on time');
           setIsExamAccessible(true);
           setShowNotAccessibleModal(false);
-          setIsCheckingExamAccess(true);
-          setLoading(true);
           fetchQuestions();
         }
       }
@@ -1493,18 +1729,6 @@ const ExamContent: React.FC = () => {
     }
   };
 
-  // Di dalam ExamProvider (context/ExamContext.tsx)
-  useEffect(() => {
-    console.log('📝 ExamContext: examOrder updated:', {
-      count: examOrder.length,
-      data: examOrder.map(exam => ({
-        exam_string: exam.exam_string,
-        exam_id: exam.exam_id,
-        name: exam.name
-      }))
-    });
-  }, [examOrder]);
-
   // Question elapsed time tracking
   useEffect(() => {
     if (!isClient || loading || questions.length === 0 || currentQuestion >= questions.length) return;
@@ -1515,9 +1739,9 @@ const ExamContent: React.FC = () => {
     }
     
     if (exam_string) {
-      ExamDBService.updateQuestionElapsedTime(exam_string, currentQuestionData.id, elapsed);
+      ExamDBService.updateQuestionElapsedTime(exam_string, currentQuestionData.id);
     }
-  }, [isClient, loading, questions, currentQuestion, exam_string,elapsed, isRunning]);
+  }, [isClient, loading, questions, currentQuestion, exam_string]);
 
   // Cleanup effect
   useEffect(() => {
@@ -1526,61 +1750,25 @@ const ExamContent: React.FC = () => {
     return () => {
       if (autoSaveRef.current) clearInterval(autoSaveRef.current);
       
-      if (exam_string && questions.length > 0 && isRunning) {
-        ExamDBService.finalizeCurrentQuestionTime(exam_string, elapsed);
+      if (exam_string && questions.length > 0) {
+        ExamDBService.finalizeCurrentQuestionTime(exam_string);
       }
     };
-  }, [isClient, exam_string, questions, elapsed, isRunning]);
+  }, [isClient, exam_string, questions]);
 
-  useEffect(() => {
-  if (!isClient || !exam_string || !examScheduleId || examOrder.length === 0) return;
-
-  const initExam = async () => {
-    try {
-      setIsInitializing(true);
-
-      // Fetch saved answers from ExamDBService
-      const savedAnswers = await ExamDBService.getAnswers(exam_string);
-      if (savedAnswers) {
-        setAnswers(savedAnswers);
-      }
-
-      await fetchQuestions();
-    } catch (error) {
-      setError(true);
-      setLoading(false);
-      setIsQuestionsReady(false);
-    } finally {
-      setIsInitializing(false);
-    }
-  };
-
-  if (lastLoadedExamString !== exam_string || !isQuestionsReady || !hasInitialAccessCheck) {
-    initExam();
-  }
-}, [
-  isClient,
-  exam_string,
-  examScheduleId,
-  examOrder.length,
-  lastLoadedExamString,
-  isQuestionsReady,
-  hasInitialAccessCheck,
-  fetchQuestions
-]);
-
-  // Countdown effect for exam access with proper timezone handling
+  // CRITICAL FIX: Countdown effect for exam access with proper timezone handling
   useEffect(() => {
     if (!isClient || isExamAccessible || !examStartTime) return;
     
     const timer = setInterval(() => {
-      // Use enhancedGetServerTime() for countdown
+      // FIXED: Use enhancedGetServerTime() for countdown
       const now = enhancedGetServerTime();
       const startTime = new Date(examStartTime).getTime();
       const diff = startTime - now;
       
       if (diff <= 0) {
         clearInterval(timer);
+        console.log('⏰ Countdown finished - attempting to access exam');
         handleRetryAccess();
         return;
       }
@@ -1595,15 +1783,40 @@ const ExamContent: React.FC = () => {
     return () => clearInterval(timer);
   }, [isClient, isExamAccessible, examStartTime, enhancedGetServerTime, handleRetryAccess]);
 
-  // Enhanced loading state validation
+  // ENHANCED loading state validation
   useEffect(() => {
-    // Enhanced condition for loading state
-    if (loading && isQuestionsReady && questions.length > 0 && isClient && exam_string && examScheduleId && hasInitialAccessCheck) {
+    console.log('🔄 Enhanced loading state validation:', {
+      loading,
+      isInitializing,
+      questionsLength: questions.length,
+      isQuestionsReady,
+      isClient,
+      exam_string,
+      examScheduleId,
+      contextExamScheduleId,
+      timerInitialized,
+      timerError,
+      examDataConsistency,
+      lastLoadedExamString
+    });
+    
+    // Enhanced condition: only set loading to false if questions are properly validated
+    if (loading && isQuestionsReady && questions.length > 0 && isClient && exam_string && examScheduleId) {
+      console.log('🚨 Enhanced: All data ready and validated, confirming loading state');
+      
       // Double check that questions belong to current exam
       const currentExam = examOrder.find(exam => exam.exam_string === exam_string);
-      if (currentExam && examDataConsistency.examIdMatch && examDataConsistency.questionsMatch && isExamAccessible) {
+      if (currentExam && examDataConsistency.examIdMatch && examDataConsistency.questionsMatch) {
+        console.log('✅ Questions validation confirmed, setting loading to false');
         setLoading(false);
+      } else {
+        console.warn('⚠️ Questions validation failed, keeping loading state');
       }
+    }
+    
+    // Additional check for timer readiness
+    if (!loading && !isInitializing && questions.length > 0 && !timerInitialized && !timerError) {
+      console.log('⏰ Questions ready but timer still initializing...');
     }
   }, [
     loading, 
@@ -1618,10 +1831,7 @@ const ExamContent: React.FC = () => {
     timerError,
     examDataConsistency,
     lastLoadedExamString,
-    examOrder,
-    isCheckingExamAccess,
-    hasInitialAccessCheck,
-    isExamAccessible
+    examOrder
   ]);
 
   // Auto-save effect
@@ -1645,48 +1855,75 @@ const ExamContent: React.FC = () => {
     };
   }, [isClient, loading, answers, timeLeft, isRunning, saveExamSession]);
 
-  // Main initialization effect
+  // ENHANCED main initialization effect
   useEffect(() => {
+    console.log('🔍 Enhanced main init effect triggered:', {
+      isClient,
+      exam_string,
+      examScheduleId,
+      contextExamScheduleId,
+      examOrder: examOrder.length,
+      initializationAttempted: initializationAttempted.current,
+      loading,
+      isInitializing,
+      timerInitialized,
+      questionsLength: questions.length,
+      isQuestionsReady,
+      lastLoadedExamString
+    });
+    
     if (!isClient) {
+      console.log('❌ Not client side yet');
       return;
     }
     
     if (!exam_string) {
+      console.log('❌ No exam_string yet');
       return;
     }
     
-    // Wait for examScheduleId to be available (from context sync)
+    // CRITICAL: Wait for examScheduleId to be available (from context sync)
     if (!examScheduleId) {
+      console.log('❌ Exam schedule ID not ready yet - waiting for context sync');
       return;
     }
     
     if (examOrder.length === 0) {
+      console.log('❌ Exam order not ready yet');
       return;
     }
 
-    // Check if we already have valid questions for this exam
-    if (lastLoadedExamString === exam_string && isQuestionsReady && questions.length > 0 && hasInitialAccessCheck) {
+    // ENHANCED: Check if we already have valid questions for this exam
+    if (lastLoadedExamString === exam_string && isQuestionsReady && questions.length > 0) {
+      console.log('✅ Questions already loaded and validated for this exam, skipping initialization');
       return;
     }
     
     // Prevent multiple initialization attempts for the SAME exam
     const initKey = `${exam_string}-${examScheduleId}`;
     if (initializationAttempted.current === initKey) {
+      console.log('⏸️ Initialization already attempted for this exam, skipping...');
       return;
     }
     
     initializationAttempted.current = initKey; // Store unique key instead of boolean
     
+    console.log('🚀 Enhanced initialization starting for exam:', exam_string, 'with scheduleId:', examScheduleId);
+    
     setIsInitializing(true);
     
     const initExam = async () => {
       try {
+        console.log('📚 About to fetch questions for exam:', exam_string);
         await fetchQuestions();
+        console.log('✅ fetchQuestions completed');
       } catch (error) {
+        console.error('❌ Initialization failed:', error);
         setError(true);
         setLoading(false);
         setIsQuestionsReady(false);
       } finally {
+        console.log('🏁 Setting isInitializing to false');
         setIsInitializing(false);
       }
     };
@@ -1700,9 +1937,22 @@ const ExamContent: React.FC = () => {
     lastLoadedExamString,
     isQuestionsReady,
     questions.length,
-    hasInitialAccessCheck,
     fetchQuestions
   ]);
+
+  // Timer state logging
+  useEffect(() => {
+    console.log('🔍 Enhanced timer state changed:', {
+      timerInitialized,
+      timerError,
+      isRunning,
+      timeLeft,
+      workerReady: getBackupTimerValues().workerReady,
+      fallbackActive: getBackupTimerValues().fallbackActive,
+      examDataConsistency,
+      timeOffset: Math.round(timeOffset) + 'ms'
+    });
+  }, [timerInitialized, timerError, isRunning, timeLeft, getBackupTimerValues, examDataConsistency, timeOffset]);
 
   // Retry on error
   useEffect(() => {
@@ -1712,29 +1962,46 @@ const ExamContent: React.FC = () => {
       initializationAttempted.current = false; // Reset for retry
       setIsQuestionsReady(false);
       setLastLoadedExamString(null);
-      setHasInitialAccessCheck(false);
       fetchQuestions();
     }, 5000);
 
     return () => clearTimeout(retryTimeout);
   }, [isClient, error, isInitializing, fetchQuestions]);
-
-  // Enhanced loading screen with access check status
-  if (!isClient || loading || isInitializing || !isQuestionsReady || isCheckingExamAccess) {
+  // ENHANCED loading screen with more detailed status
+  if (!isClient || loading || isInitializing || !isQuestionsReady) {
     return (
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <div className="tw-text-center">
           <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
           <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">
-            {isCheckingExamAccess ? 'Checking Exam Access...' : 
-             isInitializing ? 'Initializing Exam...' : 
-             !isQuestionsReady ? 'Validating Questions...' : 'Loading Exam...'}
+            {isInitializing ? 'Initializing Exam...' : !isQuestionsReady ? 'Validating Questions...' : 'Loading Exam...'}
           </h2>
           <p className="tw-text-violet-600 tw-mt-2">
-            {isCheckingExamAccess ? 'Verifying exam schedule and accessibility...' :
-             !isQuestionsReady ? 'Ensuring questions match current exam...' : 
-             'Please wait while we prepare your questions'}
+            {!isQuestionsReady ? 'Ensuring questions match current exam...' : 'Please wait while we prepare your questions'}
           </p>
+          <div className="tw-text-sm tw-text-gray-500 tw-mt-2 tw-space-y-1">
+            <p>Current Exam: {exam_string || 'Loading...'}</p>
+            <p>Context Schedule ID: {contextExamScheduleId || 'Loading...'}</p>
+            <p>Component Schedule ID: {examScheduleId || 'Loading...'}</p>
+            <p>Time sync: {syncCount} syncs, offset: {Math.round(timeOffset)}ms</p>
+            <p>Worker timer: {timerInitialized ? 'Initialized' : 'Loading...'}</p>
+            <p>Questions: {questions.length} loaded</p>
+            <p>Questions Ready: {isQuestionsReady ? 'Yes' : 'No'}</p>
+            <p>Last Loaded: {lastLoadedExamString || 'None'}</p>
+            <p>Status: {isInitializing ? 'Initializing' : loading ? 'Loading' : !isQuestionsReady ? 'Validating' : 'Ready'}</p>
+            <p>Init Key: {initializationAttempted.current || 'None'}</p>
+            {process.env.NODE_ENV === 'development' && (
+              <div className="tw-text-xs tw-text-gray-400 tw-mt-2 tw-bg-gray-100 tw-p-2 tw-rounded">
+                <p>Data Consistency:</p>
+                <p>📝 String Match: {examDataConsistency.examStringMatch ? '✅' : '❌'}</p>
+                <p>🆔 ID Match: {examDataConsistency.examIdMatch ? '✅' : '❌'}</p>
+                <p>❓ Questions Match: {examDataConsistency.questionsMatch ? '✅' : '❌'}</p>
+                <p>📋 Session Match: {examDataConsistency.sessionMatch ? '✅' : '❌'}</p>
+                <p>⏰ Time Offset: {Math.round(timeOffset)}ms</p>
+                <p>🌐 Reliability: {Math.round((reliability || 0) * 100)}%</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -1755,19 +2022,26 @@ const ExamContent: React.FC = () => {
               initializationAttempted.current = false;
               setIsQuestionsReady(false);
               setLastLoadedExamString(null);
-              setHasInitialAccessCheck(false);
               fetchQuestions();
             }}
           >
             Retry Now
           </Button>
+          {process.env.NODE_ENV === 'development' && (
+            <div className="tw-text-xs tw-text-gray-400 tw-mt-4 tw-bg-gray-100 tw-p-2 tw-rounded">
+              <p>Debug Info:</p>
+              <p>Time Offset: {Math.round(timeOffset)}ms</p>
+              <p>Schedule ID: {examScheduleId || 'NULL'}</p>
+              <p>Exam String: {exam_string || 'NULL'}</p>
+              <p>Timer State: {timerInitialized ? 'Ready' : 'Loading'}</p>
+            </div>
+          )}
         </div>
       </div>
     );
   }
   
-  // Show waiting screen ONLY when exam is not accessible
-  if (!isExamAccessible && hasInitialAccessCheck) {
+  if (!isExamAccessible) {
     return (
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <div className="tw-text-center">
@@ -1784,6 +2058,14 @@ const ExamContent: React.FC = () => {
               <p className="tw-text-sm tw-text-violet-500 tw-mt-2">
                 Scheduled at: {new Date(examStartTime).toLocaleString()}
               </p>
+              {process.env.NODE_ENV === 'development' && (
+                <div className="tw-text-xs tw-text-violet-400 tw-mt-2 tw-bg-violet-100 tw-p-2 tw-rounded">
+                  <p>Server Time: {new Date(enhancedGetServerTime()).toISOString()}</p>
+                  <p>Start Time: {new Date(examStartTime).toISOString()}</p>
+                  <p>Time Offset: {Math.round(timeOffset)}ms</p>
+                  <p>Time Sync: {Math.round((reliability || 0) * 100)}% reliable</p>
+                </div>
+              )}
             </div>
           )}
           
@@ -1813,6 +2095,7 @@ const ExamContent: React.FC = () => {
           }
         }}
         onSecurityBreach={() => {
+          console.log('🚨 EXTREME security breach from validator - auto-submit');
           handleAutoSubmit('extreme_security_breach');
         }}
       />
@@ -1822,6 +2105,23 @@ const ExamContent: React.FC = () => {
         onAutoSubmit={handleAutoSubmit}
         enabled={!loading && !error && isExamAccessible && questions.length > 0 && !isSubmitting && isQuestionsReady}
         timerRunning={isRunning}
+      />
+
+      {/* Enhanced Security Status Display with time sync info */}
+      <SecurityStatusDisplay 
+        securityValidation={{
+          ...securityValidation,
+          timeSyncActive: isOnline,
+          networkQuality: securityValidation.networkQuality,
+          syncReliability: Math.round((reliability || 0) * 100)
+        }}
+        timerState={{ 
+          isValid: timerValid, 
+          isRunning,
+          networkLatency: Math.round(networkLatency || 0),
+          timeOffset: Math.round(timeOffset || 0),
+          fallbackActive: getBackupTimerValues().fallbackActive
+        }}
       />
 
       <ChangeTabPrevention 
@@ -1842,6 +2142,27 @@ const ExamContent: React.FC = () => {
                       End time: {new Date(examSession.end_time).toLocaleTimeString()}
                     </p>
                   )}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="tw-text-xs tw-text-violet-300 tw-space-y-1">
+                      <p>Sync: {syncCount}x | Offset: {Math.round(timeOffset)}ms | {isOnline ? '🟢' : '🔴'}</p>
+                      <p>Reliability: {Math.round((reliability || 0) * 100)}% | Network: {Math.round(networkLatency || 0)}ms</p>
+                      <p>
+                        Worker: {timerInitialized ? '🟢' : '🔴'} | 
+                        Valid: {timerValid ? '🟢' : '🔴'} | 
+                        Security: {securityValidation.consistent ? '🟢' : '🔴'} |
+                        Quality: {securityValidation.networkQuality}
+                      </p>
+                      <p>
+                        StdDev: {Math.round(offsetStdDev || 0)}ms | 
+                        TZ Offset: {Math.round((timezoneOffset || 0) / 1000 / 60)}min |
+                        Heartbeat: {securityValidation.heartbeatActive ? '🟢' : '🔴'}
+                      </p>
+                      <p>Context: {contextExamScheduleId} → Component: {examScheduleId}</p>
+                      <p>Fallback: {getBackupTimerValues().fallbackActive ? '🟡' : '🟢'}</p>
+                      <p>Questions Ready: {isQuestionsReady ? '🟢' : '🔴'} | Loaded: {lastLoadedExamString}</p>
+                      <p>Consistency: S:{examDataConsistency.examStringMatch ? '✅' : '❌'} | ID:{examDataConsistency.examIdMatch ? '✅' : '❌'} | Q:{examDataConsistency.questionsMatch ? '✅' : '❌'} | Sess:{examDataConsistency.sessionMatch ? '✅' : '❌'}</p>
+                    </div>
+                  )}
                 </div>
                 <div className="tw-flex tw-items-center tw-gap-3 tw-bg-violet-700 tw-rounded-lg tw-px-6 tw-py-3 tw-flex-shrink-0">
                   <div className="tw-flex tw-items-center tw-gap-1">
@@ -1853,28 +2174,43 @@ const ExamContent: React.FC = () => {
                   <div className="tw-flex tw-flex-col tw-items-start">
                     <span className="tw-text-violet-200 tw-text-sm">Time Remaining</span>
                     <span className="tw-text-3xl tw-font-mono tw-font-bold">{formatTime(timeLeft)}</span>
+                    {process.env.NODE_ENV === 'development' && (
+                      <span className="tw-text-xs tw-text-violet-300">
+                        Server: {formatTime(Math.floor((enhancedGetServerTime()) / 1000) % 86400)}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
             </Container>
           </div>
 
-          {/* Auto-Submit Loading Overlay */}
+          {/* Auto-Submit Loading Overlay with enhanced info */}
           {isSubmitting && (
             <div className="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-flex tw-items-center tw-justify-center tw-z-50">
               <div className="tw-bg-white tw-p-8 tw-rounded-lg tw-text-center tw-max-w-md">
                 <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
                 <h3 className="tw-text-xl tw-font-semibold tw-text-violet-800 tw-mb-2">
-                  {isLastExam ? 'Submitting Final Exam' : 'Submitting Exam'}
+                  Submitting Exam
                 </h3>
                 <p className="tw-text-violet-600 tw-mb-4">
-                  {isLastExam ? 'Processing your final answers and generating results...' : 'Please wait while we process your answers...'}
+                  Please wait while we process your answers...
                 </p>
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="tw-text-xs tw-text-gray-500 tw-bg-gray-50 tw-p-2 tw-rounded">
+                    Sync Quality: {Math.round((reliability || 0) * 100)}% | 
+                    Network: {Math.round(networkLatency || 0)}ms |
+                    Security: {securityValidation.networkQuality} |
+                    Schedule ID: {examScheduleId} |
+                    Questions Ready: {isQuestionsReady ? 'Yes' : 'No'} |
+                    Time Offset: {Math.round(timeOffset)}ms
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {/* Enhanced Checkpoint Toast */}
+          {/* Enhanced Checkpoint Toast with sync info */}
           <div 
             className="tw-fixed tw-top-4 tw-right-4 tw-z-50"
             style={{ display: showCheckpointToast ? 'block' : 'none' }}
@@ -1889,9 +2225,19 @@ const ExamContent: React.FC = () => {
               <Toast.Header className="tw-bg-violet-200 tw-text-violet-800">
                 <Check className="tw-mr-2 tw-text-violet-600" size={16} />
                 <strong className="tw-mr-auto">Checkpoint Saved</strong>
+                {process.env.NODE_ENV === 'development' && (
+                  <Badge bg="success" className="tw-text-xs">
+                    Sync: {Math.round((reliability || 0) * 100)}%
+                  </Badge>
+                )}
               </Toast.Header>
               <Toast.Body className="tw-text-violet-700">
                 Your answers have been saved to the server.
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="tw-text-xs tw-text-violet-600 tw-mt-1">
+                    Server time sync: {timeOffset > 0 ? '+' : ''}{Math.round(timeOffset)}ms
+                  </div>
+                )}
               </Toast.Body>
             </Toast>
           </div>
@@ -1925,6 +2271,21 @@ const ExamContent: React.FC = () => {
                                 <span className="tw-text-sm">Saving...</span>
                               </div>
                             )}
+                            {process.env.NODE_ENV === 'development' && (
+                              <Badge 
+                                bg={securityValidation.networkQuality === 'EXCELLENT' ? 'success' : 
+                                    securityValidation.networkQuality === 'GOOD' ? 'primary' :
+                                    securityValidation.networkQuality === 'FAIR' ? 'warning' : 'danger'}
+                                className="tw-text-xs"
+                              >
+                                {securityValidation.networkQuality}
+                              </Badge>
+                            )}
+                            {isQuestionsReady && (
+                              <Badge bg="success" className="tw-text-xs">
+                                ✅ Validated
+                              </Badge>
+                            )}
                           </div>
                         </div>
                         
@@ -1955,18 +2316,37 @@ const ExamContent: React.FC = () => {
                         <p className="tw-text-gray-500">
                           {!isQuestionsReady ? 'Validating questions for current exam...' : 'No questions available'}
                         </p>
+                        {process.env.NODE_ENV === 'development' && (
+                          <div className="tw-text-xs tw-text-gray-400 tw-mt-2">
+                            Sync Status: {isOnline ? 'Online' : 'Offline'} | 
+                            Timer: {timerInitialized ? 'Ready' : 'Loading'} |
+                            Schedule ID: {examScheduleId || 'NULL'} |
+                            Questions Ready: {isQuestionsReady ? 'Yes' : 'No'} |
+                            Loaded Exam: {lastLoadedExamString || 'None'} |
+                            Time Offset: {Math.round(timeOffset)}ms
+                          </div>
+                        )}
                       </div>
                     )}
                   </Card.Body>
                 </Card>
               </Col>
 
-              {/* Enhanced Right Sidebar */}
+              {/* Enhanced Right Sidebar with sync info */}
               <Col lg={4} className="tw-hidden md:tw-block">
                 <Card className="tw-shadow-md tw-border-0 tw-rounded-xl tw-sticky tw-top-4">
                   <Card.Body className="tw-p-4">
                     <div className="tw-flex tw-items-center tw-justify-between tw-mb-4">
                       <h3 className="tw-text-lg tw-font-semibold tw-text-violet-800">Question Navigator</h3>
+                      {process.env.NODE_ENV === 'development' && (
+                        <div className="tw-flex tw-items-center tw-gap-1">
+                          <div className={`tw-w-2 tw-h-2 tw-rounded-full ${isOnline ? 'tw-bg-green-500' : 'tw-bg-red-500'}`} />
+                          <span className="tw-text-xs tw-text-gray-500">
+                            {Math.round((reliability || 0) * 100)}%
+                          </span>
+                          {isQuestionsReady && <Check size={12} className="tw-text-green-500" />}
+                        </div>
+                      )}
                     </div>
                     {questions.length > 0 && isQuestionsReady ? (
                       <>
@@ -2012,39 +2392,48 @@ const ExamContent: React.FC = () => {
                               {isRunning && <Activity className="tw-text-blue-600 tw-animate-pulse" size={14} />}
                               {getBackupTimerValues().fallbackActive && <AlertCircle className="tw-text-yellow-600" size={14} />}
                               {isQuestionsReady && <Check className="tw-text-green-600" size={14} />}
-                              {isLastExam && <span className="tw-text-orange-600 tw-text-xs">🏁</span>}
                             </div>
                           </div>
                           <p className="tw-text-lg tw-font-mono tw-font-bold tw-text-violet-700">
                             {formatTime(timeLeft)}
                           </p>
+                          {process.env.NODE_ENV === 'development' && (
+                            <div className="tw-text-xs tw-text-violet-600 tw-space-y-1 tw-mt-2">
+                              <p>Elapsed: {formatTime(elapsed)}</p>
+                              <p>Network: {Math.round(networkLatency || 0)}ms</p>
+                              <p>Offset: {timeOffset > 0 ? '+' : ''}{Math.round(timeOffset)}ms</p>
+                              <p>Quality: {securityValidation.networkQuality}</p>
+                              <p>Schedule ID: {examScheduleId || 'NULL'}</p>
+                              <p>Mode: {getBackupTimerValues().fallbackActive ? 'Fallback' : 'Worker'}</p>
+                              <p>Q-Ready: {isQuestionsReady ? 'Yes' : 'No'}</p>
+                              <p>Q-Count: {currentExamQuestionIds.size}</p>
+                              <p>Reliability: {Math.round((reliability || 0) * 100)}%</p>
+                            </div>
+                          )}
                         </div>
 
-                        {/* Enhanced submit button for final exam */}
                         {currentQuestion === questions.length - 1 && (
                           <Button 
                             variant="primary" 
-                            className={`tw-w-full tw-border-0 tw-mt-4 ${
-                              isLastExam 
-                                ? 'tw-bg-orange-600 hover:tw-bg-orange-700' 
-                                : 'tw-bg-violet-600 hover:tw-bg-violet-700'
-                            }`}
+                            className="tw-w-full tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
                             onClick={handleSubmit}
                           >
-                            {isLastExam ? (
-                              <>
-                                <FileCheck className="tw-mr-2" size={16} />
-                                Submit Final Exam
-                              </>
-                            ) : (
-                              'Submit Exam'
-                            )}
+                            Submit Exam
                           </Button>
                         )}
                       </>
                     ) : (
                       <div className="tw-text-center tw-text-gray-500">
                         <p>{!isQuestionsReady ? 'Validating questions...' : 'No questions loaded'}</p>
+                        {process.env.NODE_ENV === 'development' && (
+                          <div className="tw-text-xs tw-text-gray-400 tw-mt-2">
+                            Sync: {syncCount}x | Network: {isOnline ? 'Online' : 'Offline'} | 
+                            Schedule ID: {examScheduleId || 'NULL'} |
+                            Q-Ready: {isQuestionsReady ? 'Yes' : 'No'} |
+                            Loaded: {lastLoadedExamString || 'None'} |
+                            Offset: {Math.round(timeOffset)}ms
+                          </div>
+                        )}
                       </div>
                     )}
                   </Card.Body>
@@ -2061,7 +2450,22 @@ const ExamContent: React.FC = () => {
                   <div className="tw-mb-3">
                     <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
                       <span>Progress</span>
-                      <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
+                      <div className="tw-flex tw-items-center tw-gap-2">
+                        <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
+                        {process.env.NODE_ENV === 'development' && (
+                          <>
+                            <Badge 
+                              bg={isOnline ? 'success' : 'danger'}
+                              className="tw-text-xs"
+                            >
+                              {Math.round((reliability || 0) * 100)}%
+                            </Badge>
+                            {isQuestionsReady && (
+                              <Badge bg="success" className="tw-text-xs">✅</Badge>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                     <ProgressBar 
                       now={(getFilledAnswersCount() / questions.length) * 100} 
@@ -2093,75 +2497,71 @@ const ExamContent: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Enhanced mobile submit button */}
                   {currentQuestion === questions.length - 1 && (
                     <Button 
                       variant="primary" 
-                      className={`tw-w-full tw-border-0 tw-mt-4 ${
-                        isLastExam 
-                          ? 'tw-bg-orange-600 hover:tw-bg-orange-700' 
-                          : 'tw-bg-violet-600 hover:tw-bg-violet-700'
-                      }`}
+                      className="tw-w-full tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
                       onClick={handleSubmit}
                     >
-                      {isLastExam ? (
-                        <>
-                          <FileCheck className="tw-mr-2" size={16} />
-                          Submit Final Exam
-                        </>
-                      ) : (
-                        'Submit Exam'
-                      )}
+                      Submit Exam
                     </Button>
                   )}
                 </>
               ) : (
                 <div className="tw-text-center tw-text-gray-500">
                   <p>{!isQuestionsReady ? 'Validating questions...' : 'No questions available'}</p>
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="tw-text-xs tw-text-gray-400 tw-mt-2">
+                      Sync: {syncCount}x | Timer: {timerInitialized ? 'Ready' : 'Loading'} | 
+                      Schedule ID: {examScheduleId || 'NULL'} |
+                      Q-Ready: {isQuestionsReady ? 'Yes' : 'No'} |
+                      Loaded: {lastLoadedExamString || 'None'} |
+                      Offset: {Math.round(timeOffset)}ms
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Enhanced Confirmation Modal with final exam awareness */}
+          {/* Confirmation Modal - Enhanced */}
           <Modal 
             show={showConfirmationModal} 
             onHide={() => setShowConfirmationModal(false)}
             centered
             backdrop="static"
           >
-            <Modal.Header className={`${isLastExam ? 'tw-bg-orange-50' : 'tw-bg-violet-50'}`}>
-              <Modal.Title className={`${isLastExam ? 'tw-text-orange-800' : 'tw-text-violet-800'} tw-flex tw-items-center`}>
-                <AlertCircle className={`tw-mr-2 ${isLastExam ? 'tw-text-orange-600' : 'tw-text-violet-600'}`} size={20} />
-                {isLastExam ? 'Confirm Final Submission' : 'Confirm Submission'}
+            <Modal.Header className="tw-bg-violet-50">
+              <Modal.Title className="tw-text-violet-800 tw-flex tw-items-center">
+                <AlertCircle className="tw-mr-2 tw-text-violet-600" size={20} />
+                Confirm Submission
               </Modal.Title>
             </Modal.Header>
             <Modal.Body>
               <div className="tw-p-2">
-                <p className={`tw-text-lg tw-font-medium tw-mb-3 ${isLastExam ? 'tw-text-orange-900' : 'tw-text-violet-900'}`}>
-                  {isLastExam 
-                    ? 'Are you sure you want to end this final exam? This will complete your entire exam session.'
-                    : 'Are you sure you want to end this exam?'
-                  }
-                </p>
+                <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-violet-900">Are you sure you want to end this exam?</p>
                 
-                <div className={`${isLastExam ? 'tw-bg-orange-50' : 'tw-bg-violet-50'} tw-p-4 tw-rounded-lg tw-mb-4`}>
+                <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
                   <div className="tw-flex tw-items-center tw-mb-2">
-                    <FileCheck className={`${isLastExam ? 'tw-text-orange-600' : 'tw-text-violet-600'} tw-mr-2`} size={18} />
-                    <span className={`tw-font-medium ${isLastExam ? 'tw-text-orange-800' : 'tw-text-violet-800'}`}>
-                      {isLastExam ? 'Final Exam Summary' : 'Exam Summary'}
-                    </span>
+                    <FileCheck className="tw-text-violet-600 tw-mr-2" size={18} />
+                    <span className="tw-font-medium tw-text-violet-800">Exam Summary</span>
                   </div>
-                  <p className={`${isLastExam ? 'tw-text-orange-700' : 'tw-text-violet-700'} tw-mb-2`}>
+                  <p className="tw-text-violet-700 tw-mb-2">
                     <span className="tw-font-medium">Completed:</span> {getFilledAnswersCount()} of {questions.length} questions
                   </p>
-                  <p className={`${isLastExam ? 'tw-text-orange-700' : 'tw-text-violet-700'} tw-mb-2`}>
+                  <p className="tw-text-violet-700 tw-mb-2">
                     <span className="tw-font-medium">Time Remaining:</span> {formatTime(timeLeft)}
                   </p>
-                  {isLastExam && (
-                    <p className="tw-text-orange-700 tw-mb-2 tw-font-medium">
-                      📋 This is your final exam section. Results will be processed after submission.
-                    </p>
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="tw-text-xs tw-text-violet-600 tw-bg-violet-100 tw-p-2 tw-rounded tw-mt-2">
+                      <p>Sync Quality: {Math.round((reliability || 0) * 100)}%</p>
+                      <p>Network Latency: {Math.round(networkLatency || 0)}ms</p>
+                      <p>Time Offset: {timeOffset > 0 ? '+' : ''}{Math.round(timeOffset)}ms</p>
+                      <p>Schedule ID: {examScheduleId || 'NULL'}</p>
+                      <p>Timer Mode: {getBackupTimerValues().fallbackActive ? 'Fallback' : 'Worker'}</p>
+                      <p>Questions Ready: {isQuestionsReady ? 'Yes' : 'No'}</p>
+                      <p>Questions Validated: {currentExamQuestionIds.size} IDs</p>
+                    </div>
                   )}
                   {getFilledAnswersCount() < questions.length && (
                     <div className="tw-bg-amber-50 tw-p-2 tw-rounded tw-border tw-border-amber-200 tw-text-amber-800 tw-text-sm tw-mt-2">
@@ -2171,10 +2571,7 @@ const ExamContent: React.FC = () => {
                 </div>
                 
                 <p className="tw-text-gray-600 tw-text-sm">
-                  {isLastExam 
-                    ? 'Once submitted, you won\'t be able to change your answers and your results will be processed.'
-                    : 'Once submitted, you won\'t be able to change your answers for this section.'
-                  }
+                  Once submitted, you won't be able to change your answers for this section.
                 </p>
               </div>
             </Modal.Body>
@@ -2182,26 +2579,21 @@ const ExamContent: React.FC = () => {
               <Button 
                 variant="outline-secondary" 
                 onClick={() => setShowConfirmationModal(false)}
-                className={`tw-border-2 ${isLastExam ? 'tw-border-orange-200 tw-text-orange-700 hover:tw-bg-orange-50' : 'tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50'}`}
+                className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
               >
                 Continue Exam
               </Button>
               <Button 
                 variant="primary" 
                 onClick={confirmSubmit}
-                className={`tw-border-0 tw-flex tw-items-center ${
-                  isLastExam 
-                    ? 'tw-bg-orange-600 hover:tw-bg-orange-700' 
-                    : 'tw-bg-violet-600 hover:tw-bg-violet-700'
-                }`}
+                className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center"
               >
-                <ArrowRight className="tw-mr-1" size={16} /> 
-                {isLastExam ? 'Submit Final Exam' : 'End Exam'}
+                <ArrowRight className="tw-mr-1" size={16} /> End Exam
               </Button>
             </Modal.Footer>
           </Modal>
 
-          {/* Enhanced Next Exam Modal with final exam completion handling */}
+          {/* Next Exam Modal */}
           <Modal 
             show={showModalNext} 
             onHide={() => setShowModalNext(false)}
@@ -2232,7 +2624,7 @@ const ExamContent: React.FC = () => {
                     <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-green-900">
                       Great job! Your exam has been submitted successfully.
                     </p>
-                    {nextExam && !isLastExam ? (
+                    {nextExam ? (
                       <div className="tw-bg-blue-50 tw-p-4 tw-rounded-lg tw-mb-4">
                         <p className="tw-text-blue-700 tw-mb-2">
                           <span className="tw-font-medium">Next exam:</span> {nextExam}
@@ -2276,119 +2668,16 @@ const ExamContent: React.FC = () => {
                   onClick={handleNextExam}
                   className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center"
                 >
-                  {nextExam && !isLastExam ? (
+                  {nextExam ? (
                     <>
                       <ArrowRight className="tw-mr-1" size={16} /> Continue to Next Exam
                     </>
                   ) : (
                     <>
-                      <Home className="tw-mr-1" size={16} /> Return to Try-Out
+                      <Check className="tw-mr-1" size={16} /> Return to Home
                     </>
                   )}
                 </Button>
-              )}
-            </Modal.Footer>
-          </Modal>
-
-          {/* Final Completion Modal for last exam */}
-          <Modal 
-            show={showFinalCompletionModal} 
-            onHide={() => setShowFinalCompletionModal(false)}
-            centered
-            backdrop="static"
-          >
-            <Modal.Header className="tw-bg-gradient-to-r tw-from-green-50 tw-to-blue-50">
-              <Modal.Title className="tw-text-green-800 tw-flex tw-items-center">
-                {finalSubmitSuccess ? (
-                  <>
-                    <Check className="tw-mr-2 tw-text-green-600" size={20} />
-                    🎉 Exam Session Completed!
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="tw-mr-2 tw-text-red-600" size={20} />
-                    Final Submission Error
-                  </>
-                )}
-              </Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <div className="tw-p-2">
-                {finalSubmitSuccess ? (
-                  <>
-                    <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-green-900">
-                      🌟 Congratulations! You have successfully completed your entire exam session.
-                    </p>
-                    <div className="tw-bg-gradient-to-r tw-from-green-50 tw-to-blue-50 tw-p-4 tw-rounded-lg tw-mb-4">
-                      <div className="tw-flex tw-items-center tw-mb-2">
-                        <FileCheck className="tw-text-green-600 tw-mr-2" size={18} />
-                        <span className="tw-font-medium tw-text-green-800">Final Results</span>
-                      </div>
-                      <p className="tw-text-green-700 tw-mb-2">
-                        ✅ All exam sections have been submitted successfully
-                      </p>
-                      <p className="tw-text-green-700 tw-mb-2">
-                        📊 Your answers are being processed for scoring
-                      </p>
-                      <p className="tw-text-blue-700 tw-font-medium">
-                        🏆 Results will be available on your dashboard shortly
-                      </p>
-                    </div>
-                    <div className="tw-bg-blue-50 tw-p-3 tw-rounded tw-border tw-border-blue-200">
-                      <p className="tw-text-blue-800 tw-text-sm tw-mb-1">
-                        <strong>What happens next?</strong>
-                      </p>
-                      <ul className="tw-text-blue-700 tw-text-sm tw-list-disc tw-list-inside tw-space-y-1">
-                        <li>Your answers will be automatically scored</li>
-                        <li>Results will appear on your dashboard</li>
-                        <li>You can review your performance and areas for improvement</li>
-                      </ul>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-red-900">
-                      There was an error submitting your final exam.
-                    </p>
-                    <div className="tw-bg-red-50 tw-p-4 tw-rounded-lg tw-mb-4">
-                      <p className="tw-text-red-700 tw-mb-2">
-                        Don't worry! Your answers have been saved locally.
-                      </p>
-                      <p className="tw-text-red-600 tw-text-sm">
-                        Please check your internet connection and try submitting again.
-                      </p>
-                    </div>
-                  </>
-                )}
-              </div>
-            </Modal.Body>
-            <Modal.Footer>
-              {finalSubmitSuccess ? (
-                <Button 
-                  variant="primary" 
-                  onClick={handleNextExam}
-                  className="tw-bg-gradient-to-r tw-from-green-600 tw-to-blue-600 tw-border-0 hover:tw-from-green-700 hover:tw-to-blue-700 tw-flex tw-items-center"
-                >
-                  <Home className="tw-mr-2" size={16} />
-                  Return to Try-Out Dashboard
-                </Button>
-              ) : (
-                <>
-                  <Button 
-                    variant="outline-secondary" 
-                    onClick={() => setShowFinalCompletionModal(false)}
-                    className="tw-border-2 tw-border-gray-200 tw-text-gray-700 hover:tw-bg-gray-50"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    variant="primary" 
-                    onClick={handleRetrySubmit}
-                    className="tw-bg-red-600 tw-border-0 hover:tw-bg-red-700"
-                  >
-                    Retry Final Submit
-                  </Button>
-                </>
               )}
             </Modal.Footer>
           </Modal>
@@ -2422,6 +2711,14 @@ const ExamContent: React.FC = () => {
                       <div className="tw-text-2xl tw-font-mono tw-font-bold tw-text-amber-700 tw-mt-2">
                         {countdown}
                       </div>
+                      {process.env.NODE_ENV === 'development' && (
+                        <div className="tw-text-xs tw-text-amber-600 tw-bg-amber-100 tw-p-2 tw-rounded tw-mt-2">
+                          <p>Server Time: {new Date(enhancedGetServerTime()).toISOString()}</p>
+                          <p>Start Time: {new Date(examStartTime).toISOString()}</p>
+                          <p>Time Offset: {Math.round(timeOffset)}ms</p>
+                          <p>Reliability: {Math.round((reliability || 0) * 100)}%</p>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -2475,8 +2772,18 @@ const ChainExam: React.FC = () => {
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <div className="tw-text-center">
           <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
-          <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">Initializing Exam System...</h2>
-          <p className="tw-text-violet-600 tw-mt-2">Please wait while we prepare the timer and validation system</p>
+          <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">Initializing Enhanced Exam System...</h2>
+          <p className="tw-text-violet-600 tw-mt-2">Please wait while we prepare the enhanced timer and validation system</p>
+          {process.env.NODE_ENV === 'development' && (
+            <div className="tw-text-xs tw-text-violet-400 tw-mt-4 tw-bg-violet-100 tw-p-2 tw-rounded">
+              <p>⚡ Fixed Version Features:</p>
+              <p>✅ Pure UTC Time Synchronization</p>
+              <p>✅ No Timezone Confusion</p>
+              <p>✅ Enhanced Timer Validation</p>
+              <p>✅ Statistical Network Analysis</p>
+              <p>✅ Proper Question Loading Control</p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -2486,19 +2793,19 @@ const ChainExam: React.FC = () => {
     <UserPurchaseProvider 
       examDuration={mainTimer} 
       onSecurityBreach={() => {
-        // Security breach handler
+        console.log('🚨 Purchase context security breach detected');
       }}
     >
       <ActiveUserProvider 
         examDuration={mainTimer}
         onSecurityBreach={() => {
-          // Security breach handler
+          console.log('🚨 User activity context anomaly detected');
         }}
       >
         <AllProductProvider 
           examDuration={mainTimer}
           onSecurityBreach={() => {
-            // Security breach handler
+            console.log('🚨 Product context inventory breach detected');
           }}
         >
           <ExamContent />

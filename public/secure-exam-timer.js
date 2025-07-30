@@ -1,7 +1,5 @@
 // File: public/secure-exam-timer.js
-// FIXED VERSION - GUARANTEED TO WORK WITH PROPER RESPONSES
-
-console.log('Timer Worker Starting...');
+// PRODUCTION VERSION - NO DEBUG LOGGING
 
 // Simple state
 let timer = null;
@@ -15,18 +13,13 @@ self.postMessage({
   timestamp: Date.now()
 });
 
-console.log('Worker ready signal sent');
-
 // Handle messages
 self.onmessage = function(e) {
-  console.log('Worker received message:', e.data);
-  
   const { action, payload } = e.data;
   
   try {
     switch (action) {
       case 'ping':
-        console.log('Ping received - sending ready response');
         self.postMessage({ 
           type: 'worker_ready',
           timestamp: Date.now()
@@ -34,26 +27,21 @@ self.onmessage = function(e) {
         break;
         
       case 'start':
-        console.log('Start timer:', payload);
         startTimer(payload.duration || 0);
         break;
         
       case 'stop':
-        console.log('Stop timer');
         stopTimer();
         break;
         
       case 'heartbeat_response':
-        console.log('Heartbeat response received:', payload);
-        // Just acknowledge the heartbeat response
+        // Acknowledge heartbeat response
         break;
         
       default:
-        console.log('Unknown action:', action);
-        // Don't throw error for unknown actions, just log
+        // Ignore unknown actions
     }
   } catch (error) {
-    console.error('Worker error:', error);
     self.postMessage({
       type: 'worker_error',
       error: error.message
@@ -62,8 +50,6 @@ self.onmessage = function(e) {
 };
 
 function startTimer(duration) {
-  console.log('Starting timer with duration:', duration, 'seconds');
-  
   if (timer) {
     clearInterval(timer);
   }
@@ -77,8 +63,6 @@ function startTimer(duration) {
   
   // Start interval
   timer = setInterval(sendTick, 1000);
-  
-  console.log('Timer started successfully');
 }
 
 function sendTick() {
@@ -87,8 +71,6 @@ function sendTick() {
   const now = Date.now();
   const elapsed = Math.floor((now - startTime) / 1000);
   const remaining = Math.max(0, durationSeconds - elapsed);
-  
-  console.log(`Timer tick: ${remaining}s remaining, ${elapsed}s elapsed`);
   
   self.postMessage({
     type: 'tick',
@@ -108,7 +90,6 @@ function sendTick() {
   });
   
   if (remaining <= 0) {
-    console.log('Timer expired - sending timeout signal');
     stopTimer();
     self.postMessage({
       type: 'timeout',
@@ -118,7 +99,6 @@ function sendTick() {
 }
 
 function stopTimer() {
-  console.log('Stopping timer');
   isRunning = false;
   if (timer) {
     clearInterval(timer);
@@ -135,5 +115,3 @@ setInterval(() => {
     });
   }
 }, 5000);
-
-console.log('Worker fully loaded and ready');
