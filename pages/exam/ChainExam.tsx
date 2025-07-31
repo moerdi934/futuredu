@@ -1,4 +1,4 @@
-// ChainExam Component - PRODUCTION CLEAN VERSION
+// ChainExam Component - FIXED VERSION (Single Fetch)
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
@@ -315,7 +315,6 @@ const ExamContent: React.FC = () => {
   const [nextExam, setNextExam] = useState<string | null>(null);
   const [showCheckpointToast, setShowCheckpointToast] = useState<boolean>(false);
   const [autoSaving, setAutoSaving] = useState<boolean>(false);
-  const [isInitializing, setIsInitializing] = useState(false);
   const [examSession, setExamSession] = useState<ExamSession | null>(null);
   const [isExamAccessible, setIsExamAccessible] = useState<boolean>(true);
   const [showNotAccessibleModal, setShowNotAccessibleModal] = useState(false);
@@ -326,30 +325,31 @@ const ExamContent: React.FC = () => {
   const [originPath, setOriginPath] = useState<string>('/');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Enhanced loading control states
-  const [questionsForCurrentExam, setQuestionsForCurrentExam] = useState<Question[]>([]);
-  const [currentExamQuestionIds, setCurrentExamQuestionIds] = useState<Set<number>>(new Set());
-  const [isQuestionsReady, setIsQuestionsReady] = useState(false);
-  const [lastLoadedExamString, setLastLoadedExamString] = useState<string | null>(null);
-  const [examDataConsistency, setExamDataConsistency] = useState({
-    examStringMatch: false,
-    examIdMatch: false,
-    questionsMatch: false,
-    sessionMatch: false
-  });
+  // FIXED: Enhanced loading control states with proper fetch tracking
+  const [questionsReady, setQuestionsReady] = useState(false);
+  const [accessCheckComplete, setAccessCheckComplete] = useState(false);
+  const [initializationComplete, setInitializationComplete] = useState(false);
 
   // Fixed submission states
   const [isLastExam, setIsLastExam] = useState(false);
   const [finalSubmitSuccess, setFinalSubmitSuccess] = useState(false);
   const [showFinalCompletionModal, setShowFinalCompletionModal] = useState(false);
 
-  // Fixed loading states for exam accessibility
-  const [isCheckingExamAccess, setIsCheckingExamAccess] = useState(true);
-  const [hasInitialAccessCheck, setHasInitialAccessCheck] = useState(false);
+  // FIXED: Single fetch tracking
+  const fetchStateRef = useRef<{
+    currentExamString: string | null;
+    isFetching: boolean;
+    hasFetched: boolean;
+    lastSuccessfulFetch: string | null;
+  }>({
+    currentExamString: null,
+    isFetching: false,
+    hasFetched: false,
+    lastSuccessfulFetch: null
+  });
 
   const autoSaveRef = useRef<NodeJS.Timeout>();
   const submissionInProgress = useRef<boolean>(false);
-  const initializationAttempted = useRef<boolean>(false);
 
   // Get context data safely with proper checks
   const { 
@@ -388,77 +388,7 @@ const ExamContent: React.FC = () => {
   useEffect(() => {
     const isLast = currentExamIndex === examOrder.length - 1;
     setIsLastExam(isLast);
-  }, [currentExamIndex, examOrder.length, exam_string]);
-
-  // Enhanced validation for exam readiness
-  const validateExamReadiness = useCallback((
-    targetExamString: string,
-    targetExamId: number,
-    targetQuestions: Question[],
-    targetExamName: string
-  ) => {
-    // Check 1: Exam string must match current route
-    const examStringMatch = targetExamString === exam_string;
-    
-    // Check 2: Exam ID must match the one from examOrder
-    const currentExam = examOrder.find(exam => exam.exam_string === targetExamString);
-    const examIdMatch = currentExam && currentExam.exam_id === targetExamId;
-    
-    // Check 3: Questions must exist and be non-empty
-    const questionsMatch = targetQuestions.length > 0;
-    
-    // Check 4: Exam name must match
-    const examNameMatch = targetExamName && targetExamName.trim().length > 0;
-
-    const consistency = {
-      examStringMatch,
-      examIdMatch: !!examIdMatch,
-      questionsMatch,
-      sessionMatch: examNameMatch
-    };
-
-    setExamDataConsistency(consistency);
-
-    const isReady = examStringMatch && examIdMatch && questionsMatch && examNameMatch;
-
-    return isReady;
-  }, [exam_string, examId, examOrder]);
-
-  // Enhanced questions setter with validation
-  const setQuestionsWithValidation = useCallback((
-    newQuestions: Question[],
-    forExamString: string,
-    forExamId: number,
-    forExamName: string
-  ) => {
-    // Validate that these questions are for the current exam
-    const isReady = validateExamReadiness(forExamString, forExamId, newQuestions, forExamName);
-
-    if (isReady) {
-      // Set the question IDs for this exam
-      const questionIds = new Set(newQuestions.map(q => q.id));
-      setCurrentExamQuestionIds(questionIds);
-      
-      // Set questions for current exam
-      setQuestionsForCurrentExam(newQuestions);
-      setQuestions(newQuestions);
-      setLastLoadedExamString(forExamString);
-      setIsQuestionsReady(true);
-      setLoading(false);
-      setError(false);
-    } else {
-      // Keep in loading state until proper questions arrive
-      setIsQuestionsReady(false);
-      setLoading(true);
-      
-      // Clear any existing questions that don't match
-      if (lastLoadedExamString !== forExamString) {
-        setQuestions([]);
-        setQuestionsForCurrentExam([]);
-        setCurrentExamQuestionIds(new Set());
-      }
-    }
-  }, [exam_string, validateExamReadiness, lastLoadedExamString]);
+  }, [currentExamIndex, examOrder.length]);
 
   // Enhanced auto-submit handler with proper final exam handling
   const handleAutoSubmit = useCallback(async (reason = 'time_expired') => {
@@ -563,51 +493,50 @@ const ExamContent: React.FC = () => {
     });
   }, [networkLatency, reliability, offsetStdDev, timezoneOffset, updateNetworkInfo]);
 
-  // Exam string change handler with better state management
+  // FIXED: Enhanced exam string change handler with proper state reset
   useEffect(() => {
-    if (exam_string && exam_string !== lastLoadedExamString) {
+    if (exam_string !== fetchStateRef.current.currentExamString) {
+      console.log('🔄 Exam string changed, resetting state:', {
+        from: fetchStateRef.current.currentExamString,
+        to: exam_string
+      });
+      
       // Stop current timer
       stopTimer();
+      
+      // Reset fetch state
+      fetchStateRef.current = {
+        currentExamString: exam_string,
+        isFetching: false,
+        hasFetched: false,
+        lastSuccessfulFetch: null
+      };
       
       // Enhanced state reset for exam change
       setLoading(true);
       setError(false);
       setSubmitError(false);
-      
-      // Clear previous exam data immediately
       setQuestions([]);
-      setQuestionsForCurrentExam([]);
-      setCurrentExamQuestionIds(new Set());
-      setIsQuestionsReady(false);
-      
       setAnswers({});
       setCurrentQuestion(0);
       setExamSession(null);
       setIsTimeExpired(false);
       setExamName(null);
       setDuration(0);
+      setQuestionsReady(false);
+      setAccessCheckComplete(false);
+      setInitializationComplete(false);
       
       // Reset access check states
-      setIsCheckingExamAccess(true);
-      setHasInitialAccessCheck(false);
       setIsExamAccessible(true);
       setShowNotAccessibleModal(false);
       setExamStartTime(null);
       setCountdown("");
       
-      // Reset validation states
-      setExamDataConsistency({
-        examStringMatch: false,
-        examIdMatch: false,
-        questionsMatch: false,
-        sessionMatch: false
-      });
-      
       // Reset initialization flags
-      initializationAttempted.current = false;
       submissionInProgress.current = false;
     }
-  }, [exam_string, lastLoadedExamString, questions.length, isQuestionsReady, examDataConsistency, stopTimer]);
+  }, [exam_string, stopTimer]);
 
   // Stable effect for time jump detection
   useEffect(() => {
@@ -643,7 +572,7 @@ const ExamContent: React.FC = () => {
     setIsClient(true);
   }, []);
 
-  // Stable context data sync - IMMEDIATE sync when context changes
+  // FIXED: Stable context data sync with immediate synchronization
   useEffect(() => {
     if (!examContext) return;
     
@@ -670,11 +599,13 @@ const ExamContent: React.FC = () => {
       setExamSession(contextActiveSession);
     }
     
+    // FIXED: Set examId immediately and only once per exam change
     if (examOrder.length > 0 && exam_string) {
       const currentExam = examOrder.find(exam => exam.exam_string === exam_string);
       
       if (currentExam && currentExam.exam_id) {
         setExamId(currentExam.exam_id);
+        setExamName(currentExam.name);
         setExamType(currentExam.examType);
       }
     }
@@ -740,27 +671,7 @@ const ExamContent: React.FC = () => {
     }
   };
 
-  // Find latest unfinished exam
-  const findLatestUnfinishedExam = useCallback(async () => {
-    if (!isClient) return false;
-    
-    if (!exam_string && examOrder.length > 0) {
-      setLoading(true);
-      
-      for (let i = examOrder.length - 1; i >= 0; i--) {
-        const hasData = await ExamDBService.hasExamData(examOrder[i].exam_string);
-        
-        if (hasData) {
-          router.push(`/exam/${examOrder[i].exam_string}`);
-          return true;
-        }
-      }
-      setLoading(false);
-    }
-    return false;
-  }, [isClient, examOrder, exam_string, router]);
-
-  // Enhanced loadExistingSession with proper access control
+  // FIXED: Enhanced loadExistingSession with single call guarantee
   const loadExistingSession = useCallback(async (currentExamId: number, expectedExamString: string) => {
     if (!isClient || !examScheduleId || !currentExamId) {
       return false;
@@ -807,8 +718,7 @@ const ExamContent: React.FC = () => {
           // Set access state and show wait screen WITHOUT loading questions
           setExamStartTime(sessionData.start_time);
           setIsExamAccessible(false);
-          setIsCheckingExamAccess(false);
-          setHasInitialAccessCheck(true);
+          setAccessCheckComplete(true);
           setShowNotAccessibleModal(true);
           setLoading(false); // Stop loading to show wait screen
           
@@ -817,8 +727,7 @@ const ExamContent: React.FC = () => {
         }
         
         setIsExamAccessible(true);
-        setIsCheckingExamAccess(false);
-        setHasInitialAccessCheck(true);
+        setAccessCheckComplete(true);
         
         // Set answers
         setAnswers(sessionData.answers || {});
@@ -878,8 +787,7 @@ const ExamContent: React.FC = () => {
                   } catch (error) {
                     // Error handling
                   }
-                }
-              }
+                }}
             }, 500);
           }
         } else {
@@ -892,14 +800,12 @@ const ExamContent: React.FC = () => {
         
       } else {
         // Even if no session, still check exam accessibility
-        setIsCheckingExamAccess(false);
-        setHasInitialAccessCheck(true);
+        setAccessCheckComplete(true);
         return false;
       }
     } catch (error) {
       // Set access check complete even on error
-      setIsCheckingExamAccess(false);
-      setHasInitialAccessCheck(true);
+      setAccessCheckComplete(true);
       
       // Fallback: load saved answers (but only if exam hasn't changed)
       if (expectedExamString === exam_string) {
@@ -926,32 +832,58 @@ const ExamContent: React.FC = () => {
     timeOffset
   ]);
 
-  // Enhanced fetchQuestions with strict validation and loading control
+  // FIXED: Single fetch function with comprehensive duplicate prevention
   const fetchQuestions = useCallback(async () => {
     if (!isClient) {
+      console.log('❌ fetchQuestions: Not client-side, skipping');
       return;
     }
     
     if (!exam_string) {
+      console.log('❌ fetchQuestions: No exam_string, skipping');
+      return;
+    }
+    
+    if (!examScheduleId) {
+      console.log('❌ fetchQuestions: No examScheduleId, skipping');
+      return;
+    }
+    
+    if (examOrder.length === 0) {
+      console.log('❌ fetchQuestions: No examOrder, skipping');
+      return;
+    }
+
+    // CRITICAL: Check if already fetching or fetched for this exam
+    const fetchState = fetchStateRef.current;
+    
+    if (fetchState.isFetching) {
+      console.log('⏳ fetchQuestions: Already fetching, skipping duplicate request');
+      return;
+    }
+    
+    if (fetchState.hasFetched && fetchState.lastSuccessfulFetch === exam_string) {
+      console.log('✅ fetchQuestions: Already fetched for this exam, skipping');
       return;
     }
     
     // Validate that this exam_string exists in examOrder
     const currentExam = examOrder.find((exam) => exam.exam_string === exam_string);
     if (!currentExam) {
+      console.log('❌ fetchQuestions: Exam not found in examOrder');
       setError(true);
       setLoading(false);
       return;
     }
 
-    // CHECK: Avoid duplicate requests for the same exam
-    if (lastLoadedExamString === exam_string && isQuestionsReady && questions.length > 0) {
-      return;
-    }
+    // Mark as fetching to prevent duplicates
+    fetchStateRef.current.isFetching = true;
     
-    // Set examId IMMEDIATELY and SYNCHRONOUSLY
-    setExamId(currentExam.exam_id);
-    setExamName(currentExam.name);
+    console.log('🚀 fetchQuestions: Starting fetch for exam:', {
+      exam_string,
+      examId: currentExam.exam_id,
+      examName: currentExam.name
+    });
     
     try {
       const axios = (await import('axios')).default;
@@ -969,7 +901,8 @@ const ExamContent: React.FC = () => {
       );
 
       // CHECK: Ensure exam hasn't changed during API call
-      if (exam_string !== (params?.exam_string as string)) {
+      if (exam_string !== fetchStateRef.current.currentExamString) {
+        console.log('❌ fetchQuestions: Exam changed during fetch, aborting');
         return;
       }
 
@@ -985,65 +918,71 @@ const ExamContent: React.FC = () => {
       }
 
       // FINAL CHECK: Ensure exam is still the same
-      if (exam_string !== (params?.exam_string as string)) {
+      if (exam_string !== fetchStateRef.current.currentExamString) {
+        console.log('❌ fetchQuestions: Exam changed after decrypt, aborting');
         return;
       }
       
-      // Set duration first
+      console.log('✅ fetchQuestions: Successfully fetched questions:', {
+        count: parsedData.questions.length,
+        duration: parsedData.duration
+      });
+      
+      // Set examId and examName IMMEDIATELY and SYNCHRONOUSLY
+      setExamId(currentExam.exam_id);
+      setExamName(currentExam.name);
       setDuration(parsedData.duration);
+      setQuestions(parsedData.questions);
+      setQuestionsReady(true);
       
-      // Use validation-based question setter
-      setQuestionsWithValidation(
-        parsedData.questions,
-        exam_string,
-        currentExam.exam_id,
-        currentExam.name
-      );
+      // Mark as successfully fetched
+      fetchStateRef.current.hasFetched = true;
+      fetchStateRef.current.lastSuccessfulFetch = exam_string;
       
-      // Load session ONLY after questions are set AND accessibility is confirmed
-      if (validateExamReadiness(exam_string, currentExam.exam_id, parsedData.questions, currentExam.name)) {
-        try {
-          const sessionLoaded = await loadExistingSession(currentExam.exam_id, exam_string);
-          
-          // If session loading indicated exam is not accessible, stop here
-          if (!isExamAccessible && hasInitialAccessCheck) {
-            return;
-          }
-          
-          if (!sessionLoaded && isExamAccessible) {
-            if (parsedData.duration > 0 && timerInitialized && exam_string === (params?.exam_string as string)) {
-              const timerDuration = parsedData.duration * 60;
-              const success = startTimer(timerDuration);
-            }
-          }
-        } catch (sessionError) {
-          // Only start fresh timer if exam is accessible
-          if (isExamAccessible && parsedData.duration > 0 && timerInitialized && exam_string === (params?.exam_string as string)) {
+      // Load session ONLY after questions are set
+      try {
+        const sessionLoaded = await loadExistingSession(currentExam.exam_id, exam_string);
+        
+        // If session loading indicated exam is not accessible, stop here
+        if (!isExamAccessible && accessCheckComplete) {
+          return;
+        }
+        
+        if (!sessionLoaded && isExamAccessible) {
+          if (parsedData.duration > 0 && timerInitialized && exam_string === fetchStateRef.current.currentExamString) {
             const timerDuration = parsedData.duration * 60;
             const success = startTimer(timerDuration);
           }
         }
+      } catch (sessionError) {
+        console.warn('⚠️ Session loading failed, starting fresh timer:', sessionError);
+        // Only start fresh timer if exam is accessible
+        if (isExamAccessible && parsedData.duration > 0 && timerInitialized && exam_string === fetchStateRef.current.currentExamString) {
+          const timerDuration = parsedData.duration * 60;
+          const success = startTimer(timerDuration);
+        }
       }
       
+      // Mark initialization as complete
+      setInitializationComplete(true);
+      setError(false);
+      
     } catch (error) {
+      console.error('❌ fetchQuestions: Error fetching questions:', error);
       setError(true);
+      setQuestionsReady(false);
+    } finally {
+      // Always reset fetching state
+      fetchStateRef.current.isFetching = false;
       setLoading(false);
-      setIsQuestionsReady(false);
     }
   }, [
     isClient, 
     exam_string,
     examOrder,
     examScheduleId,
-    examId,
-    lastLoadedExamString,
-    isQuestionsReady,
-    questions.length,
-    params?.exam_string,
-    hasInitialAccessCheck,
     isExamAccessible,
-    setQuestionsWithValidation,
-    validateExamReadiness,
+    accessCheckComplete,
     loadExistingSession, 
     timerInitialized, 
     startTimer
@@ -1117,12 +1056,11 @@ const ExamContent: React.FC = () => {
       const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
       
       console.log('📤 Submitting to server:', {
-      exam_string,
-      examIdToSubmit,
-      savedAnswers,
-      finalElapsedTimes
-    });
-
+        exam_string,
+        examIdToSubmit,
+        savedAnswers,
+        finalElapsedTimes
+      });
 
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/examSession/submit`,
@@ -1186,30 +1124,20 @@ const ExamContent: React.FC = () => {
       setSubmitError(true);
       return false;
     }
-    }, [isClient, exam_string, examScheduleId, examId, answers, isLastExam, selectedTopicId,examOrder]);
+  }, [isClient, exam_string, examScheduleId, examId, answers, isLastExam, selectedTopicId, examOrder, elapsed]);
 
   // Handle change
   const handleChange = useCallback(async (id: number, value: any) => {
-    // VALIDATION: Only allow changes for current exam's questions
-    if (!currentExamQuestionIds.has(id)) {
-      return;
-    }
-
     const updatedAnswers = {
       ...answers,
       [id]: value
     };
     setAnswers(updatedAnswers);
     await ExamDBService.saveAnswers(exam_string, updatedAnswers);
-  }, [answers, exam_string, currentExamQuestionIds]);
+  }, [answers, exam_string]);
 
   // Handle true/false change
   const handleTrueFalseChange = useCallback(async (id: number, index: number, value: any) => {
-    // VALIDATION: Only allow changes for current exam's questions
-    if (!currentExamQuestionIds.has(id)) {
-      return;
-    }
-
     const updatedAnswers = [...(answers[id] || [])];
     updatedAnswers[index] = value;
     const newAnswers = {
@@ -1218,7 +1146,7 @@ const ExamContent: React.FC = () => {
     };
     setAnswers(newAnswers);
     await ExamDBService.saveAnswers(exam_string, newAnswers);
-  }, [answers, exam_string, currentExamQuestionIds]);
+  }, [answers, exam_string]);
 
   // Utility functions
   const isAnswerFilled = (answer: any): boolean => {
@@ -1272,33 +1200,30 @@ const ExamContent: React.FC = () => {
         // Error handling
       }
       
+      // Reset fetch state for new exam
+      fetchStateRef.current = {
+        currentExamString: null,
+        isFetching: false,
+        hasFetched: false,
+        lastSuccessfulFetch: null
+      };
+      
       // Enhanced state reset before navigation
       setLoading(true);
       setError(false);
       setSubmitError(false);
       setQuestions([]);
-      setQuestionsForCurrentExam([]);
-      setCurrentExamQuestionIds(new Set());
-      setIsQuestionsReady(false);
       setAnswers({});
       setCurrentQuestion(0);
       setExamSession(null);
       setIsTimeExpired(false);
       setExamName(null);
       setDuration(0);
-      setIsInitializing(false);
-      setLastLoadedExamString(null);
-      
-      // Reset validation states
-      setExamDataConsistency({
-        examStringMatch: false,
-        examIdMatch: false,
-        questionsMatch: false,
-        sessionMatch: false
-      });
+      setQuestionsReady(false);
+      setAccessCheckComplete(false);
+      setInitializationComplete(false);
       
       // Reset refs
-      initializationAttempted.current = false;
       submissionInProgress.current = false;
       
       // Small delay to ensure state is reset before navigation
@@ -1395,8 +1320,12 @@ const ExamContent: React.FC = () => {
         if (!sessionData.is_auto_move && serverNow >= sessionStartTime) {
           setShowNotAccessibleModal(false);
           setIsExamAccessible(true);
-          setIsCheckingExamAccess(true);
+          setAccessCheckComplete(false);
           setLoading(true);
+          
+          // Reset fetch state to allow refetch
+          fetchStateRef.current.hasFetched = false;
+          fetchStateRef.current.lastSuccessfulFetch = null;
           
           // Fetch questions since exam is now accessible
           fetchQuestions();
@@ -1414,8 +1343,13 @@ const ExamContent: React.FC = () => {
         if (serverNow >= startTime) {
           setIsExamAccessible(true);
           setShowNotAccessibleModal(false);
-          setIsCheckingExamAccess(true);
+          setAccessCheckComplete(false);
           setLoading(true);
+          
+          // Reset fetch state to allow refetch
+          fetchStateRef.current.hasFetched = false;
+          fetchStateRef.current.lastSuccessfulFetch = null;
+          
           fetchQuestions();
         }
       }
@@ -1500,20 +1434,6 @@ const ExamContent: React.FC = () => {
     }
   };
 
-  
-
-  // Di dalam ExamProvider (context/ExamContext.tsx)
-  useEffect(() => {
-    console.log('📝 ExamContext: examOrder updated:', {
-      count: examOrder.length,
-      data: examOrder.map(exam => ({
-        exam_string: exam.exam_string,
-        exam_id: exam.exam_id,
-        name: exam.name
-      }))
-    });
-  }, [examOrder]);
-
   // Question elapsed time tracking
   useEffect(() => {
     if (!isClient || loading || questions.length === 0 || currentQuestion >= questions.length || !isRunning) return;
@@ -1523,15 +1443,15 @@ const ExamContent: React.FC = () => {
       return;
     }
     
-if (exam_string && Number.isFinite(elapsed)) {
-    console.log('⏱ Updating question elapsed time:', { exam_string, questionId: currentQuestionData.id, elapsed });
-    ExamDBService.updateQuestionElapsedTime(exam_string, currentQuestionData.id, elapsed).catch(err => {
-      console.error('🚨 Error updating question elapsed time:', err);
-    });
-  } else {
-    console.warn('⚠ Skipping updateQuestionElapsedTime due to invalid elapsed:', { elapsed, isRunning });
-  }
-  }, [isClient, loading, questions, currentQuestion, exam_string,elapsed, isRunning]);
+    if (exam_string && Number.isFinite(elapsed)) {
+      console.log('⏱ Updating question elapsed time:', { exam_string, questionId: currentQuestionData.id, elapsed });
+      ExamDBService.updateQuestionElapsedTime(exam_string, currentQuestionData.id, elapsed).catch(err => {
+        console.error('🚨 Error updating question elapsed time:', err);
+      });
+    } else {
+      console.warn('⚠ Skipping updateQuestionElapsedTime due to invalid elapsed:', { elapsed, isRunning });
+    }
+  }, [isClient, loading, questions, currentQuestion, exam_string, elapsed, isRunning]);
 
   // Cleanup effect
   useEffect(() => {
@@ -1541,52 +1461,53 @@ if (exam_string && Number.isFinite(elapsed)) {
       if (autoSaveRef.current) clearInterval(autoSaveRef.current);
       
       if (exam_string && questions.length > 0 && isRunning && Number.isFinite(elapsed)) {
-      console.log('⏱ Finalizing question elapsed time:', { exam_string, elapsed });
-      ExamDBService.finalizeCurrentQuestionTime(exam_string, elapsed).catch(err => {
-        console.error('🚨 Error finalizing question elapsed time:', err);
-      });
-    } else {
-      console.warn('⚠ Skipping finalizeCurrentQuestionTime:', { exam_string, questionsLength: questions.length, isRunning, elapsed });
-    }
+        console.log('⏱ Finalizing question elapsed time:', { exam_string, elapsed });
+        ExamDBService.finalizeCurrentQuestionTime(exam_string, elapsed).catch(err => {
+          console.error('🚨 Error finalizing question elapsed time:', err);
+        });
+      } else {
+        console.warn('⚠ Skipping finalizeCurrentQuestionTime:', { exam_string, questionsLength: questions.length, isRunning, elapsed });
+      }
     };
   }, [isClient, exam_string, questions, elapsed, isRunning]);
 
+  // FIXED: Single initialization effect that handles everything
   useEffect(() => {
-  if (!isClient || !exam_string || !examScheduleId || examOrder.length === 0) return;
-
-  const initExam = async () => {
-    try {
-      setIsInitializing(true);
-
-      // Fetch saved answers from ExamDBService
-      const savedAnswers = await ExamDBService.getAnswers(exam_string);
-      if (savedAnswers) {
-        setAnswers(savedAnswers);
-      }
-
-      await fetchQuestions();
-    } catch (error) {
-      setError(true);
-      setLoading(false);
-      setIsQuestionsReady(false);
-    } finally {
-      setIsInitializing(false);
+    // Only run if all required conditions are met
+    if (!isClient || !exam_string || !examScheduleId || examOrder.length === 0) {
+      return;
     }
-  };
+    
+    // Check if we should initialize (haven't fetched for this exam yet)
+    if (!fetchStateRef.current.hasFetched || fetchStateRef.current.lastSuccessfulFetch !== exam_string) {
+      console.log('🚀 FIXED: Single initialization for exam:', exam_string);
+      
+      const initExam = async () => {
+        try {
+          // Load saved answers first
+          const savedAnswers = await ExamDBService.getAnswers(exam_string);
+          if (savedAnswers) {
+            setAnswers(savedAnswers);
+          }
 
-  if (lastLoadedExamString !== exam_string || !isQuestionsReady || !hasInitialAccessCheck) {
-    initExam();
-  }
-}, [
-  isClient,
-  exam_string,
-  examScheduleId,
-  examOrder.length,
-  lastLoadedExamString,
-  isQuestionsReady,
-  hasInitialAccessCheck,
-  fetchQuestions
-]);
+          // Fetch questions (this will handle session loading internally)
+          await fetchQuestions();
+        } catch (error) {
+          console.error('❌ Initialization failed:', error);
+          setError(true);
+          setLoading(false);
+        }
+      };
+
+      initExam();
+    }
+  }, [
+    isClient,
+    exam_string,
+    examScheduleId,
+    examOrder.length,
+    fetchQuestions
+  ]);
 
   // Countdown effect for exam access with proper timezone handling
   useEffect(() => {
@@ -1614,33 +1535,30 @@ if (exam_string && Number.isFinite(elapsed)) {
     return () => clearInterval(timer);
   }, [isClient, isExamAccessible, examStartTime, enhancedGetServerTime, handleRetryAccess]);
 
-  // Enhanced loading state validation
+  // FIXED: Enhanced loading state management
   useEffect(() => {
-    // Enhanced condition for loading state
-    if (loading && isQuestionsReady && questions.length > 0 && isClient && exam_string && examScheduleId && hasInitialAccessCheck) {
-      // Double check that questions belong to current exam
-      const currentExam = examOrder.find(exam => exam.exam_string === exam_string);
-      if (currentExam && examDataConsistency.examIdMatch && examDataConsistency.questionsMatch && isExamAccessible) {
-        setLoading(false);
-      }
+    const shouldStopLoading = 
+      questionsReady && 
+      accessCheckComplete && 
+      initializationComplete &&
+      questions.length > 0 && 
+      isClient && 
+      exam_string && 
+      examScheduleId;
+
+    if (shouldStopLoading && loading) {
+      console.log('✅ FIXED: All conditions met, stopping loading');
+      setLoading(false);
     }
   }, [
-    loading, 
-    isInitializing, 
-    questions.length, 
-    isQuestionsReady,
-    isClient, 
-    exam_string, 
-    examScheduleId, 
-    contextExamScheduleId,
-    timerInitialized,
-    timerError,
-    examDataConsistency,
-    lastLoadedExamString,
-    examOrder,
-    isCheckingExamAccess,
-    hasInitialAccessCheck,
-    isExamAccessible
+    questionsReady,
+    accessCheckComplete, 
+    initializationComplete,
+    questions.length,
+    isClient,
+    exam_string,
+    examScheduleId,
+    loading
   ]);
 
   // Auto-save effect
@@ -1664,96 +1582,39 @@ if (exam_string && Number.isFinite(elapsed)) {
     };
   }, [isClient, loading, answers, timeLeft, isRunning, saveExamSession]);
 
-  // Main initialization effect
+  // Debug effect to monitor fetch state
   useEffect(() => {
-    if (!isClient) {
-      return;
-    }
-    
-    if (!exam_string) {
-      return;
-    }
-    
-    // Wait for examScheduleId to be available (from context sync)
-    if (!examScheduleId) {
-      return;
-    }
-    
-    if (examOrder.length === 0) {
-      return;
-    }
+    console.log('🔍 FIXED: Fetch state updated:', {
+      currentExamString: fetchStateRef.current.currentExamString,
+      isFetching: fetchStateRef.current.isFetching,
+      hasFetched: fetchStateRef.current.hasFetched,
+      lastSuccessfulFetch: fetchStateRef.current.lastSuccessfulFetch,
+      questionsReady,
+      accessCheckComplete,
+      initializationComplete
+    });
+  }, [questionsReady, accessCheckComplete, initializationComplete]);
 
-    // Check if we already have valid questions for this exam
-    if (lastLoadedExamString === exam_string && isQuestionsReady && questions.length > 0 && hasInitialAccessCheck) {
-      return;
-    }
-    
-    // Prevent multiple initialization attempts for the SAME exam
-    const initKey = `${exam_string}-${examScheduleId}`;
-    if (initializationAttempted.current === initKey) {
-      return;
-    }
-    
-    initializationAttempted.current = initKey; // Store unique key instead of boolean
-    
-    setIsInitializing(true);
-    
-    const initExam = async () => {
-      try {
-        await fetchQuestions();
-      } catch (error) {
-        setError(true);
-        setLoading(false);
-        setIsQuestionsReady(false);
-      } finally {
-        setIsInitializing(false);
-      }
-    };
-    
-    initExam();
-  }, [
-    isClient, 
-    exam_string, 
-    examScheduleId,
-    examOrder.length,
-    lastLoadedExamString,
-    isQuestionsReady,
-    questions.length,
-    hasInitialAccessCheck,
-    fetchQuestions
-  ]);
-
-  // Retry on error
-  useEffect(() => {
-    if (!isClient || !error || isInitializing) return;
-    
-    const retryTimeout = setTimeout(() => {
-      initializationAttempted.current = false; // Reset for retry
-      setIsQuestionsReady(false);
-      setLastLoadedExamString(null);
-      setHasInitialAccessCheck(false);
-      fetchQuestions();
-    }, 5000);
-
-    return () => clearTimeout(retryTimeout);
-  }, [isClient, error, isInitializing, fetchQuestions]);
-
-  // Enhanced loading screen with access check status
-  if (!isClient || loading || isInitializing || !isQuestionsReady || isCheckingExamAccess) {
+  // FIXED: Enhanced loading screen with better status indication
+  if (!isClient || loading || !questionsReady || !accessCheckComplete) {
     return (
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <div className="tw-text-center">
           <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
           <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">
-            {isCheckingExamAccess ? 'Checking Exam Access...' : 
-             isInitializing ? 'Initializing Exam...' : 
-             !isQuestionsReady ? 'Validating Questions...' : 'Loading Exam...'}
+            {!accessCheckComplete ? 'Checking Exam Access...' : 
+             !questionsReady ? 'Loading Questions...' : 
+             'Initializing Exam...'}
           </h2>
           <p className="tw-text-violet-600 tw-mt-2">
-            {isCheckingExamAccess ? 'Verifying exam schedule and accessibility...' :
-             !isQuestionsReady ? 'Ensuring questions match current exam...' : 
-             'Please wait while we prepare your questions'}
+            {!accessCheckComplete ? 'Verifying exam schedule and accessibility...' :
+             !questionsReady ? 'Fetching exam questions and setup...' : 
+             'Preparing your exam environment...'}
           </p>
+          <div className="tw-mt-4 tw-text-sm tw-text-violet-500">
+            <p>Exam: {exam_string}</p>
+            <p>Status: {fetchStateRef.current.isFetching ? 'Fetching...' : 'Initializing...'}</p>
+          </div>
         </div>
       </div>
     );
@@ -1766,15 +1627,22 @@ if (exam_string && Number.isFinite(elapsed)) {
           <AlertCircle className="tw-h-12 tw-w-12 tw-text-red-600 tw-mx-auto tw-mb-4" />
           <h2 className="tw-text-xl tw-font-semibold tw-text-red-800">Error Loading Exam</h2>
           <p className="tw-text-red-600 tw-mt-2">There was an error loading the exam questions</p>
-          <p className="tw-text-gray-600 tw-mt-2">We'll automatically retry in a few seconds...</p>
           <Button 
             variant="primary" 
             className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
             onClick={() => {
-              initializationAttempted.current = false;
-              setIsQuestionsReady(false);
-              setLastLoadedExamString(null);
-              setHasInitialAccessCheck(false);
+              // Reset fetch state to allow retry
+              fetchStateRef.current = {
+                currentExamString: exam_string,
+                isFetching: false,
+                hasFetched: false,
+                lastSuccessfulFetch: null
+              };
+              setQuestionsReady(false);
+              setAccessCheckComplete(false);
+              setInitializationComplete(false);
+              setError(false);
+              setLoading(true);
               fetchQuestions();
             }}
           >
@@ -1786,7 +1654,7 @@ if (exam_string && Number.isFinite(elapsed)) {
   }
   
   // Show waiting screen ONLY when exam is not accessible
-  if (!isExamAccessible && hasInitialAccessCheck) {
+  if (!isExamAccessible && accessCheckComplete) {
     return (
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <div className="tw-text-center">
@@ -1839,13 +1707,13 @@ if (exam_string && Number.isFinite(elapsed)) {
       {/* Enhanced Focus Detector with network-aware thresholds */}
       <FocusDetector 
         onAutoSubmit={handleAutoSubmit}
-        enabled={!loading && !error && isExamAccessible && questions.length > 0 && !isSubmitting && isQuestionsReady}
+        enabled={!loading && !error && isExamAccessible && questions.length > 0 && !isSubmitting && questionsReady}
         timerRunning={isRunning}
       />
 
       <ChangeTabPrevention 
         onAutoSubmit={() => handleAutoSubmit('tab_change')}
-        enabled={!loading && !error && isExamAccessible && questions.length > 0 && isQuestionsReady}
+        enabled={!loading && !error && isExamAccessible && questions.length > 0 && questionsReady}
       >
         <div className="tw-min-h-screen tw-bg-violet-50">
           {/* Enhanced Header with integrated time sync and timer info */}
@@ -1867,7 +1735,7 @@ if (exam_string && Number.isFinite(elapsed)) {
                     <Clock size={28} className="tw-text-violet-200" />
                     {isRunning && <Activity size={16} className="tw-text-green-400 tw-animate-pulse" />}
                     {isOnline ? <Wifi size={16} className="tw-text-green-400" /> : <WifiOff size={16} className="tw-text-red-400" />}
-                    {isQuestionsReady && <Check size={16} className="tw-text-green-400" />}
+                    {questionsReady && <Check size={16} className="tw-text-green-400" />}
                   </div>
                   <div className="tw-flex tw-flex-col tw-items-start">
                     <span className="tw-text-violet-200 tw-text-sm">Time Remaining</span>
@@ -1931,7 +1799,7 @@ if (exam_string && Number.isFinite(elapsed)) {
                   [&_img]:tw-mx-auto 
                   [&_img]:tw-my-4">
                   <Card.Body className="tw-p-6">
-                    {questions.length > 0 && currentQuestion < questions.length && isQuestionsReady ? (
+                    {questions.length > 0 && currentQuestion < questions.length && questionsReady ? (
                       <>
                         <div className="tw-flex tw-justify-between tw-items-center tw-mb-6">
                           <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">
@@ -1972,7 +1840,7 @@ if (exam_string && Number.isFinite(elapsed)) {
                     ) : (
                       <div className="tw-text-center tw-py-8">
                         <p className="tw-text-gray-500">
-                          {!isQuestionsReady ? 'Validating questions for current exam...' : 'No questions available'}
+                          {!questionsReady ? 'Loading questions...' : 'No questions available'}
                         </p>
                       </div>
                     )}
@@ -1987,7 +1855,7 @@ if (exam_string && Number.isFinite(elapsed)) {
                     <div className="tw-flex tw-items-center tw-justify-between tw-mb-4">
                       <h3 className="tw-text-lg tw-font-semibold tw-text-violet-800">Question Navigator</h3>
                     </div>
-                    {questions.length > 0 && isQuestionsReady ? (
+                    {questions.length > 0 && questionsReady ? (
                       <>
                         <div className="tw-grid tw-grid-cols-5 tw-gap-2 tw-mb-6">
                           {questions.map((q, index) => (
@@ -2030,7 +1898,7 @@ if (exam_string && Number.isFinite(elapsed)) {
                               {timerValid && <Shield className="tw-text-green-600" size={14} />}
                               {isRunning && <Activity className="tw-text-blue-600 tw-animate-pulse" size={14} />}
                               {getBackupTimerValues().fallbackActive && <AlertCircle className="tw-text-yellow-600" size={14} />}
-                              {isQuestionsReady && <Check className="tw-text-green-600" size={14} />}
+                              {questionsReady && <Check className="tw-text-green-600" size={14} />}
                               {isLastExam && <span className="tw-text-orange-600 tw-text-xs">🏁</span>}
                             </div>
                           </div>
@@ -2063,7 +1931,7 @@ if (exam_string && Number.isFinite(elapsed)) {
                       </>
                     ) : (
                       <div className="tw-text-center tw-text-gray-500">
-                        <p>{!isQuestionsReady ? 'Validating questions...' : 'No questions loaded'}</p>
+                        <p>{!questionsReady ? 'Loading questions...' : 'No questions loaded'}</p>
                       </div>
                     )}
                   </Card.Body>
@@ -2075,7 +1943,7 @@ if (exam_string && Number.isFinite(elapsed)) {
           {/* Enhanced Mobile Bottom Navigation */}
           <div className="tw-block md:tw-hidden tw-fixed tw-bottom-0 tw-left-0 tw-right-0 tw-bg-white tw-shadow-lg tw-border-t tw-border-gray-200 tw-z-50">
             <div className="tw-p-4">
-              {questions.length > 0 && isQuestionsReady ? (
+              {questions.length > 0 && questionsReady ? (
                 <>
                   <div className="tw-mb-3">
                     <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
@@ -2136,7 +2004,7 @@ if (exam_string && Number.isFinite(elapsed)) {
                 </>
               ) : (
                 <div className="tw-text-center tw-text-gray-500">
-                  <p>{!isQuestionsReady ? 'Validating questions...' : 'No questions available'}</p>
+                  <p>{!questionsReady ? 'Loading questions...' : 'No questions available'}</p>
                 </div>
               )}
             </div>
@@ -2399,7 +2267,7 @@ if (exam_string && Number.isFinite(elapsed)) {
                     className="tw-border-2 tw-border-gray-200 tw-text-gray-700 hover:tw-bg-gray-50"
                   >
                     Cancel
-                  </Button>
+                    </Button>
                   <Button 
                     variant="primary" 
                     onClick={handleRetrySubmit}
