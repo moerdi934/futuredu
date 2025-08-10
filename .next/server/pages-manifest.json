@@ -1,9 +1,0 @@
-{
-  "/_app": "pages/_app.js",
-  "/_error": "pages/_error.js",
-  "/_document": "pages/_document.js",
-  "/api/exam-schedules/type/[examtype]": "pages/api/exam-schedules/type/[examtype].js",
-  "/exam/[exam_string]": "pages/exam/[exam_string].js",
-  "/diagnostic-test": "pages/diagnostic-test.js",
-  "/try-out": "pages/try-out.js"
-}
