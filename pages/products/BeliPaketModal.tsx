@@ -97,7 +97,7 @@ const BeliPaketModal: React.FC<Props> = ({
       );
       await refreshStatus?.();
       onClose();
-      router.push(`/checkout?ids=${productId}&price=${productPrice}`);
+      router.push(`/checkout?ids=${productId}`);
     } catch (err: any) {
       console.error('Error buying now:', err);
       showToast(

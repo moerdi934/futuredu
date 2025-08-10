@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Button, Spinner, Alert, Form, Container, Row, Col, Card } from 'react-bootstrap';
-import { PlusCircle, MinusCircle, Trash2, ShoppingCart, Package, Plus, Minus } from 'lucide-react';
+import { PlusCircle, MinusCircle, Trash2, ShoppingCart, Package, Plus, Minus, CheckCircle, Circle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import NavigationBar from '../../components/layout/NavigationBar';
 
@@ -101,6 +101,16 @@ export default function CartPage() {
       .reduce((total, item) => total + (item.current_price * item.quantity), 0);
   };
 
+  const toggleSelectAll = () => {
+    if (selectedIds.length === items.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(items.map(item => item.product_id));
+    }
+  };
+
+  const isAllSelected = selectedIds.length === items.length && items.length > 0;
+
   if (loading) {
     return (
       <div className="tw-h-full" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', minHeight: '100vh'}}>
@@ -191,26 +201,74 @@ export default function CartPage() {
               </div>
             ) : (
               <>
+                {/* Select All Button */}
+                <div className="tw-mb-4 tw-flex tw-justify-between tw-items-center">
+                  <Button
+                    variant={isAllSelected ? "success" : "outline-light"}
+                    onClick={toggleSelectAll}
+                    className={`tw-border-2 tw-px-4 tw-py-2 tw-font-semibold tw-transition-all tw-duration-300 tw-flex tw-items-center tw-gap-2 ${
+                      isAllSelected 
+                        ? 'tw-bg-green-500 tw-border-green-500 tw-text-white hover:tw-bg-green-600 tw-shadow-lg' 
+                        : 'tw-border-white/50 tw-text-white hover:tw-bg-white/10 tw-backdrop-blur-sm'
+                    }`}
+                  >
+                    {isAllSelected ? <CheckCircle size={18} /> : <Circle size={18} />}
+                    {isAllSelected ? 'Batalkan Semua' : 'Pilih Semua'}
+                  </Button>
+                  <div className="tw-text-white/90 tw-font-medium">
+                    {selectedIds.length} dari {items.length} produk dipilih
+                  </div>
+                </div>
+
                 <Row className="tw-g-4 tw-mb-4">
                   {items.map((item) => {
                     const checked = selectedIds.includes(item.product_id);
                     return (
                       <Col key={item.product_id} xs={12} md={6} lg={4} className="tw-mb-4">
-                        <Card className="tw-h-full tw-border-0 tw-shadow-2xl tw-bg-white/95 tw-backdrop-blur-sm tw-transition-all tw-duration-300 hover:tw-shadow-3xl hover:tw-transform hover:tw-scale-105">
+                        <Card 
+                          className={`tw-h-full tw-border-0 tw-shadow-2xl tw-bg-white/95 tw-backdrop-blur-sm tw-transition-all tw-duration-300 hover:tw-shadow-3xl hover:tw-transform hover:tw-scale-105 tw-relative tw-overflow-hidden ${
+                            checked ? 'tw-ring-4 tw-ring-green-400 tw-ring-opacity-50' : ''
+                          }`}
+                        >
+                          {/* Selection Overlay */}
+                          {checked && (
+                            <div className="tw-absolute tw-top-0 tw-right-0 tw-bg-green-500 tw-text-white tw-p-2 tw-rounded-bl-lg tw-z-10">
+                              <CheckCircle size={20} />
+                            </div>
+                          )}
+                          
                           <Card.Body className="tw-p-4 tw-d-flex tw-flex-column">
+                            {/* Selection Button - More Prominent */}
                             <div className="tw-flex tw-justify-between tw-items-start tw-mb-3">
-                              <Form.Check
-                                checked={checked}
-                                onChange={() => {
+                              <Button
+                                variant={checked ? "success" : "outline-secondary"}
+                                size="sm"
+                                onClick={() => {
                                   setSelectedIds(prev =>
                                     checked
                                       ? prev.filter(id => id !== item.product_id)
                                       : [...prev, item.product_id]
                                   );
                                 }}
-                                className="tw-mb-0"
-                                style={{ accentColor: '#8B5CF6' }}
-                              />
+                                className={`tw-border-2 tw-px-3 tw-py-2 tw-font-semibold tw-transition-all tw-duration-300 tw-flex tw-items-center tw-gap-2 ${
+                                  checked 
+                                    ? 'tw-bg-green-500 tw-border-green-500 tw-text-white hover:tw-bg-green-600 tw-shadow-md' 
+                                    : 'tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50 hover:tw-border-purple-400'
+                                }`}
+                              >
+                                {checked ? (
+                                  <>
+                                    <CheckCircle size={16} />
+                                    <span className="tw-text-xs tw-font-bold">DIPILIH</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Circle size={16} />
+                                    <span className="tw-text-xs tw-font-bold">PILIH</span>
+                                  </>
+                                )}
+                              </Button>
+                              
                               <Button 
                                 size="sm" 
                                 variant="outline-danger" 
@@ -294,8 +352,9 @@ export default function CartPage() {
                             <span className="tw-font-bold tw-text-purple-700">{totalQty}</span>
                           </div>
                           <div className="tw-flex tw-items-center tw-gap-2">
+                            <CheckCircle className="tw-text-green-600" size={16} />
                             <span className="tw-text-gray-700">Item Dipilih:</span>
-                            <span className="tw-font-bold tw-text-purple-700">{selectedIds.length}</span>
+                            <span className="tw-font-bold tw-text-green-700">{selectedIds.length}</span>
                           </div>
                         </div>
                       </Col>

@@ -2,10 +2,8 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/try-out": "pages/try-out.js",
-  "/login": "pages/login.js",
-  "/exam/[exam_string]": "pages/exam/[exam_string].js",
-  "/api/examSession/submit": "pages/api/examSession/submit.js",
   "/api/exam-schedules/type/[examtype]": "pages/api/exam-schedules/type/[examtype].js",
-  "/api/users/check-auth": "pages/api/users/check-auth.js"
+  "/exam/[exam_string]": "pages/exam/[exam_string].js",
+  "/diagnostic-test": "pages/diagnostic-test.js",
+  "/try-out": "pages/try-out.js"
 }
