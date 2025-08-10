@@ -6,7 +6,7 @@ import {
   Button,
 } from 'react-bootstrap';
 import axios from 'axios';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation'; // Changed from next/router
 import { ShoppingCart, Zap, Star, Gift } from 'lucide-react';
 import { useStatus } from '../../context/StatusContext';
 
@@ -87,17 +87,50 @@ const BeliPaketModal: React.FC<Props> = ({
     }
   };
 
-  // 2) Beli sekarang: add to cart lalu langsung ke checkout
+  // 2) Beli sekarang: add to cart, ambil cart yang baru, lalu langsung checkout
   const handleBuyNow = async () => {
     try {
+      // Add to cart first
       await axios.post(
         `${apiUrl}/cart/add`,
         { productId: productId },
         { withCredentials: true }
       );
-      await refreshStatus?.();
-      onClose();
-      router.push(`/checkout?ids=${productId}&price=${productPrice}`);
+
+      // Fetch cart to get the latest cart data
+      const cartResponse = await axios.get(`${apiUrl}/cart`, { 
+        withCredentials: true 
+      });
+
+      if (cartResponse.data.success) {
+        const cartItems = cartResponse.data.data.products;
+        
+        // Find the item we just added
+        const addedItem = cartItems.find((item: any) => item.product_id === productId);
+        
+        if (addedItem) {
+          // Create checkout data for just this item
+          const checkoutData = {
+            selectedIds: [productId],
+            items: [addedItem]
+          };
+          
+          // Store in sessionStorage
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('checkoutData', JSON.stringify(checkoutData));
+          }
+          
+          await refreshStatus?.();
+          onClose();
+          
+          // Go directly to checkout
+          router.push('/checkout');
+        } else {
+          throw new Error('Item not found in cart after adding');
+        }
+      } else {
+        throw new Error('Failed to fetch cart after adding item');
+      }
     } catch (err: any) {
       console.error('Error buying now:', err);
       showToast(

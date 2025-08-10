@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { AlertTriangle, Bell, BellOff, CheckCircle, XCircle } from 'lucide-react';
 import { Alert, Button, Modal, Badge } from 'react-bootstrap';
 
@@ -23,32 +23,98 @@ const ChangeTabPrevention: React.FC<ChangeTabPreventionProps> = ({
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const [isSecureContext, setIsSecureContext] = useState(false);
   const [notificationSupported, setNotificationSupported] = useState(false);
+  const [permissionRequested, setPermissionRequested] = useState(false);
+
+  // Refs to prevent infinite loops
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const notificationRef = useRef<Notification | null>(null);
   const originalTitle = useRef<string>('');
+  const isInitializedRef = useRef<boolean>(false);
+  const debugInfoRef = useRef<string[]>([]);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      originalTitle.current = document.title;
-      setIsSecureContext(window.isSecureContext);
-      setNotificationSupported('Notification' in window);
-      
-      if ('Notification' in window) {
-        setNotificationPermission(Notification.permission);
-        addDebugInfo(`Initial permission: ${Notification.permission}`);
-        addDebugInfo(`Secure context: ${window.isSecureContext}`);
-        addDebugInfo(`Max actions: ${Notification.maxActions || 'Unknown'}`);
-      } else {
-        addDebugInfo('Notifications not supported in this browser');
-      }
-    }
+  // FIXED: Stable addDebugInfo function using useCallback
+  const addDebugInfo = useCallback((info: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const newInfo = `[${timestamp}] ${info}`;
+    
+    debugInfoRef.current = [...debugInfoRef.current.slice(-49), newInfo]; // Keep last 50 items
+    setDebugInfo([...debugInfoRef.current]);
   }, []);
 
-  const addDebugInfo = (info: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    setDebugInfo(prev => [...prev, `[${timestamp}] ${info}`]);
-  };
+  // FIXED: Initialize once on mount
+  useEffect(() => {
+    if (isInitializedRef.current || typeof window === 'undefined') return;
+    
+    isInitializedRef.current = true;
+    originalTitle.current = document.title;
+    setIsSecureContext(window.isSecureContext);
+    setNotificationSupported('Notification' in window);
+    
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+      addDebugInfo(`Initial permission: ${Notification.permission}`);
+      addDebugInfo(`Secure context: ${window.isSecureContext}`);
+      addDebugInfo(`Max actions: ${Notification.maxActions || 'Unknown'}`);
+    } else {
+      addDebugInfo('Notifications not supported in this browser');
+    }
+  }, []); // Empty dependency array - run once
 
+  // FIXED: Separate permission request logic
+  const requestNotificationPermission = useCallback(async () => {
+    if (permissionRequested || !('Notification' in window)) {
+      return;
+    }
+
+    setPermissionRequested(true);
+    addDebugInfo(`Requesting notification permission. Current: ${Notification.permission}`);
+    
+    if (Notification.permission === 'default') {
+      try {
+        const permission = await Notification.requestPermission();
+        setNotificationPermission(permission);
+        addDebugInfo(`Permission result: ${permission}`);
+        
+        if (permission === 'granted') {
+          // Send a test notification
+          setTimeout(() => {
+            const testNotification = new Notification('✅ Notifikasi Aktif!', {
+              body: 'Sistem keamanan ujian siap. Anda akan mendapat peringatan jika berpindah tab.',
+              icon: '/favicon.ico',
+              tag: 'test-notification',
+              requireInteraction: false
+            });
+            
+            testNotification.onshow = () => {
+              addDebugInfo('✅ Test notification shown!');
+            };
+            
+            testNotification.onerror = (error) => {
+              addDebugInfo(`❌ Test notification error: ${error}`);
+            };
+            
+            setTimeout(() => {
+              testNotification.close();
+            }, 4000);
+          }, 100);
+              
+        } else if (permission === 'denied') {
+          addDebugInfo('❌ User denied notification permission');
+          setShowPermissionModal(true);
+        }
+      } catch (error) {
+        addDebugInfo(`❌ Permission request error: ${error}`);
+        setShowPermissionModal(true);
+      }
+    } else if (Notification.permission === 'denied') {
+      addDebugInfo('❌ Notifications previously denied');
+      setShowPermissionModal(true);
+    } else if (Notification.permission === 'granted') {
+      addDebugInfo('✅ Notifications already granted');
+    }
+  }, [permissionRequested, addDebugInfo]);
+
+  // FIXED: Main effect with proper dependencies
   useEffect(() => {
     if (!enabled || typeof window === 'undefined') return;
 
@@ -75,47 +141,26 @@ const ChangeTabPrevention: React.FC<ChangeTabPreventionProps> = ({
     };
 
     const sendNotification = (message: string, countdown: number) => {
-      if (!('Notification' in window)) {
-        addDebugInfo('Notification API not supported');
-        return;
-      }
-
-      if (Notification.permission !== 'granted') {
-        addDebugInfo(`Permission not granted: ${Notification.permission}`);
+      if (!('Notification' in window) || Notification.permission !== 'granted') {
         return;
       }
 
       try {
         if (notificationRef.current) {
           notificationRef.current.close();
-          addDebugInfo('Closed previous notification');
         }
         
-        const options = {
+        const title = `🚨 UJIAN BERAKHIR DALAM ${countdown} DETIK!`;
+        
+        notificationRef.current = new Notification(title, {
           body: message,
-          icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzIiIGZpbGw9IiNEQzI2MjYiLz4KPHN2ZyB4PSIxNiIgeT0iMTYiIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+Cjxwb2x5Z29uIHBvaW50cz0iNy44NiAxMiAxNiAyLjkzIDE2IDIxLjA3IDcuODYgMTIiLz4KPC9zdmc+Cjwvc3ZnPgo=',
-          badge: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzIiIGZpbGw9IiNEQzI2MjYiLz4KPHN2ZyB4PSIxNiIgeT0iMTYiIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+Cjxwb2x5Z29uIHBvaW50cz0iNy44NiAxMiAxNiAyLjkzIDE2IDIxLjA3IDcuODYgMTIiLz4KPC9zdmc+Cjwvc3ZnPgo=',
+          icon: '/favicon.ico',
           requireInteraction: true,
           tag: `exam-warning-${Date.now()}`,
           renotify: true,
           silent: false,
-          timestamp: Date.now(),
-          data: {
-            countdown: countdown,
-            timestamp: Date.now(),
-            type: 'exam-warning'
-          }
-        };
-
-        // Add vibration only if supported (mobile devices)
-        if ('vibrate' in navigator) {
-          (options as any).vibrate = [200, 100, 200, 100, 200];
-        }
-
-        const title = `🚨 UJIAN BERAKHIR DALAM ${countdown} DETIK!`;
-        
-        addDebugInfo(`Creating notification: ${title}`);
-        notificationRef.current = new Notification(title, options);
+          timestamp: Date.now()
+        });
         
         notificationRef.current.onshow = () => {
           addDebugInfo('✅ Notification shown successfully!');
@@ -127,10 +172,6 @@ const ChangeTabPrevention: React.FC<ChangeTabPreventionProps> = ({
           if (notificationRef.current) {
             notificationRef.current.close();
           }
-        };
-
-        notificationRef.current.onclose = () => {
-          addDebugInfo('Notification closed');
         };
 
         notificationRef.current.onerror = (error) => {
@@ -169,9 +210,11 @@ const ChangeTabPrevention: React.FC<ChangeTabPreventionProps> = ({
           sendNotification('Kembali ke tab ujian SEKARANG! Ujian akan otomatis berakhir!', 10);
         } else if (Notification.permission === 'denied') {
           setNotificationDenied(true);
-          addDebugInfo('❌ Notifications denied by user');
-        } else {
-          addDebugInfo(`⚠️ Notification permission: ${Notification.permission}`);
+        }
+        
+        // FIXED: Clear previous countdown before starting new one
+        if (countdownRef.current) {
+          clearInterval(countdownRef.current);
         }
         
         countdownRef.current = setInterval(() => {
@@ -185,6 +228,7 @@ const ChangeTabPrevention: React.FC<ChangeTabPreventionProps> = ({
             if (newCount <= 0) {
               if (countdownRef.current) {
                 clearInterval(countdownRef.current);
+                countdownRef.current = null;
               }
               if (notificationRef.current) {
                 notificationRef.current.close();
@@ -224,62 +268,12 @@ const ChangeTabPrevention: React.FC<ChangeTabPreventionProps> = ({
       return e.returnValue;
     };
 
-    const requestNotificationPermission = async () => {
-      if (!('Notification' in window)) {
-        addDebugInfo('❌ Notification API not supported');
-        setShowPermissionModal(true);
-        return;
-      }
-
-      addDebugInfo(`Requesting notification permission. Current: ${Notification.permission}`);
-      
-      if (Notification.permission === 'default') {
-        try {
-          const permission = await Notification.requestPermission();
-          setNotificationPermission(permission);
-          addDebugInfo(`Permission result: ${permission}`);
-          
-          if (permission === 'granted') {
-            // Send a test notification immediately
-            setTimeout(() => {
-              const testNotification = new Notification('✅ Notifikasi Aktif!', {
-                body: 'Sistem keamanan ujian siap. Anda akan mendapat peringatan jika berpindah tab.',
-                icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzIiIGZpbGw9IiMyMkM1NUIiLz4KPHN2ZyB4PSIxNiIgeT0iMTYiIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+Cjxwb2x5bGluZSBwb2ludHM9IjIwIDYgOSAxNyA0IDEyIi8+Cjwvc3ZnPgo8L3N2Zz4K',
-                tag: 'test-notification',
-                requireInteraction: false
-              });
-              
-              testNotification.onshow = () => {
-                addDebugInfo('✅ Test notification shown!');
-              };
-              
-              testNotification.onerror = (error) => {
-                addDebugInfo(`❌ Test notification error: ${error}`);
-              };
-              
-              setTimeout(() => {
-                testNotification.close();
-              }, 4000);
-            }, 100);
-              
-          } else if (permission === 'denied') {
-            addDebugInfo('❌ User denied notification permission');
-            setShowPermissionModal(true);
-          }
-        } catch (error) {
-          addDebugInfo(`❌ Permission request error: ${error}`);
-          setShowPermissionModal(true);
-        }
-      } else if (Notification.permission === 'denied') {
-        addDebugInfo('❌ Notifications previously denied');
-        setShowPermissionModal(true);
-      } else if (Notification.permission === 'granted') {
-        addDebugInfo('✅ Notifications already granted');
-      }
-    };
-
-    // Wait a bit before requesting permission to avoid blocking
-    setTimeout(requestNotificationPermission, 1000);
+    // FIXED: Request permission with delay and only once
+    if (!permissionRequested) {
+      setTimeout(() => {
+        requestNotificationPermission();
+      }, 1000);
+    }
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -290,19 +284,21 @@ const ChangeTabPrevention: React.FC<ChangeTabPreventionProps> = ({
       
       if (countdownRef.current) {
         clearInterval(countdownRef.current);
+        countdownRef.current = null;
       }
       
       if (notificationRef.current) {
         notificationRef.current.close();
+        notificationRef.current = null;
       }
       
       if (originalTitle.current) {
         document.title = originalTitle.current;
       }
     };
-  }, [enabled, onAutoSubmit, countdown]);
+  }, [enabled, onAutoSubmit, addDebugInfo, permissionRequested, requestNotificationPermission]); // FIXED: Stable dependencies
 
-  const handleEnableNotifications = async () => {
+  const handleEnableNotifications = useCallback(async () => {
     if (!('Notification' in window)) {
       addDebugInfo('❌ Notification API not supported');
       return;
@@ -317,7 +313,7 @@ const ChangeTabPrevention: React.FC<ChangeTabPreventionProps> = ({
       if (permission === 'granted') {
         const successNotification = new Notification('🎉 Notifikasi Berhasil Diaktifkan!', {
           body: 'Sekarang Anda akan mendapat peringatan jika berpindah tab selama ujian.',
-          icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzIiIGZpbGw9IiMyMkM1NUIiLz4KPHN2ZyB4PSIxNiIgeT0iMTYiIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+Cjxwb2x5bGluZSBwb2ludHM9IjIwIDYgOSAxNyA0IDEyIi8+Cjwvc3ZnPgo8L3N2Zz4K',
+          icon: '/favicon.ico',
           requireInteraction: false
         });
         
@@ -334,14 +330,14 @@ const ChangeTabPrevention: React.FC<ChangeTabPreventionProps> = ({
     } catch (error) {
       addDebugInfo(`❌ Error requesting notification permission: ${error}`);
     }
-  };
+  }, [addDebugInfo]);
 
-  const testNotification = () => {
+  const testNotification = useCallback(() => {
     if (Notification.permission === 'granted') {
       addDebugInfo('🧪 Testing notification...');
       const testNotif = new Notification('🧪 Test Notifikasi', {
         body: 'Ini adalah contoh notifikasi yang akan muncul saat Anda berpindah tab.',
-        icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzIiIGZpbGw9IiM0Qjc3REIiLz4KPHN2ZyB4PSIxNiIgeT0iMTYiIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CjxwYXRoIGQ9Im0xMCAxNSA0LTQgNCA0Ii8+CjxwYXRoIGQ9Im0yMSA0LTcgNy03LTciLz4KPC9zdmc+Cjwvc3ZnPgo=',
+        icon: '/favicon.ico',
         requireInteraction: true,
         tag: 'test-notification'
       });
@@ -365,7 +361,7 @@ const ChangeTabPrevention: React.FC<ChangeTabPreventionProps> = ({
     } else {
       addDebugInfo(`❌ Cannot test - permission: ${Notification.permission}`);
     }
-  };
+  }, [addDebugInfo]);
 
   if (!enabled) {
     return <>{children}</>;
@@ -503,16 +499,6 @@ const ChangeTabPrevention: React.FC<ChangeTabPreventionProps> = ({
               </ul>
             </div>
 
-            <div className="tw-bg-red-50 tw-border tw-border-red-200 tw-rounded-lg tw-p-4 tw-mb-4">
-              <h4 className="tw-font-semibold tw-text-red-800 tw-mb-2">🚫 Troubleshooting:</h4>
-              <ul className="tw-text-sm tw-text-red-700 tw-space-y-1">
-                <li>• Pastikan website menggunakan HTTPS</li>
-                <li>• Cek pengaturan notifikasi di browser</li>
-                <li>• Matikan "Do Not Disturb" mode</li>
-                <li>• Izinkan notifikasi dari situs ini</li>
-              </ul>
-            </div>
-
             <div className="tw-text-center">
               <p className="tw-text-gray-600 tw-text-sm tw-mb-4">
                 Klik tombol di bawah, lalu pilih "Izinkan" pada popup browser
@@ -548,4 +534,3 @@ const ChangeTabPrevention: React.FC<ChangeTabPreventionProps> = ({
 };
 
 export default ChangeTabPrevention;
-         

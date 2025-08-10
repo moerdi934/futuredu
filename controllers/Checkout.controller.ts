@@ -178,7 +178,7 @@ class CheckoutController {
          WHERE product_id = ANY($1::int[])
          FOR UPDATE
       `, [ids]);
-      lap('lock-stock');
+      lap('lock-stock'); 
 
       // lalu update stok dan cek rowCount
       const upd = await client.query(`

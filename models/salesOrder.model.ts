@@ -143,7 +143,7 @@ class SalesOrder {
       [status, orderNumber]
     );
     return rows[0];
-  }
+  } 
 
   /* ------------- fetch summary ------------- */
   static async getOrderSummary(
@@ -197,16 +197,21 @@ class SalesOrder {
     client: PoolClient = pool
   ): Promise<UserTransaction[]> {
     const { rows } = await client.query(`
-      SELECT
-        order_number,
-        payment_status,
-        expired_at,
-        created_at,
-        midtrans_token,
-        midtrans_url
-      FROM sales_order_header
-      WHERE user_id = $1
-      ORDER BY created_at DESC
+SELECT
+  order_number,
+  payment_status,
+  expired_at,
+  created_at,
+  midtrans_token,
+  midtrans_url
+FROM sales_order_header
+WHERE user_id = $1
+  AND (
+    payment_status = 'success'
+    OR expired_at > NOW() 
+  )
+ORDER BY created_at DESC;
+
     `, [userId]);
     return rows;
   }
