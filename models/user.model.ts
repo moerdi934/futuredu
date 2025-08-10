@@ -153,7 +153,7 @@ export const getUnpaidCount = async (userId: number): Promise<number> => {
     `SELECT COUNT(*) AS unpaidcount
        FROM sales_order_header
       WHERE user_id = $1
-        AND payment_status = 'pending'`,
+        AND payment_status = 'pending' and expired_at > NOW()`,
     [userId]
   );
   return parseInt(rows[0].unpaidcount, 10);
