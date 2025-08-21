@@ -25,6 +25,13 @@ export interface UserAccountData {
   tahun_masuk?: string | null;
   pendidikan_terakhir?: string | null;
   tahun_lulus?: string | null;
+  kelurahan_id?: number | null;
+  sekolah_id?: number | null;
+  university_id?: number | null;
+  prodi_id?: number |null;
+  kecamatan_id?: number |null;
+  kota_id?: number |null;
+  provinsi_id?: number |null;
 }
 
 export interface UserAccountCreateData extends Omit<UserAccountData, 'user_id'> {
@@ -100,7 +107,7 @@ export const create = async (newAccount: UserAccountCreateData): Promise<Databas
     const nomor_whatsapp_ortu = newAccount.nomor_whatsapp_ortu ? parseInt(newAccount.nomor_whatsapp_ortu.toString()) : null;
 
     const result = await pool.query(
-      "INSERT INTO user_account (user_id, nama_lengkap, nama_panggilan, jenis_kelamin, tanggal_lahir, nomor_whatsapp, nomor_whatsapp_ortu, provinsi, kota, kecamatan, kelurahan, pendidikan_sekarang, sekolah, kelas, jurusan, tahun_lulus_sma_smk, strata, universitas, program_studi, tahun_masuk, pendidikan_terakhir, tahun_lulus) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22) RETURNING *",
+      "INSERT INTO user_account (user_id, nama_lengkap, nama_panggilan, jenis_kelamin, tanggal_lahir, nomor_whatsapp, nomor_whatsapp_ortu, provinsi, kota, kecamatan, kelurahan, pendidikan_sekarang, sekolah, kelas, jurusan, tahun_lulus_sma_smk, strata, universitas, program_studi, tahun_masuk, pendidikan_terakhir, tahun_lulus, kelurahan_id, sekolah_id, university_id, prodi_id, kecamatan_id, city_id, provinsi_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29) RETURNING *",
       [
         newAccount.user_id,
         convertEmptyToNull(newAccount.nama_lengkap),
@@ -123,7 +130,13 @@ export const create = async (newAccount: UserAccountCreateData): Promise<Databas
         convertEmptyToNull(newAccount.program_studi),
         convertEmptyToNull(newAccount.tahun_masuk),
         convertEmptyToNull(newAccount.pendidikan_terakhir),
-        convertEmptyToNull(newAccount.tahun_lulus)
+        convertEmptyToNull(newAccount.tahun_lulus),
+        convertEmptyToNull(newAccount.kelurahan_id),
+        convertEmptyToNull(newAccount.sekolah_id),
+        convertEmptyToNull(newAccount.university_id),
+        convertEmptyToNull(newAccount.kecamatan_id),
+        convertEmptyToNull(newAccount.kota_id),
+        convertEmptyToNull(newAccount.provinsi_id)
       ]
     );
 
@@ -148,7 +161,7 @@ export const update = async (user_id: string, accountData: UserAccountUpdateData
     const nomor_whatsapp_ortu = accountData.nomor_whatsapp_ortu ? parseInt(accountData.nomor_whatsapp_ortu.toString()) : null;
 
     const result = await pool.query(
-      "UPDATE user_account SET nama_lengkap = $1, nama_panggilan = $2, jenis_kelamin = $3, tanggal_lahir = $4, nomor_whatsapp = $5, nomor_whatsapp_ortu = $6, provinsi = $7, kota = $8, kecamatan = $9, kelurahan = $10, pendidikan_sekarang = $11, sekolah = $12, kelas = $13, jurusan = $14, tahun_lulus_sma_smk = $15, strata = $16, universitas = $17, program_studi = $18, tahun_masuk = $19, pendidikan_terakhir = $20, tahun_lulus = $21 WHERE user_id = $22 RETURNING *",
+      "UPDATE user_account SET nama_lengkap = $1, nama_panggilan = $2, jenis_kelamin = $3, tanggal_lahir = $4, nomor_whatsapp = $5, nomor_whatsapp_ortu = $6, provinsi = $7, kota = $8, kecamatan = $9, kelurahan = $10, pendidikan_sekarang = $11, sekolah = $12, kelas = $13, jurusan = $14, tahun_lulus_sma_smk = $15, strata = $16, universitas = $17, program_studi = $18, tahun_masuk = $19, pendidikan_terakhir = $20, tahun_lulus = $21, kelurahan_id = $23, sekolah_id=$24, university_id=$25, prodi_id =$26, kecamatan_id = $27, city_id = $28, provinsi_id = $29 WHERE user_id = $22 RETURNING *",
       [
         convertEmptyToNull(accountData.nama_lengkap),
         convertEmptyToNull(accountData.nama_panggilan),
@@ -171,7 +184,14 @@ export const update = async (user_id: string, accountData: UserAccountUpdateData
         convertEmptyToNull(accountData.tahun_masuk),
         convertEmptyToNull(accountData.pendidikan_terakhir),
         convertEmptyToNull(accountData.tahun_lulus),
-        user_id
+        user_id,
+        convertEmptyToNull(accountData.kelurahan_id),
+        convertEmptyToNull(accountData.sekolah_id),
+        convertEmptyToNull(accountData.university_id),
+        convertEmptyToNull(accountData.prodi_id),        
+        convertEmptyToNull(accountData.kecamatan_id),        
+        convertEmptyToNull(accountData.kota_id),        
+        convertEmptyToNull(accountData.provinsi_id),        
       ]
     );
 

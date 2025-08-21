@@ -28,6 +28,10 @@ interface SaveUserAccountRequest {
   tahun_masuk?: string;
   pendidikan_terakhir?: string;
   tahun_lulus?: string;
+  kelurahan_id?: number | null;
+  sekolah_id?: number | null;
+  university_id?: number | null;
+  prodi_id?: number |null;
 }
 
 // Fungsi untuk menyimpan atau memperbarui data akun user
@@ -37,14 +41,14 @@ export const saveUserAccount = async (req: AuthenticatedRequest, res: NextApiRes
     console.log('Request body:', req.body);
 
     const userResult = await findByUsername(username);
-    
-    if (!userResult.success || !userResult.data) {
+    console.log("user result", userResult)
+    if (!userResult.id) {
       return res.status(404).json({
         message: 'User not found.'
       });
     }
 
-    const user_id = userResult.data.user_id;
+    const user_id = userResult.user_id;
     const accountDataWithUserId = { ...accountData, user_id };
     console.log('User ID Controller:', user_id);
 

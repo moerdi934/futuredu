@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await runMiddleware(req, res, authenticateRole(['admin', 'student']));
     
     // Call controller
-    return await UserController.findByUsername(req, res);
+    return await UserController.findUserByUsername(req, res);
   } catch (error) {
     return res.status(500).json({ message: 'Internal server error' });
   }

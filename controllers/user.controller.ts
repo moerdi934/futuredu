@@ -7,6 +7,7 @@ import {
   updateUser,
   deleteUser as deleteUserById,
   findByUsername,
+  verifyUserCredentials,
   findById,
   updateLastLogin,
   getUserDataByRole,
@@ -21,8 +22,14 @@ import {
   getStudentGrowth,
   getUserDetailsById,
   getStudentGroup,
+  migrateAllPasswordsToHash,
+  addHashPasswordColumn,
+  replacePasswordsWithHashed,
+  removeHashPasswordColumn,
+  getMigrationStatus,
   User,
-  UserFilters
+  UserFilters,
+  changePassword 
 } from '../models/user.model';
 import { AuthenticatedRequest } from '../lib/middleware/auth';
 import jwt from 'jsonwebtoken';
@@ -89,7 +96,7 @@ export const create = async (req: NextApiRequest, res: NextApiResponse) => {
       });
     }
 
-    // Create user
+    // Create user (password otomatis di-hash di model)
     const user: User = { username, email, password, role: 'student' };
     const data = await createUser(user);
     res.status(201).json(data);
@@ -134,7 +141,7 @@ export const createNoCaptcha = async (req: NextApiRequest, res: NextApiResponse)
     // Default role if not provided
     const userRole = role || 'student';
 
-    // Create user
+    // Create user (password otomatis di-hash di model)
     const user: User = { username, fullName, email, password, role: userRole };
     const data = await createUser(user);
     res.status(201).json(data);
@@ -158,6 +165,7 @@ export const updateUserController = async (req: NextApiRequest, res: NextApiResp
       return res.status(400).json({ message: 'Username, email, and old password are required.' });
     }
 
+    // Password verification akan handle both hash dan plain password di model
     const data = await updateUser(parseInt(userId), { username, email, oldPassword, newPassword });
     res.status(200).json({ message: 'User updated successfully.', data });
   } catch (error: any) {
@@ -191,23 +199,17 @@ export const deleteUserController = async (req: NextApiRequest, res: NextApiResp
   }
 };
 
-// Login user
+// Login user - Support both hashed dan plain passwords
 export const login = async (req: NextApiRequest, res: NextApiResponse) => {
   try {
     const { username, password }: LoginRequest = req.body;
 
-    const user = await findByUsername(username);
+    // Function ini akan handle both hashed dan plain passwords
+    const user = await verifyUserCredentials(username, password);
 
     if (!user) {
-      return res.status(404).json({
-        message: "User not found."
-      });
-    }
-
-    // Check if password matches
-    if (user.password !== password) {
       return res.status(401).json({
-        message: "Invalid password."
+        message: "Invalid username or password."
       });
     }
 
@@ -558,7 +560,161 @@ export const getStudentGroupController = async (req: NextApiRequest, res: NextAp
   }
 };
 
-/* controllers/user.controller.ts – di paling bawah */
+// MIGRATION ENDPOINTS
+
+// Complete migration (all steps at once)
+export const migrateAllPasswordsController = async (req: NextApiRequest, res: NextApiResponse) => {
+  try {
+    // Protection - hanya allow di development atau dengan special header
+    if (process.env.NODE_ENV === 'production' && req.headers['x-migration-key'] !== process.env.MIGRATION_KEY) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    await migrateAllPasswordsToHash();
+    res.json({ 
+      message: 'Complete password migration finished successfully! All passwords are now hashed.',
+      success: true 
+    });
+  } catch (error: any) {
+    console.error('Complete migration error:', error);
+    res.status(500).json({ 
+      message: 'Error during complete password migration',
+      error: error.message 
+    });
+  }
+};
+
+// Individual step endpoints (for manual control)
+
+// Step 1: Add hash_password column and populate
+export const addHashPasswordColumnController = async (req: NextApiRequest, res: NextApiResponse) => {
+  try {
+    if (process.env.NODE_ENV === 'production' && req.headers['x-migration-key'] !== process.env.MIGRATION_KEY) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    await addHashPasswordColumn();
+    res.json({ message: 'Step 1 completed: hash_password column added and populated' });
+  } catch (error: any) {
+    console.error('Step 1 error:', error);
+    res.status(500).json({ message: 'Error in step 1', error: error.message });
+  }
+};
+
+// Step 2: Replace passwords with hashed versions
+export const replacePasswordsController = async (req: NextApiRequest, res: NextApiResponse) => {
+  try {
+    if (process.env.NODE_ENV === 'production' && req.headers['x-migration-key'] !== process.env.MIGRATION_KEY) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    await replacePasswordsWithHashed();
+    res.json({ message: 'Step 2 completed: passwords replaced with hashed versions' });
+  } catch (error: any) {
+    console.error('Step 2 error:', error);
+    res.status(500).json({ message: 'Error in step 2', error: error.message });
+  }
+};
+
+// Step 3: Remove hash_password column
+export const removeHashPasswordColumnController = async (req: NextApiRequest, res: NextApiResponse) => {
+  try {
+    if (process.env.NODE_ENV === 'production' && req.headers['x-migration-key'] !== process.env.MIGRATION_KEY) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    await removeHashPasswordColumn();
+    res.json({ message: 'Step 3 completed: hash_password column removed. Migration finished!' });
+  } catch (error: any) {
+    console.error('Step 3 error:', error);
+    res.status(500).json({ message: 'Error in step 3', error: error.message });
+  }
+};
+
+// Get migration status
+export const getMigrationStatusController = async (req: NextApiRequest, res: NextApiResponse) => {
+  try {
+    const status = await getMigrationStatus();
+    res.json(status);
+  } catch (error: any) {
+    console.error('Error getting migration status:', error);
+    res.status(500).json({ message: 'Error getting migration status' });
+  }
+};
+
+export const changePasswordController = async (req: AuthenticatedRequest, res: NextApiResponse) => {
+  try {
+    console.log('=== Change Password Controller Start ===');
+    
+    // Get user ID from authenticated request
+    const userId = parseInt(req.user!.id);
+    console.log('User ID from token:', userId);
+    
+    const { current_password, new_password }: {
+      current_password: string;
+      new_password: string;
+    } = req.body;
+
+    console.log('Request body received');
+
+    // Validate input
+    if (!current_password || !new_password) {
+      console.log('Missing required fields');
+      return res.status(400).json({ 
+        message: 'Password saat ini dan password baru harus diisi.' 
+      });
+    }
+
+    // Validate new password length
+    if (new_password.length < 8) {
+      console.log('New password too short');
+      return res.status(400).json({ 
+        message: 'Password baru harus minimal 8 karakter.' 
+      });
+    }
+
+    // Check if current password and new password are the same
+    if (current_password === new_password) {
+      console.log('Current and new password are the same');
+      return res.status(400).json({ 
+        message: 'Password baru harus berbeda dengan password saat ini.' 
+      });
+    }
+
+    console.log('Validation passed, calling changePassword model...');
+
+    // Call model function to change password
+    const updatedUser = await changePassword(userId, current_password, new_password);
+
+    console.log('Password changed successfully');
+
+    res.status(200).json({ 
+      message: 'Password berhasil diubah!',
+      success: true,
+      user: {
+        id: updatedUser.id,
+        username: updatedUser.username,
+        email: updatedUser.email
+      }
+    });
+  } catch (error: any) {
+    console.error('Change password controller error:', error);
+    
+    if (error.message === 'User not found') {
+      return res.status(404).json({ message: 'User tidak ditemukan.' });
+    }
+    
+    if (error.message === 'Password saat ini tidak sesuai') {
+      return res.status(400).json({ message: 'Password saat ini tidak sesuai.' });
+    }
+    
+    return res.status(500).json({ 
+      message: 'Terjadi kesalahan saat mengubah password.' 
+    });
+  }
+};
+
+// Update the UserController export object to include the new function
 const UserController = {
   // auth & session
   login,
@@ -573,6 +729,7 @@ const UserController = {
   getStatus,
   updateUserController,
   deleteUserController,
+  changePasswordController, // Add this line
 
   // lookup
   findUserByUsername,
@@ -591,6 +748,13 @@ const UserController = {
   getStudentGrowthController,
   getUserDetailsController,
   getStudentGroupController,
+
+  // migration
+  migrateAllPasswordsController,
+  addHashPasswordColumnController,
+  replacePasswordsController,
+  removeHashPasswordColumnController,
+  getMigrationStatusController,
 };
 
-export default UserController;          // ⬅⬅⬅
+export default UserController;

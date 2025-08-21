@@ -1,6 +1,7 @@
 // models/user.model.ts
 import pool from '../lib/db';
 import { PoolClient } from 'pg';
+import bcrypt from 'bcryptjs'; // npm install bcryptjs @types/bcryptjs
 
 // Types
 export interface User {
@@ -9,6 +10,7 @@ export interface User {
   fullName?: string;
   email: string;
   password: string;
+  hash_password?: string; // Temporary column for migration
   role: string;
   create_date?: Date;
   last_login?: Date;
@@ -112,12 +114,31 @@ export interface StudentGroup {
   user_names: string[];
 }
 
-// Create new user
+// Helper function to hash password
+const hashPassword = async (password: string): Promise<string> => {
+  const saltRounds = 12;
+  return await bcrypt.hash(password, saltRounds);
+};
+
+// Helper function to verify password
+export const verifyPassword = async (plainPassword: string, hashedPassword: string): Promise<boolean> => {
+  return await bcrypt.compare(plainPassword, hashedPassword);
+};
+
+// Helper function to check if password is already hashed
+const isPasswordHashed = (password: string): boolean => {
+  return /^\$2[aby]\$\d{2}\$.{53}$/.test(password);
+};
+
+// Create new user (always create with hashed password)
 export const createUser = async (newUser: User): Promise<User> => {
   try {
+    // Hash password for new users
+    const hashedPassword = await hashPassword(newUser.password);
+    
     const result = await pool.query(
       "INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING *",
-      [newUser.username, newUser.email, newUser.password, newUser.role]
+      [newUser.username, newUser.email, hashedPassword, newUser.role]
     );
 
     if (newUser.fullName) {
@@ -189,7 +210,7 @@ export const updateUser = async (userId: number, updatedData: {
   const { username, email, oldPassword, newPassword } = updatedData;
 
   try {
-    // Check old password
+    // Get current user data
     const checkResult = await pool.query(
       `SELECT password FROM users WHERE id = $1`,
       [userId]
@@ -201,17 +222,31 @@ export const updateUser = async (userId: number, updatedData: {
 
     const currentPassword = checkResult.rows[0].password;
 
-    if (currentPassword !== oldPassword) {
+    // Verify old password (support both hashed and plain text)
+    let isOldPasswordValid = false;
+    
+    if (isPasswordHashed(currentPassword)) {
+      // Current password is hashed, use bcrypt to verify
+      isOldPasswordValid = await verifyPassword(oldPassword, currentPassword);
+    } else {
+      // Current password is plain text, compare directly
+      isOldPasswordValid = currentPassword === oldPassword;
+    }
+
+    if (!isOldPasswordValid) {
       throw { message: "Old password does not match" };
     }
 
-    // Update user data
+    // Hash new password
+    const hashedNewPassword = await hashPassword(newPassword);
+
+    // Update user data with hashed password
     const updateResult = await pool.query(
       `UPDATE users
        SET username = $1, email = $2, password = $3
        WHERE id = $4
        RETURNING id, username, email, role, last_login, create_date`,
-      [username, email, newPassword, userId]
+      [username, email, hashedNewPassword, userId]
     );
 
     if (updateResult.rows.length === 0) {
@@ -262,6 +297,38 @@ export const findByUsername = async (username: string): Promise<User> => {
   }
 };
 
+// Verify user credentials for login
+export const verifyUserCredentials = async (username: string, password: string): Promise<User | null> => {
+  try {
+    const user = await findByUsername(username);
+    
+    if (!user) {
+      return null;
+    }
+
+    let isPasswordValid = false;
+    
+    if (isPasswordHashed(user.password)) {
+      // Password is hashed, use bcrypt to verify
+      isPasswordValid = await verifyPassword(password, user.password);
+      console.log('Verified against hashed password');
+    } else {
+      // Password is plain text, compare directly
+      isPasswordValid = user.password === password;
+      console.log('Verified against plain password');
+    }
+
+    if (isPasswordValid) {
+      return user;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.log("error verifying credentials: ", error);
+    throw error;
+  }
+};
+
 // Find user by ID
 export const findById = async (id: number): Promise<User> => {
   try {
@@ -296,6 +363,174 @@ export const updateLastLogin = async (username: string): Promise<User> => {
     return result.rows[0];
   } catch (error) {
     console.log("Error updating last_login:", error);
+    throw error;
+  }
+};
+
+// MIGRATION FUNCTIONS
+
+// Step 1: Add hash_password column with hashed versions
+export const addHashPasswordColumn = async (): Promise<void> => {
+  try {
+    console.log('Step 1: Adding hash_password column and populating with hashed passwords...');
+    
+    // Add column if not exists
+    await pool.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS hash_password VARCHAR(255)
+    `);
+    
+    // Get all users with plain text passwords
+    const result = await pool.query(
+      "SELECT id, username, password FROM users WHERE hash_password IS NULL"
+    );
+
+    console.log(`Found ${result.rows.length} users to process`);
+
+    let processedCount = 0;
+    for (const user of result.rows) {
+      try {
+        const hashedPassword = await hashPassword(user.password);
+        
+        await pool.query(
+          "UPDATE users SET hash_password = $1 WHERE id = $2",
+          [hashedPassword, user.id]
+        );
+        
+        processedCount++;
+        console.log(`✓ Processed user: ${user.username} (ID: ${user.id})`);
+      } catch (error) {
+        console.error(`✗ Failed to process user: ${user.username} (ID: ${user.id})`, error);
+      }
+    }
+
+    console.log(`\nStep 1 completed!`);
+    console.log(`Total users processed: ${result.rows.length}`);
+    console.log(`Successfully processed: ${processedCount}`);
+    
+  } catch (error) {
+    console.error('Error in Step 1:', error);
+    throw error;
+  }
+};
+
+// Step 2: Replace password column with hashed versions
+export const replacePasswordsWithHashed = async (): Promise<void> => {
+  try {
+    console.log('Step 2: Replacing password column with hashed versions...');
+    
+    // Update password column with hash_password values
+    const result = await pool.query(`
+      UPDATE users 
+      SET password = hash_password 
+      WHERE hash_password IS NOT NULL
+      RETURNING id, username
+    `);
+
+    console.log(`✓ Updated ${result.rows.length} user passwords with hashed versions`);
+    
+    // Verify all passwords are now hashed
+    const verifyResult = await pool.query(`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(CASE WHEN password ~ '^\\$2[aby]\\$\\d{2}\\$.{53}$' THEN 1 END) as hashed
+      FROM users
+    `);
+    
+    const { total, hashed } = verifyResult.rows[0];
+    
+    if (parseInt(total) === parseInt(hashed)) {
+      console.log(`✓ Verification successful: All ${total} passwords are now hashed`);
+    } else {
+      throw new Error(`Verification failed: ${total} total, ${hashed} hashed`);
+    }
+    
+  } catch (error) {
+    console.error('Error in Step 2:', error);
+    throw error;
+  }
+};
+
+// Step 3: Remove hash_password column
+export const removeHashPasswordColumn = async (): Promise<void> => {
+  try {
+    console.log('Step 3: Removing hash_password column...');
+    
+    // Drop the temporary column
+    await pool.query('ALTER TABLE users DROP COLUMN IF EXISTS hash_password');
+    
+    console.log('✓ Successfully removed hash_password column');
+    console.log('🎉 Migration completed! All passwords are now hashed in the password column.');
+    
+  } catch (error) {
+    console.error('Error in Step 3:', error);
+    throw error;
+  }
+};
+
+// Complete migration (all steps)
+export const migrateAllPasswordsToHash = async (): Promise<void> => {
+  try {
+    console.log('🚀 Starting complete password migration...\n');
+    
+    await addHashPasswordColumn();
+    console.log('\n' + '='.repeat(50) + '\n');
+    
+    await replacePasswordsWithHashed();
+    console.log('\n' + '='.repeat(50) + '\n');
+    
+    await removeHashPasswordColumn();
+    
+    console.log('\n🎉 MIGRATION COMPLETED SUCCESSFULLY! 🎉');
+    console.log('All passwords are now securely hashed with bcrypt.');
+    
+  } catch (error) {
+    console.error('❌ Migration failed:', error);
+    throw error;
+  }
+};
+
+// Get migration status
+export const getMigrationStatus = async (): Promise<{
+  total_users: number;
+  hashed_passwords: number;
+  plain_passwords: number;
+  has_temp_column: boolean;
+  migration_completed: boolean;
+}> => {
+  try {
+    // Check if hash_password column exists
+    const columnCheck = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'hash_password'
+    `);
+    
+    const hasTempColumn = columnCheck.rows.length > 0;
+    
+    // Get password status
+    const result = await pool.query(`
+      SELECT 
+        COUNT(*) as total_users,
+        COUNT(CASE WHEN password ~ '^\\$2[aby]\\$\\d{2}\\$.{53}$' THEN 1 END) as hashed_passwords,
+        COUNT(*) - COUNT(CASE WHEN password ~ '^\\$2[aby]\\$\\d{2}\\$.{53}$' THEN 1 END) as plain_passwords
+      FROM users
+    `);
+    
+    const stats = result.rows[0];
+    const total = parseInt(stats.total_users);
+    const hashed = parseInt(stats.hashed_passwords);
+    const plain = parseInt(stats.plain_passwords);
+    
+    return {
+      total_users: total,
+      hashed_passwords: hashed,
+      plain_passwords: plain,
+      has_temp_column: hasTempColumn,
+      migration_completed: (plain === 0 && !hasTempColumn)
+    };
+  } catch (error) {
+    console.error('Error getting migration status:', error);
     throw error;
   }
 };
@@ -752,8 +987,8 @@ export const searchUsersByRolesAndName = async (roles: string[], searchTerm: str
   const query = `
       SELECT userid, name
       FROM v_dashboard_userdata
-      WHERE role IN (${roles.map((_, i) => `$${i + 1}`).join(', ')})
-      AND name ILIKE $${roles.length + 1}
+      WHERE role IN (${roles.map((_, i) => `${i + 1}`).join(', ')})
+      AND name ILIKE ${roles.length + 1}
       ORDER BY name ASC
       LIMIT 50
   `;
@@ -791,5 +1026,73 @@ export const getStudentGroup = async (): Promise<StudentGroup[]> => {
     return result.rows;
   } catch (error) {
     throw new Error(`Error fetching student groups: ${error.message}`);
+  }
+};
+
+// Tambahkan fungsi ini ke models/user.model.ts
+
+// Change password function
+export const changePassword = async (userId: number, currentPassword: string, newPassword: string): Promise<User> => {
+  try {
+    console.log('Changing password for user ID:', userId);
+
+    // Get current user data
+    const checkResult = await pool.query(
+      `SELECT id, username, password FROM users WHERE id = $1`,
+      [userId]
+    );
+
+    if (checkResult.rows.length === 0) {
+      throw { message: "User not found" };
+    }
+
+    const user = checkResult.rows[0];
+    const currentStoredPassword = user.password;
+
+    console.log('User found, verifying current password...');
+
+    // Verify current password (support both hashed and plain text)
+    let isCurrentPasswordValid = false;
+    
+    if (isPasswordHashed(currentStoredPassword)) {
+      // Current password is hashed, use bcrypt to verify
+      isCurrentPasswordValid = await verifyPassword(currentPassword, currentStoredPassword);
+      console.log('Verified against hashed password');
+    } else {
+      // Current password is plain text, compare directly
+      isCurrentPasswordValid = currentStoredPassword === currentPassword;
+      console.log('Verified against plain password');
+    }
+
+    if (!isCurrentPasswordValid) {
+      console.log('Current password verification failed');
+      throw { message: "Password saat ini tidak sesuai" };
+    }
+
+    console.log('Current password verified, hashing new password...');
+
+    // Hash new password
+    const hashedNewPassword = await hashPassword(newPassword);
+
+    console.log('Updating password in database...');
+
+    // Update password in database
+    const updateResult = await pool.query(
+      `UPDATE users
+       SET password = $1
+       WHERE id = $2
+       RETURNING id, username, email, role, last_login, create_date`,
+      [hashedNewPassword, userId]
+    );
+
+    if (updateResult.rows.length === 0) {
+      throw { message: "Update failed" };
+    }
+
+    console.log('Password updated successfully for user:', updateResult.rows[0].username);
+    return updateResult.rows[0];
+  } catch (error) {
+    console.error("Error changing password:", error);
+    throw error;
   }
 };
