@@ -3,7 +3,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { AuthenticatedRequest } from '../lib/middleware/auth';
 import {
   getPagedRankingsBySchedule,
-  getUserCenteredRankings,
+  getUserCenteredRankingsModel,
   getUserExamScheduleRankings,
   RankingFilters,
   UserCenteredFilters,
@@ -37,7 +37,7 @@ export const getPagedRankings = async (
     sortKey: (req.query.sortKey as string) || 'rank',
     sortOrder: (req.query.sortOrder as string) || 'asc'
   };
-
+ 
   try {
     const result = await getPagedRankingsBySchedule(parseInt(examScheduleId as string), filters);
     if (result.data.length === 0) {
@@ -84,7 +84,7 @@ export const getUserCenteredRankings = async (
   };
   
   try {
-    const result = await getUserCenteredRankings(
+    const result = await getUserCenteredRankingsModel(
       parseInt(examScheduleId as string), 
       parseInt(userId), 
       filters

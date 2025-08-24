@@ -278,7 +278,7 @@ export const getPagedRankingsBySchedule = async (
   }
 };
 
-export const getUserCenteredRankings = async (
+export const getUserCenteredRankingsModel = async (
   examScheduleId: number,
   userId: number,
   filters: UserCenteredFilters
@@ -628,7 +628,7 @@ export const getUserExamScheduleRankings = async (
     limit = 50,
     search = '',
     examType = null,
-    sortKey = 'name', // Diubah dari 'exam_schedule_name'
+    sortKey = 'name',
     sortOrder = 'asc'
   } = filters;
 
@@ -637,7 +637,7 @@ export const getUserExamScheduleRankings = async (
   // Define allowed sort keys to prevent SQL injection
   const allowedSortKeys = [
     'exam_schedule_id',
-    'name', // Diubah dari 'exam_schedule_name'
+    'name',
     'exam_type',
     'rank', 
     'peserta',
@@ -651,10 +651,10 @@ export const getUserExamScheduleRankings = async (
   ];
 
   // Validate sortKey and sortOrder
-  const validatedSortKey = allowedSortKeys.includes(sortKey) ? sortKey : 'name'; // Diubah dari 'exam_schedule_name'
+  const validatedSortKey = allowedSortKeys.includes(sortKey) ? sortKey : 'name';
   const validatedSortOrder = sortOrder.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
 
-  // Starting our CTE definitions similar to the second document
+  // Starting our CTE definitions
   const cteDefinitions = `
     WITH latest_scores AS (
       SELECT
@@ -801,7 +801,7 @@ export const getUserExamScheduleRankings = async (
   const mainQuery = `
     ${cteDefinitions}
     SELECT
-      ROW_NUMBER() OVER (ORDER BY ${validatedSortKey === 'name' ? 'es.name' : validatedSortKey} ${validatedSortOrder}) + ${offset} as no,
+      ROW_NUMBER() OVER (ORDER BY ${validatedSortKey === 'name' ? 'es.name' : validatedSortKey} ${validatedSortOrder}) + $${paramIndex + 1} as no,
       es.id as exam_schedule_id,
       es.name as exam_schedule_name,
       es.exam_type,
@@ -821,7 +821,7 @@ export const getUserExamScheduleRankings = async (
     JOIN province_ranks pr ON ur.user_id = pr.user_id AND ur.exam_schedule_id = pr.exam_schedule_id
     ${whereClause}
     ORDER BY ${validatedSortKey === 'name' ? 'es.name' : validatedSortKey} ${validatedSortOrder}
-    LIMIT ${paramIndex} OFFSET ${paramIndex + 1}
+    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
   `;
 
   // Add LIMIT and OFFSET parameters
@@ -840,6 +840,16 @@ export const getUserExamScheduleRankings = async (
   `;
 
   try {
+    // Add debugging
+    console.log('=== SQL Query Debug ===');
+    console.log('Main Query:', mainQuery);
+    console.log('Main Query Params:', mainQueryParams);
+    console.log('Count Query:', countQuery);
+    console.log('Count Query Params:', params);
+    console.log('Expected main query parameters:', (mainQuery.match(/\$\d+/g) || []).length);
+    console.log('Provided main query parameters:', mainQueryParams.length);
+    console.log('======================');
+
     const [dataResult, countResult] = await Promise.all([
       pool.query(mainQuery, mainQueryParams),
       pool.query(countQuery, params)
@@ -855,6 +865,15 @@ export const getUserExamScheduleRankings = async (
       currentPage: page
     };
   } catch (error: any) {
+    console.error('SQL Error Details:', {
+      message: error.message,
+      mainQuery,
+      mainQueryParams,
+      countQuery,
+      countParams: params,
+      expectedMainParams: (mainQuery.match(/\$\d+/g) || []).length,
+      providedMainParams: mainQueryParams.length
+    });
     throw new Error(`Failed to fetch user exam schedule rankings: ${error.message}`);
   }
 };
