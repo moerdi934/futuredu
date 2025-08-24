@@ -60,7 +60,7 @@
                 "align": "center"
               },
             {
-              "id": "total_score",
+              "id": "skor_total",
               "header": "Skor Total",
               "size": 80,
               "minSize": 80,
@@ -70,7 +70,7 @@
               "align": "center"
             },
             {
-              "id": "avg_score",
+              "id": "avg_skor",
               "header": "Skor Rata-rata",
               "size": 160,
               "minSize": 160,
@@ -99,7 +99,7 @@
               "align": "center"
             },
               {
-                "id": "rankkota",
+                "id": "rank_kota",
                 "header": "Rank Kota",
                 "size": 120,
                 "minSize": 120,
@@ -108,7 +108,7 @@
                 "align": "center"
               },
               {
-                "id": "rankprovinsi",
+                "id": "rank_provinsi",
                 "header": "Rank Provinsi",
                 "size": 120,
                 "minSize": 120,
@@ -195,7 +195,7 @@
                   "align": "center"
                 },
               {
-                "id": "total_score",
+                "id": "skor_total",
                 "header": "Skor Total",
                 "size": 80,
                 "minSize": 80,
@@ -205,7 +205,7 @@
                 "align": "center"
               },
               {
-                "id": "avg_score",
+                "id": "avg_skor",
                 "header": "Skor Rata-rata",
                 "size": 160,
                 "minSize": 160,
@@ -234,7 +234,7 @@
                 "align": "center"
               },
                 {
-                  "id": "rankkota",
+                  "id": "rank_kota",
                   "header": "Rank Kota",
                   "size": 120,
                   "minSize": 120,
@@ -243,7 +243,7 @@
                   "align": "center"
                 },
                 {
-                  "id": "rankprovinsi",
+                  "id": "rank_provinsi",
                   "header": "Rank Provinsi",
                   "size": 120,
                   "minSize": 120,
