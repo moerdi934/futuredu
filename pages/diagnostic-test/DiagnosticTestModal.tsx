@@ -1,4 +1,4 @@
-// components/DiagnosticTestModal.tsx
+// pages/diagnostic-test/DiagnosticTestModal.tsx
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { Modal, Button, Spinner, Alert } from "react-bootstrap";

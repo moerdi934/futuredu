@@ -1,7 +1,6 @@
-// context/ExamContext.tsx
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
 // Types
 interface ExamOrder {
@@ -36,6 +35,13 @@ interface ExamSession {
   minute_exam: number;
 }
 
+interface TimerSyncData {
+  serverEndTime: string;
+  serverRemainingTime: number;
+  lastSyncTime: number;
+  timeDifference: number;
+}
+
 interface ExamContextType {
   // Data
   topicId: number | null;
@@ -46,6 +52,7 @@ interface ExamContextType {
   selectedSchedule: ExamSchedule | null;
   examType: string;
   originPath: string | null;
+  timerSync: TimerSyncData | null;
   
   // Setters
   setTopicId: (id: number | null) => void;
@@ -56,10 +63,12 @@ interface ExamContextType {
   setSelectedSchedule: (schedule: ExamSchedule | null) => void;
   setExamType: (type: string) => void;
   setOriginPath: (path: string | null) => void;
+  setTimerSync: (sync: TimerSyncData | null) => void;
   
   // Utilities
   clearExamData: () => void;
   isDataComplete: () => boolean;
+  updateTimerFromServer: (serverEndTime: string) => TimerSyncData | null;
 }
 
 const ExamContext = createContext<ExamContextType | undefined>(undefined);
@@ -74,64 +83,10 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [selectedSchedule, setSelectedSchedule] = useState<ExamSchedule | null>(null);
   const [examType, setExamType] = useState<string>('Try-Out');
   const [originPath, setOriginPath] = useState<string | null>(null);
-  
-  // Logging untuk setiap perubahan state
-  useEffect(() => {
-    console.log('🆔 ExamContext: topicId updated:', topicId);
-  }, [topicId]);
-
-  useEffect(() => {
-    console.log('📅 ExamContext: examScheduleId updated:', examScheduleId);
-  }, [examScheduleId]);
-
-  useEffect(() => {
-    console.log('📝 ExamContext: examOrder updated:', {
-      count: examOrder.length,
-      data: examOrder
-    });
-  }, [examOrder]);
-
-  useEffect(() => {
-    console.log('💾 ExamContext: examSessions updated:', {
-      count: examSessions.length,
-      data: examSessions
-    });
-  }, [examSessions]);
-
-  useEffect(() => {
-    console.log('🎯 ExamContext: activeSession updated:', activeSession);
-  }, [activeSession]);
-
-  useEffect(() => {
-    console.log('📋 ExamContext: selectedSchedule updated:', selectedSchedule);
-  }, [selectedSchedule]);
-
-  useEffect(() => {
-    console.log('🏷️ ExamContext: examType updated:', examType);
-  }, [examType]);
-
-  useEffect(() => {
-    console.log('🛤️ ExamContext: originPath updated:', originPath);
-  }, [originPath]);
-
-  // Log comprehensive context state when any critical data changes
-  useEffect(() => {
-    console.log('🔄 ExamContext: Context state summary:', {
-      topicId,
-      examScheduleId,
-      examOrderCount: examOrder.length,
-      examSessionsCount: examSessions.length,
-      hasActiveSession: !!activeSession,
-      hasSelectedSchedule: !!selectedSchedule,
-      examType,
-      originPath,
-      isComplete: examScheduleId !== null && examOrder.length > 0
-    });
-  }, [topicId, examScheduleId, examOrder, examSessions, activeSession, selectedSchedule, examType, originPath]);
+  const [timerSync, setTimerSync] = useState<TimerSyncData | null>(null);
   
   // Utilities
   const clearExamData = useCallback(() => {
-    console.log('🗑️ ExamContext: Clearing all exam data');
     setTopicId(null);
     setExamScheduleId(null);
     setExamOrder([]);
@@ -140,59 +95,29 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSelectedSchedule(null);
     setExamType('Try-Out');
     setOriginPath(null);
-    console.log('✅ ExamContext: All exam data cleared');
+    setTimerSync(null);
   }, []);
   
   const isDataComplete = useCallback(() => {
-    const complete = examScheduleId !== null && examOrder.length > 0;
-    console.log('🔍 ExamContext: Data completeness check:', {
-      examScheduleId,
-      examOrderLength: examOrder.length,
-      isComplete: complete
-    });
-    return complete;
+    return examScheduleId !== null && examOrder.length > 0;
   }, [examScheduleId, examOrder]);
 
-  // Enhanced setters dengan logging
-  const enhancedSetTopicId = useCallback((id: number | null) => {
-    console.log('🔄 ExamContext: Setting topicId from', topicId, 'to', id);
-    setTopicId(id);
-  }, [topicId]);
-
-  const enhancedSetExamScheduleId = useCallback((id: number | null) => {
-    console.log('🔄 ExamContext: Setting examScheduleId from', examScheduleId, 'to', id);
-    setExamScheduleId(id);
-  }, [examScheduleId]);
-
-  const enhancedSetExamOrder = useCallback((order: ExamOrder[]) => {
-    console.log('🔄 ExamContext: Setting examOrder from', examOrder.length, 'items to', order.length, 'items');
-    setExamOrder(order);
-  }, [examOrder.length]);
-
-  const enhancedSetExamSessions = useCallback((sessions: ExamSession[]) => {
-    console.log('🔄 ExamContext: Setting examSessions from', examSessions.length, 'items to', sessions.length, 'items');
-    setExamSessions(sessions);
-  }, [examSessions.length]);
-
-  const enhancedSetActiveSession = useCallback((session: ExamSession | null) => {
-    console.log('🔄 ExamContext: Setting activeSession from', activeSession?.id, 'to', session?.id);
-    setActiveSession(session);
-  }, [activeSession?.id]);
-
-  const enhancedSetSelectedSchedule = useCallback((schedule: ExamSchedule | null) => {
-    console.log('🔄 ExamContext: Setting selectedSchedule from', selectedSchedule?.id, 'to', schedule?.id);
-    setSelectedSchedule(schedule);
-  }, [selectedSchedule?.id]);
-
-  const enhancedSetExamType = useCallback((type: string) => {
-    console.log('🔄 ExamContext: Setting examType from', examType, 'to', type);
-    setExamType(type);
-  }, [examType]);
-
-  const enhancedSetOriginPath = useCallback((path: string | null) => {
-    console.log('🔄 ExamContext: Setting originPath from', originPath, 'to', path);
-    setOriginPath(path);
-  }, [originPath]);
+  // Timer sync utility
+  const updateTimerFromServer = useCallback((serverEndTime: string): TimerSyncData | null => {
+    const serverEndTimeMs = new Date(serverEndTime).getTime();
+    const currentTime = Date.now();
+    const serverRemainingTime = Math.max(0, Math.floor((serverEndTimeMs - currentTime) / 1000));
+    
+    const syncData: TimerSyncData = {
+      serverEndTime,
+      serverRemainingTime,
+      lastSyncTime: currentTime,
+      timeDifference: 0 // Will be calculated by consumer
+    };
+    
+    setTimerSync(syncData);
+    return syncData;
+  }, []);
   
   const contextValue: ExamContextType = {
     // Data
@@ -204,20 +129,23 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     selectedSchedule,
     examType,
     originPath,
+    timerSync,
     
-    // Enhanced setters with logging
-    setTopicId: enhancedSetTopicId,
-    setExamScheduleId: enhancedSetExamScheduleId,
-    setExamOrder: enhancedSetExamOrder,
-    setExamSessions: enhancedSetExamSessions,
-    setActiveSession: enhancedSetActiveSession,
-    setSelectedSchedule: enhancedSetSelectedSchedule,
-    setExamType: enhancedSetExamType,
-    setOriginPath: enhancedSetOriginPath,
+    // Setters
+    setTopicId,
+    setExamScheduleId,
+    setExamOrder,
+    setExamSessions,
+    setActiveSession,
+    setSelectedSchedule,
+    setExamType,
+    setOriginPath,
+    setTimerSync,
     
     // Utilities
     clearExamData,
-    isDataComplete
+    isDataComplete,
+    updateTimerFromServer
   };
   
   return (

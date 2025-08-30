@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Container, Row, Col, Card, ProgressBar, Badge, Button, Spinner, Alert } from 'react-bootstrap';
 import axios from 'axios';
+import Link from 'next/link';
 import { 
   BookOpen, 
   Clock, 
@@ -48,13 +49,12 @@ interface CourseData {
   imageurl: string | null;
   learningPoint: string[];
   sections: SectionApi[];
-  isEntitled: boolean;
 }
 
 const CoursePage: React.FC = () => {
   const params = useParams();
   const courseCode = params?.courseCode as string;
-  const [courseData, setCourseData] = useState<CourseData | null>(null);
+  const [courseData, setCourseData] = useState<CourseData & { isEntitled: boolean } | null>(null);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -116,15 +116,6 @@ const CoursePage: React.FC = () => {
         bonusProgress: courseData.isEntitled ? sec.bonusProgress : 0,
       }))
     : [];
-
-  const onSectionClick = (sectionString: string, e: React.MouseEvent) => {
-    if (!courseData?.isEntitled) {
-      e.preventDefault();
-      router.push('/login');
-    } else {
-      router.push(`/section/${sectionString}`);
-    }
-  };
 
   const formatDuration = (minutes: number | undefined): string => {
     if (!minutes) return '';
@@ -320,12 +311,12 @@ const CoursePage: React.FC = () => {
               <Card.Body className="tw-p-6">
                 <div className="tw-space-y-4">
                   {sortedSections.map((section, index) => (
-                    <div
+                    <Link
                       key={section.id}
-                      className="tw-group tw-cursor-pointer tw-bg-gradient-to-r tw-from-white tw-to-purple-50 tw-border-2 tw-border-purple-200 tw-rounded-xl tw-p-5 tw-hover:tw-shadow-lg tw-hover:tw-border-purple-400 tw-transition-all tw-duration-300 tw-hover:tw-scale-105 tw-hover:tw-from-purple-50 tw-hover:tw-to-pink-50 tw-no-underline"
+                      href={`/section/${section.section_string}`}
+                      className="tw-group tw-cursor-pointer tw-bg-gradient-to-r tw-from-white tw-to-purple-50 tw-border-2 tw-border-purple-200 tw-rounded-xl tw-p-5 tw-hover:tw-shadow-lg tw-hover:tw-border-purple-400 tw-transition-all tw-duration-300 tw-hover:tw-scale-105 tw-hover:tw-from-purple-50 tw-hover:tw-to-pink-50 tw-no-underline tw-block"
                       onMouseEnter={() => setHoveredSectionId(section.id)}
                       onMouseLeave={() => setHoveredSectionId(null)}
-                      onClick={(e) => onSectionClick(section.section_string, e)}
                     >
                       <div className="tw-flex tw-justify-between tw-items-start tw-mb-4">
                         <div className="tw-flex-1">
@@ -452,7 +443,7 @@ const CoursePage: React.FC = () => {
                           </div>
                         </div>
                       )}
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </Card.Body>

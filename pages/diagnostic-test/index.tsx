@@ -1,4 +1,4 @@
-// pages/diagnostic-test.tsx
+// pages/diagnostic-test/index.tsx
 import React, { useState, useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';

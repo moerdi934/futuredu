@@ -1,38 +1,25 @@
-// ChainExam Component - FIXED VERSION (Single Fetch)
 'use client';
 
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
+import axios from 'axios';
 import CryptoJS from 'crypto-js';
-import ChangeTabPrevention from '../../components/ChangeTabPrevention';
-import { useDistributedTimeSync } from '../../hooks/useDistributedTimeSync';
-import { useSecureTimer } from '../../hooks/useSecureTimer';
-import { useExam } from '../../context/ExamContext';
-import { useAuth } from '../../context/AuthContext';
-import ExamDBService from '../../utils/ExamDBService';
-
-// Import hidden timer contexts
-import { UserPurchaseProvider, useUserPurchase } from '../../context/UserPurchaseContext';
-import { ActiveUserProvider, useActiveUser } from '../../context/ActiveUserContext';
-import { AllProductProvider, useAllProduct } from '../../context/AllProductContext';
-
-// Import helper for timer authentication
-import { RewardTimerAuthenticator } from '../../utils/RewardAuthenticationProcessor';
-
-const SingleChoice = dynamic(() => import('./SingleChoice'), { ssr: false });
-const MultipleChoice = dynamic(() => import('./MultipleChoice'), { ssr: false });
-const NumberInput = dynamic(() => import('./NumberInput'), { ssr: false });
-const TextInput = dynamic(() => import('./TextInput'), { ssr: false });
-const TrueFalse = dynamic(() => import('./TrueFalse'), { ssr: false });
-
-const BlockMath = dynamic(() => import('react-katex').then(mod => ({ default: mod.BlockMath })), { ssr: false });
-const InlineMath = dynamic(() => import('react-katex').then(mod => ({ default: mod.InlineMath })), { ssr: false });
-const Latex = dynamic(() => import('react-latex-next'), { ssr: false });
-
-import { Container, Row, Col, ProgressBar, Card, Button, Modal, Alert, Toast, Badge } from 'react-bootstrap';
+import SingleChoice from './SingleChoice';
+import MultipleChoice from './MultipleChoice';
+import NumberInput from './NumberInput';
+import TextInput from './TextInput';
+import TrueFalse from './TrueFalse';
+import ExamNotAccessibleModal from '../try-out/ExamNotAccessibleModal';
+import 'katex/dist/katex.min.css';
+import Latex from 'react-latex-next';
+import { Container, Row, Col, ProgressBar, Card, Button, Modal, Alert, Toast } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Clock, Loader2, Check, AlertCircle, FileCheck, ArrowRight, Eye, EyeOff, Shield, ShieldAlert, Activity, Wifi, WifiOff, Home } from 'lucide-react';
+import { Clock, Loader2, Check, AlertCircle, FileCheck, ArrowRight } from 'lucide-react';
+import examDbService from '../../utils/ExamDBService';
+import { useAuth } from '../../context/AuthContext';
+import { useExam } from '../../context/ExamContext';
+
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
 interface Question {
   id: number;
@@ -64,248 +51,35 @@ interface ExamSession {
   question_elapsed_times?: Record<number, number>;
 }
 
-// Enhanced Hidden Timer Validator with Web Worker Integration
-const HiddenTimerValidator: React.FC<{
-  workerTimerValues: any;
-  onSecurityBreach: () => void;
-}> = React.memo(({ workerTimerValues, onSecurityBreach }) => {
-  const userPurchase = useUserPurchase();
-  const activeUser = useActiveUser();
-  const allProduct = useAllProduct();
-  const timerAuthenticator = useRef(new RewardTimerAuthenticator(30));
-  const lastValidationRef = useRef<number>(0);
-  
-  useEffect(() => {
-    const validateTimers = () => {
-      try {
-        const now = Date.now();
-        
-        // Rate limiting - validate every 3-5 minutes
-        const timeSinceLastValidation = now - lastValidationRef.current;
-        const minInterval = 3 * 60 * 1000; // 3 minutes
-        const maxInterval = 5 * 60 * 1000; // 5 minutes
-        const randomInterval = minInterval + Math.random() * (maxInterval - minInterval);
-        
-        if (timeSinceLastValidation < randomInterval) {
-          return;
-        }
-        
-        lastValidationRef.current = now;
-        
-        // Get all timer values
-        const mainTimer = workerTimerValues.mainTimer || 0;
-        const purchaseTimer = userPurchase.getMarketResearchInterval();
-        const userActivityTimer = activeUser.getUserActivityInterval();
-        const inventoryTimer = allProduct.getInventoryUpdateInterval();
-        
-        // Get worker backup timers
-        const workerBackupTimers = workerTimerValues.backupTimers || {};
-        
-        // Very lenient validation - only flag EXTREME discrepancies
-        const allTimers = [
-          mainTimer,
-          purchaseTimer,
-          userActivityTimer,
-          inventoryTimer,
-          workerBackupTimers.purchase || 0,
-          workerBackupTimers.userActivity || 0,
-          workerBackupTimers.inventory || 0
-        ];
-        
-        // Cross-validation using helper
-        const validationResult = timerAuthenticator.current.validateTimerConsistency(allTimers);
-        
-        // Individual context validations
-        const purchaseValid = userPurchase.validatePurchaseAuthority(mainTimer);
-        const userActivityValid = activeUser.validateUserSessionIntegrity(mainTimer);
-        const inventoryValid = allProduct.validateInventorySystemIntegrity(mainTimer);
-        
-        // Worker timer validation
-        const workerValid = workerTimerValues.sessionValid;
-        
-        // Calculate deviation between worker and context timers
-        const maxDeviation = Math.max(
-          Math.abs(mainTimer - purchaseTimer),
-          Math.abs(mainTimer - userActivityTimer),
-          Math.abs(mainTimer - inventoryTimer),
-          Math.abs(mainTimer - (workerBackupTimers.purchase || 0)),
-          Math.abs(mainTimer - (workerBackupTimers.userActivity || 0)),
-          Math.abs(mainTimer - (workerBackupTimers.inventory || 0))
-        );
-        
-        // Even more lenient validation - only trigger on EXTREME discrepancies
-        const isValid = 
-          validationResult.isValid &&
-          validationResult.confidence >= 0.3 && // Even lower threshold
-          purchaseValid &&
-          userActivityValid &&
-          inventoryValid &&
-          workerValid &&
-          maxDeviation <= 300; // Allow up to 5 minutes deviation
-        
-        if (!isValid) {
-          // Only trigger auto-submit if deviation is EXTREME (>10 minutes)
-          if (maxDeviation > 600 || validationResult.confidence < 0.1) {
-            onSecurityBreach();
-          }
-        }
-        
-      } catch (error) {
-        // Don't auto-submit on validation errors, just log
-      }
-    };
-    
-    // Even less frequent validation - every 3-5 minutes
-    const intervalId = setInterval(() => {
-      validateTimers();
-    }, 3 * 60 * 1000 + Math.random() * 2 * 60 * 1000);
-    
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [workerTimerValues, userPurchase, activeUser, allProduct, onSecurityBreach]);
-  
-  return null; // Hidden component
-});
-
-HiddenTimerValidator.displayName = 'HiddenTimerValidator';
-
-// Enhanced Focus Detection with Web Worker Integration
-const FocusDetector: React.FC<{
-  onAutoSubmit: (reason: string) => void;
-  enabled: boolean;
-  timerRunning: boolean;
-}> = React.memo(({ onAutoSubmit, enabled, timerRunning }) => {
-  const focusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastFocusTime = useRef<number>(Date.now());
-  const [isPageVisible, setIsPageVisible] = useState(true);
-  const [focusWarningTime, setFocusWarningTime] = useState(0);
-  const [showWarning, setShowWarning] = useState(false);
-  
-  useEffect(() => {
-    if (!enabled || !timerRunning) return;
-    
-    const handleVisibilityChange = () => {
-      const isVisible = !document.hidden;
-      setIsPageVisible(isVisible);
-      
-      if (isVisible) {
-        // Reset when page becomes visible
-        lastFocusTime.current = Date.now();
-        setFocusWarningTime(0);
-        setShowWarning(false);
-        
-        if (focusTimeoutRef.current) {
-          clearTimeout(focusTimeoutRef.current);
-          focusTimeoutRef.current = null;
-        }
-      } else {
-        // Start countdown when page loses focus - increased to 15 seconds
-        setShowWarning(true);
-        
-        let countdown = 15;
-        setFocusWarningTime(countdown);
-        
-        const countdownInterval = setInterval(() => {
-          countdown -= 1;
-          setFocusWarningTime(countdown);
-          
-          if (countdown <= 0) {
-            clearInterval(countdownInterval);
-            setShowWarning(false);
-          }
-        }, 1000);
-        
-        // Auto-submit after 15 seconds
-        focusTimeoutRef.current = setTimeout(() => {
-          clearInterval(countdownInterval);
-          setShowWarning(false);
-          onAutoSubmit('focus_lost');
-        }, 15000);
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleVisibilityChange);
-    window.addEventListener('focus', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleVisibilityChange);
-      window.removeEventListener('focus', handleVisibilityChange);
-      
-      if (focusTimeoutRef.current) {
-        clearTimeout(focusTimeoutRef.current);
-      }
-    };
-  }, [enabled, timerRunning, onAutoSubmit]);
-  
-  // Show warning only if page is not visible and countdown is active
-  if (!enabled || !timerRunning || isPageVisible || focusWarningTime <= 0 || !showWarning) {
-    return null;
-  }
-  
-  return (
-    <div className="tw-fixed tw-top-0 tw-left-0 tw-right-0 tw-bg-red-600 tw-text-white tw-p-4 tw-text-center tw-z-50 tw-shadow-lg tw-animate-pulse">
-      <div className="tw-flex tw-items-center tw-justify-center tw-gap-2">
-        <EyeOff className="tw-h-5 tw-w-5" />
-        <span className="tw-font-bold">
-          WARNING: Return to exam page! Auto-submit in {focusWarningTime} seconds
-        </span>
-        <EyeOff className="tw-h-5 tw-w-5" />
-      </div>
-    </div>
-  );
-});
-
-FocusDetector.displayName = 'FocusDetector';
-
-// Main Exam Component
-const ExamContent: React.FC = () => {
-  const [isClient, setIsClient] = useState(false);
-  
-  // All hooks at TOP LEVEL - no conditional hooks
+const ChainExam: React.FC = () => {
   const params = useParams();
-  const router = useRouter();
+  const exam_string = params?.exam_string as string;
   
-  // Context hooks at top level
-  const examContext = useExam();
-  const authContext = useAuth();
-  
-  // Memoize the exam_string to prevent re-initialization loops
-  const exam_string = useMemo(() => params?.exam_string as string, [params?.exam_string]);
-
-  // Initialize distributed time sync with stable config (memoized)
-  const timeSyncConfig = useMemo(() => ({
-    minInterval: 2 * 60 * 1000,    // 2 minutes
-    maxInterval: 5 * 60 * 1000,    // 5 minutes  
-    focusThreshold: 1 * 60 * 1000, // 1 minute
-    jumpThreshold: 5 * 1000        // 5 seconds
-  }), []);
-  
-  const {
-    timeOffset,
-    getServerTime,
-    detectTimeJump,
-    forceSyncNow,
-    isOnline,
-    syncCount,
-    getSyncStats,
-    networkLatency,
-    reliability,
-    offsetStdDev,
-    timezoneOffset
-  } = useDistributedTimeSync(timeSyncConfig);
-  
-  // More granular loading states
   const [examId, setExamId] = useState<number | null>(null);
   const [examScheduleId, setExamScheduleId] = useState<string | null>(null);
   const [examName, setExamName] = useState<string | null>(null);
   const [examType, setExamType] = useState<string>('Try-Out');
+  const router = useRouter();
+  const { username } = useAuth();
+
+  // Get data from context
+  const {
+    topicId: selectedTopicId,
+    examScheduleId: contextExamScheduleId,
+    examOrder: contextExamOrder,
+    examSessions: contextExamSessions,
+    activeSession: contextActiveSession,
+    selectedSchedule: contextSelectedSchedule,
+    examType: contextExamType,
+    originPath: contextOriginPath,
+    clearExamData
+  } = useExam();
+
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [duration, setDuration] = useState<number>(0);
+  const [timeLeft, setTimeLeft] = useState<number>(0);
   const [answers, setAnswers] = useState<Answers>({});
   const [error, setError] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<boolean>(false);
@@ -315,383 +89,372 @@ const ExamContent: React.FC = () => {
   const [nextExam, setNextExam] = useState<string | null>(null);
   const [showCheckpointToast, setShowCheckpointToast] = useState<boolean>(false);
   const [autoSaving, setAutoSaving] = useState<boolean>(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [examSession, setExamSession] = useState<ExamSession | null>(null);
   const [isExamAccessible, setIsExamAccessible] = useState<boolean>(true);
   const [showNotAccessibleModal, setShowNotAccessibleModal] = useState(false);
   const [examStartTime, setExamStartTime] = useState<string | null>(null);
   const [countdown, setCountdown] = useState("");
   const [isTimeExpired, setIsTimeExpired] = useState(false);
-  const [selectedTopicId, setSelectedTopicId] = useState<number|null>(null);
-  const [originPath, setOriginPath] = useState<string>('/');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastServerSync, setLastServerSync] = useState<number>(0);
 
-  // FIXED: Enhanced loading control states with proper fetch tracking
-  const [questionsReady, setQuestionsReady] = useState(false);
-  const [accessCheckComplete, setAccessCheckComplete] = useState(false);
-  const [initializationComplete, setInitializationComplete] = useState(false);
+  // Origin path from context instead of localStorage
+  const originPath = contextOriginPath || '/';
 
-  // Fixed submission states
-  const [isLastExam, setIsLastExam] = useState(false);
-  const [finalSubmitSuccess, setFinalSubmitSuccess] = useState(false);
-  const [showFinalCompletionModal, setShowFinalCompletionModal] = useState(false);
-
-  // FIXED: Single fetch tracking
-  const fetchStateRef = useRef<{
-    currentExamString: string | null;
-    isFetching: boolean;
-    hasFetched: boolean;
-    lastSuccessfulFetch: string | null;
-  }>({
-    currentExamString: null,
-    isFetching: false,
-    hasFetched: false,
-    lastSuccessfulFetch: null
-  });
-
+  const timerRef = useRef<NodeJS.Timeout>();
+  const lastTickRef = useRef<number>(Date.now());
   const autoSaveRef = useRef<NodeJS.Timeout>();
-  const submissionInProgress = useRef<boolean>(false);
+  const timerSyncRef = useRef<NodeJS.Timeout>();
 
-  // Get context data safely with proper checks
-  const { 
-    topicId: contextTopicId,
-    examScheduleId: contextExamScheduleId,
-    examOrder: contextExamOrder,
-    examSessions: contextExamSessions,
-    activeSession: contextActiveSession,
-    selectedSchedule: contextSelectedSchedule,
-    examType: contextExamType,
-    originPath: contextOriginPath,
-    clearExamData
-  } = examContext || {
-    topicId: null,
-    examScheduleId: null,
-    examOrder: [],
-    examSessions: [],
-    activeSession: null,
-    selectedSchedule: null,
-    examType: 'Try-Out',
-    originPath: '/',
-    clearExamData: () => {}
-  };
-
-  // Safe username extraction
-  const { username, id: userId } = authContext || { username: null, id: null };
-
-  // Stable exam order
-  const examOrder = useMemo(() => contextExamOrder || [], [contextExamOrder]);
-  const currentExamIndex = useMemo(() => 
-    examOrder.findIndex((exam: ExamOrder) => exam.exam_string === exam_string),
-    [examOrder, exam_string]
-  );
-
+  // Use context data instead of localStorage
+  const examOrder = contextExamOrder || [];
+  const currentExamIndex = examOrder.findIndex((exam: ExamOrder) => exam.exam_string === exam_string);
+  
   // Check if this is the last exam
+  const isLastExam = currentExamIndex === examOrder.length - 1;
+  
   useEffect(() => {
-    const isLast = currentExamIndex === examOrder.length - 1;
-    setIsLastExam(isLast);
-  }, [currentExamIndex, examOrder.length]);
-
-  // Enhanced auto-submit handler with proper final exam handling
-  const handleAutoSubmit = useCallback(async (reason = 'time_expired') => {
-    if (submissionInProgress.current) return;
-    
-    submissionInProgress.current = true;
-    setIsTimeExpired(true);
-    setIsSubmitting(true);
-    
-    // Stop the Web Worker timer
-    stopTimer();
-    
-    // Always submit to server, but handle scoring based on exam position
-    const shouldScore = isLastExam && !nextExam;
-    
-    const success = await submitToServer(shouldScore);
-    
-    if (success) {
-      // Clear exam data
-      await ExamDBService.deleteExamData(exam_string);
-      
-      // Handle final exam completion vs next exam
-      if (isLastExam) {
-        setFinalSubmitSuccess(true);
-        setShowFinalCompletionModal(true);
-      } else {
-        // Determine next action for non-final exams
-        const nextExamIndex = currentExamIndex + 1;
-        const hasNextExam = nextExamIndex < examOrder.length;
-        
-        if (hasNextExam) {
-          setNextExam(examOrder[nextExamIndex]?.name || null);
-          setShowModalNext(true);
-        } else {
-          // Fallback: no more exams, go back to home
-          if (clearExamData) clearExamData();
-          router.push(originPath || '/try-out');
-        }
-      }
-    } else {
-      setSubmitError(true);
-      if (isLastExam) {
-        setShowFinalCompletionModal(true);
-      } else {
-        setShowModalNext(true);
-      }
-    }
-    
-    setIsSubmitting(false);
-    submissionInProgress.current = false;
-  }, [isLastExam, nextExam, currentExamIndex, examOrder, clearExamData, router, originPath, exam_string]);
-
-  const onSecurityBreach = useCallback((reason: string, details?: any) => {
-    // Only auto-submit on EXTREME security breaches
-    if (reason === 'extreme_time_jump' || reason === 'checksum_failed_with_timeout') {
-      handleAutoSubmit(`extreme_security_breach_${reason}`);
-    }
-  }, [handleAutoSubmit]);
-
-  const onValidationFailure = useCallback((reason: string) => {
-    // Don't auto-submit on validation failures, just log
-  }, []);
-
-  // Memoize timer options to prevent re-initialization
-  const timerOptions = useMemo(() => ({
-    examId: exam_string || 'default',
-    onTimeout: () => {
-      handleAutoSubmit('timer_expired');
-    },
-    onSecurityBreach,
-    onValidationFailure
-  }), [exam_string, handleAutoSubmit, onSecurityBreach, onValidationFailure]);
-
-  // Initialize secure timer with Web Worker
-  const {
-    timeLeft,
-    elapsed,
-    isRunning,
-    isValid: timerValid,
-    isInitialized: timerInitialized,
-    error: timerError,
-    backupTimers,
-    securityValidation,
-    startTimer,
-    stopTimer,
-    restoreTimer,
-    validateIntegrity,
-    getBackupTimerValues,
-    formatTime,
-    isExpired,
-    updateNetworkInfo 
-  } = useSecureTimer(timerOptions);
-
-  // Stable effect for network info updates
-  useEffect(() => {
-    // Update secure timer with latest network information from time sync
-    updateNetworkInfo({
-      latency: networkLatency || 0,
-      timezoneOffset: timezoneOffset || 0,
-      reliability: reliability || 1.0,
-      offsetStdDev: offsetStdDev || 0
-    });
-  }, [networkLatency, reliability, offsetStdDev, timezoneOffset, updateNetworkInfo]);
-
-  // FIXED: Enhanced exam string change handler with proper state reset
-  useEffect(() => {
-    if (exam_string !== fetchStateRef.current.currentExamString) {
-      console.log('🔄 Exam string changed, resetting state:', {
-        from: fetchStateRef.current.currentExamString,
-        to: exam_string
-      });
-      
-      // Stop current timer
-      stopTimer();
-      
-      // Reset fetch state
-      fetchStateRef.current = {
-        currentExamString: exam_string,
-        isFetching: false,
-        hasFetched: false,
-        lastSuccessfulFetch: null
-      };
-      
-      // Enhanced state reset for exam change
-      setLoading(true);
-      setError(false);
-      setSubmitError(false);
-      setQuestions([]);
-      setAnswers({});
-      setCurrentQuestion(0);
-      setExamSession(null);
-      setIsTimeExpired(false);
-      setExamName(null);
-      setDuration(0);
-      setQuestionsReady(false);
-      setAccessCheckComplete(false);
-      setInitializationComplete(false);
-      
-      // Reset access check states
-      setIsExamAccessible(true);
-      setShowNotAccessibleModal(false);
-      setExamStartTime(null);
-      setCountdown("");
-      
-      // Reset initialization flags
-      submissionInProgress.current = false;
-    }
-  }, [exam_string, stopTimer]);
-
-  // Stable effect for time jump detection
-  useEffect(() => {
-    let lastCheckTime = Date.now();
-    
-    const timeJumpChecker = setInterval(() => {
-      const currentTime = Date.now();
-      const hasTimeJump = detectTimeJump(currentTime, lastCheckTime);
-      
-      if (hasTimeJump) {
-        validateIntegrity();
-        
-        // If time sync detects extreme jump, force sync
-        const deviation = Math.abs(currentTime - lastCheckTime - 1000);
-        if (deviation > 60000) { // 60 seconds - more lenient
-          forceSyncNow();
-        }
-      }
-      
-      lastCheckTime = currentTime;
-    }, 1000);
-    
-    return () => clearInterval(timeJumpChecker);
-  }, [detectTimeJump, validateIntegrity, forceSyncNow]);
-
-  // Use FIXED getServerTime for all time calculations
-  const enhancedGetServerTime = useCallback(() => {
-    return getServerTime(); // This now returns pure UTC + network offset (no timezone confusion)
-  }, [getServerTime]);
-
-  // Stable client-side initialization
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // FIXED: Stable context data sync with immediate synchronization
-  useEffect(() => {
-    if (!examContext) return;
-    
-    // IMMEDIATE synchronization - no delays
-    if (contextOriginPath) {
-      setOriginPath(contextOriginPath);
-    }
-    
-    if (contextTopicId) {
-      setSelectedTopicId(contextTopicId);
+    // Set data from context
+    if (contextExamScheduleId) {
+      setExamScheduleId(contextExamScheduleId.toString());
     }
     
     if (contextExamType) {
       setExamType(contextExamType);
     }
-    
-    // Set examScheduleId IMMEDIATELY when context updates
-    if (contextExamScheduleId) {
-      const scheduleIdStr = contextExamScheduleId.toString();
-      setExamScheduleId(scheduleIdStr);
-    }
-    
-    if (contextActiveSession) {
-      setExamSession(contextActiveSession);
-    }
-    
-    // FIXED: Set examId immediately and only once per exam change
-    if (examOrder.length > 0 && exam_string) {
-      const currentExam = examOrder.find(exam => exam.exam_string === exam_string);
-      
-      if (currentExam && currentExam.exam_id) {
-        setExamId(currentExam.exam_id);
-        setExamName(currentExam.name);
-        setExamType(currentExam.examType);
+  }, [contextExamScheduleId, contextExamType]);
+
+  useEffect(() => {
+    if (!loading && questions.length > 0) {
+      if (exam_string) {
+        examDbService.updateQuestionElapsedTime(exam_string, questions[currentQuestion].id);
       }
     }
-  }, [
-    examContext,
-    contextOriginPath, 
-    contextTopicId, 
-    contextExamType, 
-    contextExamScheduleId, 
-    contextActiveSession, 
-    examOrder, 
-    exam_string
-  ]);
+  }, [loading, questions, currentQuestion, exam_string]);
+
+  // Add question timer logging effect
+  useEffect(() => {
+    if (!loading && questions.length > 0) {
+      const logQuestionTimer = async () => {
+        const currentQuestionId = questions[currentQuestion].id;
+        const elapsedTimes = await examDbService.getQuestionElapsedTimes(exam_string);
+        
+        console.log('📋 QUESTION TIMER STATUS');
+        console.log('Active Question ID:', currentQuestionId);
+        console.log('Active Question Number:', currentQuestion + 1);
+        console.log('Question Elapsed Times:', elapsedTimes);
+        console.log('Current Question Time (seconds):', elapsedTimes[currentQuestionId] || 0);
+        console.log('---');
+      };
+
+      const timer = setInterval(logQuestionTimer, 5000); // Log every 5 seconds
+      
+      return () => clearInterval(timer);
+    }
+  }, [loading, questions, currentQuestion, exam_string]);
 
   useEffect(() => {
     return () => {
-      // Stop timer
-      stopTimer();
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (autoSaveRef.current) clearInterval(autoSaveRef.current);
+      if (timerSyncRef.current) clearInterval(timerSyncRef.current);
       
-      // Clear any pending timeouts/intervals
-      if (autoSaveRef.current) {
-        clearInterval(autoSaveRef.current);
-      }
-      
-      // Finalize current question time if needed
       if (exam_string && questions.length > 0) {
-        ExamDBService.finalizeCurrentQuestionTime(exam_string).catch(console.error);
+        examDbService.finalizeCurrentQuestionTime(exam_string);
       }
     };
-  }, [exam_string, questions.length, stopTimer]);
+  }, [exam_string, questions]);
 
-  // Decryption function
+  useEffect(() => {
+    if (!isExamAccessible && examStartTime) {
+      const timer = setInterval(() => {
+        const now = new Date();
+        const startTime = new Date(examStartTime);
+        const diff = startTime.getTime() - now.getTime();
+        
+        if (diff <= 0) {
+          clearInterval(timer);
+          handleRetryAccess();
+          return;
+        }
+        
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        
+        setCountdown(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      }, 1000);
+      
+      return () => clearInterval(timer);
+    }
+  }, [isExamAccessible, examStartTime]);
+
   const decryptData = (encryptedData: string) => {
+    const [ivHex, encrypted] = encryptedData.split(':');
+    const iv = CryptoJS.enc.Hex.parse(ivHex);
+    const encryptionKeyString = process.env.NEXT_PUBLIC_EXAM_ENCRYPTION_KEY;
+    
+    if (!encryptionKeyString) {
+      console.error('Encryption key not found in environment variables');
+      throw new Error('Encryption configuration error');
+    }
+    
+    let key;
+    if (encryptionKeyString.length >= 32) {
+      key = CryptoJS.enc.Utf8.parse(encryptionKeyString.substring(0, 32));
+    } else {
+      const paddedKey = encryptionKeyString.padEnd(32, '0');
+      key = CryptoJS.enc.Utf8.parse(paddedKey);
+    }
+    
+    const decryptParams = {
+      iv: iv,
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.Pkcs7
+    };
+    
     try {
-      const [ivHex, encrypted] = encryptedData.split(':');
-      const iv = CryptoJS.enc.Hex.parse(ivHex);
-      const encryptionKeyString = process.env.NEXT_PUBLIC_EXAM_ENCRYPTION_KEY;
+      const decrypted = CryptoJS.AES.decrypt(
+        encrypted,
+        key,
+        decryptParams
+      );
       
-      if (!encryptionKeyString) {
-        throw new Error('Encryption configuration error');
-      }
-      
-      let key;
-      if (encryptionKeyString.length >= 32) {
-        key = CryptoJS.enc.Utf8.parse(encryptionKeyString.substring(0, 32));
-      } else {
-        const paddedKey = encryptionKeyString.padEnd(32, '0');
-        key = CryptoJS.enc.Utf8.parse(paddedKey);
-      }
-      
-      const decryptParams = {
-        iv: iv,
-        mode: CryptoJS.mode.CBC,
-        padding: CryptoJS.pad.Pkcs7
-      };
-      
-      const decrypted = CryptoJS.AES.decrypt(encrypted, key, decryptParams);
-      const result = decrypted.toString(CryptoJS.enc.Utf8);
-      
-      return result;
+      return decrypted.toString(CryptoJS.enc.Utf8);
     } catch (error) {
+      console.error('Decryption error:', error);
       throw new Error('Failed to decrypt data');
     }
   };
 
-  // FIXED: Enhanced loadExistingSession with single call guarantee
-  const loadExistingSession = useCallback(async (currentExamId: number, expectedExamString: string) => {
-    if (!isClient || !examScheduleId || !currentExamId) {
-      return false;
+  const findLatestUnfinishedExam = useCallback(async () => {
+    if (!exam_string && examOrder.length > 0) {
+      setLoading(true);
+      
+      for (let i = examOrder.length - 1; i >= 0; i--) {
+        const hasData = await examDbService.hasExamData(examOrder[i].exam_string);
+        if (hasData) {
+          router.push(`/exam/${examOrder[i].exam_string}`);
+          return true;
+        }
+      }
+      setLoading(false);
     }
+    return false;
+  }, [examOrder, exam_string, router]);
 
-    // VALIDATION: Ensure we're loading session for the correct exam
-    if (expectedExamString !== exam_string) {
-      return false;
+  const fetchQuestions = async () => {
+    try {
+      const currentExam = examOrder.find((exam) => exam.exam_string === exam_string);
+      
+      if (currentExam && currentExam.exam_id) {
+        setExamId(currentExam.exam_id);
+      }
+
+      const authToken = localStorage.getItem('authToken');
+      const response = await axios.get(
+        `${apiUrl}/questions/byExamString?exam_string=${exam_string}`,
+        {
+          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${authToken}`
+          }
+        }
+      );
+  
+      const decryptedData = decryptData(response.data.encryptedData);
+      const parsedData = JSON.parse(decryptedData);
+      
+      const examDurationInMinutes = parsedData.duration;
+      setQuestions(parsedData.questions);
+      setDuration(examDurationInMinutes);
+      
+      await loadExistingSession(currentExam?.exam_id);
+      setLoading(false);
+      setError(false);
+    } catch (error) {
+      console.error('Error fetching questions:', error);
+      setError(true);
+      setLoading(false);
+    }
+  };
+  
+  const handleSubmit = useCallback((e?: React.FormEvent, skipConfirmation = false) => {
+    if (e) e.preventDefault();
+    
+    if (isTimeExpired || skipConfirmation) {
+      directSubmit();
+    } else {
+      setShowConfirmationModal(true);
+    }
+  }, [isTimeExpired]);
+
+  const directSubmit = useCallback(() => {
+    // For the last exam, there's no next exam
+    if (isLastExam) {
+      setNextExam(null);
+    } else {
+      const nextExamIndex = currentExamIndex + 1;
+      setNextExam(examOrder[nextExamIndex]?.name || null);
     }
     
-    try {
-      const axios = (await import('axios')).default;
-      const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+    setShowConfirmationModal(false);
+    setShowModalNext(true);
+  }, [currentExamIndex, examOrder, isLastExam]);
+
+  const confirmSubmit = useCallback(() => {
+    setShowConfirmationModal(false);
+    directSubmit();
+  }, [directSubmit]);
+
+  useEffect(() => {
+    if (exam_string && contextExamOrder.length > 0) {
+      const currentExam = contextExamOrder.find((exam: ExamOrder) => exam.exam_string === exam_string);
+      if (currentExam && currentExam.exam_id) {
+        setExamId(currentExam.exam_id);
+      }
       
+      if (contextExamScheduleId) {
+        setExamScheduleId(contextExamScheduleId.toString());
+      }
+    }
+  }, [exam_string, contextExamOrder, contextExamScheduleId]);
+
+  useEffect(() => {
+    const initializeExam = async () => {
+      setIsInitializing(true);
+      
+      if (!exam_string) {
+        await findLatestUnfinishedExam();
+      } else {
+        await fetchQuestions();
+      }
+      
+      setIsInitializing(false);
+    };
+    
+    initializeExam();
+  }, []);
+
+  useEffect(() => {
+    if (exam_string && !isInitializing) {
+      setLoading(true);
+      setQuestions([]);
+      setDuration(0);
+      setTimeLeft(0);
+      setAnswers({});
+      setError(false);
+      setSubmitError(false);
+      setCurrentQuestion(0);
+      setShowModalNext(false);
+      setShowConfirmationModal(false);
+      setExamSession(null);
+      setIsTimeExpired(false);
+      
+      const currentExam = examOrder.find((exam) => exam.exam_string === exam_string);
+      
+      if (currentExam && currentExam.exam_id) {
+        setExamId(currentExam.exam_id);
+      }
+      
+      if (contextExamScheduleId) {
+        setExamScheduleId(contextExamScheduleId.toString());
+      }
+      
+      fetchQuestions();
+    }
+  }, [exam_string, isInitializing]);
+
+  useEffect(() => {
+    if (error && !isInitializing) {
+      const retryTimeout = setTimeout(() => {
+        fetchQuestions();
+      }, 5000);
+  
+      return () => clearTimeout(retryTimeout);
+    }
+  }, [error, isInitializing]);
+
+  useEffect(() => {
+    if (!loading && timeLeft > 0) {
+      const updateTimer = () => {
+        const now = Date.now();
+        const deltaTime = Math.floor((now - lastTickRef.current) / 1000);
+        
+        if (deltaTime >= 1) {
+          setTimeLeft(prevTime => {
+            const newTime = Math.max(0, prevTime - deltaTime);
+            if (newTime <= 0) {
+              setIsTimeExpired(true);
+              handleSubmit(undefined, true);
+              return 0;
+            }
+            return newTime;
+          });
+          lastTickRef.current = now;
+        }
+      };
+
+      timerRef.current = setInterval(updateTimer, 100);
+
+      return () => {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+        }
+      };
+    }
+  }, [loading, timeLeft, handleSubmit]);
+
+  useEffect(() => {
+    if (!loading && timeLeft > 0 && timeLeft % 120 === 0) {
+      if (autoSaveRef.current) {
+        clearInterval(autoSaveRef.current);
+      }
+      
+      autoSaveRef.current = setInterval(() => {
+        if (Object.keys(answers).length > 0) {
+          saveExamSession();
+        }
+      }, 1000);
+
+      return () => {
+        if (autoSaveRef.current) {
+          clearInterval(autoSaveRef.current);
+        }
+      };
+    }
+  }, [loading, answers, timeLeft]);
+
+  // Periodic timer sync every 5 minutes
+  useEffect(() => {
+    if (!loading && examSession && examScheduleId && examId) {
+      const startPeriodicSync = () => {
+        timerSyncRef.current = setInterval(() => {
+          performTimerSync();
+        }, 5 * 60 * 1000); // Every 5 minutes
+      };
+
+      startPeriodicSync();
+
+      return () => {
+        if (timerSyncRef.current) {
+          clearInterval(timerSyncRef.current);
+        }
+      };
+    }
+  }, [loading, examSession, examScheduleId, examId]);
+
+  const performTimerSync = async () => {
+    if (!examScheduleId || !examId) return;
+
+    try {
+      const authToken = localStorage.getItem('authToken');
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/examSession/active`,
+        `${apiUrl}/examSession/active`,
         {
           params: {
             exam_schedule_id: examScheduleId,
-            exam_id: currentExamId // ALWAYS use the passed exam_id
+            exam_id: examId
           },
           withCredentials: true,
           headers: {
@@ -699,309 +462,34 @@ const ExamContent: React.FC = () => {
           }
         }
       );
-        
-      // DOUBLE CHECK: Ensure current exam hasn't changed during API call
-      if (expectedExamString !== exam_string) {
-        return false;
-      }
-        
+
       if (response.data.status === 'success' && response.data.data) {
-        const sessionData = response.data.data;
-        
-        setExamName(sessionData.name);
-        
-        // Check exam accessibility FIRST before setting up timer
-        const serverNow = enhancedGetServerTime();
-        const sessionStartTime = new Date(sessionData.start_time).getTime();
-        
-        if (!sessionData.is_auto_move && serverNow < sessionStartTime) {
-          // Set access state and show wait screen WITHOUT loading questions
-          setExamStartTime(sessionData.start_time);
-          setIsExamAccessible(false);
-          setAccessCheckComplete(true);
-          setShowNotAccessibleModal(true);
-          setLoading(false); // Stop loading to show wait screen
-          
-          // Don't proceed with timer setup
-          return false;
-        }
-        
-        setIsExamAccessible(true);
-        setAccessCheckComplete(true);
-        
-        // Set answers
-        setAnswers(sessionData.answers || {});
-        await ExamDBService.saveAnswers(expectedExamString, sessionData.answers || {});
-        
-        // Handle question elapsed times
-        if (sessionData.question_elapsed_times) {
-          const examData = await ExamDBService.getExamData(expectedExamString) || { 
-            answers: sessionData.answers || {}, 
-            startTime: serverNow, // Use serverNow
-            questionElapsedTimes: {},
-            lastQuestionVisit: null
-          };
-          examData.questionElapsedTimes = sessionData.question_elapsed_times;
-          const db = await ExamDBService.db;
-          await db.put('examData', examData, expectedExamString);
-        }
-        
-        // Proper time calculation with synchronized time
-        const endTime = new Date(sessionData.end_time).getTime();
-        
-        // Both serverNow and endTime are now properly synchronized
-        const remainingTime = Math.max(0, Math.floor((endTime - serverNow) / 1000));
-        
-        if (remainingTime > 0) {
-          const startTimerWithRetry = () => {
-            if (timerInitialized && expectedExamString === exam_string) {
-              const success = startTimer(remainingTime);
-              return true;
-            }
-            return false;
-          };
-          
-          // Try to start immediately
-          if (!startTimerWithRetry()) {
-            let attempts = 0;
-            const maxAttempts = 10;
-            
-            const waitForTimer = setInterval(() => {
-              attempts++;
-              
-              // Check if exam has changed during retry
-              if (expectedExamString !== exam_string) {
-                clearInterval(waitForTimer);
-                return;
-              }
-              
-              if (startTimerWithRetry()) {
-                clearInterval(waitForTimer);
-              } else if (attempts >= maxAttempts) {
-                clearInterval(waitForTimer);
-                
-                // Force start with fallback
-                if (expectedExamString === exam_string) {
-                  try {
-                    const success = startTimer(remainingTime);
-                  } catch (error) {
-                    // Error handling
-                  }
-                }}
-            }, 500);
-          }
-        } else {
-          setIsTimeExpired(true);
-          handleAutoSubmit('session_expired');
-        }
-        
-        setExamSession(sessionData);
-        return true;
-        
-      } else {
-        // Even if no session, still check exam accessibility
-        setAccessCheckComplete(true);
-        return false;
+        const serverData = response.data.data;
+        syncTimerWithServer(serverData.start_time, serverData.end_time);
+        setLastServerSync(Date.now());
       }
     } catch (error) {
-      // Set access check complete even on error
-      setAccessCheckComplete(true);
-      
-      // Fallback: load saved answers (but only if exam hasn't changed)
-      if (expectedExamString === exam_string) {
-        try {
-          const savedAnswers = await ExamDBService.getAnswers(expectedExamString);
-          if (savedAnswers) {
-            setAnswers(savedAnswers);
-          }
-        } catch (fallbackError) {
-          // Fallback error
-        }
-      }
-      
-      return false;
+      console.error('Timer sync failed:', error);
     }
-  }, [
-    isClient, 
-    examScheduleId, 
-    exam_string,
-    enhancedGetServerTime, 
-    timerInitialized, 
-    startTimer, 
-    handleAutoSubmit,
-    timeOffset
-  ]);
+  };
 
-  // FIXED: Single fetch function with comprehensive duplicate prevention
-  const fetchQuestions = useCallback(async () => {
-    if (!isClient) {
-      console.log('❌ fetchQuestions: Not client-side, skipping');
-      return;
-    }
-    
-    if (!exam_string) {
-      console.log('❌ fetchQuestions: No exam_string, skipping');
-      return;
-    }
-    
-    if (!examScheduleId) {
-      console.log('❌ fetchQuestions: No examScheduleId, skipping');
-      return;
-    }
-    
-    if (examOrder.length === 0) {
-      console.log('❌ fetchQuestions: No examOrder, skipping');
-      return;
-    }
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (autoSaveRef.current) clearInterval(autoSaveRef.current);
+      if (timerSyncRef.current) clearInterval(timerSyncRef.current);
+    };
+  }, []);
 
-    // CRITICAL: Check if already fetching or fetched for this exam
-    const fetchState = fetchStateRef.current;
-    
-    if (fetchState.isFetching) {
-      console.log('⏳ fetchQuestions: Already fetching, skipping duplicate request');
-      return;
-    }
-    
-    if (fetchState.hasFetched && fetchState.lastSuccessfulFetch === exam_string) {
-      console.log('✅ fetchQuestions: Already fetched for this exam, skipping');
-      return;
-    }
-    
-    // Validate that this exam_string exists in examOrder
-    const currentExam = examOrder.find((exam) => exam.exam_string === exam_string);
-    if (!currentExam) {
-      console.log('❌ fetchQuestions: Exam not found in examOrder');
-      setError(true);
-      setLoading(false);
-      return;
-    }
-
-    // Mark as fetching to prevent duplicates
-    fetchStateRef.current.isFetching = true;
-    
-    console.log('🚀 fetchQuestions: Starting fetch for exam:', {
-      exam_string,
-      examId: currentExam.exam_id,
-      examName: currentExam.name
-    });
-    
-    try {
-      const axios = (await import('axios')).default;
-      
-      const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-      
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/questions/byExamString?exam_string=${exam_string}`,
-        {
-          withCredentials: true,
-          headers: {
-            Authorization: `Bearer ${authToken}`
-          }
-        }
-      );
-
-      // CHECK: Ensure exam hasn't changed during API call
-      if (exam_string !== fetchStateRef.current.currentExamString) {
-        console.log('❌ fetchQuestions: Exam changed during fetch, aborting');
-        return;
-      }
-
-      if (!response.data || !response.data.encryptedData) {
-        throw new Error('Invalid API response - no encrypted data');
-      }
-
-      const decryptedData = decryptData(response.data.encryptedData);
-      const parsedData = JSON.parse(decryptedData);
-      
-      if (!parsedData.questions || parsedData.questions.length === 0) {
-        throw new Error('No questions found in response');
-      }
-
-      // FINAL CHECK: Ensure exam is still the same
-      if (exam_string !== fetchStateRef.current.currentExamString) {
-        console.log('❌ fetchQuestions: Exam changed after decrypt, aborting');
-        return;
-      }
-      
-      console.log('✅ fetchQuestions: Successfully fetched questions:', {
-        count: parsedData.questions.length,
-        duration: parsedData.duration
-      });
-      
-      // Set examId and examName IMMEDIATELY and SYNCHRONOUSLY
-      setExamId(currentExam.exam_id);
-      setExamName(currentExam.name);
-      setDuration(parsedData.duration);
-      setQuestions(parsedData.questions);
-      setQuestionsReady(true);
-      
-      // Mark as successfully fetched
-      fetchStateRef.current.hasFetched = true;
-      fetchStateRef.current.lastSuccessfulFetch = exam_string;
-      
-      // Load session ONLY after questions are set
-      try {
-        const sessionLoaded = await loadExistingSession(currentExam.exam_id, exam_string);
-        
-        // If session loading indicated exam is not accessible, stop here
-        if (!isExamAccessible && accessCheckComplete) {
-          return;
-        }
-        
-        if (!sessionLoaded && isExamAccessible) {
-          if (parsedData.duration > 0 && timerInitialized && exam_string === fetchStateRef.current.currentExamString) {
-            const timerDuration = parsedData.duration * 60;
-            const success = startTimer(timerDuration);
-          }
-        }
-      } catch (sessionError) {
-        console.warn('⚠️ Session loading failed, starting fresh timer:', sessionError);
-        // Only start fresh timer if exam is accessible
-        if (isExamAccessible && parsedData.duration > 0 && timerInitialized && exam_string === fetchStateRef.current.currentExamString) {
-          const timerDuration = parsedData.duration * 60;
-          const success = startTimer(timerDuration);
-        }
-      }
-      
-      // Mark initialization as complete
-      setInitializationComplete(true);
-      setError(false);
-      
-    } catch (error) {
-      console.error('❌ fetchQuestions: Error fetching questions:', error);
-      setError(true);
-      setQuestionsReady(false);
-    } finally {
-      // Always reset fetching state
-      fetchStateRef.current.isFetching = false;
-      setLoading(false);
-    }
-  }, [
-    isClient, 
-    exam_string,
-    examOrder,
-    examScheduleId,
-    isExamAccessible,
-    accessCheckComplete,
-    loadExistingSession, 
-    timerInitialized, 
-    startTimer
-  ]);
-
-  // Save exam session
-  const saveExamSession = useCallback(async () => {
-    if (!isClient) return false;
-    
+  const saveExamSession = async () => {
     setAutoSaving(true);
     
     try {
-      const axios = (await import('axios')).default;
-      const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const questionElapsedTimes = await examDbService.getQuestionElapsedTimes(exam_string);
+      const authToken = localStorage.getItem('authToken');
       
-      const questionElapsedTimes = await ExamDBService.getQuestionElapsedTimes(exam_string);
-      
-      await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/examSession/save`,
+      const response = await axios.post(
+        `${apiUrl}/examSession/save`,
         { 
           exam_schedule_id: examScheduleId,
           exam_id: examId,
@@ -1016,6 +504,12 @@ const ExamContent: React.FC = () => {
         }
       );
       
+      // Sync timer with server response
+      if (response.data.status === 'success' && response.data.data) {
+        const serverData = response.data.data;
+        syncTimerWithServer(serverData.start_time, serverData.end_time);
+      }
+      
       setAutoSaving(false);
       setShowCheckpointToast(true);
       return true;
@@ -1023,121 +517,62 @@ const ExamContent: React.FC = () => {
       setAutoSaving(false);
       return false;
     }
-  }, [isClient, exam_string, examScheduleId, examId, answers]);
+  };
 
-  // Enhanced submit to server with proper final exam handling
-  const submitToServer = useCallback(async (shouldScore = false): Promise<boolean> => {
-    if (!isClient) return false;
+  const syncTimerWithServer = (serverStartTime: string, serverEndTime: string) => {
+    const serverEndTimeMs = new Date(serverEndTime).getTime();
+    const currentTime = Date.now();
+    const serverRemainingTime = Math.max(0, Math.floor((serverEndTimeMs - currentTime) / 1000));
     
-    setSubmitLoading(true);
-    setSubmitError(false);
+    // Calculate time difference between client and server
+    const clientTimeLeft = timeLeft;
+    const timeDifference = Math.abs(clientTimeLeft - serverRemainingTime);
     
-    try {
-      console.log('🔍 Current examOrder in context:', examOrder);
+    console.log('🔄 TIMER SYNC');
+    console.log('Server End Time:', serverEndTime);
+    console.log('Current Client Time Left:', clientTimeLeft);
+    console.log('Server Remaining Time:', serverRemainingTime);
+    console.log('Time Difference:', timeDifference, 'seconds');
+    
+    // If difference is more than 5 seconds, sync with server
+    if (timeDifference > 5) {
+      console.log('⚠️ Timer desync detected, syncing with server...');
+      setTimeLeft(serverRemainingTime);
+      lastTickRef.current = Date.now();
       
-      const currentExam = examOrder.find(exam => exam.exam_string === exam_string);
-      if (!currentExam) {
-        console.error('🚨 Current exam not found in examOrder for exam_string:', exam_string);
-        throw new Error('Current exam not found');
+      // Update session data
+      setExamSession(prev => prev ? {
+        ...prev,
+        start_time: serverStartTime,
+        end_time: serverEndTime
+      } : null);
+      
+      // Check if time has expired
+      if (serverRemainingTime <= 0) {
+        setIsTimeExpired(true);
+        handleSubmit(undefined, true);
       }
-      
-      if (!currentExam.exam_id) {
-        console.error('🚨 Exam ID missing for exam:', currentExam);
-        throw new Error('Exam ID missing');
-      }
-      
-      const examIdToSubmit = currentExam.exam_id;
-
-      // Fetch the latest answers from ExamDBService
-      const savedAnswers = await ExamDBService.getAnswers(exam_string) || answers;
-      const finalElapsedTimes = await ExamDBService.finalizeCurrentQuestionTime(exam_string, elapsed);
-
-      const axios = (await import('axios')).default;
-      const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-      
-      console.log('📤 Submitting to server:', {
-        exam_string,
-        examIdToSubmit,
-        savedAnswers,
-        finalElapsedTimes
-      });
-
-      await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/examSession/submit`,
-        { 
-          exam_schedule_id: examScheduleId,
-          exam_id: examIdToSubmit,
-          answers: savedAnswers,
-          question_elapsed_times: finalElapsedTimes
-        },
-        { 
-          withCredentials: true,
-          headers: {
-            Authorization: `Bearer ${authToken}`
-          }
-        }
-      );
-
-      // Handle user course submission for final exam
-      if (isLastExam && selectedTopicId) {
-        try {
-          await axios.post(
-            `${process.env.NEXT_PUBLIC_API_URL}/userCourse/`,
-            {
-              topic_id: selectedTopicId,
-              quiz_id: examScheduleId
-            },
-            { 
-              withCredentials: true,
-              headers: {
-                Authorization: `Bearer ${authToken}`
-              }
-            }
-          );
-        } catch (error) {
-          // Error handling
-        }
-      }
-      
-      // Handle scoring for final exam
-      if (shouldScore && isLastExam) {
-        try {
-          await axios.post(
-            `${process.env.NEXT_PUBLIC_API_URL}/score/schedule/${examScheduleId}`,
-            {},
-            { 
-              withCredentials: true,
-              headers: {
-                Authorization: `Bearer ${authToken}`
-              }
-            }
-          );
-        } catch (scoreError) {
-          // Score error handling
-        }
-      }
-  
-      setSubmitLoading(false);
-      return true;
-    } catch (error) {
-      setSubmitLoading(false);
-      setSubmitError(true);
-      return false;
     }
-  }, [isClient, exam_string, examScheduleId, examId, answers, isLastExam, selectedTopicId, examOrder, elapsed]);
+    
+    console.log('---');
+  };
 
-  // Handle change
-  const handleChange = useCallback(async (id: number, value: any) => {
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+  };
+
+  const handleChange = async (id: number, value: any) => {
     const updatedAnswers = {
       ...answers,
       [id]: value
     };
     setAnswers(updatedAnswers);
-    await ExamDBService.saveAnswers(exam_string, updatedAnswers);
-  }, [answers, exam_string]);
+    await examDbService.saveAnswers(exam_string, updatedAnswers);
+  };
 
-  // Handle true/false change
-  const handleTrueFalseChange = useCallback(async (id: number, index: number, value: any) => {
+  const handleTrueFalseChange = async (id: number, index: number, value: any) => {
     const updatedAnswers = [...(answers[id] || [])];
     updatedAnswers[index] = value;
     const newAnswers = {
@@ -1145,10 +580,9 @@ const ExamContent: React.FC = () => {
       [id]: updatedAnswers
     };
     setAnswers(newAnswers);
-    await ExamDBService.saveAnswers(exam_string, newAnswers);
-  }, [answers, exam_string]);
+    await examDbService.saveAnswers(exam_string, newAnswers);
+  };
 
-  // Utility functions
   const isAnswerFilled = (answer: any): boolean => {
     if (answer === undefined || answer === null || answer === '') {
       return false;
@@ -1165,139 +599,297 @@ const ExamContent: React.FC = () => {
     return Object.values(answers).filter(answer => isAnswerFilled(answer)).length;
   };
 
-  // Handle submit
-  const handleSubmit = useCallback((e?: React.FormEvent, skipConfirmation = false) => {
-    if (e) e.preventDefault();
+  const handleNextExam = async () => {
+    const shouldScore = isLastExam; // Score on last exam only
+    const success = await submitToServer(shouldScore);
     
-    if (isTimeExpired || skipConfirmation) {
-      handleAutoSubmit('manual_submit');
-    } else {
-      setShowConfirmationModal(true);
-    }
-  }, [isTimeExpired, handleAutoSubmit]);
-
-  // Confirm submit
-  const confirmSubmit = useCallback(async () => {
-    setShowConfirmationModal(false);
-    await handleAutoSubmit('confirmed_submit');
-  }, [handleAutoSubmit]);
-
-  // Enhanced handleNextExam with proper final exam handling
-  const handleNextExam = useCallback(async () => {
-    if (nextExam && !isLastExam) {
-      const nextExamString = examOrder[currentExamIndex + 1].exam_string;
-      
-      // Close modal first
-      setShowModalNext(false);
-      
-      // Stop current timer before navigation
-      stopTimer();
-      
-      // Clear current exam data from IndexedDB
-      try {
-        await ExamDBService.deleteExamData(exam_string);
-      } catch (error) {
-        // Error handling
-      }
-      
-      // Reset fetch state for new exam
-      fetchStateRef.current = {
-        currentExamString: null,
-        isFetching: false,
-        hasFetched: false,
-        lastSuccessfulFetch: null
-      };
-      
-      // Enhanced state reset before navigation
-      setLoading(true);
-      setError(false);
-      setSubmitError(false);
-      setQuestions([]);
-      setAnswers({});
-      setCurrentQuestion(0);
-      setExamSession(null);
-      setIsTimeExpired(false);
-      setExamName(null);
-      setDuration(0);
-      setQuestionsReady(false);
-      setAccessCheckComplete(false);
-      setInitializationComplete(false);
-      
-      // Reset refs
-      submissionInProgress.current = false;
-      
-      // Small delay to ensure state is reset before navigation
-      setTimeout(() => {
+    if (success) {
+      if (!isLastExam && nextExam) {
+        // Go to next exam
+        const nextExamString = examOrder[currentExamIndex + 1].exam_string;
+        setShowModalNext(false);
+        
+        setCurrentQuestion(0);
+        setQuestions([]);
+        setAnswers({});
+        setExamSession(null);
+        
         router.push(`/exam/${nextExamString}`);
-      }, 100);
-      
-    } else {
-      // Close any open modals
-      setShowModalNext(false);
-      setShowFinalCompletionModal(false);
-      
-      // Stop timer
-      stopTimer();
-      
-      // Clear all exam data
-      if (clearExamData) {
+      } else {
+        // This is the last exam, go back to origin
         clearExamData();
+        router.push(originPath);
       }
-      
-      // Navigate to origin or default to /try-out
-      router.push(originPath || '/try-out');
     }
-  }, [
-    nextExam, 
-    examOrder, 
-    currentExamIndex, 
-    isLastExam,
-    finalSubmitSuccess,
-    clearExamData, 
-    router, 
-    originPath, 
-    exam_string,
-    stopTimer
-  ]);
-
-  // Handle retry submit
-  const handleRetrySubmit = () => {
-    handleAutoSubmit('retry');
   };
 
-  // Handle navigation
-  const handleNavigation = useCallback(async (index: number) => {
-    if (questions.length === 0 || currentQuestion >= questions.length) return;
-    
-    if (exam_string && questions[currentQuestion] && questions[currentQuestion].id) {
-      await ExamDBService.updateQuestionElapsedTime(exam_string, questions[currentQuestion].id);
+  const handleRetrySubmit = () => {
+    handleNextExam();
+  };
+
+  const handleNavigation = async (index: number) => {
+    if (exam_string) {
+      await examDbService.updateQuestionElapsedTime(exam_string, questions[currentQuestion].id);
     }
     
     setCurrentQuestion(index);
-  }, [questions, currentQuestion, exam_string]);
+  };
 
-  // Check if answered
   const isAnswered = (id: number) => {
     return answers[id] !== undefined && isAnswerFilled(answers[id]);
   };
 
-  // Handle close
-  const handleClose = useCallback(async () => {
-    stopTimer();
-    if (clearExamData) clearExamData();
-    router.push(originPath || '/try-out');
-  }, [stopTimer, clearExamData, router, originPath]);
-
-  // Handle retry access with proper timezone handling
-  const handleRetryAccess = useCallback(async () => {
-    if (!isClient) return;
+  const submitToServer = async (shouldScore = false): Promise<boolean> => {
+    setSubmitLoading(true);
+    setSubmitError(false);
     
     try {
-      const axios = (await import('axios')).default;
-      const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const finalElapsedTimes = await examDbService.finalizeCurrentQuestionTime(exam_string);
+      const authToken = localStorage.getItem('authToken');
       
+      await axios.post(
+        `${apiUrl}/examSession/submit`,
+        { 
+          exam_schedule_id: examScheduleId,
+          exam_id: examId,
+          answers: answers,
+          question_elapsed_times: finalElapsedTimes
+        },
+        { 
+          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${authToken}`
+          }
+        }
+      );
+
+      // Update user course only on last exam
+      if (isLastExam && selectedTopicId) {
+        try {
+          await axios.post(
+            `${apiUrl}/userCourse/`,
+            {
+              topic_id: selectedTopicId,
+              quiz_id: examScheduleId
+            },
+            { 
+              withCredentials: true,
+              headers: {
+                Authorization: `Bearer ${authToken}`
+              }
+            }
+          );
+        } catch (error) {
+          console.error('Error updating user course:', error);
+        }
+      }
+      
+      // Score only on last exam
+      if (shouldScore && isLastExam) {
+        try {
+          await axios.post(
+            `${apiUrl}/score/schedule/${examScheduleId}`,
+            {},
+            { 
+              withCredentials: true,
+              headers: {
+                Authorization: `Bearer ${authToken}`
+              }
+            }
+          );
+        } catch (scoreError) {
+          console.error('Error submitting for scoring:', scoreError);
+        }
+      }
+  
+      await examDbService.deleteExamData(exam_string);
+      setSubmitLoading(false);
+      return true;
+    } catch (error) {
+      setSubmitLoading(false);
+      setSubmitError(true);
+      return false;
+    }
+  };
+
+  const renderQuestion = (q: Question) => {
+    switch (q.type) {
+      case 'single-choice':
+        return (
+          <div className="single-choice-container">
+            <SingleChoice 
+              question={<Latex>{q.question}</Latex>} 
+              options={q.options} 
+              onChange={(value) => handleChange(q.id, value)} 
+              selectedAnswers={answers[q.id] || []} 
+            />
+          </div>
+        );
+      
+      case 'multiple-choice':
+        return (
+          <div className="multiple-choice-container">
+            <MultipleChoice 
+              question={<Latex>{q.question}</Latex>} 
+              options={q.options} 
+              selectedAnswers={answers[q.id] || []} 
+              onChange={(value) => handleChange(q.id, value)} 
+            />
+          </div>
+        );
+        
+      case 'number':
+        return (
+          <div className="number-input-container">
+            <NumberInput 
+              question={q.question} 
+              onChange={(value) => handleChange(q.id, value)}
+              value={answers[q.id]} 
+            />
+          </div>
+        );
+        
+      case 'text':
+        return (
+          <div className="text-input-container">
+            <TextInput 
+              question={q.question} 
+              onChange={(value) => handleChange(q.id, value)}
+              value={answers[q.id]} 
+            />
+          </div>
+        );
+        
+      case 'true-false':
+        return (
+          <div className="true-false-container">
+            <TrueFalse 
+              question={q.question} 
+              statements={q.statements} 
+              selectedAnswers={answers[q.id] || []} 
+              onChange={(index, value) => handleTrueFalseChange(q.id, index, value)} 
+            />
+          </div>
+        );
+        
+      default:
+        return null;
+    }
+  };
+
+  const handleClose = async () => {
+    const shouldScore = isLastExam;
+    const success = await submitToServer(shouldScore);
+    if (success) {
+      clearExamData();
+      router.push(originPath);
+    }
+  };
+
+  const loadExistingSession = async (currentExamId: number | undefined) => {
+    const examIdToUse = currentExamId || examId;
+    
+    if (!examScheduleId || !examIdToUse) return;
+    
+    try {
+      const authToken = localStorage.getItem('authToken');
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/examSession/active`,
+        `${apiUrl}/examSession/active`,
+        {
+          params: {
+            exam_schedule_id: examScheduleId,
+            exam_id: examIdToUse
+          },
+          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${authToken}`
+          }
+        }
+      );
+        
+      if (response.data.status === 'success' && response.data.data) {
+        const sessionData = response.data.data;
+        
+        const startTime = new Date(sessionData.start_time);
+        const endTime = new Date(sessionData.end_time);
+        const now = new Date();
+        
+        setExamName(sessionData.name);
+        
+        // Check if exam time has expired
+        if (now > endTime) {
+          setIsTimeExpired(true);
+          setTimeLeft(0);
+          // Set minimal data to allow submit process
+          setAnswers(sessionData.answers || {});
+          setExamSession(sessionData);
+          // Auto submit immediately
+          setTimeout(() => {
+            handleSubmit(undefined, true);
+          }, 1000);
+          return;
+        }
+        
+        if (!sessionData.is_auto_move && now < startTime) {
+          setExamStartTime(sessionData.start_time);
+          setShowNotAccessibleModal(true);
+          setIsExamAccessible(false);
+          return;
+        }
+        
+        setIsExamAccessible(true);
+        
+        setAnswers(sessionData.answers || {});
+        await examDbService.saveAnswers(exam_string, sessionData.answers || {});
+        
+        if (sessionData.question_elapsed_times) {
+          const examData = await examDbService.getExamData(exam_string) || { 
+            answers: sessionData.answers || {}, 
+            startTime: Date.now(),
+            questionElapsedTimes: {},
+            lastQuestionVisit: null
+          };
+          examData.questionElapsedTimes = sessionData.question_elapsed_times;
+          const db = await examDbService.db;
+          await db.put('examData', examData, exam_string);
+        }
+        
+        const nowTimestamp = Date.now();
+        const endTimeTimestamp = endTime.getTime();
+        const remainingTime = Math.max(0, Math.floor((endTimeTimestamp - nowTimestamp) / 1000));
+        
+        setTimeLeft(remainingTime);
+        lastTickRef.current = nowTimestamp;
+        
+        setExamSession(sessionData);
+        
+        if (remainingTime <= 0) {
+          setIsTimeExpired(true);
+          handleSubmit(undefined, true);
+        }
+        
+        return;
+      }
+    } catch (error) {
+      console.error('Error fetching exam session:', error);
+      
+      const savedAnswers = await examDbService.getAnswers(exam_string);
+      if (savedAnswers) {
+        setAnswers(savedAnswers);
+      }
+      
+      if (duration > 0) {
+        setTimeLeft(duration * 60);
+        lastTickRef.current = Date.now();
+      }
+    }
+  };
+
+  const handleRetryAccess = async () => {
+    try {
+      const authToken = localStorage.getItem('authToken');
+      const response = await axios.get(
+        `${apiUrl}/examSession/active`,
         {
           params: {
             exam_schedule_id: examScheduleId,
@@ -1313,21 +905,9 @@ const ExamContent: React.FC = () => {
       if (response.data.status === 'success' && response.data.data) {
         const sessionData = response.data.data;
         
-        // Use enhancedGetServerTime() for time comparison
-        const serverNow = enhancedGetServerTime();
-        const sessionStartTime = new Date(sessionData.start_time).getTime();
-        
-        if (!sessionData.is_auto_move && serverNow >= sessionStartTime) {
+        if (!sessionData.is_auto_move && new Date() >= new Date(sessionData.start_time)) {
           setShowNotAccessibleModal(false);
           setIsExamAccessible(true);
-          setAccessCheckComplete(false);
-          setLoading(true);
-          
-          // Reset fetch state to allow refetch
-          fetchStateRef.current.hasFetched = false;
-          fetchStateRef.current.lastSuccessfulFetch = null;
-          
-          // Fetch questions since exam is now accessible
           fetchQuestions();
         } else {
           setExamStartTime(sessionData.start_time);
@@ -1335,326 +915,28 @@ const ExamContent: React.FC = () => {
         }
       }
     } catch (error) {
-      // Fallback: check if examStartTime is past current server time
-      if (examStartTime) {
-        const serverNow = enhancedGetServerTime();
-        const startTime = new Date(examStartTime).getTime();
-        
-        if (serverNow >= startTime) {
-          setIsExamAccessible(true);
-          setShowNotAccessibleModal(false);
-          setAccessCheckComplete(false);
-          setLoading(true);
-          
-          // Reset fetch state to allow refetch
-          fetchStateRef.current.hasFetched = false;
-          fetchStateRef.current.lastSuccessfulFetch = null;
-          
-          fetchQuestions();
-        }
+      console.error('Error checking exam accessibility:', error);
+      if (examStartTime && new Date() >= new Date(examStartTime)) {
+        setIsExamAccessible(true);
+        setShowNotAccessibleModal(false);
+        fetchQuestions();
       }
-    }
-  }, [isClient, examScheduleId, examId, enhancedGetServerTime, examStartTime, fetchQuestions]);
-
-  // Render question
-  const renderQuestion = (q: Question) => {
-    if (!isClient) return null;
-    
-    switch (q.type) {
-      case 'single-choice':
-        return (
-          <div className="single-choice-container">
-            {SingleChoice && (
-              <SingleChoice 
-                question={Latex ? <Latex>{q.question}</Latex> : q.question} 
-                options={q.options} 
-                onChange={(value) => handleChange(q.id, value)} 
-                selectedAnswers={answers[q.id] || []} 
-              />
-            )}
-          </div>
-        );
-      
-      case 'multiple-choice':
-        return (
-          <div className="multiple-choice-container">
-            {MultipleChoice && (
-              <MultipleChoice 
-                question={q.question} 
-                options={q.options || []} 
-                selectedAnswers={answers[q.id] || []} 
-                onChange={(value) => handleChange(q.id, value)} 
-              />
-            )}
-          </div>
-        );
-        
-      case 'number':
-        return (
-          <div className="number-input-container">
-            {NumberInput && (
-              <NumberInput 
-                question={q.question} 
-                onChange={(value) => handleChange(q.id, value)}
-                value={answers[q.id]} 
-              />
-            )}
-          </div>
-        );
-        
-      case 'text':
-        return (
-          <div className="text-input-container">
-            {TextInput && (
-              <TextInput 
-                question={q.question} 
-                onChange={(value) => handleChange(q.id, value)}
-                value={answers[q.id]} 
-              />
-            )}
-          </div>
-        );
-        
-      case 'true-false':
-        return (
-          <div className="true-false-container">
-            {TrueFalse && (
-              <TrueFalse 
-                question={q.question} 
-                statements={q.statements || []} 
-                selectedAnswers={answers[q.id] || []} 
-                onChange={(index, value) => handleTrueFalseChange(q.id, index, value)} 
-              />
-            )}
-          </div>
-        );
-        
-      default:
-        return null;
     }
   };
 
-  // Question elapsed time tracking
-  useEffect(() => {
-    if (!isClient || loading || questions.length === 0 || currentQuestion >= questions.length || !isRunning) return;
-    
-    const currentQuestionData = questions[currentQuestion];
-    if (!currentQuestionData || !currentQuestionData.id) {
-      return;
-    }
-    
-    if (exam_string && Number.isFinite(elapsed)) {
-      console.log('⏱ Updating question elapsed time:', { exam_string, questionId: currentQuestionData.id, elapsed });
-      ExamDBService.updateQuestionElapsedTime(exam_string, currentQuestionData.id, elapsed).catch(err => {
-        console.error('🚨 Error updating question elapsed time:', err);
-      });
-    } else {
-      console.warn('⚠ Skipping updateQuestionElapsedTime due to invalid elapsed:', { elapsed, isRunning });
-    }
-  }, [isClient, loading, questions, currentQuestion, exam_string, elapsed, isRunning]);
-
-  // Cleanup effect
-  useEffect(() => {
-    if (!isClient) return;
-    
-    return () => {
-      if (autoSaveRef.current) clearInterval(autoSaveRef.current);
-      
-      if (exam_string && questions.length > 0 && isRunning && Number.isFinite(elapsed)) {
-        console.log('⏱ Finalizing question elapsed time:', { exam_string, elapsed });
-        ExamDBService.finalizeCurrentQuestionTime(exam_string, elapsed).catch(err => {
-          console.error('🚨 Error finalizing question elapsed time:', err);
-        });
-      } else {
-        console.warn('⚠ Skipping finalizeCurrentQuestionTime:', { exam_string, questionsLength: questions.length, isRunning, elapsed });
-      }
-    };
-  }, [isClient, exam_string, questions, elapsed, isRunning]);
-
-  // FIXED: Single initialization effect that handles everything
-  useEffect(() => {
-    // Only run if all required conditions are met
-    if (!isClient || !exam_string || !examScheduleId || examOrder.length === 0) {
-      return;
-    }
-    
-    // Check if we should initialize (haven't fetched for this exam yet)
-    if (!fetchStateRef.current.hasFetched || fetchStateRef.current.lastSuccessfulFetch !== exam_string) {
-      console.log('🚀 FIXED: Single initialization for exam:', exam_string);
-      
-      const initExam = async () => {
-        try {
-          // Load saved answers first
-          const savedAnswers = await ExamDBService.getAnswers(exam_string);
-          if (savedAnswers) {
-            setAnswers(savedAnswers);
-          }
-
-          // Fetch questions (this will handle session loading internally)
-          await fetchQuestions();
-        } catch (error) {
-          console.error('❌ Initialization failed:', error);
-          setError(true);
-          setLoading(false);
-        }
-      };
-
-      initExam();
-    }
-  }, [
-    isClient,
-    exam_string,
-    examScheduleId,
-    examOrder.length,
-    fetchQuestions
-  ]);
-
-  // Countdown effect for exam access with proper timezone handling
-  useEffect(() => {
-    if (!isClient || isExamAccessible || !examStartTime) return;
-    
-    const timer = setInterval(() => {
-      // Use enhancedGetServerTime() for countdown
-      const now = enhancedGetServerTime();
-      const startTime = new Date(examStartTime).getTime();
-      const diff = startTime - now;
-      
-      if (diff <= 0) {
-        clearInterval(timer);
-        handleRetryAccess();
-        return;
-      }
-      
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      
-      setCountdown(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-    }, 1000);
-    
-    return () => clearInterval(timer);
-  }, [isClient, isExamAccessible, examStartTime, enhancedGetServerTime, handleRetryAccess]);
-
-  // FIXED: Enhanced loading state management
-  useEffect(() => {
-    const shouldStopLoading = 
-      questionsReady && 
-      accessCheckComplete && 
-      initializationComplete &&
-      questions.length > 0 && 
-      isClient && 
-      exam_string && 
-      examScheduleId;
-
-    if (shouldStopLoading && loading) {
-      console.log('✅ FIXED: All conditions met, stopping loading');
-      setLoading(false);
-    }
-  }, [
-    questionsReady,
-    accessCheckComplete, 
-    initializationComplete,
-    questions.length,
-    isClient,
-    exam_string,
-    examScheduleId,
-    loading
-  ]);
-
-  // Auto-save effect
-  useEffect(() => {
-    if (!isClient || loading || !isRunning || timeLeft <= 0 || timeLeft % 120 !== 0) return;
-    
-    if (autoSaveRef.current) {
-      clearInterval(autoSaveRef.current);
-    }
-    
-    autoSaveRef.current = setInterval(() => {
-      if (Object.keys(answers).length > 0) {
-        saveExamSession();
-      }
-    }, 1000);
-
-    return () => {
-      if (autoSaveRef.current) {
-        clearInterval(autoSaveRef.current);
-      }
-    };
-  }, [isClient, loading, answers, timeLeft, isRunning, saveExamSession]);
-
-  // Debug effect to monitor fetch state
-  useEffect(() => {
-    console.log('🔍 FIXED: Fetch state updated:', {
-      currentExamString: fetchStateRef.current.currentExamString,
-      isFetching: fetchStateRef.current.isFetching,
-      hasFetched: fetchStateRef.current.hasFetched,
-      lastSuccessfulFetch: fetchStateRef.current.lastSuccessfulFetch,
-      questionsReady,
-      accessCheckComplete,
-      initializationComplete
-    });
-  }, [questionsReady, accessCheckComplete, initializationComplete]);
-
-  // FIXED: Enhanced loading screen with better status indication
-  if (!isClient || loading || !questionsReady || !accessCheckComplete) {
+  if (loading) {
     return (
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <div className="tw-text-center">
           <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
-          <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">
-            {!accessCheckComplete ? 'Checking Exam Access...' : 
-             !questionsReady ? 'Loading Questions...' : 
-             'Initializing Exam...'}
-          </h2>
-          <p className="tw-text-violet-600 tw-mt-2">
-            {!accessCheckComplete ? 'Verifying exam schedule and accessibility...' :
-             !questionsReady ? 'Fetching exam questions and setup...' : 
-             'Preparing your exam environment...'}
-          </p>
-          <div className="tw-mt-4 tw-text-sm tw-text-violet-500">
-            <p>Exam: {exam_string}</p>
-            <p>Status: {fetchStateRef.current.isFetching ? 'Fetching...' : 'Initializing...'}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-    
-  if (error) {
-    return (
-      <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
-        <div className="tw-text-center">
-          <AlertCircle className="tw-h-12 tw-w-12 tw-text-red-600 tw-mx-auto tw-mb-4" />
-          <h2 className="tw-text-xl tw-font-semibold tw-text-red-800">Error Loading Exam</h2>
-          <p className="tw-text-red-600 tw-mt-2">There was an error loading the exam questions</p>
-          <Button 
-            variant="primary" 
-            className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
-            onClick={() => {
-              // Reset fetch state to allow retry
-              fetchStateRef.current = {
-                currentExamString: exam_string,
-                isFetching: false,
-                hasFetched: false,
-                lastSuccessfulFetch: null
-              };
-              setQuestionsReady(false);
-              setAccessCheckComplete(false);
-              setInitializationComplete(false);
-              setError(false);
-              setLoading(true);
-              fetchQuestions();
-            }}
-          >
-            Retry Now
-          </Button>
+          <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">Loading Exam...</h2>
+          <p className="tw-text-violet-600 tw-mt-2">Please wait while we prepare your questions</p>
         </div>
       </div>
     );
   }
   
-  // Show waiting screen ONLY when exam is not accessible
-  if (!isExamAccessible && accessCheckComplete) {
+  if (!isExamAccessible) {
     return (
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <div className="tw-text-center">
@@ -1674,7 +956,7 @@ const ExamContent: React.FC = () => {
             </div>
           )}
           
-         <Button 
+          <Button 
             variant="primary" 
             className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
             onClick={handleRetryAccess}
@@ -1687,711 +969,437 @@ const ExamContent: React.FC = () => {
   }
 
   return (
-    <>
-      {/* Enhanced Hidden Timer Validator */}
-      <HiddenTimerValidator 
-        workerTimerValues={{
-          ...getBackupTimerValues(),
-          timeSync: {
-            offset: timeOffset,
-            reliability: reliability,
-            syncCount: syncCount,
-            networkLatency: networkLatency
-          }
-        }}
-        onSecurityBreach={() => {
-          handleAutoSubmit('extreme_security_breach');
-        }}
-      />
+    <div className="tw-min-h-screen tw-bg-violet-50">
+      <div className="tw-bg-violet-600 tw-text-white tw-py-4 tw-shadow-lg tw-mb-6">
+        <Container>
+          <div className="tw-flex tw-justify-between tw-items-center">
+            <div className="tw-flex-1 tw-min-w-0">
+              <h1 className="tw-text-2xl tw-font-bold tw-mb-1 tw-break-words tw-pr-4">
+                {examName}
+              </h1>
+              {examSession && (
+                <p className="tw-text-sm tw-text-violet-200">
+                  End time: {new Date(examSession.end_time).toLocaleTimeString()}
+                </p>
+              )}
+            </div>
+            <div className="tw-flex tw-items-center tw-gap-3 tw-bg-violet-700 tw-rounded-lg tw-px-6 tw-py-3 tw-flex-shrink-0">
+              <Clock size={28} className="tw-text-violet-200" />
+              <div className="tw-flex tw-flex-col tw-items-start">
+                <div className="tw-flex tw-items-center tw-gap-2">
+                  <span className="tw-text-violet-200 tw-text-sm">Time Remaining</span>
+                  {lastServerSync && Date.now() - lastServerSync < 10 * 60 * 1000 && (
+                    <div className="tw-flex tw-items-center tw-text-xs tw-text-violet-300">
+                      <div className="tw-w-2 tw-h-2 tw-bg-green-400 tw-rounded-full tw-mr-1 tw-animate-pulse"></div>
+                      Synced
+                    </div>
+                  )}
+                </div>
+                <span className="tw-text-3xl tw-font-mono tw-font-bold">{formatTime(timeLeft)}</span>
+              </div>
+            </div>
+          </div>
+        </Container>
+      </div>
 
-      {/* Enhanced Focus Detector with network-aware thresholds */}
-      <FocusDetector 
-        onAutoSubmit={handleAutoSubmit}
-        enabled={!loading && !error && isExamAccessible && questions.length > 0 && !isSubmitting && questionsReady}
-        timerRunning={isRunning}
-      />
-
-      <ChangeTabPrevention 
-        onAutoSubmit={() => handleAutoSubmit('tab_change')}
-        enabled={!loading && !error && isExamAccessible && questions.length > 0 && questionsReady}
+      <div 
+        className="tw-fixed tw-top-4 tw-right-4 tw-z-50"
+        style={{ display: showCheckpointToast ? 'block' : 'none' }}
       >
-        <div className="tw-min-h-screen tw-bg-violet-50">
-          {/* Enhanced Header with integrated time sync and timer info */}
-          <div className="tw-bg-violet-600 tw-text-white tw-py-4 tw-shadow-lg tw-mb-6">
-            <Container>
-              <div className="tw-flex tw-justify-between tw-items-center">
-                <div className="tw-flex-1 tw-min-w-0">
-                  <h1 className="tw-text-2xl tw-font-bold tw-mb-1 tw-break-words tw-pr-4">
-                    {examName || 'Loading...'}
-                  </h1>
-                  {examSession && (
-                    <p className="tw-text-sm tw-text-violet-200">
-                      End time: {new Date(examSession.end_time).toLocaleTimeString()}
-                    </p>
-                  )}
-                </div>
-                <div className="tw-flex tw-items-center tw-gap-3 tw-bg-violet-700 tw-rounded-lg tw-px-6 tw-py-3 tw-flex-shrink-0">
-                  <div className="tw-flex tw-items-center tw-gap-1">
-                    <Clock size={28} className="tw-text-violet-200" />
-                    {isRunning && <Activity size={16} className="tw-text-green-400 tw-animate-pulse" />}
-                    {isOnline ? <Wifi size={16} className="tw-text-green-400" /> : <WifiOff size={16} className="tw-text-red-400" />}
-                    {questionsReady && <Check size={16} className="tw-text-green-400" />}
-                  </div>
-                  <div className="tw-flex tw-flex-col tw-items-start">
-                    <span className="tw-text-violet-200 tw-text-sm">Time Remaining</span>
-                    <span className="tw-text-3xl tw-font-mono tw-font-bold">{formatTime(timeLeft)}</span>
-                  </div>
-                </div>
-              </div>
-            </Container>
-          </div>
+        <Toast 
+          onClose={() => setShowCheckpointToast(false)} 
+          show={showCheckpointToast} 
+          delay={3000} 
+          autohide
+          className="tw-bg-violet-100 tw-border-violet-300 tw-border"
+        >
+          <Toast.Header className="tw-bg-violet-200 tw-text-violet-800">
+            <Check className="tw-mr-2 tw-text-violet-600" size={16} />
+            <strong className="tw-mr-auto">Checkpoint Saved</strong>
+          </Toast.Header>
+          <Toast.Body className="tw-text-violet-700">
+            Your answers have been saved to the server.
+          </Toast.Body>
+        </Toast>
+      </div>
 
-          {/* Auto-Submit Loading Overlay */}
-          {isSubmitting && (
-            <div className="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-flex tw-items-center tw-justify-center tw-z-50">
-              <div className="tw-bg-white tw-p-8 tw-rounded-lg tw-text-center tw-max-w-md">
-                <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
-                <h3 className="tw-text-xl tw-font-semibold tw-text-violet-800 tw-mb-2">
-                  {isLastExam ? 'Submitting Final Exam' : 'Submitting Exam'}
-                </h3>
-                <p className="tw-text-violet-600 tw-mb-4">
-                  {isLastExam ? 'Processing your final answers and generating results...' : 'Please wait while we process your answers...'}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Enhanced Checkpoint Toast */}
-          <div 
-            className="tw-fixed tw-top-4 tw-right-4 tw-z-50"
-            style={{ display: showCheckpointToast ? 'block' : 'none' }}
-          >
-            <Toast 
-              onClose={() => setShowCheckpointToast(false)} 
-              show={showCheckpointToast} 
-              delay={3000} 
-              autohide
-              className="tw-bg-violet-100 tw-border-violet-300 tw-border"
-            >
-              <Toast.Header className="tw-bg-violet-200 tw-text-violet-800">
-                <Check className="tw-mr-2 tw-text-violet-600" size={16} />
-                <strong className="tw-mr-auto">Checkpoint Saved</strong>
-              </Toast.Header>
-              <Toast.Body className="tw-text-violet-700">
-                Your answers have been saved to the server.
-              </Toast.Body>
-            </Toast>
-          </div>
-
-          {/* Main Content Container */}
-          <Container className="tw-mb-8">
-            <Row>
-              <Col lg={8} className="tw-mb-4">
-                <Card className="tw-shadow-md tw-border-0 tw-rounded-xl
-                  [&_p_img]:tw-max-w-full 
-                  [&_p_img]:tw-h-auto 
-                  [&_p_img]:tw-block 
-                  [&_p_img]:tw-mx-auto 
-                  [&_p_img]:tw-my-4
-                  [&_img]:tw-max-w-full 
-                  [&_img]:tw-h-auto 
-                  [&_img]:tw-block 
-                  [&_img]:tw-mx-auto 
-                  [&_img]:tw-my-4">
-                  <Card.Body className="tw-p-6">
-                    {questions.length > 0 && currentQuestion < questions.length && questionsReady ? (
-                      <>
-                        <div className="tw-flex tw-justify-between tw-items-center tw-mb-6">
-                          <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">
-                            Question {currentQuestion + 1} of {questions.length}
-                          </h2>
-                          <div className="tw-flex tw-items-center tw-gap-2">
-                            {autoSaving && (
-                              <div className="tw-flex tw-items-center tw-text-violet-600">
-                                <Loader2 className="tw-h-4 tw-w-4 tw-animate-spin tw-mr-2" />
-                                <span className="tw-text-sm">Saving...</span>
-                              </div>
-                            )}
-                          </div>
+      <Container className="tw-mb-8">
+        <Row>
+          <Col lg={8} className="tw-mb-4">
+            <Card className="tw-shadow-md tw-border-0 tw-rounded-xl
+              [&_p_img]:tw-max-w-full 
+              [&_p_img]:tw-h-auto 
+              [&_p_img]:tw-block 
+              [&_p_img]:tw-mx-auto 
+              [&_p_img]:tw-my-4
+              [&_img]:tw-max-w-full 
+              [&_img]:tw-h-auto 
+              [&_img]:tw-block 
+              [&_img]:tw-mx-auto 
+              [&_img]:tw-my-4">
+              <Card.Body className="tw-p-6">
+                {questions.length > 0 && (
+                  <>
+                    <div className="tw-flex tw-justify-between tw-items-center tw-mb-6">
+                      <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">
+                        Question {currentQuestion + 1} of {questions.length}
+                      </h2>
+                      {autoSaving && (
+                        <div className="tw-flex tw-items-center tw-text-violet-600">
+                          <Loader2 className="tw-h-4 tw-w-4 tw-animate-spin tw-mr-2" />
+                          <span className="tw-text-sm">Saving...</span>
                         </div>
-                        
-                        <div className="tw-mb-6">
-                          {renderQuestion(questions[currentQuestion])}
-                        </div>
-
-                        <div className="tw-flex tw-justify-between tw-mt-8">
-                          <Button
-                            variant="outline-secondary"
-                            className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
-                            disabled={currentQuestion === 0}
-                            onClick={() => handleNavigation(currentQuestion - 1)}
-                          >
-                            Previous
-                          </Button>
-                          <Button
-                            className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700"
-                            disabled={currentQuestion === questions.length - 1}
-                            onClick={() => handleNavigation(currentQuestion + 1)}
-                          >
-                            Next
-                          </Button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="tw-text-center tw-py-8">
-                        <p className="tw-text-gray-500">
-                          {!questionsReady ? 'Loading questions...' : 'No questions available'}
-                        </p>
-                      </div>
-                    )}
-                  </Card.Body>
-                </Card>
-              </Col>
-
-              {/* Enhanced Right Sidebar */}
-              <Col lg={4} className="tw-hidden md:tw-block">
-                <Card className="tw-shadow-md tw-border-0 tw-rounded-xl tw-sticky tw-top-4">
-                  <Card.Body className="tw-p-4">
-                    <div className="tw-flex tw-items-center tw-justify-between tw-mb-4">
-                      <h3 className="tw-text-lg tw-font-semibold tw-text-violet-800">Question Navigator</h3>
-                    </div>
-                    {questions.length > 0 && questionsReady ? (
-                      <>
-                        <div className="tw-grid tw-grid-cols-5 tw-gap-2 tw-mb-6">
-                          {questions.map((q, index) => (
-                            <Button
-                              key={q.id}
-                              variant={currentQuestion === index ? "primary" : "outline-secondary"}
-                              className={`tw-w-10 tw-h-10 tw-rounded-lg tw-flex tw-items-center tw-justify-center 
-                                ${currentQuestion === index 
-                                  ? 'tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700' 
-                                  : 'tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50'}
-                                ${isAnswered(q.id) ? 'tw-bg-violet-200' : ''}`}
-                              onClick={() => handleNavigation(index)}
-                            >
-                              {index + 1}
-                            </Button>
-                          ))}
-                        </div>
-
-                        <div className="tw-mb-4">
-                          <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
-                            <span>Progress</span>
-                            <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
-                          </div>
-                          <ProgressBar 
-                            now={(getFilledAnswersCount() / questions.length) * 100} 
-                            className="tw-h-2 tw-bg-violet-100"
-                          >
-                            <ProgressBar 
-                              now={(getFilledAnswersCount()/ questions.length) * 100} 
-                              className="tw-bg-violet-600"
-                            />
-                          </ProgressBar>
-                        </div>
-
-                        {/* Enhanced Timer Display */}
-                        <div className="tw-bg-violet-50 tw-p-3 tw-rounded-lg tw-mb-4">
-                          <div className="tw-flex tw-items-center tw-justify-between tw-mb-2">
-                            <span className="tw-text-sm tw-font-medium tw-text-violet-800">Timer Status</span>
-                            <div className="tw-flex tw-items-center tw-gap-1">
-                              {timerValid && <Shield className="tw-text-green-600" size={14} />}
-                              {isRunning && <Activity className="tw-text-blue-600 tw-animate-pulse" size={14} />}
-                              {getBackupTimerValues().fallbackActive && <AlertCircle className="tw-text-yellow-600" size={14} />}
-                              {questionsReady && <Check className="tw-text-green-600" size={14} />}
-                              {isLastExam && <span className="tw-text-orange-600 tw-text-xs">🏁</span>}
-                            </div>
-                          </div>
-                          <p className="tw-text-lg tw-font-mono tw-font-bold tw-text-violet-700">
-                            {formatTime(timeLeft)}
-                          </p>
-                        </div>
-
-                        {/* Enhanced submit button for final exam */}
-                        {currentQuestion === questions.length - 1 && (
-                          <Button 
-                            variant="primary" 
-                            className={`tw-w-full tw-border-0 tw-mt-4 ${
-                              isLastExam 
-                                ? 'tw-bg-orange-600 hover:tw-bg-orange-700' 
-                                : 'tw-bg-violet-600 hover:tw-bg-violet-700'
-                            }`}
-                            onClick={handleSubmit}
-                          >
-                            {isLastExam ? (
-                              <>
-                                <FileCheck className="tw-mr-2" size={16} />
-                                Submit Final Exam
-                              </>
-                            ) : (
-                              'Submit Exam'
-                            )}
-                          </Button>
-                        )}
-                      </>
-                    ) : (
-                      <div className="tw-text-center tw-text-gray-500">
-                        <p>{!questionsReady ? 'Loading questions...' : 'No questions loaded'}</p>
-                      </div>
-                    )}
-                  </Card.Body>
-                </Card>
-              </Col>
-            </Row>
-          </Container>
-
-          {/* Enhanced Mobile Bottom Navigation */}
-          <div className="tw-block md:tw-hidden tw-fixed tw-bottom-0 tw-left-0 tw-right-0 tw-bg-white tw-shadow-lg tw-border-t tw-border-gray-200 tw-z-50">
-            <div className="tw-p-4">
-              {questions.length > 0 && questionsReady ? (
-                <>
-                  <div className="tw-mb-3">
-                    <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
-                      <span>Progress</span>
-                      <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
-                    </div>
-                    <ProgressBar 
-                      now={(getFilledAnswersCount() / questions.length) * 100} 
-                      className="tw-h-2 tw-bg-violet-100"
-                    >
-                      <ProgressBar 
-                        now={(getFilledAnswersCount() / questions.length) * 100} 
-                        className="tw-bg-violet-600"
-                      />
-                    </ProgressBar>
-                  </div>
-                  
-                  <div className="tw-overflow-x-auto tw-pb-2">
-                    <div className="tw-flex tw-gap-2 tw-min-w-max">
-                      {questions.map((q, index) => (
-                        <Button
-                          key={q.id}
-                          variant={currentQuestion === index ? "primary" : "outline-secondary"}
-                          className={`tw-w-10 tw-h-10 tw-rounded-lg tw-flex-shrink-0 tw-flex tw-items-center tw-justify-center 
-                            ${currentQuestion === index 
-                              ? 'tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700' 
-                              : 'tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50'}
-                            ${isAnswered(q.id) ? 'tw-bg-violet-200' : ''}`}
-                          onClick={() => handleNavigation(index)}
-                        >
-                          {index + 1}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Enhanced mobile submit button */}
-                  {currentQuestion === questions.length - 1 && (
-                    <Button 
-                      variant="primary" 
-                      className={`tw-w-full tw-border-0 tw-mt-4 ${
-                        isLastExam 
-                          ? 'tw-bg-orange-600 hover:tw-bg-orange-700' 
-                          : 'tw-bg-violet-600 hover:tw-bg-violet-700'
-                      }`}
-                      onClick={handleSubmit}
-                    >
-                      {isLastExam ? (
-                        <>
-                          <FileCheck className="tw-mr-2" size={16} />
-                          Submit Final Exam
-                        </>
-                      ) : (
-                        'Submit Exam'
                       )}
+                    </div>
+                    
+                    <div className="tw-mb-6">
+                      {renderQuestion(questions[currentQuestion])}
+                    </div>
+
+                    <div className="tw-flex tw-justify-between tw-mt-8">
+                      <Button
+                        variant="outline-secondary"
+                        className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
+                        disabled={currentQuestion === 0}
+                        onClick={() => handleNavigation(currentQuestion - 1)}
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700"
+                        disabled={currentQuestion === questions.length - 1}
+                        onClick={() => handleNavigation(currentQuestion + 1)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </Card.Body>
+            </Card>
+          </Col>
+
+          <Col lg={4} className="tw-hidden md:tw-block">
+            <Card className="tw-shadow-md tw-border-0 tw-rounded-xl tw-sticky tw-top-4">
+              <Card.Body className="tw-p-4">
+                <h3 className="tw-text-lg tw-font-semibold tw-text-violet-800 tw-mb-4">Question Navigator</h3>
+                <div className="tw-grid tw-grid-cols-5 tw-gap-2 tw-mb-6">
+                  {questions.map((q, index) => (
+                    <Button
+                      key={q.id}
+                      variant={currentQuestion === index ? "primary" : "outline-secondary"}
+                      className={`tw-w-10 tw-h-10 tw-rounded-lg tw-flex tw-items-center tw-justify-center 
+                        ${currentQuestion === index 
+                          ? 'tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700' 
+                          : 'tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50'}
+                        ${isAnswered(q.id) ? 'tw-bg-violet-200' : ''}`}
+                      onClick={() => handleNavigation(index)}
+                    >
+                      {index + 1}
                     </Button>
-                  )}
-                </>
-              ) : (
-                <div className="tw-text-center tw-text-gray-500">
-                  <p>{!questionsReady ? 'Loading questions...' : 'No questions available'}</p>
+                  ))}
                 </div>
-              )}
+
+                <div className="tw-mb-4">
+                  <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
+                    <span>Progress</span>
+                    <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
+                  </div>
+                  <ProgressBar 
+                    now={(getFilledAnswersCount() / questions.length) * 100} 
+                    className="tw-h-2 tw-bg-violet-100"
+                  >
+                    <ProgressBar 
+                      now={(getFilledAnswersCount()/ questions.length) * 100} 
+                      className="tw-bg-violet-600"
+                    />
+                  </ProgressBar>
+                </div>
+
+                {currentQuestion === questions.length - 1 && (
+                  <Button 
+                    variant="primary" 
+                    className="tw-w-full tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
+                    onClick={handleSubmit}
+                  >
+                    {isLastExam ? 'Selesaikan Ujian' : 'Submit Exam'}
+                  </Button>
+                )}
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
+
+      <div className="tw-block md:tw-hidden tw-fixed tw-bottom-0 tw-left-0 tw-right-0 tw-bg-white tw-shadow-lg tw-border-t tw-border-gray-200 tw-z-50">
+        <div className="tw-p-4">
+          <div className="tw-mb-3">
+            <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
+              <span>Progress</span>
+              <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
+            </div>
+            <ProgressBar 
+              now={(getFilledAnswersCount() / questions.length) * 100} 
+              className="tw-h-2 tw-bg-violet-100"
+            >
+              <ProgressBar 
+                now={(getFilledAnswersCount() / questions.length) * 100} 
+                className="tw-bg-violet-600"
+              />
+            </ProgressBar>
+          </div>
+          
+          <div className="tw-overflow-x-auto tw-pb-2">
+            <div className="tw-flex tw-gap-2 tw-min-w-max">
+              {questions.map((q, index) => (
+                <Button
+                  key={q.id}
+                  variant={currentQuestion === index ? "primary" : "outline-secondary"}
+                  className={`tw-w-10 tw-h-10 tw-rounded-lg tw-flex-shrink-0 tw-flex tw-items-center tw-justify-center 
+                    ${currentQuestion === index 
+                      ? 'tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700' 
+                      : 'tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50'}
+                    ${isAnswered(q.id) ? 'tw-bg-violet-200' : ''}`}
+                  onClick={() => handleNavigation(index)}
+                >
+                  {index + 1}
+                </Button>
+              ))}
             </div>
           </div>
 
-          {/* Enhanced Confirmation Modal with final exam awareness */}
-          <Modal 
-            show={showConfirmationModal} 
-            onHide={() => setShowConfirmationModal(false)}
-            centered
-            backdrop="static"
-          >
-            <Modal.Header className={`${isLastExam ? 'tw-bg-orange-50' : 'tw-bg-violet-50'}`}>
-              <Modal.Title className={`${isLastExam ? 'tw-text-orange-800' : 'tw-text-violet-800'} tw-flex tw-items-center`}>
-                <AlertCircle className={`tw-mr-2 ${isLastExam ? 'tw-text-orange-600' : 'tw-text-violet-600'}`} size={20} />
-                {isLastExam ? 'Confirm Final Submission' : 'Confirm Submission'}
-              </Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <div className="tw-p-2">
-                <p className={`tw-text-lg tw-font-medium tw-mb-3 ${isLastExam ? 'tw-text-orange-900' : 'tw-text-violet-900'}`}>
-                  {isLastExam 
-                    ? 'Are you sure you want to end this final exam? This will complete your entire exam session.'
-                    : 'Are you sure you want to end this exam?'
-                  }
-                </p>
-                
-                <div className={`${isLastExam ? 'tw-bg-orange-50' : 'tw-bg-violet-50'} tw-p-4 tw-rounded-lg tw-mb-4`}>
-                  <div className="tw-flex tw-items-center tw-mb-2">
-                    <FileCheck className={`${isLastExam ? 'tw-text-orange-600' : 'tw-text-violet-600'} tw-mr-2`} size={18} />
-                    <span className={`tw-font-medium ${isLastExam ? 'tw-text-orange-800' : 'tw-text-violet-800'}`}>
-                      {isLastExam ? 'Final Exam Summary' : 'Exam Summary'}
-                    </span>
-                  </div>
-                  <p className={`${isLastExam ? 'tw-text-orange-700' : 'tw-text-violet-700'} tw-mb-2`}>
-                    <span className="tw-font-medium">Completed:</span> {getFilledAnswersCount()} of {questions.length} questions
-                  </p>
-                  <p className={`${isLastExam ? 'tw-text-orange-700' : 'tw-text-violet-700'} tw-mb-2`}>
-                    <span className="tw-font-medium">Time Remaining:</span> {formatTime(timeLeft)}
-                  </p>
-                  {isLastExam && (
-                    <p className="tw-text-orange-700 tw-mb-2 tw-font-medium">
-                      📋 This is your final exam section. Results will be processed after submission.
-                    </p>
-                  )}
-                  {getFilledAnswersCount() < questions.length && (
-                    <div className="tw-bg-amber-50 tw-p-2 tw-rounded tw-border tw-border-amber-200 tw-text-amber-800 tw-text-sm tw-mt-2">
-                      Warning: You have {questions.length - getFilledAnswersCount()} unanswered questions.
-                    </div>
-                  )}
-                </div>
-                
-                <p className="tw-text-gray-600 tw-text-sm">
-                  {isLastExam 
-                    ? 'Once submitted, you won\'t be able to change your answers and your results will be processed.'
-                    : 'Once submitted, you won\'t be able to change your answers for this section.'
-                  }
-                </p>
-              </div>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button 
-                variant="outline-secondary" 
-                onClick={() => setShowConfirmationModal(false)}
-                className={`tw-border-2 ${isLastExam ? 'tw-border-orange-200 tw-text-orange-700 hover:tw-bg-orange-50' : 'tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50'}`}
-              >
-                Continue Exam
-              </Button>
-              <Button 
-                variant="primary" 
-                onClick={confirmSubmit}
-                className={`tw-border-0 tw-flex tw-items-center ${
-                  isLastExam 
-                    ? 'tw-bg-orange-600 hover:tw-bg-orange-700' 
-                    : 'tw-bg-violet-600 hover:tw-bg-violet-700'
-                }`}
-              >
-                <ArrowRight className="tw-mr-1" size={16} /> 
-                {isLastExam ? 'Submit Final Exam' : 'End Exam'}
-              </Button>
-            </Modal.Footer>
-          </Modal>
-
-          {/* Enhanced Next Exam Modal with final exam completion handling */}
-          <Modal 
-            show={showModalNext} 
-            onHide={() => setShowModalNext(false)}
-            centered
-            backdrop="static"
-          >
-            <Modal.Header className="tw-bg-green-50">
-              <Modal.Title className="tw-text-green-800 tw-flex tw-items-center">
-                <Check className="tw-mr-2 tw-text-green-600" size={20} />
-                {submitError ? 'Submission Error' : 'Exam Submitted Successfully'}
-              </Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <div className="tw-p-2">
-                {submitError ? (
-                  <>
-                    <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-red-900">
-                      There was an error submitting your exam.
-                    </p>
-                    <div className="tw-bg-red-50 tw-p-4 tw-rounded-lg tw-mb-4">
-                      <p className="tw-text-red-700">
-                        Your answers have been saved locally. Please check your internet connection and try again.
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-green-900">
-                      Great job! Your exam has been submitted successfully.
-                    </p>
-                    {nextExam && !isLastExam ? (
-                      <div className="tw-bg-blue-50 tw-p-4 tw-rounded-lg tw-mb-4">
-                        <p className="tw-text-blue-700 tw-mb-2">
-                          <span className="tw-font-medium">Next exam:</span> {nextExam}
-                        </p>
-                        <p className="tw-text-blue-600 tw-text-sm">
-                          Click "Continue" to proceed to the next section.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="tw-bg-green-50 tw-p-4 tw-rounded-lg tw-mb-4">
-                        <p className="tw-text-green-700">
-                          You have completed all sections of this exam session.
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </Modal.Body>
-            <Modal.Footer>
-              {submitError ? (
-                <>
-                  <Button 
-                    variant="outline-secondary" 
-                    onClick={() => setShowModalNext(false)}
-                    className="tw-border-2 tw-border-gray-200 tw-text-gray-700 hover:tw-bg-gray-50"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    variant="primary" 
-                    onClick={handleRetrySubmit}
-                    className="tw-bg-red-600 tw-border-0 hover:tw-bg-red-700"
-                  >
-                    Retry Submit
-                  </Button>
-                </>
-              ) : (
-                <Button 
-                  variant="primary" 
-                  onClick={handleNextExam}
-                  className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center"
-                >
-                  {nextExam && !isLastExam ? (
-                    <>
-                      <ArrowRight className="tw-mr-1" size={16} /> Continue to Next Exam
-                    </>
-                  ) : (
-                    <>
-                      <Home className="tw-mr-1" size={16} /> Return to Try-Out
-                    </>
-                  )}
-                </Button>
-              )}
-            </Modal.Footer>
-          </Modal>
-
-          {/* Final Completion Modal for last exam */}
-          <Modal 
-            show={showFinalCompletionModal} 
-            onHide={() => setShowFinalCompletionModal(false)}
-            centered
-            backdrop="static"
-          >
-            <Modal.Header className="tw-bg-gradient-to-r tw-from-green-50 tw-to-blue-50">
-              <Modal.Title className="tw-text-green-800 tw-flex tw-items-center">
-                {finalSubmitSuccess ? (
-                  <>
-                    <Check className="tw-mr-2 tw-text-green-600" size={20} />
-                    🎉 Exam Session Completed!
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="tw-mr-2 tw-text-red-600" size={20} />
-                    Final Submission Error
-                  </>
-                )}
-              </Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <div className="tw-p-2">
-                {finalSubmitSuccess ? (
-                  <>
-                    <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-green-900">
-                      🌟 Congratulations! You have successfully completed your entire exam session.
-                    </p>
-                    <div className="tw-bg-gradient-to-r tw-from-green-50 tw-to-blue-50 tw-p-4 tw-rounded-lg tw-mb-4">
-                      <div className="tw-flex tw-items-center tw-mb-2">
-                        <FileCheck className="tw-text-green-600 tw-mr-2" size={18} />
-                        <span className="tw-font-medium tw-text-green-800">Final Results</span>
-                      </div>
-                      <p className="tw-text-green-700 tw-mb-2">
-                        ✅ All exam sections have been submitted successfully
-                      </p>
-                      <p className="tw-text-green-700 tw-mb-2">
-                        📊 Your answers are being processed for scoring
-                      </p>
-                      <p className="tw-text-blue-700 tw-font-medium">
-                        🏆 Results will be available on your dashboard shortly
-                      </p>
-                    </div>
-                    <div className="tw-bg-blue-50 tw-p-3 tw-rounded tw-border tw-border-blue-200">
-                      <p className="tw-text-blue-800 tw-text-sm tw-mb-1">
-                        <strong>What happens next?</strong>
-                      </p>
-                      <ul className="tw-text-blue-700 tw-text-sm tw-list-disc tw-list-inside tw-space-y-1">
-                        <li>Your answers will be automatically scored</li>
-                        <li>Results will appear on your dashboard</li>
-                        <li>You can review your performance and areas for improvement</li>
-                      </ul>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-red-900">
-                      There was an error submitting your final exam.
-                    </p>
-                    <div className="tw-bg-red-50 tw-p-4 tw-rounded-lg tw-mb-4">
-                      <p className="tw-text-red-700 tw-mb-2">
-                        Don't worry! Your answers have been saved locally.
-                      </p>
-                      <p className="tw-text-red-600 tw-text-sm">
-                        Please check your internet connection and try submitting again.
-                      </p>
-                    </div>
-                  </>
-                )}
-              </div>
-            </Modal.Body>
-            <Modal.Footer>
-              {finalSubmitSuccess ? (
-                <Button 
-                  variant="primary" 
-                  onClick={handleNextExam}
-                  className="tw-bg-gradient-to-r tw-from-green-600 tw-to-blue-600 tw-border-0 hover:tw-from-green-700 hover:tw-to-blue-700 tw-flex tw-items-center"
-                >
-                  <Home className="tw-mr-2" size={16} />
-                  Return to Try-Out Dashboard
-                </Button>
-              ) : (
-                <>
-                  <Button 
-                    variant="outline-secondary" 
-                    onClick={() => setShowFinalCompletionModal(false)}
-                    className="tw-border-2 tw-border-gray-200 tw-text-gray-700 hover:tw-bg-gray-50"
-                  >
-                    Cancel
-                    </Button>
-                  <Button 
-                    variant="primary" 
-                    onClick={handleRetrySubmit}
-                    className="tw-bg-red-600 tw-border-0 hover:tw-bg-red-700"
-                  >
-                    Retry Final Submit
-                  </Button>
-                </>
-              )}
-            </Modal.Footer>
-          </Modal>
-
-          {/* Not Accessible Modal */}
-          <Modal 
-            show={showNotAccessibleModal} 
-            onHide={() => setShowNotAccessibleModal(false)}
-            centered
-            backdrop="static"
-          >
-            <Modal.Header className="tw-bg-amber-50">
-              <Modal.Title className="tw-text-amber-800 tw-flex tw-items-center">
-                <Clock className="tw-mr-2 tw-text-amber-600" size={20} />
-                Exam Not Available
-              </Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <div className="tw-p-2 tw-text-center">
-                <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-amber-900">
-                  This exam is not yet available.
-                </p>
-                
-                <div className="tw-bg-amber-50 tw-p-4 tw-rounded-lg tw-mb-4">
-                  {examStartTime && (
-                    <>
-                      <p className="tw-text-amber-700 tw-mb-2">
-                        <span className="tw-font-medium">Available at:</span><br />
-                        {new Date(examStartTime).toLocaleString()}
-                      </p>
-                      <div className="tw-text-2xl tw-font-mono tw-font-bold tw-text-amber-700 tw-mt-2">
-                        {countdown}
-                      </div>
-                    </>
-                  )}
-                </div>
-                
-                <p className="tw-text-amber-600 tw-text-sm">
-                  Please wait until the scheduled start time or check if the exam has auto-start enabled.
-                </p>
-              </div>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button 
-                variant="outline-secondary" 
-                onClick={handleClose}
-                className="tw-border-2 tw-border-gray-200 tw-text-gray-700 hover:tw-bg-gray-50"
-              >
-                Go Back
-              </Button>
-              <Button 
-                variant="primary" 
-                onClick={handleRetryAccess}
-                className="tw-bg-amber-600 tw-border-0 hover:tw-bg-amber-700"
-              >
-                Check Again
-              </Button>
-            </Modal.Footer>
-          </Modal>
-        </div>
-      </ChangeTabPrevention>
-    </>
-  );
-};
-
-// Main ChainExam Component with All Providers and Enhanced Context Management
-const ChainExam: React.FC = () => {
-  const [isClient, setIsClient] = useState(false);
-  const [examDuration, setExamDuration] = useState<number>(0);
-  const [mainTimer, setMainTimer] = useState<number>(0);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // Callback untuk menerima timer updates dari ExamContent
-  const handleTimerUpdate = useCallback((currentTime: number) => {
-    setMainTimer(currentTime);
-    setExamDuration(currentTime);
-  }, []);
-
-  if (!isClient) {
-    return (
-      <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
-        <div className="tw-text-center">
-          <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
-          <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">Initializing Exam System...</h2>
-          <p className="tw-text-violet-600 tw-mt-2">Please wait while we prepare the timer and validation system</p>
+          {currentQuestion === questions.length - 1 && (
+            <Button 
+              variant="primary" 
+              className="tw-w-full tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
+              onClick={handleSubmit}
+            >
+              {isLastExam ? 'Selesaikan Ujian' : 'Submit Exam'}
+            </Button>
+          )}
         </div>
       </div>
-    );
-  }
 
-  return (
-    <UserPurchaseProvider 
-      examDuration={mainTimer} 
-      onSecurityBreach={() => {
-        // Security breach handler
-      }}
-    >
-      <ActiveUserProvider 
-        examDuration={mainTimer}
-        onSecurityBreach={() => {
-          // Security breach handler
-        }}
+      {/* Confirmation Modal */}
+      <Modal 
+        show={showConfirmationModal} 
+        onHide={() => setShowConfirmationModal(false)}
+        centered
+        backdrop="static"
       >
-        <AllProductProvider 
-          examDuration={mainTimer}
-          onSecurityBreach={() => {
-            // Security breach handler
-          }}
-        >
-          <ExamContent />
-        </AllProductProvider>
-      </ActiveUserProvider>
-    </UserPurchaseProvider>
+        <Modal.Header className="tw-bg-violet-50">
+          <Modal.Title className="tw-text-violet-800 tw-flex tw-items-center">
+            <AlertCircle className="tw-mr-2 tw-text-violet-600" size={20} />
+            Confirm Submission
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="tw-p-2">
+            <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-violet-900">
+              {isLastExam ? 'Apakah Anda yakin ingin menyelesaikan seluruh ujian?' : 'Are you sure you want to end this exam?'}
+            </p>
+            
+            <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
+              <div className="tw-flex tw-items-center tw-mb-2">
+                <FileCheck className="tw-text-violet-600 tw-mr-2" size={18} />
+                <span className="tw-font-medium tw-text-violet-800">Exam Summary</span>
+              </div>
+              <p className="tw-text-violet-700 tw-mb-2">
+                <span className="tw-font-medium">Completed:</span> {getFilledAnswersCount()} of {questions.length} questions
+              </p>
+              {getFilledAnswersCount() < questions.length && (
+                <div className="tw-bg-amber-50 tw-p-2 tw-rounded tw-border tw-border-amber-200 tw-text-amber-800 tw-text-sm">
+                  Warning: You have {questions.length - getFilledAnswersCount()} unanswered questions.
+                </div>
+              )}
+            </div>
+            
+            <p className="tw-text-gray-600 tw-text-sm">
+              {isLastExam 
+                ? 'Setelah diselesaikan, Anda tidak dapat mengubah jawaban lagi.'
+                : 'Once submitted, you won\'t be able to change your answers for this section.'
+              }
+            </p>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button 
+            variant="outline-secondary" 
+            onClick={() => setShowConfirmationModal(false)}
+            className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
+          >
+            {isLastExam ? 'Lanjut Ujian' : 'Continue Exam'}
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={confirmSubmit}
+            className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center"
+          >
+            <ArrowRight className="tw-mr-1" size={16} /> 
+            {isLastExam ? 'Selesaikan' : 'End Exam'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    
+      {/* Next Exam / Completion Modal */}
+      <Modal 
+        show={showModalNext} 
+        onHide={() => {}}
+        centered
+        backdrop="static"
+        keyboard={false}
+      >
+        <Modal.Header className="tw-bg-violet-50">
+          <Modal.Title className="tw-text-violet-800">
+            {submitLoading ? (
+              <div className="tw-flex tw-items-center">
+                <Loader2 className="tw-h-5 tw-w-5 tw-animate-spin tw-mr-2 tw-text-violet-600" />
+                Menyimpan Jawaban...
+              </div>
+            ) : isTimeExpired ? (
+              "Waktu Telah Habis"
+            ) : isLastExam ? (
+              "Ujian Selesai"
+            ) : nextExam ? (
+              "Lanjut ke Ujian Berikutnya?"
+            ) : (
+              "Selesai"
+            )}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {submitLoading ? (
+            <div className="tw-text-center tw-py-4">
+              <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
+              <p className="tw-text-lg tw-font-medium">Sedang menyimpan jawaban...</p>
+              <p className="tw-text-gray-600">Mohon tunggu sebentar</p>
+            </div>
+          ) : submitError ? (
+            <div className="tw-py-2">
+              <Alert variant="danger" className="tw-mb-4">
+                <p className="tw-font-bold tw-mb-2">Gagal menyimpan jawaban</p>
+                <p>
+                  {isLastExam 
+                    ? 'Jangan khawatir, sistem akan tetap mencoba menyimpan jawaban Anda.'
+                    : 'Jangan khawatir, soal selanjutnya akan dimulai setelah selesai mengirim jawaban kamu saat ini.'
+                  }
+                </p>
+              </Alert>
+              <p>Silakan coba kirim ulang jawaban.</p>
+            </div>
+          ) : isTimeExpired ? (
+            <div className="tw-p-2 tw-text-center">
+              <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
+                <Clock className="tw-h-16 tw-w-16 tw-text-violet-600 tw-mx-auto tw-mb-2" />
+                <p className="tw-text-xl tw-font-medium tw-text-violet-800 tw-mb-2">Waktu ujian telah habis!</p>
+                <p className="tw-text-violet-700">
+                  Jawaban Anda akan diproses secara otomatis.
+                </p>
+              </div>
+              <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
+                <div className="tw-flex tw-items-center tw-mb-2">
+                  <FileCheck className="tw-text-violet-600 tw-mr-2" size={18} />
+                  <span className="tw-font-medium tw-text-violet-800">Ringkasan Ujian</span>
+                </div>
+                <p className="tw-text-violet-700 tw-mb-2">
+                  <span className="tw-font-medium">Terjawab:</span> {getFilledAnswersCount()} dari {questions.length} pertanyaan
+                </p>
+              </div>
+            </div>
+          ) : isLastExam ? (
+            <div className="tw-p-2 tw-text-center">
+              <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
+                <Check className="tw-h-16 tw-w-16 tw-text-violet-600 tw-mx-auto tw-mb-2" />
+                <p className="tw-text-xl tw-font-medium tw-text-violet-800 tw-mb-2">Selamat!</p>
+                <p className="tw-text-violet-700">
+                  Anda telah menyelesaikan semua ujian dengan baik.
+                </p>
+              </div>
+              <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
+                <div className="tw-flex tw-items-center tw-mb-2">
+                  <FileCheck className="tw-text-violet-600 tw-mr-2" size={18} />
+                  <span className="tw-font-medium tw-text-violet-800">Ringkasan Ujian</span>
+                </div>
+                <p className="tw-text-violet-700 tw-mb-2">
+                  <span className="tw-font-medium">Terjawab:</span> {getFilledAnswersCount()} dari {questions.length} pertanyaan
+                </p>
+              </div>
+              <p className="tw-text-gray-600">Terima kasih atas partisipasinya!</p>
+            </div>
+          ) : nextExam ? (
+            <div className="tw-p-2">
+              <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4 tw-text-center">
+                <FileCheck className="tw-h-12 tw-w-12 tw-text-violet-600 tw-mx-auto tw-mb-2" />
+                <p className="tw-text-lg tw-font-medium tw-text-violet-800 tw-mb-2">Bagian ini telah selesai!</p>
+                <p className="tw-text-violet-700">
+                  Anda akan melanjutkan ke <span className="tw-font-semibold">{nextExam}</span>.
+                </p>
+              </div>
+              <p className="tw-text-center tw-text-gray-600">Apakah Anda siap untuk melanjutkan?</p>
+            </div>
+          ) : (
+            <div className="tw-p-2 tw-text-center">
+              <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
+                <Check className="tw-h-16 tw-w-16 tw-text-violet-600 tw-mx-auto tw-mb-2" />
+                <p className="tw-text-xl tw-font-medium tw-text-violet-800 tw-mb-2">Selamat!</p>
+                <p className="tw-text-violet-700">
+                  Anda telah menyelesaikan semua ujian dengan baik.
+                </p>
+              </div>
+              <p className="tw-text-gray-600">Terima kasih atas partisipasinya!</p>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          {submitLoading ? null : (
+            <>
+              {submitError ? (
+                <Button 
+                  variant="primary" 
+                  className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700"
+                  onClick={handleRetrySubmit}
+                >
+                  Kirim Ulang
+                </Button>
+              ) : (
+                <>
+                  <Button 
+                    variant="secondary" 
+                    onClick={handleClose}
+                  >
+                    Kembali ke Home
+                  </Button>
+                  {!isLastExam && nextExam && !isTimeExpired && (
+                    <Button 
+                      variant="primary" 
+                      className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center"
+                      onClick={handleNextExam}
+                    >
+                      Lanjut <ArrowRight className="tw-ml-1" size={16} />
+                    </Button>
+                  )}
+                  {!isLastExam && isTimeExpired && nextExam && (
+                    <Button 
+                      variant="primary" 
+                      className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center"
+                      onClick={handleNextExam}
+                    >
+                      Lanjut ke Ujian Berikutnya <ArrowRight className="tw-ml-1" size={16} />
+                    </Button>
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </Modal.Footer>
+      </Modal>
+      
+      <ExamNotAccessibleModal 
+        show={showNotAccessibleModal} 
+        startTime={examStartTime} 
+        onRetry={handleRetryAccess} 
+      />
+    </div>
   );
 };
 

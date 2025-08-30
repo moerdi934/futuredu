@@ -1,10 +1,11 @@
-'use client'
 // pages/diagnostic-test/exam/[examString].tsx
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
-import Head from "next/head";
-import CryptoJS from "crypto-js";
+import { GetServerSideProps } from "next";
 import dynamic from "next/dynamic";
+import Head from "next/head";
+import { openDB } from "idb";
+import CryptoJS from "crypto-js";
 import {
   Container,
   Row,
@@ -16,71 +17,56 @@ import {
 } from "react-bootstrap";
 import { Clock, Loader2, Check, Home, AlertCircle } from "lucide-react";
 
-// Dynamic imports for CSR components
+// Dynamic imports for client-side only components
 const SingleChoice = dynamic(() => import("../../../exam/SingleChoice"), { ssr: false });
-const MultipleChoice = dynamic(() => import("../../../exam/MultipleChoice"), { ssr: false });
-const NumberInput = dynamic(() => import("../../../exam/NumberInput"), { ssr: false });
-const TextInput = dynamic(() => import("../../../exam/TextInput"), { ssr: false });
-const TrueFalse = dynamic(() => import("../../../exam/TrueFalse"), { ssr: false });
+const MultipleChoice = dynamic(() => import("../../../exam//MultipleChoice"), { ssr: false });
+const NumberInput = dynamic(() => import("../../../exam//NumberInput"), { ssr: false });
+const TextInput = dynamic(() => import("../../../exam//TextInput"), { ssr: false });
+const TrueFalse = dynamic(() => import("../../../exam//TrueFalse"), { ssr: false });
 const Latex = dynamic(() => import("react-latex-next"), { ssr: false });
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 const TOTAL_DURATION_SECONDS = 10 * 60; // 10 menit
 const DB_NAME = "diagnostic-test-db-v2";
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
-/* ───────────── Types ───────────── */
+// TypeScript interfaces
 interface Question {
   id: number;
-  type: string;
+  type: 'single-choice' | 'multiple-choice' | 'number' | 'text' | 'true-false';
   question: string;
   options?: string[];
   statements?: string[];
 }
 
-interface TimerData {
-  s: string;
-  e: string;
-  d: string;
-  v: string;
+interface DiagnosticTestProps {
+  examString: string;
+  exam_id?: string;
+  schedule_id?: string;
+  session_id?: string;
 }
 
-interface WorkerMessage {
-  type: 'store' | 'tick' | 'timeout' | 'restored' | 'invalid';
-  remaining?: number;
-  elapsed?: number;
-  data?: TimerData;
+interface AnswerPayload {
+  question_id: number;
+  exam_id?: string;
+  exam_schedule_id?: string;
+  session_id?: string;
+  user_answer: any;
+  answer_time: string;
+  elapsed_time: number;
 }
 
-interface ExamState {
-  exam_id?: string | number;
-  schedule_id?: string | number;
-  session_id?: string | number;
-  user_id?: string | number;
-}
-
-/* ───────────── IndexedDB helpers ───────────── */
+// IndexedDB helpers
 async function getDB() {
-  // Skip di server (build/SSR)
-  if (typeof window === 'undefined') {
-    return {
-      put: async () => undefined,
-      getAll: async () => [],
-      clear: async () => undefined,
-    } as const;
-  }
-
-  // Import `idb` hanya di browser
-  const { openDB } = await import('idb');
   return openDB(DB_NAME, 1, {
     upgrade(db) {
-      if (!db.objectStoreNames.contains('answers')) {
-        db.createObjectStore('answers', { keyPath: 'question_id' });
+      if (!db.objectStoreNames.contains("answers")) {
+        db.createObjectStore("answers", { keyPath: "question_id" });
       }
     },
   });
 }
 
-/* ───────────── Encryption helpers ───────────── */
+// Encryption helpers
 function decryptData(encryptedData: string): string {
   try {
     const [ivHex, encrypted] = encryptedData.split(":");
@@ -105,180 +91,48 @@ function decryptData(encryptedData: string): string {
   }
 }
 
-const DiagnosticTest: React.FC = () => {
+const DiagnosticTest: React.FC<DiagnosticTestProps> = ({ 
+  examString, 
+  exam_id, 
+  schedule_id, 
+  session_id 
+}) => {
   const router = useRouter();
-  const { examString } = router.query;
-  
-  // Get state from router (passed from modal)
-  const state: ExamState = router.query || {};
 
-  /* ───────────── Fetch state ───────────── */
+  // Fetch state
   const [questions, setQuestions] = useState<Question[]>([]);
   const [examName, setExamName] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  /* ───────────── Working-session state ───────────── */
+  // Working-session state
   const [currentIdx, setCurrentIdx] = useState<number>(0);
   const [answer, setAnswer] = useState<any>(null);
   const [elapsedPerSoal, setElapsedPerSoal] = useState<number>(0);
   const [timer, setTimer] = useState<number>(TOTAL_DURATION_SECONDS);
-  const [timerLoaded, setTimerLoaded] = useState<boolean>(false);
   const [submitLoading, setSubmitLoading] = useState<boolean>(false);
 
-  /* ───────────── Submit-score state ───────────── */
+  // Submit-score state
   const [savingScore, setSavingScore] = useState<boolean>(false);
   const [finishModal, setFinishModal] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  /* ───────────── Timer refs ───────────── */
-  const workerRef = useRef<Worker | null>(null);
-  const sessionKeyRef = useRef<string>('');
+  // Refs
+  const intervalRef = useRef<NodeJS.Timeout>();
   const soalStartTime = useRef<number>(Date.now());
-  const fallbackInterval = useRef<NodeJS.Timeout | null>(null);
 
-  /* ───────────── Generate unique session key ───────────── */
+  // Fetch & decrypt
   useEffect(() => {
-    if (!sessionKeyRef.current) {
-      const examId = state.exam_id?.toString() || 'unknown';
-      const userId = state.user_id?.toString() || 'anonymous'; 
-      const timestamp = Date.now().toString();
-      const random = Math.random().toString(36).substring(2);
-      
-      sessionKeyRef.current = CryptoJS.MD5(examId + userId + timestamp + random).toString();
-    }
-  }, [state.exam_id, state.user_id]);
-
-  /* ───────────── Initialize Secure Timer ───────────── */
-  useEffect(() => {
-    if (!sessionKeyRef.current) return;
-    
-    // Fallback timer function
-    const startFallbackTimer = () => {
-      const startTime = Date.now();
-      fallbackInterval.current = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        const remaining = Math.max(0, TOTAL_DURATION_SECONDS - elapsed);
-        setTimer(remaining);
-        
-        if (remaining <= 0) {
-          if (fallbackInterval.current) {
-            clearInterval(fallbackInterval.current);
-          }
-          handleFinish(true);
-        }
-      }, 1000);
-      
-      setTimerLoaded(true);
-    };
-
-    // Try Web Worker first
-    if (typeof Worker !== 'undefined') {
-      try {
-        workerRef.current = new Worker('/secure-exam-timer.js');
-        
-        workerRef.current.onmessage = function(e: MessageEvent<WorkerMessage>) {
-          const { type, remaining, data } = e.data;
-          
-          switch (type) {
-            case 'store':
-              if (data) {
-                sessionStorage.setItem('_examTimer', JSON.stringify(data));
-              }
-              setTimerLoaded(true);
-              break;
-              
-            case 'tick':
-              if (typeof remaining === 'number') {
-                setTimer(remaining);
-              }
-              break;
-              
-            case 'timeout':
-              sessionStorage.removeItem('_examTimer');
-              handleFinish(true);
-              break;
-              
-            case 'restored':
-              if (typeof remaining === 'number') {
-                setTimer(remaining);
-              }
-              setTimerLoaded(true);
-              console.log('Timer restored successfully');
-              break;
-              
-            case 'invalid':
-              console.log('Invalid timer data, starting fresh');
-              sessionStorage.removeItem('_examTimer');
-              startFreshTimer();
-              break;
-          }
-        };
-
-        workerRef.current.onerror = function(error) {
-          console.error('Web Worker error:', error);
-          startFallbackTimer();
-        };
-        
-        // Check for existing timer
-        const storedTimer = sessionStorage.getItem('_examTimer');
-        if (storedTimer) {
-          try {
-            const parsed: TimerData = JSON.parse(storedTimer);
-            workerRef.current.postMessage({
-              action: 'restore',
-              payload: {
-                stored: parsed,
-                sessionKey: sessionKeyRef.current
-              }
-            });
-          } catch {
-            startFreshTimer();
-          }
-        } else {
-          startFreshTimer();
-        }
-      } catch (error) {
-        console.error('Failed to create Web Worker, using fallback:', error);
-        startFallbackTimer();
-      }
-    } else {
-      console.log('Web Worker not supported, using fallback timer');
-      startFallbackTimer();
-    }
-    
-    return () => {
-      if (workerRef.current) {
-        workerRef.current.postMessage({ action: 'stop' });
-        workerRef.current.terminate();
-      }
-      if (fallbackInterval.current) {
-        clearInterval(fallbackInterval.current);
-      }
-    };
-  }, [sessionKeyRef.current]);
-
-  const startFreshTimer = () => {
-    if (workerRef.current && sessionKeyRef.current) {
-      workerRef.current.postMessage({
-        action: 'start',
-        payload: {
-          duration: TOTAL_DURATION_SECONDS,
-          sessionKey: sessionKeyRef.current
-        }
-      });
-    }
-  };
-
-  /* ───────────── Fetch & decrypt questions ───────────── */
-  useEffect(() => {
-    if (!router.isReady || !examString) return;
-    
     let ignore = false;
     setLoading(true);
     setFetchError(null);
 
     const authToken = typeof window !== 'undefined' ? localStorage.getItem("authToken") : null;
+    if (!examString) {
+      setFetchError("Exam string tidak ditemukan di URL");
+      setLoading(false);
+      return;
+    }
 
     fetch(
       `${API_URL}/questions/diagnostic/byExamString?exam_string=${examString}`,
@@ -303,9 +157,9 @@ const DiagnosticTest: React.FC = () => {
     return () => {
       ignore = true;
     };
-  }, [router.isReady, examString]);
+  }, [examString]);
 
-  /* ───────────── Per-soal setup ───────────── */
+  // Per-soal setup
   useEffect(() => {
     if (!questions.length) return;
     setAnswer(getInitialAnswer(questions[currentIdx]));
@@ -313,7 +167,25 @@ const DiagnosticTest: React.FC = () => {
     soalStartTime.current = Date.now();
   }, [currentIdx, questions]);
 
-  /* ───────────── Timer per-soal ───────────── */
+  // Timer global
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      setTimer((prev) => {
+        if (prev <= 1) {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          handleFinish(true); // true ⇒ dipicu timer
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []); // sekali saja
+
+  // Timer per-soal
   useEffect(() => {
     const perSoalInterval = setInterval(() => {
       setElapsedPerSoal(Math.floor((Date.now() - soalStartTime.current) / 1000));
@@ -321,7 +193,7 @@ const DiagnosticTest: React.FC = () => {
     return () => clearInterval(perSoalInterval);
   }, [currentIdx]);
 
-  /* ───────────── IndexedDB utils ───────────── */
+  // IndexedDB utils
   function getInitialAnswer(question: Question): any {
     if (!question) return null;
     switch (question.type) {
@@ -340,16 +212,14 @@ const DiagnosticTest: React.FC = () => {
     }
   }
 
-  const saveAnswerToIDB = async (payload: any): Promise<void> => {
+  const saveAnswerToIDB = async (payload: AnswerPayload): Promise<void> => {
     try {
       const db = await getDB();
       await db.put("answers", payload);
-    } catch (_) {
-      // Silent fail
-    }
+    } catch (_) {}
   };
 
-  const getAllAnswersFromIDB = async (): Promise<any[]> => {
+  const getAllAnswersFromIDB = async (): Promise<AnswerPayload[]> => {
     const db = await getDB();
     return db.getAll("answers");
   };
@@ -359,10 +229,10 @@ const DiagnosticTest: React.FC = () => {
     await db.clear("answers");
   };
 
-  /* ───────────── Answer helpers ───────────── */
-  const handleChange = (value: any): void => setAnswer(value);
+  // Answer helpers
+  const handleChange = (value: any) => setAnswer(value);
 
-  const handleTrueFalseChange = (idx: number, val: any): void => {
+  const handleTrueFalseChange = (idx: number, val: any) => {
     const updated = [...(answer || [])];
     updated[idx] = val;
     setAnswer(updated);
@@ -387,31 +257,43 @@ const DiagnosticTest: React.FC = () => {
       case "text":
         return answer !== "";
       case "true-false":
-        return Array.isArray(answer) && answer.every((a: any) => a !== undefined);
+        return Array.isArray(answer) && answer.every((a) => a !== undefined);
       default:
         return false;
     }
   }
 
-  /* ───────────── Navigation ───────────── */
+  // Navigation
   const handleNextOrFinish = async (): Promise<void> => {
     if (!questions.length) return;
     setSubmitLoading(true);
+    if (intervalRef.current) clearInterval(intervalRef.current);
 
-    // Save current answer
+    // simpan current answer
     await saveAnswerToIDB({
       question_id: questions[currentIdx].id,
-      exam_id: state.exam_id,
-      exam_schedule_id: state.schedule_id,
-      session_id: state.session_id,
+      exam_id: exam_id,
+      exam_schedule_id: schedule_id,
+      session_id: session_id,
       user_answer: answer,
       answer_time: new Date().toISOString(),
       elapsed_time: elapsedPerSoal,
     });
 
     if (currentIdx < questions.length - 1 && timer > 0) {
-      // Go to next question
+      // lanjut soal berikut
       setCurrentIdx(currentIdx + 1);
+      // restart timer
+      intervalRef.current = setInterval(() => {
+        setTimer((prev) => {
+          if (prev <= 1) {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            handleFinish(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     } else {
       await handleFinish(false);
     }
@@ -419,26 +301,19 @@ const DiagnosticTest: React.FC = () => {
     setSubmitLoading(false);
   };
 
-  /* ───────────── Submit score to server ───────────── */
-  const handleFinish = async (autoFromTimer: boolean = false): Promise<void> => {
+  // Submit skor ke server
+  const handleFinish = async (autoFromTimer = false): Promise<void> => {
     try {
       setSavingScore(true);
-      
-      // Stop timer
-      if (workerRef.current) {
-        workerRef.current.postMessage({ action: 'stop' });
-      }
-      if (fallbackInterval.current) {
-        clearInterval(fallbackInterval.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
 
-      // If triggered by timer, save last answer if filled
+      // jika dipicu timer, simpan jawaban terakhir (bila terisi)
       if (autoFromTimer && isAnswerFilled()) {
         await saveAnswerToIDB({
           question_id: questions[currentIdx].id,
-          exam_id: state.exam_id,
-          exam_schedule_id: state.schedule_id,
-          session_id: state.session_id,
+          exam_id: exam_id,
+          exam_schedule_id: schedule_id,
+          session_id: session_id,
           user_answer: answer,
           answer_time: new Date().toISOString(),
           elapsed_time: elapsedPerSoal,
@@ -446,7 +321,7 @@ const DiagnosticTest: React.FC = () => {
       }
 
       const allAnswers = await getAllAnswersFromIDB();
-      const answersPayload = allAnswers.map((a: any) => ({
+      const answersPayload = allAnswers.map((a) => ({
         question_id: a.question_id,
         user_answer: a.user_answer,
         elapsed_time: a.elapsed_time,
@@ -454,7 +329,7 @@ const DiagnosticTest: React.FC = () => {
 
       const authToken = typeof window !== 'undefined' ? localStorage.getItem("authToken") : null;
       const res = await fetch(
-        `${API_URL}/score/diagnostic/${state.exam_id}`,
+        `${API_URL}/score/diagnostic/${exam_id}`,
         {
           method: "POST",
           headers: {
@@ -471,7 +346,6 @@ const DiagnosticTest: React.FC = () => {
       }
 
       await clearIDB();
-      sessionStorage.removeItem('_examTimer');
       setFinishModal(true);
     } catch (err: any) {
       setSubmitError(err.message || "Terjadi kesalahan saat submit skor.");
@@ -480,11 +354,9 @@ const DiagnosticTest: React.FC = () => {
     }
   };
 
-  const handleBackToDashboard = (): void => {
-    router.push("/dashboard");
-  };
+  const handleBackToDashboard = () => router.push("/dashboard");
 
-  /* ───────────── Render helpers ───────────── */
+  // Render helpers
   function renderQuestion(q: Question): React.ReactNode {
     if (!q || answer === null) return null;
     switch (q.type) {
@@ -536,12 +408,12 @@ const DiagnosticTest: React.FC = () => {
     }
   }
 
-  /* ───────────── UI Loading/Error ───────────── */
-  if (loading || !timerLoaded) {
+  // UI Loading/Error
+  if (loading) {
     return (
       <>
         <Head>
-          <title>Loading Diagnostic Test - Platform Pembelajaran</title>
+          <title>Memuat Tes Diagnostic - Platform Pembelajaran</title>
         </Head>
         <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
           <div className="tw-text-center">
@@ -562,7 +434,7 @@ const DiagnosticTest: React.FC = () => {
     return (
       <>
         <Head>
-          <title>Error - Diagnostic Test</title>
+          <title>Error - Tes Diagnostic</title>
         </Head>
         <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
           <Container>
@@ -592,12 +464,12 @@ const DiagnosticTest: React.FC = () => {
     );
   }
 
-  /* ───────────── Success modal after submit ───────────── */
+  // Success modal setelah submit
   if (finishModal) {
     return (
       <>
         <Head>
-          <title>Test Completed - Diagnostic Test</title>
+          <title>Tes Selesai - Diagnostic Test</title>
         </Head>
         <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
           <Container>
@@ -631,13 +503,13 @@ const DiagnosticTest: React.FC = () => {
     );
   }
 
-  /* ───────────── Main render ───────────── */
+  // Main render
   return (
     <>
       <Head>
         <title>{examName} - Diagnostic Test</title>
-        <meta name="description" content="Sedang mengerjakan tes diagnostik" />
-        <meta name="robots" content="noindex, nofollow" />
+        <meta name="description" content="Tes diagnostik untuk mengukur kemampuan kognitif" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
       <div className="tw-min-h-screen tw-bg-violet-50">
@@ -743,6 +615,20 @@ const DiagnosticTest: React.FC = () => {
       </div>
     </>
   );
+};
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const { examString } = context.params as { examString: string };
+  const { exam_id, schedule_id, session_id } = context.query;
+
+  return {
+    props: {
+      examString,
+      exam_id: exam_id || null,
+      schedule_id: schedule_id || null,
+      session_id: session_id || null,
+    },
+  };
 };
 
 export default DiagnosticTest;

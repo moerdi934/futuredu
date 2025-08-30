@@ -4,13 +4,14 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-    eslint: {
-    ignoreDuringBuilds: true,   // lewati semua error ESLint
+  eslint: {
+    ignoreDuringBuilds: true,
   },
-  // (opsional) kalau masih ada type-error
   typescript: {
-    ignoreBuildErrors: true,    // lewati error TypeScript
+    ignoreBuildErrors: true,
   },
+  // Add this to prevent triple API calls in development
+  reactStrictMode: false,
 };
 
 module.exports = nextConfig;

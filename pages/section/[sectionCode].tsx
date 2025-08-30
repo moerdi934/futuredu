@@ -1,3 +1,4 @@
+// [sectionCode].tsx ->next 
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -22,7 +23,8 @@ import {
   ChevronsLeft,
   Target,
   Zap,
-  ArrowLeftFromLine
+  ArrowLeftFromLine,
+  Lock
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -67,6 +69,7 @@ interface Drill {
 interface Topic {
   id: number;
   position: number;
+  title: string;
   quizId: number;
   drillId: number;
   quizQuestionCount: number;
@@ -207,7 +210,7 @@ const SectionPage: React.FC = () => {
   const [loadingMaterial, setLoadingMaterial] = useState<boolean>(false);
   const [materialError, setMaterialError] = useState<string | null>(null);
 
-  // Tracking state via refs (ditambahkan topicId)
+  // Tracking state via refs
   const trackingRef = useRef<{
     materialId: number | null;
     topicId: number | null;
@@ -291,13 +294,14 @@ const SectionPage: React.FC = () => {
     fetchMaterialDetail();
   }, [selectedMaterialId]);
 
-  // Fetch data section awal
+  // Fetch data section awal - TANPA AUTH CHECK seperti paste1
   useEffect(() => {
     const fetchSectionData = async () => {
       try {
         setLoading(true);
         setError(null);
         
+        // Selalu kirim header auth jika ada, tapi jangan paksa
         const headers: Record<string,string> = {};
         const token = localStorage.getItem('authToken');
         if (token) headers.Authorization = `Bearer ${token}`;
@@ -321,6 +325,7 @@ const SectionPage: React.FC = () => {
           isEntitled: sectionData.isEntitled,
           topics: sectionData.topics.map(topic => ({
             id: topic.id,
+            title: topic.title,
             position: topic.position,
             quizId: topic.quiz_id,
             drillId: topic.drill_id,
@@ -443,7 +448,7 @@ const SectionPage: React.FC = () => {
     setExpandedTopics(newExpanded);
   };
 
-  // Pemilihan konten (material/quiz/drill)
+  // Pemilihan konten (material/quiz/drill) - TANPA CHECK AUTH seperti paste1
   const selectContent = (topicId: number, contentType: 'material' | 'quiz' | 'drill', materialId?: number) => {
     setSelectedTopicId(topicId);
     setSelectedContentType(contentType);
@@ -1075,7 +1080,9 @@ const SectionPage: React.FC = () => {
                                     </Badge>
                                   )}
                                   {!material.isAccessible && (
-                                    <span className="tw-ml-2 tw-text-red-500 lock-icon">🔒</span>
+                                    <span className="tw-ml-2 tw-text-red-500 lock-icon">
+                                      <Lock size={12} />
+                                    </span>
                                   )}
                                 </div>
                               </div>
@@ -1100,7 +1107,9 @@ const SectionPage: React.FC = () => {
                                     </Badge>
                                   )}
                                   {!topic.quizAccessible && (
-                                    <span className="tw-ml-2 tw-text-red-500 lock-icon">🔒</span>
+                                    <span className="tw-ml-2 tw-text-red-500 lock-icon">
+                                      <Lock size={12} />
+                                    </span>
                                   )}
                                 </div>
                               </div>
@@ -1125,7 +1134,9 @@ const SectionPage: React.FC = () => {
                                     </Badge>
                                   )}
                                   {!topic.drillAccessible && (
-                                    <span className="tw-ml-2 tw-text-red-500 lock-icon">🔒</span>
+                                    <span className="tw-ml-2 tw-text-red-500 lock-icon">
+                                      <Lock size={12} />
+                                    </span>
                                   )}
                                 </div>
                               </div>
@@ -1140,6 +1151,7 @@ const SectionPage: React.FC = () => {
               </Card>
             </Col>
 
+            {/* Main Content Area - sama seperti paste1 */}
             <Col xs={12} lg={sidebarCollapsed ? 11 : 8} className={`${isMobile && !sidebarCollapsed ? 'tw-blur-sm tw-pointer-events-none' : ''}`}>
               <div className="tw-space-y-6 tw-mx-2">
                 {isMobile && sidebarCollapsed && (
@@ -1172,7 +1184,7 @@ const SectionPage: React.FC = () => {
                           <Target className="tw-text-white" size={28} />
                         </div>
                         <h2 className="tw-text-xl md:tw-text-2xl tw-font-bold tw-mb-0 tw-text-center">
-                          Pilih Topik yang Ingin Dipelajari! 🚀
+                          Pilih Topik yang Ingin Dipelajari!
                         </h2>
                       </div>
                     </Card.Header>
@@ -1195,6 +1207,7 @@ const SectionPage: React.FC = () => {
                                 }
                               }}
                             >
+                              {/* Topic card content sama seperti paste1 */}
                               <div className="tw-flex tw-items-start tw-justify-between tw-mb-4">
                                 <div className="tw-flex tw-items-center tw-gap-3">
                                   <div className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-pink-500 tw-text-white tw-rounded-full tw-w-10 tw-h-10 tw-flex tw-items-center tw-justify-center tw-font-bold tw-text-lg tw-shadow-lg">
@@ -1266,7 +1279,7 @@ const SectionPage: React.FC = () => {
                               {topic.materials.some(m => m.isMandatory) && (
                                 <div className="tw-mt-4 tw-pt-3 tw-border-t tw-border-purple-200">
                                   <Badge bg="danger" className="tw-text-xs tw-animate-pulse">
-                                    ⭐ Ada Materi Wajib
+                                    Ada Materi Wajib
                                   </Badge>
                                 </div>
                               )}
@@ -1284,12 +1297,14 @@ const SectionPage: React.FC = () => {
                           <Star className="tw-text-yellow-500 tw-animate-pulse" size={24} />
                         </div>
                         <p className="tw-text-gray-600 tw-text-sm">
-                          Pilih topik di atas untuk memulai perjalanan belajar yang seru dan menyenangkan! 🎯
+                          Pilih topik di atas untuk memulai perjalanan belajar yang seru dan menyenangkan!
                         </p>
                       </div>
                     </Card.Body>
                   </Card>
                 ) : (
+                  /* Content areas untuk material/quiz/drill - sama seperti paste1 t
+                  /* Content areas untuk material/quiz/drill - sama seperti paste1 tanpa LoginModal */
                   <div className="tw-space-y-6">
                     {selectedContentType === 'material' && selectedMaterial && (
                       <Card className="tw-border-0 tw-shadow-2xl tw-bg-white tw-rounded-2xl tw-overflow-hidden">
@@ -1307,7 +1322,7 @@ const SectionPage: React.FC = () => {
                                 <div className="tw-flex tw-items-center tw-gap-2 tw-flex-wrap">
                                   {selectedMaterial.isMandatory && (
                                     <Badge bg="warning" className="tw-text-xs tw-animate-pulse">
-                                      ⭐ Wajib Dipelajari
+                                      Wajib Dipelajari
                                     </Badge>
                                   )}
                                   {selectedMaterial.hasVideo && (
@@ -1333,7 +1348,7 @@ const SectionPage: React.FC = () => {
                               ) : completedMaterials.has(selectedMaterial.id) ? (
                                 <div className="tw-flex tw-items-center tw-gap-2">
                                   <Check size={16} />
-                                  Selesai! 🎉
+                                  Selesai!
                                 </div>
                               ) : (
                                 <div className="tw-flex tw-items-center tw-gap-2">
@@ -1350,6 +1365,18 @@ const SectionPage: React.FC = () => {
                               <Spinner animation="border" variant="primary" className="tw-mb-4" />
                               <h4 className="tw-text-purple-800 tw-font-bold tw-text-xl tw-mb-2">
                                 Memuat Konten Pembelajaran...
+                              </h4>
+                              <p className="tw-text-gray-600">
+                                Mohon tunggu sebentar, kami sedang memuat materi untuk Anda.
+                              </p>
+                            </div>
+                          ) : materialError ? (
+                            <div className="tw-text-center tw-py-12 tw-bg-white tw-rounded-xl tw-shadow-lg tw-border tw-border-red-200">
+                              <div className="tw-inline-block tw-bg-gradient-to-r tw-from-red-600 tw-to-pink-600 tw-text-white tw-p-4 tw-rounded-full tw-mb-4">
+                                <X size={48} />
+                              </div>
+                              <h4 className="tw-text-red-800 tw-font-bold tw-text-xl tw-mb-2">
+                                Gagal Memuat Materi
                               </h4>
                               <p className="tw-text-gray-600 tw-mb-6">
                                 {materialError}
@@ -1371,7 +1398,7 @@ const SectionPage: React.FC = () => {
                                       <Play className="tw-text-white" size={20} />
                                     </div>
                                     <h4 className="tw-text-purple-800 tw-font-bold tw-text-lg tw-mb-0">
-                                      Video Pembelajaran 🎬
+                                      Video Pembelajaran
                                     </h4>
                                   </div>
                                   {materialDetail.video_url ? (
@@ -1388,7 +1415,7 @@ const SectionPage: React.FC = () => {
                                       <div className="tw-text-center">
                                         <Play className="tw-text-purple-400 tw-mx-auto tw-mb-2" size={48} />
                                         <p className="tw-text-purple-600 tw-font-medium">
-                                          Video akan muncul di sini 🎥
+                                          Video akan muncul di sini
                                         </p>
                                       </div>
                                     </div>
@@ -1402,7 +1429,7 @@ const SectionPage: React.FC = () => {
                                     <FileText className="tw-text-white" size={20} />
                                   </div>
                                   <h4 className="tw-text-purple-800 tw-font-bold tw-text-lg tw-mb-0">
-                                    Materi Pembelajaran 📚
+                                    Materi Pembelajaran
                                   </h4>
                                 </div>
                                 <div className="tw-prose tw-max-w-none tw-text-gray-700 tw-leading-relaxed">
@@ -1415,7 +1442,7 @@ const SectionPage: React.FC = () => {
                                         Materi Pembelajaran Menarik! 
                                       </h3>
                                       <p className="tw-text-purple-500 tw-text-lg">
-                                        Konten edukatif yang seru akan ditampilkan di sini untuk membantu kamu belajar dengan mudah dan menyenangkan! 🌟
+                                        Konten edukatif yang seru akan ditampilkan di sini untuk membantu kamu belajar dengan mudah dan menyenangkan!
                                       </p>
                                       <div className="tw-flex tw-items-center tw-justify-center tw-gap-3 tw-mt-4">
                                         <Heart className="tw-text-pink-500 tw-animate-bounce" size={20} />
@@ -1475,7 +1502,7 @@ const SectionPage: React.FC = () => {
                               </div>
                               <div>
                                 <h3 className="tw-text-lg md:tw-text-xl tw-font-bold tw-mb-1">
-                                  {selectedTopic.quiz.title} 🧠
+                                  {selectedTopic.quiz.title}
                                 </h3>
                                 <div className="tw-flex tw-items-center tw-gap-2">
                                   <Badge bg="light" text="dark" className="tw-text-xs">
@@ -1498,7 +1525,7 @@ const SectionPage: React.FC = () => {
                               ) : completedQuizzes.has(selectedTopic.id) ? (
                                 <div className="tw-flex tw-items-center tw-gap-2">
                                   <Trophy size={16} />
-                                  Quiz Selesai! 🏆
+                                  Quiz Selesai!
                                 </div>
                               ) : (
                                 <div className="tw-flex tw-items-center tw-gap-2">
@@ -1515,7 +1542,7 @@ const SectionPage: React.FC = () => {
                               <div className="tw-bg-white tw-p-6 tw-rounded-xl tw-shadow-lg tw-border tw-border-pink-200">
                                 <div className="tw-text-center tw-mb-6">
                                   <h4 className="tw-text-purple-800 tw-font-bold tw-text-xl tw-mb-2">
-                                    Siap untuk Tantangan Quiz? 🚀
+                                    Siap untuk Tantangan Quiz?
                                   </h4>
                                   <p className="tw-text-gray-600">
                                     Quiz ini berisi {selectedTopic.quiz.quiz_question_count} soal yang akan menguji pemahamanmu!
@@ -1533,7 +1560,7 @@ const SectionPage: React.FC = () => {
                                     >
                                       <div className="tw-flex tw-items-center tw-gap-3">
                                         <Play size={20} />
-                                        Mulai Quiz Sekarang! 🎯
+                                        Mulai Quiz Sekarang!
                                       </div>
                                     </Button>
                                   </div>
@@ -1541,7 +1568,7 @@ const SectionPage: React.FC = () => {
                                   <div className="tw-text-center tw-bg-gradient-to-r tw-from-green-100 tw-to-emerald-100 tw-p-6 tw-rounded-xl tw-border-2 tw-border-green-300">
                                     <Trophy className="tw-text-green-600 tw-mx-auto tw-mb-3 tw-animate-bounce" size={48} />
                                     <h4 className="tw-text-green-800 tw-font-bold tw-text-xl tw-mb-2">
-                                      Selamat! Quiz Sudah Selesai! 🎉
+                                      Selamat! Quiz Sudah Selesai!
                                     </h4>
                                     <p className="tw-text-green-700">
                                       Kamu telah menyelesaikan quiz ini dengan baik. Lanjutkan ke materi berikutnya!
@@ -1557,7 +1584,7 @@ const SectionPage: React.FC = () => {
                                 Quiz Sedang Disiapkan! 
                               </h3>
                               <p className="tw-text-pink-500 tw-text-lg">
-                                Quiz yang seru dan menantang akan segera hadir untuk menguji pemahamanmu! 🧠✨
+                                Quiz yang seru dan menantang akan segera hadir untuk menguji pemahamanmu!
                               </p>
                             </div>
                           )}
@@ -1597,7 +1624,7 @@ const SectionPage: React.FC = () => {
                             </div>
                             <div>
                               <h3 className="tw-text-lg md:tw-text-xl tw-font-bold tw-mb-1">
-                                {selectedTopic.drill.title} 💪
+                                {selectedTopic.drill.title}
                               </h3>
                               <Badge bg="light" text="dark" className="tw-text-xs">
                                 {selectedTopic.drill.drill_question_count} Latihan Interaktif
@@ -1611,7 +1638,7 @@ const SectionPage: React.FC = () => {
                               <div className="tw-bg-white tw-p-6 tw-rounded-xl tw-shadow-lg tw-border tw-border-indigo-200">
                                 <div className="tw-text-center tw-mb-6">
                                   <h4 className="tw-text-indigo-800 tw-font-bold tw-text-xl tw-mb-2">
-                                    Siap untuk Latihan Drill? 💪
+                                    Siap untuk Latihan Drill?
                                   </h4>
                                   <p className="tw-text-gray-600">
                                     Drill ini berisi {selectedTopic.drill.drill_question_count} latihan untuk mengasah kemampuanmu!
@@ -1629,7 +1656,7 @@ const SectionPage: React.FC = () => {
                                     >
                                       <div className="tw-flex tw-items-center tw-gap-3">
                                         <Zap size={20} />
-                                        Mulai Drill Sekarang! ⚡
+                                        Mulai Drill Sekarang!
                                       </div>
                                     </Button>
                                   </div>
@@ -1637,7 +1664,7 @@ const SectionPage: React.FC = () => {
                                   <div className="tw-text-center tw-bg-gradient-to-r tw-from-green-100 tw-to-emerald-100 tw-p-6 tw-rounded-xl tw-border-2 tw-border-green-300">
                                     <Trophy className="tw-text-green-600 tw-mx-auto tw-mb-3 tw-animate-bounce" size={48} />
                                     <h4 className="tw-text-green-800 tw-font-bold tw-text-xl tw-mb-2">
-                                      Selamat! Drill Sudah Selesai! 🎉
+                                      Selamat! Drill Sudah Selesai!
                                     </h4>
                                     <p className="tw-text-green-700">
                                       Kamu telah menyelesaikan drill ini dengan baik. Lanjutkan ke materi berikutnya!
@@ -1662,7 +1689,7 @@ const SectionPage: React.FC = () => {
                                 Selesaikan Quiz Dulu!
                               </h3>
                               <p className="tw-text-yellow-600 tw-text-lg tw-mb-4">
-                                Untuk memulai drill, selesaikan quiz dulu yaa 😊
+                                Untuk memulai drill, selesaikan quiz dulu yaa
                               </p>
                               <Button
                                 variant="primary"

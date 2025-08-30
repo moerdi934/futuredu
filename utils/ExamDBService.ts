@@ -1,47 +1,48 @@
-import { IDBPDatabase } from 'idb';
+'use client';
+
+import { openDB, IDBPDatabase } from 'idb';
 
 interface ExamData {
   answers: Record<number, any>;
   startTime: number;
   questionElapsedTimes: Record<number, number>;
-lastQuestionVisit: {
+  lastQuestionVisit: {
     questionId: number;
-    timerElapsed: number; // Change from timestamp to timer's elapsed time (in seconds)
+    timestamp: number;
   } | null;
-}
-type StubDB = {
-  put:    (..._: any[]) => Promise<void>;
-  get:    (..._: any[]) => Promise<any>;
-  getAll: (..._: any[]) => Promise<any[]>;
-  delete: (..._: any[]) => Promise<void>;
-  clear:  (..._: any[]) => Promise<void>;
-};
-
-function createStubDB(): StubDB {
-  const noop = async () => {};
-  const noopArr = async () => [];
-  return { put: noop, get: noop, getAll: noopArr, delete: noop, clear: noop };
 }
 
 class ExamDbService {
   private dbName = 'examAppDb';
-  private dbVersion = 1;
-  public db: Promise<IDBPDatabase | StubDB>;;
+  private dbVersion = 2; // Increased version to fix version error
+  private _db: Promise<IDBPDatabase> | null = null;
 
   constructor() {
-    this.db = this.initDatabase();
+    // Only initialize in browser environment
+    if (typeof window !== 'undefined') {
+      this._db = this.initDatabase();
+    }
   }
 
-private async initDatabase(): Promise<IDBPDatabase | StubDB> {
-    // ⛔ 1.  Jika server-side → kembalikan stub agar tidak sentuh indexedDB
-    if (typeof window === 'undefined') {
-      return createStubDB();
+  get db(): Promise<IDBPDatabase> {
+    if (!this._db) {
+      if (typeof window === 'undefined') {
+        throw new Error('ExamDbService can only be used in browser environment');
+      }
+      this._db = this.initDatabase();
+    }
+    return this._db;
+  }
+
+  private async initDatabase(): Promise<IDBPDatabase> {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined' || typeof indexedDB === 'undefined') {
+      throw new Error('IndexedDB is not available in this environment');
     }
 
-    // ✅ 2.  Browser: baru import idb & buka database
-    const { openDB } = await import('idb');
     return openDB(this.dbName, this.dbVersion, {
       upgrade(db) {
+        // Create stores if they don't exist
         if (!db.objectStoreNames.contains('examData')) {
           db.createObjectStore('examData');
         }
@@ -51,187 +52,314 @@ private async initDatabase(): Promise<IDBPDatabase | StubDB> {
 
   // Save exam answers
   async saveAnswers(examString: string, answers: Record<number, any>): Promise<void> {
-    const db = await this.db;
-    const data = await this.getExamData(examString) || { 
-      answers: {}, 
-      startTime: Date.now(),
-      questionElapsedTimes: {},
-      lastQuestionVisit: null
-    };
-    
-    data.answers = answers;
-    
-    await db.put('examData', data, examString);
+    if (typeof window === 'undefined') {
+      console.warn('ExamDbService: Cannot save answers in non-browser environment');
+      return;
+    }
+
+    try {
+      const db = await this.db;
+      const data = await this.getExamData(examString) || { 
+        answers: {}, 
+        startTime: Date.now(),
+        questionElapsedTimes: {},
+        lastQuestionVisit: null
+      };
+      
+      data.answers = answers;
+      
+      await db.put('examData', data, examString);
+    } catch (error) {
+      console.error('ExamDbService: Error saving answers:', error);
+    }
   }
 
   // Get exam answers
   async getAnswers(examString: string): Promise<Record<number, any> | null> {
-    const data = await this.getExamData(examString);
-    return data ? data.answers : null;
+    if (typeof window === 'undefined') {
+      console.warn('ExamDbService: Cannot get answers in non-browser environment');
+      return null;
+    }
+
+    try {
+      const data = await this.getExamData(examString);
+      return data ? data.answers : null;
+    } catch (error) {
+      console.error('ExamDbService: Error getting answers:', error);
+      return null;
+    }
   }
 
   // Save exam start time
   async saveStartTime(examString: string, startTime: number): Promise<void> {
-    const db = await this.db;
-    const data = await this.getExamData(examString) || { 
-      answers: {}, 
-      startTime: Date.now(),
-      questionElapsedTimes: {},
-      lastQuestionVisit: null
-    };
-    
-    data.startTime = startTime;
-    
-    await db.put('examData', data, examString);
+    if (typeof window === 'undefined') {
+      console.warn('ExamDbService: Cannot save start time in non-browser environment');
+      return;
+    }
+
+    try {
+      const db = await this.db;
+      const data = await this.getExamData(examString) || { 
+        answers: {}, 
+        startTime: Date.now(),
+        questionElapsedTimes: {},
+        lastQuestionVisit: null
+      };
+      
+      data.startTime = startTime;
+      
+      await db.put('examData', data, examString);
+    } catch (error) {
+      console.error('ExamDbService: Error saving start time:', error);
+    }
   }
 
   // Get exam start time
   async getStartTime(examString: string): Promise<number | null> {
-    const data = await this.getExamData(examString);
-    return data ? data.startTime : null;
+    if (typeof window === 'undefined') {
+      console.warn('ExamDbService: Cannot get start time in non-browser environment');
+      return null;
+    }
+
+    try {
+      const data = await this.getExamData(examString);
+      return data ? data.startTime : null;
+    } catch (error) {
+      console.error('ExamDbService: Error getting start time:', error);
+      return null;
+    }
   }
 
   // Update the elapsed time for a question
-// Update the elapsed time for a question
-async updateQuestionElapsedTime(examString: string, questionId: number, timerElapsed: number): Promise<Record<number, number>> {
-  console.log('🔍 updateQuestionElapsedTime called:', { examString, questionId, timerElapsed });
+  async updateQuestionElapsedTime(examString: string, questionId: number): Promise<Record<number, number>> {
+    if (typeof window === 'undefined') {
+      console.warn('ExamDbService: Cannot update question elapsed time in non-browser environment');
+      return {};
+    }
 
-  // Validate timerElapsed
-  if (!Number.isFinite(timerElapsed) || timerElapsed < 0) {
-    console.error('🚨 Invalid timerElapsed value:', timerElapsed);
-    return {};
-  }
-
-  const db = await this.db;
-  const data = await this.getExamData(examString) || {
-    answers: {},
-    startTime: timerElapsed,
-    questionElapsedTimes: {},
-    lastQuestionVisit: null
-  };
-
-  console.log('📊 Current exam data:', {
-    data,
-    questionElapsedTimes: data.questionElapsedTimes,
-    lastQuestionVisit: data.lastQuestionVisit
-  });
-
-  // If there was a previously visited question, update elapsed time
-  if (data.lastQuestionVisit && data.lastQuestionVisit.questionId !== questionId) {
-    const previousQuestionId = data.lastQuestionVisit.questionId;
-    const previousTimerElapsed = data.lastQuestionVisit.timerElapsed;
-
-    // Validate previousTimerElapsed
-    if (!Number.isFinite(previousTimerElapsed)) {
-      console.error('🚨 Invalid previousTimerElapsed:', previousTimerElapsed);
-    } else {
-      const timeSpent = timerElapsed - previousTimerElapsed;
-      console.log('⏱ Calculating timeSpent:', { previousQuestionId, timeSpent, timerElapsed, previousTimerElapsed });
-
-      // Initialize if not exists
-      data.questionElapsedTimes[previousQuestionId] = data.questionElapsedTimes[previousQuestionId] || 0;
-
-      // Add the elapsed time (in seconds)
-      data.questionElapsedTimes[previousQuestionId] += Math.max(0, Math.floor(timeSpent));
+    try {
+      const db = await this.db;
+      const data = await this.getExamData(examString) || { 
+        answers: {}, 
+        startTime: Date.now(),
+        questionElapsedTimes: {},
+        lastQuestionVisit: null
+      };
+      
+      const now = Date.now();
+      
+      console.log('🔄 UPDATE QUESTION ELAPSED TIME');
+      console.log('Target Question ID:', questionId);
+      console.log('Previous visit data:', data.lastQuestionVisit);
+      console.log('Current elapsed times (before update):', data.questionElapsedTimes);
+      
+      // If there was a previously visited question, update elapsed time
+      if (data.lastQuestionVisit && data.lastQuestionVisit.questionId !== questionId) {
+        const previousQuestionId = data.lastQuestionVisit.questionId;
+        const timeSpent = now - data.lastQuestionVisit.timestamp;
+        
+        console.log('Finalizing previous question:', previousQuestionId);
+        console.log('Time spent on previous question (ms):', timeSpent);
+        console.log('Time spent on previous question (seconds):', Math.floor(timeSpent / 1000));
+        
+        // Initialize questionElapsedTimes if it doesn't exist or is null
+        if (!data.questionElapsedTimes) {
+          data.questionElapsedTimes = {};
+        }
+        
+        // Initialize if not exists
+        data.questionElapsedTimes[previousQuestionId] = data.questionElapsedTimes[previousQuestionId] || 0;
+        
+        // Add the elapsed time (convert to seconds)
+        data.questionElapsedTimes[previousQuestionId] += Math.floor(timeSpent / 1000);
+        
+        console.log('Previous question new total time:', data.questionElapsedTimes[previousQuestionId]);
+      }
+      
+      // Initialize questionElapsedTimes if it doesn't exist
+      if (!data.questionElapsedTimes) {
+        data.questionElapsedTimes = {};
+      }
+      
+      // Update last question visit
+      data.lastQuestionVisit = {
+        questionId,
+        timestamp: now
+      };
+      
+      // Make sure current question has an entry
+      data.questionElapsedTimes[questionId] = data.questionElapsedTimes[questionId] || 0;
+      
+      console.log('Updated elapsed times (after update):', data.questionElapsedTimes);
+      console.log('New visit data:', data.lastQuestionVisit);
+      console.log('---');
+      
+      await db.put('examData', data, examString);
+      
+      return data.questionElapsedTimes;
+    } catch (error) {
+      console.error('ExamDbService: Error updating question elapsed time:', error);
+      return {};
     }
   }
-
-  // Update last question visit with timer's elapsed time
-  data.lastQuestionVisit = {
-    questionId,
-    timerElapsed // Store the timer's elapsed time (in seconds)
-  };
-
-  // Make sure current question has an entry
-  data.questionElapsedTimes[questionId] = data.questionElapsedTimes[questionId] || 0;
-
-  console.log('💾 Saving updated exam data:', { questionElapsedTimes: data.questionElapsedTimes });
-
-  await db.put('examData', data, examString);
-
-  return data.questionElapsedTimes;
-}
 
   // Get elapsed times for all questions
-async getQuestionElapsedTimes(examString: string): Promise<Record<number, number>> {
-  const data = await this.getExamData(examString);
-  console.log('🔍 getQuestionElapsedTimes:', { examString, questionElapsedTimes: data?.questionElapsedTimes });
-
-  if (!data) {
-    console.warn('⚠ No exam data found for:', examString);
-    return {};
-  }
-
-  if (!data.questionElapsedTimes) {
-    console.warn('⚠ No questionElapsedTimes in data:', data);
-    return {};
-  }
-
-  return data.questionElapsedTimes;
-}
-  
-  // Record the current time for when a user leaves a question
-async finalizeCurrentQuestionTime(examString: string, timerElapsed: number): Promise<Record<number, number>> {
-  console.log('🔍 finalizeCurrentQuestionTime called:', { examString, timerElapsed });
-
-  // Validate timerElapsed
-  if (!Number.isFinite(timerElapsed) || timerElapsed < 0) {
-    console.error('🚨 Invalid timerElapsed value:', timerElapsed);
-    return {};
-  }
-
-  const db = await this.db;
-  const data = await this.getExamData(examString);
-
-  if (data && data.lastQuestionVisit) {
-    const questionId = data.lastQuestionVisit.questionId;
-    const previousTimerElapsed = data.lastQuestionVisit.timerElapsed;
-
-    // Validate previousTimerElapsed
-    if (!Number.isFinite(previousTimerElapsed)) {
-      console.error('🚨 Invalid previousTimerElapsed:', previousTimerElapsed);
-    } else {
-      const timeSpent = timerElapsed - previousTimerElapsed;
-      console.log('⏱ Finalizing timeSpent:', { questionId, timeSpent, timerElapsed, previousTimerElapsed });
-
-      // Initialize if not exists
-      data.questionElapsedTimes[questionId] = data.questionElapsedTimes[questionId] || 0;
-
-      // Add the elapsed time (in seconds)
-      data.questionElapsedTimes[questionId] += Math.max(0, Math.floor(timeSpent));
-
-      // Reset last visit
-      data.lastQuestionVisit = null;
-
-      console.log('💾 Saving finalized exam data:', { questionElapsedTimes: data.questionElapsedTimes });
-
-      await db.put('examData', data, examString);
+  async getQuestionElapsedTimes(examString: string): Promise<Record<number, number>> {
+    if (typeof window === 'undefined') {
+      console.warn('ExamDbService: Cannot get question elapsed times in non-browser environment');
+      return {};
     }
 
-    return data.questionElapsedTimes;
+    try {
+      const data = await this.getExamData(examString);
+      
+      // If we have data but no visit record, return the stored elapsed times
+      if (data && !data.questionElapsedTimes) {
+        return {};
+      }
+      
+      // If we have a last visit record, update the current question time
+      if (data && data.lastQuestionVisit) {
+        const now = Date.now();
+        const timeSpent = now - data.lastQuestionVisit.timestamp;
+        const questionId = data.lastQuestionVisit.questionId;
+        
+        // Create a copy to avoid modifying the stored data
+        const updatedTimes = { ...data.questionElapsedTimes };
+        
+        // Add current session time to the current question (convert to seconds)
+        updatedTimes[questionId] = (updatedTimes[questionId] || 0) + Math.floor(timeSpent / 1000);
+        
+        // CRITICAL FIX: Update the stored data to prevent reset
+        const db = await this.db;
+        data.questionElapsedTimes[questionId] = updatedTimes[questionId];
+        data.lastQuestionVisit.timestamp = now; // Update timestamp to prevent double counting
+        await db.put('examData', data, examString);
+        
+        return updatedTimes;
+      }
+      
+      return data?.questionElapsedTimes || {};
+    } catch (error) {
+      console.error('ExamDbService: Error getting question elapsed times:', error);
+      return {};
+    }
   }
+  
+  // Record the current time for when a user leaves a question
+  async finalizeCurrentQuestionTime(examString: string): Promise<Record<number, number>> {
+    if (typeof window === 'undefined') {
+      console.warn('ExamDbService: Cannot finalize current question time in non-browser environment');
+      return {};
+    }
 
-  console.warn('⚠ No lastQuestionVisit or data found:', { data });
-  return data?.questionElapsedTimes || {};
-}
+    try {
+      const db = await this.db;
+      const data = await this.getExamData(examString);
+      
+      if (data && data.lastQuestionVisit) {
+        const now = Date.now();
+        const timeSpent = now - data.lastQuestionVisit.timestamp;
+        const questionId = data.lastQuestionVisit.questionId;
+        
+        // Initialize if not exists
+        data.questionElapsedTimes[questionId] = data.questionElapsedTimes[questionId] || 0;
+        
+        // Add the elapsed time (convert to seconds)
+        data.questionElapsedTimes[questionId] += Math.floor(timeSpent / 1000);
+        
+        // Reset last visit
+        data.lastQuestionVisit = null;
+        
+        await db.put('examData', data, examString);
+        
+        return data.questionElapsedTimes;
+      }
+      
+      return data?.questionElapsedTimes || {};
+    } catch (error) {
+      console.error('ExamDbService: Error finalizing current question time:', error);
+      return {};
+    }
+  }
 
   // Get all exam data
   async getExamData(examString: string): Promise<ExamData | null> {
-    const db = await this.db;
-    return db.get('examData', examString);
+    if (typeof window === 'undefined') {
+      console.warn('ExamDbService: Cannot get exam data in non-browser environment');
+      return null;
+    }
+
+    try {
+      const db = await this.db;
+      return await db.get('examData', examString) || null;
+    } catch (error) {
+      console.error('ExamDbService: Error getting exam data:', error);
+      return null;
+    }
   }
 
   // Delete exam data after submission
   async deleteExamData(examString: string): Promise<void> {
-    const db = await this.db;
-    await db.delete('examData', examString);
+    if (typeof window === 'undefined') {
+      console.warn('ExamDbService: Cannot delete exam data in non-browser environment');
+      return;
+    }
+
+    try {
+      const db = await this.db;
+      await db.delete('examData', examString);
+    } catch (error) {
+      console.error('ExamDbService: Error deleting exam data:', error);
+    }
   }
 
   // Check if exam data exists
   async hasExamData(examString: string): Promise<boolean> {
-    const db = await this.db;
-    const data = await db.get('examData', examString);
-    return data !== undefined;
+    if (typeof window === 'undefined') {
+      console.warn('ExamDbService: Cannot check exam data in non-browser environment');
+      return false;
+    }
+
+    try {
+      const db = await this.db;
+      const data = await db.get('examData', examString);
+      return data !== undefined;
+    } catch (error) {
+      console.error('ExamDbService: Error checking exam data:', error);
+      return false;
+    }
+  }
+
+  // Clear all exam data (useful for development/testing)
+  async clearAllData(): Promise<void> {
+    if (typeof window === 'undefined') {
+      console.warn('ExamDbService: Cannot clear all data in non-browser environment');
+      return;
+    }
+
+    try {
+      const db = await this.db;
+      await db.clear('examData');
+    } catch (error) {
+      console.error('ExamDbService: Error clearing all data:', error);
+    }
+  }
+
+  // Get all stored exam strings (useful for debugging)
+  async getAllExamStrings(): Promise<string[]> {
+    if (typeof window === 'undefined') {
+      console.warn('ExamDbService: Cannot get all exam strings in non-browser environment');
+      return [];
+    }
+
+    try {
+      const db = await this.db;
+      return await db.getAllKeys('examData') as string[];
+    } catch (error) {
+      console.error('ExamDbService: Error getting all exam strings:', error);
+      return [];
+    }
   }
 }
 
