@@ -8,7 +8,7 @@ import axios from 'axios';
 import debounce from 'lodash/debounce';
 import SuperEditor from '../../../../components/supereditor/SuperEditor';
 import { useAuth } from '../../../../context/AuthContext';
-import { SearchSingleField, SelectCustomField } from '../../../../components/layout/FormComponentLayout';
+import { SearchSingleField, SelectCustomField } from '../../../../components/form/FormComponentLayout';
 
 interface Question {
   exam_type_id: number | string;

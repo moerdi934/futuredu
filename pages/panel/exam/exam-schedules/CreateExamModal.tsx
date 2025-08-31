@@ -23,7 +23,7 @@ import debounce from 'lodash/debounce';
 import Select, { ActionMeta, MultiValue } from 'react-select';
 import { PlusCircle, Timer, List, Award, Upload, FileText, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 
-import { SearchSingleField } from '../../../../components/layout/FormComponentLayout';
+import { SearchSingleField } from '../../../../components/form/FormComponentLayout';
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                     */

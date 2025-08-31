@@ -18,3 +18,209 @@ body {
   /* transform: translate(0%,20%) scaleY(1.5); */
   height: 125vh !important;
 }
+
+/* ------------------------------------------------------------ */
+/* Add this to your global CSS or component CSS file */
+
+/* Fix for mobile responsiveness and z-index conflicts */
+.main-content,
+.main-content-collapsed {
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar {
+  z-index: 1000;
+}
+
+/* Mobile responsive fixes - keep sidebar behavior intact */
+@media (max-width: 768px) {
+  /* Don't override sidebar positioning on mobile - let it behave normally */
+  .sidebar {
+    z-index: 1050;
+  }
+  
+  /* Ensure main content doesn't overlap sidebar */
+  .main-content {
+    margin-left: 250px; /* Adjust based on your sidebar width */
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  .main-content-collapsed {
+    margin-left: 80px; /* Adjust based on your collapsed sidebar width */
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  /* Ensure pagination doesn't overlap sidebar */
+  .tw-relative {
+    position: relative;
+  }
+  
+  .tw-z-0 {
+    z-index: 0;
+  }
+}
+
+/* Extra small screens (phones in portrait) */
+@media (max-width: 576px) {
+  .main-content {
+    margin-left: 240px; /* Slightly smaller for very small screens */
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+  
+  .main-content-collapsed {
+    margin-left: 70px; /* Smaller collapsed width for phones */
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+}
+
+/* Table scroll and fixed header improvements */
+.table-container {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure sticky elements work properly */
+.tw-sticky {
+  position: sticky;
+}
+
+.tw-z-10 {
+  z-index: 10;
+}
+
+.tw-z-20 {
+  z-index: 20;
+}
+
+.tw-z-30 {
+  z-index: 30;
+}
+
+.tw-z-40 {
+  z-index: 40;
+}
+
+/* Bootstrap pagination responsive fix */
+.pagination {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pagination .page-item {
+  flex-shrink: 0;
+}
+
+@media (max-width: 576px) {
+  .pagination .page-item .page-link {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    min-width: 32px;
+    text-align: center;
+  }
+}
+
+/* Ensure table headers stay fixed properly */
+thead th.tw-sticky {
+  background-color: inherit !important;
+  backdrop-filter: blur(8px);
+}
+
+/* Fix for mobile table overflow */
+@media (max-width: 768px) {
+  .tw-overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Make sure table container doesn't interfere with sidebar */
+  .tw-rounded-lg {
+    border-radius: 0.5rem;
+    isolation: isolate;
+  }
+  
+  /* Prevent horizontal overflow of buttons and dropdowns */
+  .dropdown-menu {
+    max-width: calc(100vw - 280px); /* Account for sidebar */
+    word-wrap: break-word;
+  }
+}
+
+/* Responsive container improvements */
+@media (max-width: 768px) {
+  .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .container-fluid {
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+}
+
+/* Table scroll and fixed header improvements */
+.table-container {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure sticky elements work properly */
+.tw-sticky {
+  position: sticky;
+}
+
+.tw-z-10 {
+  z-index: 10;
+}
+
+.tw-z-20 {
+  z-index: 20;
+}
+
+.tw-z-30 {
+  z-index: 30;
+}
+
+.tw-z-40 {
+  z-index: 40;
+}
+
+/* Bootstrap pagination responsive fix */
+.pagination {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 576px) {
+  .pagination .page-item .page-link {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Ensure table headers stay fixed properly */
+thead th.tw-sticky {
+  background-color: inherit !important;
+  backdrop-filter: blur(8px);
+}
+
+/* Fix for mobile table overflow */
+@media (max-width: 768px) {
+  .tw-overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Make sure table container doesn't interfere with sidebar */
+  .tw-rounded-lg {
+    border-radius: 0.5rem;
+    isolation: isolate;
+  }
+}

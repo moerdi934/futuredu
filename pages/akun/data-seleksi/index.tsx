@@ -37,7 +37,7 @@ import axios from 'axios';
 import Navbar from '../../../components/layout/NavigationBar';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { SearchSingleField, SelectOption } from '../../../components/layout/FormComponentLayout';
+import { SearchSingleField, SelectOption } from '../../../components/form/FormComponentLayout';
 import { SingleValue, ActionMeta } from 'react-select';
 
 interface ExamScoreMapping {

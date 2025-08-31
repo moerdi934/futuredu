@@ -1,3 +1,4 @@
+// components/layout/TableLayout.tsx
 'use client';
 
 import React, { useMemo, useEffect, useRef } from 'react';

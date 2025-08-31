@@ -1,12 +1,13 @@
+// components/layout/FilterModalLayout.tsx
 'use client';
 
 import React, { useState } from 'react';
 import { Modal, Button, Form, Row, Col } from 'react-bootstrap';
 import { FaFilter } from 'react-icons/fa';
-import { YesNoField } from './YesNoField';
-import { SearchField } from './SearchField';
-import { DateRangeField } from './DateRangeField';
-import { CustomField } from './CustomField';
+import { YesNoField } from '../form/YesNoField';
+import { SearchField } from '../form/SearchField';
+import { DateRangeField } from '../form/DateRangeField';
+import { CustomField } from '../form/CustomField';
 
 interface FilterModalTemplateProps {
   show: boolean;

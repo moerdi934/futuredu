@@ -12,7 +12,7 @@ import {
   YesNoField,
   DateRangeField,
   SelectOption 
-} from '../../../../components/layout/FormComponentLayout';
+} from '../../../../components/form/FormComponentLayout';
 
 interface EditExamScheduleModalProps {
   isOpen: boolean;

@@ -32,8 +32,8 @@ import axios from 'axios';
 import NavigationBar from '../../../components/layout/NavigationBar';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { SearchSingleField } from '../../../components/layout/FormComponentLayout';
-import { SelectOption } from '../../../components/layout/FormComponentLayout';
+import { SearchSingleField } from '../../../components/form/FormComponentLayout';
+import { SelectOption } from '../../../components/form/FormComponentLayout';
 import { SingleValue, ActionMeta } from 'react-select';
 
 interface FormData {

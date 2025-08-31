@@ -24,7 +24,7 @@ import {
   SearchSingleField,
   SearchMultipleField,
   DateRangeField
-} from '../../../../components/layout/FormComponentLayout';
+} from '../../../../components/form/FormComponentLayout';
 
 import {
   FileText,

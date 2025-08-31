@@ -37,7 +37,7 @@ import { useAuth } from '../../../../../context/AuthContext';
 import {
   SearchSingleField,
   SelectCustomField,
-} from '../../../../../components/layout/FormComponentLayout';
+} from '../../../../../components/form/FormComponentLayout';
 import CreateBulkModal from './CreateBulkModal';
 
 const optionLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];

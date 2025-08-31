@@ -6,7 +6,7 @@ import axios, { AxiosError } from 'axios';
 import { 
   ShortFormField, 
   SelectOption
-} from '../../../../components/layout/FormComponentLayout';
+} from '../../../../components/form/FormComponentLayout';
 
 interface EditStudentModalProps {
   isOpen: boolean;
