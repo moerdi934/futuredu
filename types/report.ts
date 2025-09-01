@@ -24,6 +24,8 @@ export interface FilterConfig {
   label: string;
   options?: { value: any; label: string }[];
   multiple?: boolean;
+  apiEndpoint?: string; // New: for API-based filter options
+  debounceMs?: number; // New: for debounced API calls
 }
 
 export interface SortConfig {

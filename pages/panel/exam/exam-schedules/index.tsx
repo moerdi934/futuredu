@@ -1,7 +1,7 @@
 // pages/panel/exam/exam-schedules/index.tsx
 
 import React from 'react';
-import { FaPlus, FaEye, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaEye, FaEdit, FaTrash, FaCalendar, FaClock } from 'react-icons/fa';
 import MainLayout from '../../../../components/layout/DashboardLayout';
 import ReportLayout from '../../../../components/report/ReportLayout';
 import { ReportConfig, ColumnConfig } from '../../../../types/report';
@@ -30,7 +30,8 @@ const ExamSchedulesPage: React.FC = () => {
     
     return (
       <div className="tw-text-center">
-        <div className="tw-font-semibold tw-text-purple-700">
+        <div className="tw-font-semibold tw-text-purple-700 tw-flex tw-items-center tw-justify-center tw-gap-1">
+          <FaClock size={12} />
           {hours > 0 ? `${hours}j ${remainingMinutes}m` : `${remainingMinutes}m`}
         </div>
         <div className="tw-text-xs tw-text-gray-500">({value} menit)</div>
@@ -38,13 +39,13 @@ const ExamSchedulesPage: React.FC = () => {
     );
   };
 
-  const formatBoolean = (value: boolean, label: string) => {
+  const formatBoolean = (value: boolean, label: string, positiveColor = 'green', negativeColor = 'red') => {
     return (
       <div className="tw-text-center">
         <span className={`tw-px-3 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium ${
           value 
-            ? 'tw-bg-green-100 tw-text-green-800' 
-            : 'tw-bg-red-100 tw-text-red-800'
+            ? `tw-bg-${positiveColor}-100 tw-text-${positiveColor}-800` 
+            : `tw-bg-${negativeColor}-100 tw-text-${negativeColor}-800`
         }`}>
           {value ? `✓ ${label}` : `✗ Tidak ${label}`}
         </span>
@@ -55,10 +56,10 @@ const ExamSchedulesPage: React.FC = () => {
   const formatCreator = (value: string) => {
     return (
       <div className="tw-flex tw-items-center tw-gap-2">
-        <div className="tw-w-8 tw-h-8 tw-bg-purple-500 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-text-white tw-text-xs tw-font-bold">
+        <div className="tw-w-8 tw-h-8 tw-bg-gradient-to-r tw-from-purple-500 tw-to-indigo-500 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-text-white tw-text-xs tw-font-bold">
           {value ? value.charAt(0).toUpperCase() : 'U'}
         </div>
-        <span className="tw-font-medium">{value || 'Unknown'}</span>
+        <span className="tw-font-medium tw-text-gray-700">{value || 'Unknown'}</span>
       </div>
     );
   };
@@ -74,7 +75,34 @@ const ExamSchedulesPage: React.FC = () => {
     );
   };
 
-  // Definisi kolom-kolom
+  const formatDateTime = (value: string) => {
+    if (!value) {
+      return (
+        <div className="tw-text-center">
+          <span className="tw-text-gray-400 tw-italic tw-flex tw-items-center tw-justify-center tw-gap-1">
+            <FaCalendar size={12} />
+            Belum ditentukan
+          </span>
+        </div>
+      );
+    }
+    
+    const date = new Date(value);
+    return (
+      <div className="tw-text-center">
+        <div className="tw-font-semibold tw-text-gray-800 tw-flex tw-items-center tw-justify-center tw-gap-1">
+          <FaCalendar size={12} />
+          {date.toLocaleDateString('id-ID')}
+        </div>
+        <div className="tw-text-xs tw-text-gray-500 tw-flex tw-items-center tw-justify-center tw-gap-1">
+          <FaClock size={10} />
+          {date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+        </div>
+      </div>
+    );
+  };
+
+  // Definisi kolom-kolom berdasarkan skema database
   const columns: ColumnConfig[] = [
     {
       key: 'id',
@@ -82,15 +110,15 @@ const ExamSchedulesPage: React.FC = () => {
       type: 'number',
       width: 80,
       colGroup: 'basic'
-    },
+    }, // ID tersembunyi dari tampilan tapi tersedia untuk API calls
     {
       key: 'schedule_name',
       label: 'Nama Jadwal',
       type: 'string',
-      width: 200,
+      width: 220,
       colGroup: 'basic',
       formatter: (value) => (
-        <div className="tw-font-semibold tw-text-gray-800">
+        <div className="tw-font-semibold tw-text-gray-800 tw-leading-tight">
           {value || '-'}
         </div>
       )
@@ -99,10 +127,10 @@ const ExamSchedulesPage: React.FC = () => {
       key: 'description',
       label: 'Deskripsi',
       type: 'string',
-      width: 250,
+      width: 280,
       colGroup: 'basic',
       formatter: (value) => (
-        <div className="tw-text-gray-600 tw-text-sm tw-line-clamp-2" title={value}>
+        <div className="tw-text-gray-600 tw-text-sm tw-line-clamp-3 tw-leading-relaxed" title={value}>
           {value || '-'}
         </div>
       )
@@ -111,7 +139,7 @@ const ExamSchedulesPage: React.FC = () => {
       key: 'exam_name',
       label: 'Nama Ujian',
       type: 'string',
-      width: 300,
+      width: 320,
       colGroup: 'exam_info',
       formatter: formatExamNames
     },
@@ -127,35 +155,11 @@ const ExamSchedulesPage: React.FC = () => {
       key: 'exam_type',
       label: 'Tipe Ujian',
       type: 'string',
-      width: 150,
+      width: 160,
       colGroup: 'exam_info',
       formatter: (value) => (
-        <span className="tw-bg-purple-100 tw-text-purple-800 tw-px-3 tw-py-1 tw-rounded-full tw-text-sm tw-font-medium">
-          {value || '-'}
-        </span>
-      )
-    },
-    {
-      key: 'series',
-      label: 'Series',
-      type: 'string',
-      width: 120,
-      colGroup: 'exam_info',
-      formatter: (value) => (
-        <span className="tw-bg-blue-100 tw-text-blue-800 tw-px-2 tw-py-1 tw-rounded tw-text-sm tw-font-medium">
-          {value || '-'}
-        </span>
-      )
-    },
-    {
-      key: 'group_product',
-      label: 'Group Product',
-      type: 'string',
-      width: 150,
-      colGroup: 'exam_info',
-      formatter: (value) => (
-        <span className="tw-bg-orange-100 tw-text-orange-800 tw-px-2 tw-py-1 tw-rounded tw-text-sm tw-font-medium">
-          {value || '-'}
+        <span className="tw-bg-gradient-to-r tw-from-purple-100 tw-to-indigo-100 tw-text-purple-800 tw-px-3 tw-py-1 tw-rounded-full tw-text-sm tw-font-medium tw-shadow-sm">
+          {value || 'Unknown'}
         </span>
       )
     },
@@ -171,17 +175,17 @@ const ExamSchedulesPage: React.FC = () => {
       key: 'isfree',
       label: 'Status Free',
       type: 'boolean',
-      width: 120,
+      width: 130,
       colGroup: 'status',
-      formatter: (value) => formatBoolean(value, 'Free')
+      formatter: (value) => formatBoolean(value, 'Free', 'emerald', 'rose')
     },
     {
       key: 'is_valid',
       label: 'Status Valid',
       type: 'boolean',
-      width: 120,
+      width: 130,
       colGroup: 'status',
-      formatter: (value) => formatBoolean(value, 'Valid')
+      formatter: (value) => formatBoolean(value, 'Valid', 'blue', 'gray')
     },
     {
       key: 'start_time',
@@ -189,16 +193,7 @@ const ExamSchedulesPage: React.FC = () => {
       type: 'datetime',
       width: 180,
       colGroup: 'schedule',
-      formatter: (value) => {
-        if (!value) {
-          return (
-            <span className="tw-text-gray-400 tw-italic">
-              Belum ditentukan
-            </span>
-          );
-        }
-        return new Date(value).toLocaleString('id-ID');
-      }
+      formatter: formatDateTime
     },
     {
       key: 'end_time',
@@ -206,16 +201,7 @@ const ExamSchedulesPage: React.FC = () => {
       type: 'datetime',
       width: 180,
       colGroup: 'schedule',
-      formatter: (value) => {
-        if (!value) {
-          return (
-            <span className="tw-text-gray-400 tw-italic">
-              Belum ditentukan
-            </span>
-          );
-        }
-        return new Date(value).toLocaleString('id-ID');
-      }
+      formatter: formatDateTime
     },
     {
       key: 'schedule_creator',
@@ -235,7 +221,7 @@ const ExamSchedulesPage: React.FC = () => {
     }
   ];
 
-  // Konfigurasi report
+  // Konfigurasi report dengan sistem batch filtering
   const reportConfig: ReportConfig = {
     title: 'Jadwal Ujian (Exam Schedules)',
     columns,
@@ -248,7 +234,7 @@ const ExamSchedulesPage: React.FC = () => {
       {
         key: 'exam_info',
         label: 'Informasi Ujian',
-        columns: ['exam_name', 'exam_duration', 'exam_type', 'series', 'group_product', 'question_qty']
+        columns: ['exam_name', 'exam_duration', 'exam_type', 'question_qty']
       },
       {
         key: 'status',
@@ -266,39 +252,25 @@ const ExamSchedulesPage: React.FC = () => {
         columns: ['schedule_creator', 'exam_creator']
       }
     ],
+    // Filters menggunakan FormComponentLayout components
     filters: [
+      // Text filter menggunakan ShortFormField
       {
         key: 'schedule_name',
         type: 'text',
         label: 'Nama Jadwal'
       },
+      
+      // API-based select menggunakan SearchSingleField
       {
         key: 'exam_type',
         type: 'select',
         label: 'Tipe Ujian',
-        options: [
-          { value: 'SNBT Exam', label: 'SNBT Exam' },
-          { value: 'UTBK Exam', label: 'UTBK Exam' },
-          { value: 'Tryout', label: 'Tryout' },
-          { value: 'Custom', label: 'Custom' }
-        ]
+        apiEndpoint: '/exam-schedules/exam-types',
+        debounceMs: 300
       },
-      {
-        key: 'series',
-        type: 'select',
-        label: 'Series',
-        options: [
-          { value: 'SBMPTN', label: 'SBMPTN' },
-          { value: 'UTBK', label: 'UTBK' },
-          { value: 'SIMAK', label: 'SIMAK' },
-          { value: 'CUSTOM', label: 'CUSTOM' }
-        ]
-      },
-      {
-        key: 'group_product',
-        type: 'text',
-        label: 'Group Product'
-      },
+      
+      // Boolean filters menggunakan BooleanField
       {
         key: 'isfree',
         type: 'boolean',
@@ -309,32 +281,47 @@ const ExamSchedulesPage: React.FC = () => {
         type: 'boolean',
         label: 'Status Valid'
       },
+      
+      // Creator filters menggunakan SearchSingleField dengan API
       {
         key: 'schedule_creator',
-        type: 'text',
-        label: 'Pembuat Jadwal'
+        type: 'select',
+        label: 'Pembuat Jadwal',
+        apiEndpoint: '/exam-schedules/schedule-creators',
+        debounceMs: 300
       },
       {
         key: 'exam_creator',
-        type: 'text',
-        label: 'Pembuat Ujian'
+        type: 'select',
+        label: 'Pembuat Ujian',
+        apiEndpoint: '/exam-schedules/exam-creators',
+        debounceMs: 300
       },
+      
+      // Date filters menggunakan DateField
       {
         key: 'start_time',
         type: 'date',
-        label: 'Tanggal Mulai'
+        label: 'Tanggal Mulai (Dari)'
       },
       {
         key: 'end_time',
         type: 'date',
-        label: 'Tanggal Selesai'
+        label: 'Tanggal Selesai (Sampai)'
+      },
+      
+      // Number filter menggunakan NumberField
+      {
+        key: 'question_qty',
+        type: 'number',
+        label: 'Jumlah Soal (Minimal)'
       }
     ],
     defaultSort: [
       { key: 'id', direction: 'desc' }
     ],
+    // ID dikecualikan dari kolom default yang terlihat
     defaultVisibleColumns: [
-      'id', 
       'schedule_name', 
       'description', 
       'exam_name', 
@@ -342,13 +329,16 @@ const ExamSchedulesPage: React.FC = () => {
       'exam_type', 
       'isfree', 
       'is_valid',
+      'start_time',
+      'end_time',
       'schedule_creator'
     ],
+    // Freeze column diubah ke schedule_name karena ID disembunyikan
     defaultFreezeColumn: 'schedule_name',
     showIcon: true,
     showRowNumber: true,
     pageSize: 10,
-    rowHeight: 70,
+    rowHeight: 80,
     exportConfig: {
       enabled: true,
       filename: 'exam_schedules',
@@ -356,9 +346,9 @@ const ExamSchedulesPage: React.FC = () => {
     },
     actionColumn: {
       enabled: true,
-      label: 'Pengaturan',
+      label: 'Actions',
       width: 200,
-      sticky: false, // Changed from true to false
+      sticky: false,
       buttons: [
         {
           label: 'Detail',
@@ -367,8 +357,8 @@ const ExamSchedulesPage: React.FC = () => {
           size: 'sm',
           onClick: (row, index) => {
             console.log('View detail exam schedule:', row);
-            // Implementasi navigasi ke halaman detail
-            // router.push(`/panel/exams/exam-schedules/${row.id}`);
+            // Implementasi: navigasi ke halaman detail menggunakan ID yang tersembunyi
+            window.open(`/panel/exam/exam-schedules/${row.id}`, '_blank');
           }
         },
         {
@@ -378,8 +368,8 @@ const ExamSchedulesPage: React.FC = () => {
           size: 'sm',
           onClick: (row, index) => {
             console.log('Edit exam schedule:', row);
-            // Implementasi navigasi ke halaman edit
-            // router.push(`/panel/exams/exam-schedules/edit/${row.id}`);
+            // Implementasi: navigasi ke halaman edit menggunakan ID yang tersembunyi
+            window.location.href = `/panel/exam/exam-schedules/edit/${row.id}`;
           }
         },
         {
@@ -388,9 +378,30 @@ const ExamSchedulesPage: React.FC = () => {
           variant: 'outline-danger',
           size: 'sm',
           onClick: (row, index) => {
-            if (window.confirm('Apakah Anda yakin ingin menghapus jadwal ini?')) {
+            if (window.confirm(`Apakah Anda yakin ingin menghapus jadwal "${row.schedule_name}"?`)) {
               console.log('Delete exam schedule:', row);
-              // Implementasi delete
+              // Implementasi: panggil delete API menggunakan ID yang tersembunyi
+              /*
+              fetch(`/api/exam-schedules/${row.id}`, { 
+                method: 'DELETE',
+                headers: {
+                  'Content-Type': 'application/json',
+                  // Tambahkan authorization header jika diperlukan
+                }
+              })
+              .then(response => {
+                if (response.ok) {
+                  // Refresh tabel setelah berhasil dihapus
+                  window.location.reload();
+                } else {
+                  alert('Gagal menghapus jadwal');
+                }
+              })
+              .catch(error => {
+                console.error('Error deleting schedule:', error);
+                alert('Terjadi kesalahan saat menghapus jadwal');
+              });
+              */
             }
           }
         }
@@ -403,8 +414,8 @@ const ExamSchedulesPage: React.FC = () => {
         variant: 'primary',
         onClick: () => {
           console.log('Create new exam schedule');
-          // Implementasi navigasi ke halaman create
-          // router.push('/panel/exams/exam-schedules/create');
+          // Implementasi: navigasi ke halaman create
+          window.location.href = '/panel/exam/exam-schedules/create';
         }
       }
     ]
@@ -417,7 +428,7 @@ const ExamSchedulesPage: React.FC = () => {
           config={reportConfig}
           apiEndpoint="/exam-schedules/all"
           fetchOnMount={true}
-          searchMode="client"
+          searchMode="server" // Menggunakan server-side search dengan batch filtering
         />
       </div>
     </MainLayout>

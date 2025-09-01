@@ -12,14 +12,14 @@ interface ReportLayoutProps {
   config: ReportConfig;
   apiEndpoint: string;
   fetchOnMount?: boolean;
-  searchMode?: 'client' | 'server'; // New prop for search mode
+  searchMode?: 'client' | 'server';
 }
 
 const ReportLayout: React.FC<ReportLayoutProps> = ({
   config,
   apiEndpoint,
   fetchOnMount = true,
-  searchMode = 'client' // Default to client-side for backward compatibility
+  searchMode = 'client'
 }) => {
   const {
     data,
@@ -42,6 +42,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
     updateVisibleColumns,
     updateFreezeColumn,
     resetFilters,
+    applyFilters,
     refresh
   } = useReport({ config, apiEndpoint, fetchOnMount, searchMode });
 
@@ -79,7 +80,9 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
           <div className="tw-text-xs tw-text-blue-600">
             <strong>Debug Info:</strong> Search Mode: {searchMode} | 
             Records: {totalRecords} | 
-            Current Search: "{globalSearch}"
+            Current Search: "{globalSearch}" |
+            Visible Columns: {visibleColumns.length} (ID hidden) |
+            Active Filters: {Object.keys(filterValues).filter(key => filterValues[key] !== '' && filterValues[key] !== null && filterValues[key] !== undefined).length}
             {searchMode === 'server' && globalSearch && (
               <span className="tw-ml-2 tw-text-orange-600">(Server-side search active)</span>
             )}
@@ -87,7 +90,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
         </div>
       )}
 
-      {/* Header dengan Title dan Action Buttons */}
+      {/* Header with Title and Action Buttons */}
       <ReportHeader
         title={config.title}
         actionButtons={config.actionButtons}
@@ -98,7 +101,7 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
         loading={loading}
       />
 
-      {/* Filter, Column Selection, Global Search, dan Freeze Column Controls */}
+      {/* Filter, Column Selection, Global Search, and Freeze Column Controls */}
       <ReportFilters
         filters={config.filters}
         columns={config.columns}
@@ -112,10 +115,11 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
         onVisibleColumnsChange={updateVisibleColumns}
         onFreezeColumnChange={updateFreezeColumn}
         onResetFilters={resetFilters}
+        onApplyFilters={applyFilters}
         loading={loading}
       />
 
-      {/* Table dengan Data */}
+      {/* Table with Data */}
       <ReportTable
         data={data}
         columns={config.columns}

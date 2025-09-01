@@ -178,6 +178,41 @@ export interface DateRangeProps {
   required?: boolean;
 }
 
+// NEW: Date Field Props
+export interface DateFieldProps {
+  label: string;
+  value: Date | null;
+  onChange: (date: Date | null) => void;
+  error?: string;
+  required?: boolean;
+  placeholder?: string;
+}
+
+// NEW: Number Field Props
+export interface NumberFieldProps {
+  label: string;
+  value: string | number;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  error?: string;
+  required?: boolean;
+  placeholder?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+// NEW: Boolean Field Props (Radio/Checkbox style)
+export interface BooleanFieldProps {
+  label: string;
+  value: boolean | null;
+  onChange: (value: boolean | null) => void;
+  error?: string;
+  required?: boolean;
+  type?: 'radio' | 'select';
+  trueLabel?: string;
+  falseLabel?: string;
+}
+
 export interface EnhancedSearchSingleProps extends SearchSingleProps {
   preserveExistingParams?: boolean;
   customSearchParam?: string;
@@ -866,6 +901,162 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
     </Form.Group>
   );
 
+// NEW: Date Field Component
+export const DateField: React.FC<DateFieldProps> = ({
+  label,
+  value,
+  onChange,
+  error,
+  required = false,
+  placeholder = "Select date"
+}) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const dateValue = e.target.value ? new Date(e.target.value) : null;
+    onChange(dateValue);
+  };
+
+  const formatDateForInput = (date: Date | null): string => {
+    if (!date) return '';
+    return date.toISOString().split('T')[0];
+  };
+
+  return (
+    <Form.Group className="mb-3">
+      <Form.Label className="tw-font-semibold tw-text-white tw-mb-2">
+        {label} {required && <span className="text-danger">*</span>}
+      </Form.Label>
+      <InputGroup>
+        <InputGroup.Text className="tw-bg-white/95 tw-border-0 tw-rounded-l-xl">
+          <Calendar size={16} />
+        </InputGroup.Text>
+        <Form.Control
+          type="date"
+          value={formatDateForInput(value)}
+          onChange={handleChange}
+          isInvalid={!!error}
+          className="tw-border-0 tw-rounded-r-xl tw-bg-white/95 tw-text-gray-800"
+          placeholder={placeholder}
+        />
+      </InputGroup>
+      {error && (
+        <Form.Control.Feedback type="invalid">
+          {error}
+        </Form.Control.Feedback>
+      )}
+    </Form.Group>
+  );
+};
+
+// NEW: Number Field Component
+export const NumberField: React.FC<NumberFieldProps> = ({
+  label,
+  value,
+  onChange,
+  error,
+  required = false,
+  placeholder,
+  min,
+  max,
+  step = 1
+}) => (
+  <Form.Group className="mb-3">
+    <Form.Label className="tw-font-semibold tw-text-white tw-mb-2">
+      {label} {required && <span className="text-danger">*</span>}
+    </Form.Label>
+    <Form.Control
+      type="number"
+      value={value}
+      onChange={onChange}
+      isInvalid={!!error}
+      placeholder={placeholder}
+      min={min}
+      max={max}
+      step={step}
+      className="tw-border-0 tw-rounded-xl tw-shadow-sm tw-bg-white/95 tw-backdrop-blur-sm tw-text-gray-800 tw-py-3"
+    />
+    {error && (
+      <Form.Control.Feedback type="invalid">
+        {error}
+      </Form.Control.Feedback>
+    )}
+  </Form.Group>
+);
+
+// NEW: Boolean Field Component (Radio/Select style)
+export const BooleanField: React.FC<BooleanFieldProps> = ({
+  label,
+  value,
+  onChange,
+  error,
+  required = false,
+  type = 'select',
+  trueLabel = 'Ya',
+  falseLabel = 'Tidak'
+}) => {
+  if (type === 'radio') {
+    return (
+      <Form.Group className="mb-3">
+        <Form.Label className="tw-font-semibold tw-text-white tw-mb-2">
+          {label} {required && <span className="text-danger">*</span>}
+        </Form.Label>
+        <div className="tw-flex tw-gap-4">
+          <Form.Check
+            type="radio"
+            id={`${label}-true`}
+            name={label}
+            label={trueLabel}
+            checked={value === true}
+            onChange={() => onChange(true)}
+            className="tw-text-white"
+          />
+          <Form.Check
+            type="radio"
+            id={`${label}-false`}
+            name={label}
+            label={falseLabel}
+            checked={value === false}
+            onChange={() => onChange(false)}
+            className="tw-text-white"
+          />
+        </div>
+        {error && (
+          <div className="invalid-feedback" style={{ display: 'block' }}>
+            {error}
+          </div>
+        )}
+      </Form.Group>
+    );
+  }
+
+  // Select style
+  return (
+    <Form.Group className="mb-3">
+      <Form.Label className="tw-font-semibold tw-text-white tw-mb-2">
+        {label} {required && <span className="text-danger">*</span>}
+      </Form.Label>
+      <Form.Select
+        value={value === null ? '' : value.toString()}
+        onChange={(e) => {
+          const val = e.target.value;
+          if (val === '') onChange(null);
+          else onChange(val === 'true');
+        }}
+        isInvalid={!!error}
+        className="tw-border-0 tw-rounded-xl tw-shadow-sm tw-bg-white/95 tw-backdrop-blur-sm tw-text-gray-800 tw-py-3"
+      >
+        <option value="">Pilih {label}</option>
+        <option value="true">{trueLabel}</option>
+        <option value="false">{falseLabel}</option>
+      </Form.Select>
+      {error && (
+        <Form.Control.Feedback type="invalid">
+          {error}
+        </Form.Control.Feedback>
+      )}
+    </Form.Group>
+  );
+};
+
 export const buildApiEndpointWithParams = (
   baseEndpoint: string, 
   additionalParams: Record<string, string | number> = {},
@@ -901,6 +1092,9 @@ export default {
   SearchMultipleField, 
   YesNoField,
   DateRangeField,
+  DateField,
+  NumberField,
+  BooleanField,
   SelectCustomField,
   apiClient
 };

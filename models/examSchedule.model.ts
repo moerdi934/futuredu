@@ -6,6 +6,7 @@ export interface ExamScheduleFilters {
   page?: number;
   limit?: number;
   search?: string;
+  schedule_name?: string;
   exam_type?: string;
   series?: string;
   group_product?: string;
@@ -13,6 +14,8 @@ export interface ExamScheduleFilters {
   is_valid?: string;
   start_time?: string;
   end_time?: string;
+  schedule_creator?: string[];
+  exam_creator?: string[];
   sortKey?: string;
   sortOrder?: string;
   userId?: string;
@@ -58,19 +61,20 @@ export interface AccessCheck {
   accessGranted: boolean;
 }
 
-// Get exam schedules with filters, sorting, and pagination
+// Get exam schedules with comprehensive filters, sorting, and pagination
 export const getExamSchedules = async (filters: ExamScheduleFilters): Promise<ExamScheduleResult> => {
   const {
     page = 1,
     limit = 50,
     search = '',
+    schedule_name = '',
     exam_type,
-    series,
-    group_product,
     isfree,
     is_valid,
     start_time,
     end_time,
+    schedule_creator = [],
+    exam_creator = [],
     sortKey = 'es.id',
     sortOrder = 'asc',
     userId,
@@ -86,8 +90,6 @@ export const getExamSchedules = async (filters: ExamScheduleFilters): Promise<Ex
     'exam_name',
     'exam_duration',
     'exam_type',
-    'series',
-    'group_product',
     'isfree',
     'is_valid',
     'start_time',
@@ -97,16 +99,12 @@ export const getExamSchedules = async (filters: ExamScheduleFilters): Promise<Ex
     'exam_creator',
   ];
 
-  // Validate sortKey
   const validatedSortKey = allowedSortKeys.includes(sortKey) ? sortKey : 'es.id';
-
-  // Validate sortOrder
   const validatedSortOrder = sortOrder.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
 
-  // Common FROM and JOIN clauses
+  // Common FROM and JOIN clauses using v_dashboard_userdata
   const baseFromClause = `
     FROM exam_schedule es
-    left join product_type pt on pt.id = es."type" 
     JOIN LATERAL unnest(es.exam_id_list) AS u(exam_id) ON true
     JOIN exams ex ON ex.id = u.exam_id
     LEFT JOIN v_dashboard_userdata us ON us.userid = es.created_by
@@ -126,7 +124,7 @@ export const getExamSchedules = async (filters: ExamScheduleFilters): Promise<Ex
         FROM exam_schedule es2
         JOIN LATERAL unnest(es2.exam_id_list) AS u(exam_id) ON true
         JOIN exams ex2 ON ex2.id = u.exam_id
-        where es2.id = es.id
+        WHERE es2.id = es.id
         GROUP BY es2.id
       ) AS exam_name,
       (
@@ -135,32 +133,30 @@ export const getExamSchedules = async (filters: ExamScheduleFilters): Promise<Ex
         FROM exam_schedule es2
         JOIN LATERAL unnest(es2.exam_id_list) AS u(exam_id) ON true
         JOIN exams ex2 ON ex2.id = u.exam_id
-        where es2.id = es.id
+        WHERE es2.id = es.id
         GROUP BY es2.id
       ) AS exam_duration,
-      pt.description exam_type,
-      pt.series series,
-      pt.group_product group_product,
+      COALESCE(es.exam_type, 'Unknown') as exam_type,
       es.isfree,
       es.is_valid,
       es.start_time,
       es.end_time,
-      coalesce(us.name, 'admin') AS schedule_creator,
-      coalesce(us2.name, 'admin') AS exam_creator,
+      COALESCE(us.name, 'admin') AS schedule_creator,
+      COALESCE(us2.name, 'admin') AS exam_creator,
       (
         SELECT
         SUM(array_length(ex2.question_id_list, 1))
         FROM exam_schedule es2
         JOIN LATERAL unnest(es2.exam_id_list) AS u(exam_id) ON true
         JOIN exams ex2 ON ex2.id = u.exam_id
-        where es2.id = es.id
+        WHERE es2.id = es.id
         GROUP BY es2.id
       ) AS question_qty
   `;
 
   // Base GROUP BY clause
   const baseGroupByClause = `
-    GROUP BY es.id, es.name, es.description, es.exam_type, es.isfree, es.is_valid, es.start_time, es.end_time, us.name, us2.name, pt.description, pt.series, pt.group_product 
+    GROUP BY es.id, es.name, es.description, es.exam_type, es.isfree, es.is_valid, es.start_time, es.end_time, us.name, us2.name
   `;
 
   // Initialize WHERE clauses
@@ -169,204 +165,30 @@ export const getExamSchedules = async (filters: ExamScheduleFilters): Promise<Ex
   let valueIndex = 1;
   let filterParamsCount = 0;
 
-  if (search) {
-    whereClauses.push(`(es.name ILIKE $${valueIndex} OR es.id::TEXT ILIKE $${valueIndex})`);
-    values.push(`%${search}%`);
+  // Global search - searches across multiple fields
+  if (search && search.trim()) {
+    whereClauses.push(`(
+      es.name ILIKE $${valueIndex} OR 
+      es.id::TEXT ILIKE $${valueIndex} OR
+      es.description ILIKE $${valueIndex} OR
+      es.exam_type ILIKE $${valueIndex} OR
+      us.name ILIKE $${valueIndex} OR
+      us2.name ILIKE $${valueIndex}
+    )`);
+    values.push(`%${search.trim()}%`);
     valueIndex++;
     filterParamsCount++;
   }
 
-  if (exam_type && exam_type !== 'All') {
-    whereClauses.push(`pt.description = $${valueIndex}`);
-    values.push(exam_type);
+  // Schedule name filter (separate from global search)
+  if (schedule_name && schedule_name.trim()) {
+    whereClauses.push(`es.name ILIKE $${valueIndex}`);
+    values.push(`%${schedule_name.trim()}%`);
     valueIndex++;
     filterParamsCount++;
   }
 
-  if (series && series !== 'All') {
-    whereClauses.push(`pt.series = $${valueIndex}`);
-    values.push(series);
-    valueIndex++;
-    filterParamsCount++;
-  }
-
-  if (group_product && group_product !== 'All') {
-    whereClauses.push(`pt.group_product = $${valueIndex}`);
-    values.push(group_product);
-    valueIndex++;
-    filterParamsCount++;
-  }
-
-  if (isfree && isfree !== 'All') {
-    whereClauses.push(`es.isfree = $${valueIndex}`);
-    values.push(isfree === 'true');
-    valueIndex++;
-    filterParamsCount++;
-  }
-
-  if (is_valid && is_valid !== 'All') {
-    whereClauses.push(`es.is_valid = $${valueIndex}`);
-    values.push(is_valid === 'true');
-    valueIndex++;
-    filterParamsCount++;
-  }
-
-  if (start_time) {
-    whereClauses.push(`es.start_time >= $${valueIndex}`);
-    values.push(start_time);
-    valueIndex++;
-    filterParamsCount++;
-  }
-
-  if (end_time) {
-    whereClauses.push(`es.end_time <= $${valueIndex}`);
-    values.push(end_time);
-    valueIndex++;
-    filterParamsCount++;
-  }
-
-  if (userId) {
-    whereClauses.push(`(us.id = $${valueIndex} OR us2.id = $${valueIndex})`);
-    values.push(userId);
-    valueIndex++;
-    filterParamsCount++;
-  }
-
-  // Construct WHERE clause
-  let whereClause = '';
-  if (whereClauses.length > 0) {
-    whereClause = ' WHERE ' + whereClauses.join(' AND ');
-  }
-
-  // Construct the main query
-  const mainQuery = `
-    ${baseSelectClause}
-    ${baseFromClause}
-    ${whereClause}
-    ${baseGroupByClause}
-    ORDER BY ${validatedSortKey} ${validatedSortOrder}
-    LIMIT $${valueIndex} OFFSET $${valueIndex + 1}
-  `;
-  values.push(limit, offset);
-
-  // Construct the count query using a subquery
-  const countQuery = `
-    SELECT COUNT(*) AS total
-    FROM (
-      SELECT es.id
-      ${baseFromClause}
-      ${whereClause}
-      ${baseGroupByClause}
-    ) AS sub
-  `;
-
-  try {
-    const [dataResult, countResult] = await Promise.all([
-      pool.query(mainQuery, values),
-      pool.query(countQuery, values.slice(0, filterParamsCount)),
-    ]);
-
-    const total = parseInt(countResult.rows[0].total, 10);
-    const totalPages = Math.ceil(total / limit);
-
-    return {
-      data: dataResult.rows,
-      total,
-      totalPages,
-    };
-  } catch (error) {
-    console.error('Error fetching exam schedules:', error);
-    throw error;
-  }
-};
-
-export const getExamSchedulesById = async (filters: ExamScheduleFilters): Promise<ExamScheduleResult> => {
-  const {
-    page = 1,
-    limit = 50,
-    search = '',
-    exam_type,
-    isfree,
-    is_valid,
-    start_time,
-    end_time,
-    sortKey = 'es.id',
-    sortOrder = 'asc',
-    userId,
-  } = filters;
-
-  const offset = (page - 1) * limit;
-
-  // Define allowed sort keys to prevent SQL injection
-  const allowedSortKeys = [
-    'es.id',
-    'schedule_name',
-    'exam_id',
-    'exam_name',
-    'exam_duration',
-    'exam_type',
-    'isfree',
-    'is_valid',
-    'start_time',
-    'end_time',
-    'question_qty',
-    'schedule_creator',
-    'exam_creator',
-  ];
-
-  // Validate sortKey
-  const validatedSortKey = allowedSortKeys.includes(sortKey) ? sortKey : 'es.id';
-
-  // Validate sortOrder
-  const validatedSortOrder = sortOrder.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
-
-  // Common FROM and JOIN clauses
-  const baseFromClause = `
-    FROM exam_schedule es
-    JOIN LATERAL unnest(es.exam_id_list) AS u(exam_id) ON true
-    JOIN exams ex ON ex.id = u.exam_id
-    LEFT JOIN questions q ON q.exam_id = ex.id
-    LEFT JOIN users us ON us.id = es.created_by 
-    LEFT JOIN users us2 ON us2.id = ex.create_user_id 
-  `;
-
-  // Base SELECT clause
-  const baseSelectClause = `
-    SELECT 
-      es.id,
-      es.name AS schedule_name,
-      es.description,
-      u.exam_id,
-      ex.name AS exam_name,
-      ex.duration AS exam_duration,
-      es.exam_type,
-      es.isfree,
-      es.is_valid,
-      es.start_time,
-      es.end_time,
-      coalesce(us.username,'admin') AS schedule_creator,
-      coalesce(us2.username,'admin') AS exam_creator,
-      COUNT(q.id) AS question_qty
-  `;
-
-  // Base GROUP BY clause
-  const baseGroupByClause = `
-    GROUP BY es.id, u.exam_id, ex.name, ex.duration, us.username, us2.username
-  `;
-
-  // Initialize WHERE clauses
-  let whereClauses: string[] = [];
-  let values: any[] = [];
-  let valueIndex = 1;
-  let filterParamsCount = 0;
-
-  if (search) {
-    whereClauses.push(`(es.name ILIKE $${valueIndex} OR es.id::TEXT ILIKE $${valueIndex})`);
-    values.push(`%${search}%`);
-    valueIndex++;
-    filterParamsCount++;
-  }
-
+  // Exam type filter
   if (exam_type && exam_type !== 'All') {
     whereClauses.push(`es.exam_type = $${valueIndex}`);
     values.push(exam_type);
@@ -374,6 +196,7 @@ export const getExamSchedulesById = async (filters: ExamScheduleFilters): Promis
     filterParamsCount++;
   }
 
+  // Free status filter
   if (isfree && isfree !== 'All') {
     whereClauses.push(`es.isfree = $${valueIndex}`);
     values.push(isfree === 'true');
@@ -381,6 +204,7 @@ export const getExamSchedulesById = async (filters: ExamScheduleFilters): Promis
     filterParamsCount++;
   }
 
+  // Valid status filter
   if (is_valid && is_valid !== 'All') {
     whereClauses.push(`es.is_valid = $${valueIndex}`);
     values.push(is_valid === 'true');
@@ -388,6 +212,7 @@ export const getExamSchedulesById = async (filters: ExamScheduleFilters): Promis
     filterParamsCount++;
   }
 
+  // Date range filters
   if (start_time) {
     whereClauses.push(`es.start_time >= $${valueIndex}`);
     values.push(start_time);
@@ -402,9 +227,25 @@ export const getExamSchedulesById = async (filters: ExamScheduleFilters): Promis
     filterParamsCount++;
   }
 
-  // Apply userId filter if provided
+  // Schedule creators filter (multiple values)
+  if (schedule_creator && schedule_creator.length > 0) {
+    const creatorPlaceholders = schedule_creator.map(() => `$${valueIndex++}`).join(',');
+    whereClauses.push(`us.userid IN (${creatorPlaceholders})`);
+    values.push(...schedule_creator);
+    filterParamsCount += schedule_creator.length;
+  }
+
+  // Exam creators filter (multiple values)
+  if (exam_creator && exam_creator.length > 0) {
+    const creatorPlaceholders = exam_creator.map(() => `$${valueIndex++}`).join(',');
+    whereClauses.push(`us2.userid IN (${creatorPlaceholders})`);
+    values.push(...exam_creator);
+    filterParamsCount += exam_creator.length;
+  }
+
+  // User filter (for filtering by user-created schedules/exams)
   if (userId) {
-    whereClauses.push(`(us.id = $${valueIndex} OR us2.id = $${valueIndex})`);
+    whereClauses.push(`(us.userid = $${valueIndex} OR us2.userid = $${valueIndex})`);
     values.push(userId);
     valueIndex++;
     filterParamsCount++;
@@ -438,8 +279,10 @@ export const getExamSchedulesById = async (filters: ExamScheduleFilters): Promis
     ) AS sub
   `;
 
-  // Execute both queries in parallel
   try {
+    console.log('Executing main query:', mainQuery);
+    console.log('Query values:', values);
+
     const [dataResult, countResult] = await Promise.all([
       pool.query(mainQuery, values),
       pool.query(countQuery, values.slice(0, filterParamsCount)),
@@ -459,15 +302,15 @@ export const getExamSchedulesById = async (filters: ExamScheduleFilters): Promis
   }
 };
 
+
+// Search exam schedules (simple search for autocomplete)
 export const searchExamSchedules = async (search: string, limit: number, userId?: string): Promise<SearchExamSchedule[]> => {
   try {
-    // Start constructing the query
     let query = `
       SELECT id, name AS schedule_name
       FROM exam_schedule
     `;
     
-    // Initialize WHERE clauses and values
     let whereClauses: string[] = [];
     let values: any[] = [];
     let valueIndex = 1;
@@ -484,12 +327,10 @@ export const searchExamSchedules = async (search: string, limit: number, userId?
       valueIndex++;
     }
 
-    // Append WHERE clauses if any
     if (whereClauses.length > 0) {
       query += ' WHERE ' + whereClauses.join(' AND ');
     }
 
-    // Append ORDER BY and LIMIT
     query += `
       ORDER BY id ASC
       LIMIT $${valueIndex}
@@ -507,8 +348,9 @@ export const searchExamSchedules = async (search: string, limit: number, userId?
 export const searchExamScheduleByExamType = async (search: string = '', examType: string = ''): Promise<ExamScheduleByType[]> => {
   try {
     let query = `
-      SELECT id, name AS name, exam_type
-      FROM exam_schedule
+      SELECT es.id, es.name AS name, pt.description as exam_type
+      FROM exam_schedule es
+      LEFT JOIN product_type pt ON pt.id = es."type"
       WHERE 1=1
     `;
     
@@ -516,18 +358,18 @@ export const searchExamScheduleByExamType = async (search: string = '', examType
     let paramCount = 1;
     
     if (search) {
-      query += ` AND name ILIKE $${paramCount}`;
+      query += ` AND es.name ILIKE $${paramCount}`;
       values.push(`%${search}%`);
       paramCount++;
     }
     
     if (examType) {
-      query += ` AND exam_type = $${paramCount}`;
+      query += ` AND pt.description = $${paramCount}`;
       values.push(examType);
       paramCount++;
     }
     
-    query += ' ORDER BY name ASC LIMIT 10';
+    query += ' ORDER BY es.name ASC LIMIT 10';
     const result = await pool.query(query, values);
     return result.rows;
   } catch (error) {
@@ -546,9 +388,19 @@ export const getValidExamSchedules = async (): Promise<ExamSchedule[]> => {
 };
 
 // Get a specific exam schedule by ID
-export const getExamScheduleById = async (id: string): Promise<ExamSchedule> => {
+export const getExamScheduleById = async (id: string): Promise<any> => {
   try {
-    const result = await pool.query('SELECT * FROM exam_schedule WHERE id = $1', [id]);
+    const query = `
+      SELECT 
+        es.*,
+        us1.name as created_by_name,
+        us2.name as updated_by_name
+      FROM exam_schedule es
+      LEFT JOIN v_dashboard_userdata us1 ON us1.userid = es.created_by
+      LEFT JOIN v_dashboard_userdata us2 ON us2.userid = es.updated_by
+      WHERE es.id = $1
+    `;
+    const result = await pool.query(query, [id]);
     return result.rows[0];
   } catch (error) {
     throw error;
@@ -558,7 +410,12 @@ export const getExamScheduleById = async (id: string): Promise<ExamSchedule> => 
 // Get exam schedules by exam type
 export const getExamSchedulesByType = async (exam_type: string): Promise<ExamSchedule[]> => {
   try {
-    const result = await pool.query('SELECT * FROM exam_schedule WHERE exam_type = $1', [exam_type]);
+    const result = await pool.query(`
+      SELECT es.* 
+      FROM exam_schedule es
+      LEFT JOIN product_type pt ON pt.id = es."type"
+      WHERE pt.description = $1
+    `, [exam_type]);
     return result.rows;
   } catch (error) {
     throw error;
@@ -582,7 +439,7 @@ export const createExamSchedule = async (
 ): Promise<ExamSchedule> => {
   try {
     const result = await pool.query(
-      `INSERT INTO exam_schedule (name, description, exam_id_list, start_time, end_time,isfree, is_valid, created_by, type, is_auto_move, is_need_order_exam, is_need_weighted_score)
+      `INSERT INTO exam_schedule (name, description, exam_id_list, start_time, end_time, isfree, is_valid, created_by, type, is_auto_move, is_need_order_exam, is_need_weighted_score)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [name, description, exam_id_list, start_time, end_time, isfree, is_valid, created_by, exam_type, is_auto_move, is_need_order_exam, is_need_weighted_score]
     );
@@ -607,9 +464,9 @@ export const updateExamSchedule = async (
   try {
     const result = await pool.query( 
       `UPDATE exam_schedule 
-       SET name = $1, description = $2, exam_id_list = $3, start_time = $4, end_time = $5, is_valid = $6, updated_by = $7, update_date = NOW(), exam_type = $8
-       WHERE id = $9 RETURNING *`,
-      [name, description, exam_id_list, start_time, end_time, is_valid, updated_by, exam_type, id]
+       SET name = $1, description = $2, exam_id_list = $3, start_time = $4, end_time = $5, is_valid = $6, updated_by = $7, update_date = NOW()
+       WHERE id = $8 RETURNING *`,
+      [name, description, exam_id_list, start_time, end_time, is_valid, updated_by, id]
     );
     return result.rows[0];
   } catch (error) {
@@ -630,9 +487,11 @@ export const deleteExamSchedule = async (id: string): Promise<ExamSchedule> => {
 export const getExamScheduleTypes = async (search: string): Promise<{exam_type: string}[]> => {
   try {
     const query = `
-      SELECT DISTINCT exam_type 
-      FROM exam_schedule 
-      WHERE exam_type ILIKE $1
+      SELECT DISTINCT pt.description as exam_type 
+      FROM exam_schedule es
+      LEFT JOIN product_type pt ON pt.id = es."type"
+      WHERE pt.description IS NOT NULL AND pt.description ILIKE $1
+      ORDER BY pt.description
     `;
     const result = await pool.query(query, [`%${search}%`]);
     return result.rows;
@@ -642,7 +501,6 @@ export const getExamScheduleTypes = async (search: string): Promise<{exam_type: 
 };
 
 export const checkAccess = async (userId: string, examScheduleId: string): Promise<AccessCheck> => {
-  // Ambil ujian + entitlement (jika ada) untuk user ini
   const { rows } = await pool.query(
     `SELECT
        es.id,
@@ -663,17 +521,81 @@ export const checkAccess = async (userId: string, examScheduleId: string): Promi
 
   const { isfree, granted_at, expires_at } = rows[0];
 
-  // 1) Jika gratis → selalu granted
   if (isfree) {
     return { accessGranted: true };
   }
 
-  // 2) Jika ada entitlement dan (tidak ada expires_at → permanen, atau expires_at di masa depan) → granted
   const now = new Date();
   if (granted_at && (!expires_at || expires_at > now)) {
     return { accessGranted: true };
   }
 
-  // 3) Semua kondisi lain → ditolak
   return { accessGranted: false };
+};
+
+// New functions for form dropdown options
+export const getExamTypes = async (search: string): Promise<{exam_type: string}[]> => {
+  try {
+    const query = `
+      SELECT DISTINCT pt.description as exam_type 
+      FROM product_type pt
+      WHERE pt.description IS NOT NULL AND pt.description ILIKE $1
+      ORDER BY pt.description
+      LIMIT 20
+    `;
+    const result = await pool.query(query, [`%${search}%`]);
+    return result.rows;
+  } catch (error) {
+    throw new Error(`Database error: ${error.message}`);
+  }
+};
+
+export const getSeries = async (search: string): Promise<{series: string}[]> => {
+  try {
+    const query = `
+      SELECT DISTINCT pt.series 
+      FROM product_type pt
+      WHERE pt.series IS NOT NULL AND pt.series ILIKE $1
+      ORDER BY pt.series
+      LIMIT 20
+    `;
+    const result = await pool.query(query, [`%${search}%`]);
+    return result.rows;
+  } catch (error) {
+    throw new Error(`Database error: ${error.message}`);
+  }
+};
+
+export const getScheduleCreators = async (search: string): Promise<{id: string, name: string}[]> => {
+  try {
+    const query = `
+      SELECT DISTINCT us.userid as id, us.name as name
+      FROM exam_schedule es
+      JOIN v_dashboard_userdata us ON us.userid = es.created_by
+      WHERE us.name IS NOT NULL AND us.name ILIKE $1
+      ORDER BY us.name
+      LIMIT 20
+    `;
+    const result = await pool.query(query, [`%${search}%`]);
+    return result.rows;
+  } catch (error) {
+    throw new Error(`Database error: ${error.message}`);
+  }
+};
+
+export const getExamCreators = async (search: string): Promise<{id: string, name: string}[]> => {
+  try {
+    const query = `
+      SELECT DISTINCT us.userid as id, us.name as name
+      FROM exams ex
+      JOIN v_dashboard_userdata us ON us.userid = ex.create_user_id
+      WHERE us.name IS NOT NULL AND us.name ILIKE $1
+      ORDER BY us.name
+      LIMIT 20
+    `;
+    const result = await pool.query(query, [`%${search}%`]);
+    return result.rows;
+  } catch (error) {
+    throw new Error(`Database error: ${error.message}`);
+  }
 };
