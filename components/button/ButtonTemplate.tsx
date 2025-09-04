@@ -1,3 +1,4 @@
+// components/button/ButtonTemplate.tsx
 import React from 'react';
 import { 
   Save, 
@@ -198,7 +199,7 @@ const getActionColors = (action: ActionType) => {
     'download': { primary: '#06B6D4', secondary: '#0891B2', light: '#F0F9FF', dark: '#0E7490', gradient1: '#06B6D4', gradient2: '#22D3EE', border: '#0891B2', text: '#FFFFFF' },
     'upload': { primary: '#10B981', secondary: '#059669', light: '#F0FDF4', dark: '#047857', gradient1: '#10B981', gradient2: '#34D399', border: '#059669', text: '#FFFFFF' },
     'search': { primary: '#6B7280', secondary: '#4B5563', light: '#F9FAFB', dark: '#374151', gradient1: '#6B7280', gradient2: '#9CA3AF', border: '#4B5563', text: '#FFFFFF' },
-    'filter': { primary: '#6B7280', secondary: '#4B5563', light: '#F9FAFB', dark: '#374151', gradient1: '#6B7280', gradient2: '#9CA3AF', border: '#4B5563', text: '#FFFFFF' },
+    'filter': { primary: '#8B5CF6', secondary: '#7C3AED', light: '#F9FAFB', dark: '#6D28D9', gradient1: '#8B5CF6', gradient2: '#A855F7', border: '#7C3AED', text: '#FFFFFF' },
     'refresh': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
     'sync': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
     'connect': { primary: '#10B981', secondary: '#059669', light: '#F0FDF4', dark: '#047857', gradient1: '#10B981', gradient2: '#34D399', border: '#059669', text: '#FFFFFF' },
@@ -544,17 +545,35 @@ const getActionText = (action: ActionType, customText?: string) => {
   return textMap[action] || 'Action';
 };
 
-// Size configurations
+// IMPROVED Size configurations dengan minimum width untuk mencegah text wrapping
 const getSizeClasses = (size: 'sm' | 'md' | 'lg') => {
   const sizeMap = {
-    'sm': { padding: 'tw-px-4 tw-py-2', text: 'tw-text-sm', icon: 'tw-w-4 tw-h-4' },
-    'md': { padding: 'tw-px-6 tw-py-3', text: 'tw-text-base', icon: 'tw-w-4 tw-h-4' },
-    'lg': { padding: 'tw-px-8 tw-py-4', text: 'tw-text-lg', icon: 'tw-w-5 tw-h-5' },
+    'sm': { 
+      padding: 'tw-px-3 tw-py-2', 
+      text: 'tw-text-sm', 
+      icon: 'tw-w-4 tw-h-4',
+      minWidth: 'tw-min-w-[100px]', // Minimum width untuk mencegah wrapping
+      gap: 'tw-gap-2'
+    },
+    'md': { 
+      padding: 'tw-px-4 tw-py-3', 
+      text: 'tw-text-base', 
+      icon: 'tw-w-4 tw-h-4',
+      minWidth: 'tw-min-w-[120px]', // Minimum width untuk mencegah wrapping
+      gap: 'tw-gap-2'
+    },
+    'lg': { 
+      padding: 'tw-px-6 tw-py-4', 
+      text: 'tw-text-lg', 
+      icon: 'tw-w-5 tw-h-5',
+      minWidth: 'tw-min-w-[140px]', // Minimum width untuk mencegah wrapping
+      gap: 'tw-gap-3'
+    },
   };
   return sizeMap[size];
 };
 
-// Button Template 1 - ButtonGradient (dari Button4)
+// Button Template 1 - ButtonGradient (IMPROVED dengan better layout)
 export const ButtonGradient: React.FC<ButtonTemplateProps> = ({ 
   action, 
   onClick, 
@@ -573,7 +592,29 @@ export const ButtonGradient: React.FC<ButtonTemplateProps> = ({
   
   return (
     <button
-      className={`tw-group ${sizeClasses.padding} tw-font-bold tw-rounded-xl tw-shadow-lg tw-transform tw-transition tw-duration-300 hover:tw-scale-105 disabled:tw-opacity-50 disabled:tw-cursor-not-allowed tw-relative tw-overflow-hidden ${sizeClasses.text} ${className}`}
+      className={`
+        tw-group 
+        ${sizeClasses.padding} 
+        ${sizeClasses.minWidth}
+        tw-font-bold 
+        tw-rounded-xl 
+        tw-shadow-lg 
+        tw-transform 
+        tw-transition 
+        tw-duration-300 
+        hover:tw-scale-105 
+        disabled:tw-opacity-50 
+        disabled:tw-cursor-not-allowed 
+        tw-relative 
+        tw-overflow-hidden 
+        ${sizeClasses.text}
+        tw-flex
+        tw-items-center
+        tw-justify-center
+        ${sizeClasses.gap}
+        tw-whitespace-nowrap
+        ${className}
+      `}
       onClick={() => onClick?.(action)}
       disabled={disabled || loading}
       style={{
@@ -582,16 +623,15 @@ export const ButtonGradient: React.FC<ButtonTemplateProps> = ({
       }}
     >
       <div className="tw-absolute tw-inset-0 tw-bg-gradient-to-r tw-from-white tw-to-transparent tw-opacity-0 group-hover:tw-opacity-20 tw-transition tw-duration-300"></div>
-      <div style={{ display: 'inline-block', animation: loading ? 'bounce 2s infinite' : 'none' }}>
-        {React.cloneElement(icon as React.ReactElement, { className: `tw-inline tw-mr-2 ${sizeClasses.icon}` })}
+      <div style={{ display: 'flex', alignItems: 'center', animation: loading ? 'bounce 2s infinite' : 'none' }}>
+        {React.cloneElement(icon as React.ReactElement, { className: `${sizeClasses.icon} tw-flex-shrink-0` })}
       </div>
-      <span className="tw-relative tw-z-10">{loading ? 'Loading...' : text}</span>
+      <span className="tw-relative tw-z-10 tw-flex-shrink-0">{loading ? 'Loading...' : text}</span>
     </button>
   );
 };
 
-// Button Template 2 - ButtonPlay (dari Button9)
-// Button Template 2 - ButtonPlay (dari Button9)
+// Button Template 2 - ButtonPlay (IMPROVED dengan better layout)
 export const ButtonPlay: React.FC<ButtonTemplateProps> = ({ 
   action, 
   onClick, 
@@ -610,7 +650,26 @@ export const ButtonPlay: React.FC<ButtonTemplateProps> = ({
   
   return (
     <button
-      className={`${sizeClasses.padding} tw-font-bold tw-rounded-xl tw-shadow-2xl tw-transform tw-transition tw-duration-300 hover:tw-scale-105 disabled:tw-opacity-50 disabled:tw-cursor-not-allowed ${sizeClasses.text} ${className}`}
+      className={`
+        ${sizeClasses.padding} 
+        ${sizeClasses.minWidth}
+        tw-font-bold 
+        tw-rounded-xl 
+        tw-shadow-2xl 
+        tw-transform 
+        tw-transition 
+        tw-duration-300 
+        hover:tw-scale-105 
+        disabled:tw-opacity-50 
+        disabled:tw-cursor-not-allowed 
+        ${sizeClasses.text}
+        tw-flex
+        tw-items-center
+        tw-justify-center
+        ${sizeClasses.gap}
+        tw-whitespace-nowrap
+        ${className}
+      `}
       onClick={() => onClick?.(action)}
       disabled={disabled || loading}
       style={{
@@ -630,13 +689,15 @@ export const ButtonPlay: React.FC<ButtonTemplateProps> = ({
         }
       }}
     >
-      {React.cloneElement(icon as React.ReactElement, { className: `tw-inline tw-mr-2 ${sizeClasses.icon}` })}
-      {loading ? 'Loading...' : text}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        {React.cloneElement(icon as React.ReactElement, { className: `${sizeClasses.icon} tw-flex-shrink-0` })}
+      </div>
+      <span className="tw-flex-shrink-0">{loading ? 'Loading...' : text}</span>
     </button>
   );
 };
 
-// Button Template 3 - ButtonProfessional (dari Button10)
+// Button Template 3 - ButtonProfessional (IMPROVED dengan better layout)
 export const ButtonProfessional: React.FC<ButtonTemplateProps> = ({ 
   action, 
   onClick, 
@@ -655,7 +716,28 @@ export const ButtonProfessional: React.FC<ButtonTemplateProps> = ({
   
   return (
     <button
-      className={`${sizeClasses.padding} tw-font-bold tw-rounded-2xl tw-shadow-xl tw-transform tw-transition tw-duration-500 hover:tw-scale-110 hover:tw-rotate-3 disabled:tw-opacity-50 disabled:tw-cursor-not-allowed tw-border-b-4 ${sizeClasses.text} ${className}`}
+      className={`
+        ${sizeClasses.padding} 
+        ${sizeClasses.minWidth}
+        tw-font-bold 
+        tw-rounded-2xl 
+        tw-shadow-xl 
+        tw-transform 
+        tw-transition 
+        tw-duration-500 
+        hover:tw-scale-110 
+        hover:tw-rotate-3 
+        disabled:tw-opacity-50 
+        disabled:tw-cursor-not-allowed 
+        tw-border-b-4 
+        ${sizeClasses.text}
+        tw-flex
+        tw-items-center
+        tw-justify-center
+        ${sizeClasses.gap}
+        tw-whitespace-nowrap
+        ${className}
+      `}
       onClick={() => onClick?.(action)}
       disabled={disabled || loading}
       style={{
@@ -664,8 +746,10 @@ export const ButtonProfessional: React.FC<ButtonTemplateProps> = ({
         borderBottomColor: colors.border,
       }}
     >
-      {React.cloneElement(icon as React.ReactElement, { className: `tw-inline tw-mr-2 ${sizeClasses.icon}` })}
-      {loading ? 'Processing...' : text}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        {React.cloneElement(icon as React.ReactElement, { className: `${sizeClasses.icon} tw-flex-shrink-0` })}
+      </div>
+      <span className="tw-flex-shrink-0">{loading ? 'Processing...' : text}</span>
     </button>
   );
 };
@@ -719,11 +803,22 @@ export const ButtonExamples = {
     disabled: '<ButtonPlay action="delete" disabled={true} onClick={handleDelete} />',
   },
   
-  // Different sizes
+  // Different sizes - Now with better minimum widths
   sizes: {
-    small: '<ButtonProfessional action="edit" size="sm" onClick={handleEdit} />',
-    medium: '<ButtonGradient action="save" size="md" onClick={handleSave} />',
-    large: '<ButtonPlay action="start" size="lg" onClick={handleStart} />'
+    small: '<ButtonProfessional action="edit" size="sm" onClick={handleEdit} /> // min-width: 100px',
+    medium: '<ButtonGradient action="save" size="md" onClick={handleSave} /> // min-width: 120px',
+    large: '<ButtonPlay action="start" size="lg" onClick={handleStart} /> // min-width: 140px'
+  },
+  
+  // Filter button specific example
+  filterButton: {
+    example: `<ButtonGradient 
+      action="filter" 
+      size="sm" 
+      customText="Filter (5)" 
+      onClick={handleFilter}
+      className="tw-min-w-[120px]" // Extra safety untuk filter button
+    />`
   }
 };
 
@@ -746,4 +841,50 @@ export const ActionCategories = {
   navigation: ['menu', 'home', 'back', 'forward', 'link', 'external', 'redirect'],
   
   system: ['install', 'uninstall', 'update', 'configure', 'reset', 'enable', 'disable', 'lock', 'unlock']
+} as const;
+
+// Size recommendations untuk different use cases
+export const SizeRecommendations = {
+  // Untuk button di toolbar/filter area
+  toolbar: {
+    size: 'sm' as const,
+    minWidth: 'tw-min-w-[100px]',
+    description: 'Cocok untuk button filter, toolbar, dan kontrol kecil'
+  },
+  
+  // Untuk button di form
+  form: {
+    size: 'md' as const,
+    minWidth: 'tw-min-w-[120px]',
+    description: 'Standar untuk button di form, modal, dan aksi utama'
+  },
+  
+  // Untuk CTA dan button penting
+  cta: {
+    size: 'lg' as const,
+    minWidth: 'tw-min-w-[140px]',
+    description: 'Untuk Call-to-Action dan button yang perlu menarik perhatian'
+  }
+} as const;
+
+// CSS Classes yang bisa digunakan untuk override jika diperlukan
+export const ButtonCSSClasses = {
+  // Untuk mencegah text wrapping
+  noWrap: 'tw-whitespace-nowrap tw-overflow-hidden tw-text-ellipsis',
+  
+  // Custom minimum widths
+  minWidths: {
+    xs: 'tw-min-w-[80px]',
+    sm: 'tw-min-w-[100px]',
+    md: 'tw-min-w-[120px]',
+    lg: 'tw-min-w-[140px]',
+    xl: 'tw-min-w-[160px]',
+    '2xl': 'tw-min-w-[180px]'
+  },
+  
+  // Responsive behavior
+  responsive: {
+    stackOnMobile: 'tw-w-full sm:tw-w-auto',
+    hideTextOnMobile: 'tw-px-2 sm:tw-px-4 [&>span]:tw-hidden sm:[&>span]:tw-inline'
+  }
 } as const;

@@ -1,12 +1,19 @@
 // pages/panel/exam/exam-schedules/index.tsx
 
-import React from 'react';
+import React, { useState } from 'react';
 import { FaPlus, FaEye, FaEdit, FaTrash, FaCalendar, FaClock } from 'react-icons/fa';
+import { BookOpen } from 'lucide-react';
 import MainLayout from '../../../../components/layout/DashboardLayout';
 import ReportLayout from '../../../../components/report/ReportLayout';
 import { ReportConfig, ColumnConfig } from '../../../../types/report';
+import AddExamScheduleModal from './AddExamScheduleModal';
+import CreateExamModal from './AddExamModal';
 
 const ExamSchedulesPage: React.FC = () => {
+  // Modal states
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showExamModal, setShowExamModal] = useState(false);
+
   // Custom formatters untuk kolom-kolom tertentu
   const formatExamNames = (value: string) => {
     if (!value) return '-';
@@ -102,6 +109,19 @@ const ExamSchedulesPage: React.FC = () => {
     );
   };
 
+  // Handler functions
+  const handleScheduleSave = (scheduleData: any) => {
+    console.log('Schedule saved:', scheduleData);
+    // TODO: Refresh table data
+    // Bisa panggil API refresh atau update state
+  };
+
+  const handleExamSave = (examData: any) => {
+    console.log('Exam saved:', examData);
+    // TODO: Update available exams list
+    // Bisa update cache atau refresh dropdown options
+  };
+
   // Definisi kolom-kolom berdasarkan skema database
   const columns: ColumnConfig[] = [
     {
@@ -110,7 +130,7 @@ const ExamSchedulesPage: React.FC = () => {
       type: 'number',
       width: 80,
       colGroup: 'basic'
-    }, // ID tersembunyi dari tampilan tapi tersedia untuk API calls
+    },
     {
       key: 'schedule_name',
       label: 'Nama Jadwal',
@@ -252,16 +272,12 @@ const ExamSchedulesPage: React.FC = () => {
         columns: ['schedule_creator', 'exam_creator']
       }
     ],
-    // Filters menggunakan FormComponentLayout components
     filters: [
-      // Text filter menggunakan ShortFormField
       {
         key: 'schedule_name',
         type: 'text',
         label: 'Nama Jadwal'
       },
-      
-      // API-based select menggunakan SearchSingleField
       {
         key: 'exam_type',
         type: 'select',
@@ -269,8 +285,6 @@ const ExamSchedulesPage: React.FC = () => {
         apiEndpoint: '/exam-schedules/exam-types',
         debounceMs: 300
       },
-      
-      // Boolean filters menggunakan BooleanField
       {
         key: 'isfree',
         type: 'boolean',
@@ -281,8 +295,6 @@ const ExamSchedulesPage: React.FC = () => {
         type: 'boolean',
         label: 'Status Valid'
       },
-      
-      // Creator filters menggunakan SearchSingleField dengan API
       {
         key: 'schedule_creator',
         type: 'select',
@@ -297,8 +309,6 @@ const ExamSchedulesPage: React.FC = () => {
         apiEndpoint: '/exam-schedules/exam-creators',
         debounceMs: 300
       },
-      
-      // Date filters menggunakan DateField
       {
         key: 'start_time',
         type: 'date',
@@ -309,8 +319,6 @@ const ExamSchedulesPage: React.FC = () => {
         type: 'date',
         label: 'Tanggal Selesai (Sampai)'
       },
-      
-      // Number filter menggunakan NumberField
       {
         key: 'question_qty',
         type: 'number',
@@ -320,7 +328,6 @@ const ExamSchedulesPage: React.FC = () => {
     defaultSort: [
       { key: 'id', direction: 'desc' }
     ],
-    // ID dikecualikan dari kolom default yang terlihat
     defaultVisibleColumns: [
       'schedule_name', 
       'description', 
@@ -333,7 +340,6 @@ const ExamSchedulesPage: React.FC = () => {
       'end_time',
       'schedule_creator'
     ],
-    // Freeze column diubah ke schedule_name karena ID disembunyikan
     defaultFreezeColumn: 'schedule_name',
     showIcon: true,
     showRowNumber: true,
@@ -357,7 +363,6 @@ const ExamSchedulesPage: React.FC = () => {
           size: 'sm',
           onClick: (row, index) => {
             console.log('View detail exam schedule:', row);
-            // Implementasi: navigasi ke halaman detail menggunakan ID yang tersembunyi
             window.open(`/panel/exam/exam-schedules/${row.id}`, '_blank');
           }
         },
@@ -368,7 +373,9 @@ const ExamSchedulesPage: React.FC = () => {
           size: 'sm',
           onClick: (row, index) => {
             console.log('Edit exam schedule:', row);
-            // Implementasi: navigasi ke halaman edit menggunakan ID yang tersembunyi
+            // TODO: Open edit modal instead of navigation
+            // setEditingSchedule(row);
+            // setShowEditModal(true);
             window.location.href = `/panel/exam/exam-schedules/edit/${row.id}`;
           }
         },
@@ -380,28 +387,7 @@ const ExamSchedulesPage: React.FC = () => {
           onClick: (row, index) => {
             if (window.confirm(`Apakah Anda yakin ingin menghapus jadwal "${row.schedule_name}"?`)) {
               console.log('Delete exam schedule:', row);
-              // Implementasi: panggil delete API menggunakan ID yang tersembunyi
-              /*
-              fetch(`/api/exam-schedules/${row.id}`, { 
-                method: 'DELETE',
-                headers: {
-                  'Content-Type': 'application/json',
-                  // Tambahkan authorization header jika diperlukan
-                }
-              })
-              .then(response => {
-                if (response.ok) {
-                  // Refresh tabel setelah berhasil dihapus
-                  window.location.reload();
-                } else {
-                  alert('Gagal menghapus jadwal');
-                }
-              })
-              .catch(error => {
-                console.error('Error deleting schedule:', error);
-                alert('Terjadi kesalahan saat menghapus jadwal');
-              });
-              */
+              // TODO: Implement delete API call
             }
           }
         }
@@ -414,8 +400,16 @@ const ExamSchedulesPage: React.FC = () => {
         variant: 'primary',
         onClick: () => {
           console.log('Create new exam schedule');
-          // Implementasi: navigasi ke halaman create
-          window.location.href = '/panel/exam/exam-schedules/create';
+          setShowScheduleModal(true);
+        }
+      },
+      {
+        label: 'Buat Ujian',
+        icon: React.createElement(BookOpen),
+        variant: 'success',
+        onClick: () => {
+          console.log('Create new exam');
+          setShowExamModal(true);
         }
       }
     ]
@@ -428,9 +422,23 @@ const ExamSchedulesPage: React.FC = () => {
           config={reportConfig}
           apiEndpoint="/exam-schedules/all"
           fetchOnMount={true}
-          searchMode="server" // Menggunakan server-side search dengan batch filtering
+          searchMode="server"
         />
       </div>
+
+      {/* Modal Buat Jadwal Ujian */}
+      <AddExamScheduleModal
+        isOpen={showScheduleModal}
+        onClose={() => setShowScheduleModal(false)}
+        onSave={handleScheduleSave}
+      />
+
+      {/* Modal Buat Ujian */}
+      <CreateExamModal
+        show={showExamModal}
+        onClose={() => setShowExamModal(false)}
+        onAddExam={handleExamSave}
+      />
     </MainLayout>
   );
 };

@@ -3,19 +3,18 @@
 /**
  * ./AddExamScheduleModal.tsx
  * --------------------------------------------------------------------------
- * Modal "Tambah Jadwal Ujian" – ID ujian unik & tanpa duplikat
+ * Modal "Tambah Jadwal Ujian" – Updated untuk integrasi dengan AddExamModal
+ * Menggunakan ModalTemplate dan ButtonTemplate
  * --------------------------------------------------------------------------
  */
 
 import React, { useState, useEffect } from 'react';
 import {
-  Modal,
-  Button,
   Form,
   Row,
   Col,
   Card,
-  Spinner
+  Alert
 } from 'react-bootstrap';
 import axios from 'axios';
 import debounce from 'lodash/debounce';
@@ -39,10 +38,14 @@ import {
   Shuffle,
   Award,
   PlusCircle,
-  Trash2
+  Trash2,
+  RotateCcw,
+  XCircle,
+  CheckCircle
 } from 'lucide-react';
 
-import CreateExamModal, { SelectOption } from './CreateExamModal';
+import { LearningModal, ModalButton } from '../../../../components/modal/ModalTemplate';
+import CreateExamModal, { SelectOption } from './AddExamModal';
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                     */
@@ -52,6 +55,7 @@ interface AddExamScheduleModalProps {
   onClose: () => void;
   onSave: (payload: any) => void;
 }
+
 interface FormErrors {
   name?: string;
   examType?: string;
@@ -80,7 +84,7 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
   const [isValid, setIsValid]         = useState(true);
 
   const [selectedExams, setSelected]  = useState<SelectOption[]>([]);
-  const [customExams,   setCustom]    = useState<any[]>([]);   // simpan detail untuk tampilan
+  const [customExams,   setCustom]    = useState<any[]>([]);
 
   const [startTime, setStart]         = useState<Date | null>(null);
   const [endTime,   setEnd]           = useState<Date | null>(null);
@@ -103,6 +107,28 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
   const [saving, setSaving]           = useState(false);
 
   const [showCreate, setShowCreate]   = useState(false);
+  
+  // Track changes for modal
+  const [hasChanges, setHasChanges]   = useState(false);
+
+  /* ---------------------- Check for changes --------------------------- */
+  useEffect(() => {
+    const hasData = name.trim() || 
+                   description.trim() || 
+                   examGroup !== null || 
+                   examType !== null ||
+                   selectedExams.length > 0 ||
+                   customExams.length > 0 ||
+                   startTime !== null ||
+                   endTime !== null ||
+                   !isValid || // default true, so false means changed
+                   isFree || // default false, so true means changed
+                   autoSwitchExam ||
+                   randomExamOrder ||
+                   weightedScore;
+    setHasChanges(hasData);
+  }, [name, description, examGroup, examType, selectedExams, customExams, 
+      startTime, endTime, isValid, isFree, autoSwitchExam, randomExamOrder, weightedScore]);
 
   /* ---------------------- Fetch helpers ------------------------------ */
   const fetchGroups = async (q='') => {
@@ -122,6 +148,7 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
       );
     } finally { setLG(false); }
   };
+
   const fetchTypes = async (q='') => {
     setLT(true);
     try {
@@ -137,6 +164,7 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
       );
     } finally { setLT(false); }
   };
+
   const fetchExams = async (q='') => {
     setLE(true);
     try {
@@ -176,6 +204,7 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
     setStart(null); setEnd(null); setAnytime(false);
     setAuto(false); setRandom(false); setWeighted(false);
     setErrors({}); setSaving(false);
+    setHasChanges(false);
   };
 
   /* --------------------------- Submit ------------------------------- */
@@ -205,7 +234,7 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
         type           : anytime ? 1999 : 3,
         start_time     : anytime ? null : startTime!.toISOString(),
         end_time       : anytime ? null : endTime!.toISOString(),
-        exam_id_list   : examIds,           // ← hanya ID unik
+        exam_id_list   : examIds,
         is_auto_move          : autoSwitchExam,
         is_need_order_exam    : randomExamOrder,
         is_need_weighted_score: weightedScore
@@ -213,8 +242,11 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
 
       const { data } = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/exam-schedules`, payload);
       onSave(data);
-      resetForm(); onClose();
-    } catch { /* TODO: tampilkan error detail */ }
+      resetForm(); 
+      onClose();
+    } catch { 
+      setErrors({ api: 'Gagal menyimpan jadwal ujian. Silakan coba lagi.' });
+    }
     finally { setSaving(false); }
   };
 
@@ -227,7 +259,7 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
     state: boolean;
     setState: (val: boolean) => void;
   }) => (
-    <Card className="tw-border-2 tw-border-purple-200 tw-rounded-lg tw-shadow-sm">
+    <Card className="tw-border-2 tw-border-purple-200 tw-rounded-lg tw-shadow-sm hover:tw-shadow-md tw-transition-shadow">
       <Card.Body className="tw-p-4">
         <div className="tw-flex tw-items-center tw-justify-between">
           <div className="tw-flex tw-items-center tw-gap-2">
@@ -237,30 +269,28 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
             <span className="tw-font-semibold tw-text-purple-700">{title}</span>
           </div>
           <div className="tw-flex tw-gap-2">
-            <Button
-              size="sm"
-              variant={state ? 'success' : 'outline-secondary'}
+            <button
+              type="button"
               onClick={() => setState(true)}
-              className={`tw-rounded-lg tw-font-medium ${
+              className={`tw-px-3 tw-py-1 tw-rounded-lg tw-font-medium tw-text-sm tw-transition-colors ${
                 state
-                  ? 'tw-bg-green-500 tw-border-green-500'
-                  : 'tw-border-purple-300 tw-text-purple-600'
+                  ? 'tw-bg-green-500 tw-border-green-500 tw-text-white'
+                  : 'tw-border tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50'
               }`}
             >
               Ya
-            </Button>
-            <Button
-              size="sm"
-              variant={!state ? 'success' : 'outline-secondary'}
+            </button>
+            <button
+              type="button"
               onClick={() => setState(false)}
-              className={`tw-rounded-lg tw-font-medium ${
+              className={`tw-px-3 tw-py-1 tw-rounded-lg tw-font-medium tw-text-sm tw-transition-colors ${
                 !state
-                  ? 'tw-bg-green-500 tw-border-green-500'
-                  : 'tw-border-purple-300 tw-text-purple-600'
+                  ? 'tw-bg-green-500 tw-border-green-500 tw-text-white'
+                  : 'tw-border tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50'
               }`}
             >
               Tidak
-            </Button>
+            </button>
           </div>
         </div>
       </Card.Body>
@@ -277,215 +307,283 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
     }))
   ];
 
-  /* ----------------------- Render ----------------------------------- */
-  if (!isOpen) return null;
+  /* ---------------------- Modal Buttons ------------------------------- */
+  const topButtons: ModalButton[] = [
+    {
+      action: 'reset',
+      text: 'Reset Form',
+      icon: <RotateCcw className="tw-w-4 tw-h-4" />,
+      onClick: resetForm,
+      disabled: !hasChanges || saving,
+      size: 'sm',
+      customColors: {
+        primary: '#F59E0B',
+        secondary: '#D97706',
+        gradient1: '#F59E0B',
+        gradient2: '#FBBF24',
+        text: '#FFFFFF'
+      }
+    }
+  ];
 
+  const bottomButtons: ModalButton[] = [
+    ...(hasChanges ? [{
+      action: 'cancel' as const,
+      text: 'Batal',
+      icon: <X className="tw-w-4 tw-h-4" />,
+      onClick: () => {
+        if (window.confirm('Ada perubahan yang belum disimpan. Yakin ingin menutup?')) {
+          resetForm();
+          onClose();
+        }
+      },
+      disabled: saving,
+      customColors: {
+        primary: '#6B7280',
+        secondary: '#4B5563',
+        gradient1: '#6B7280',
+        gradient2: '#9CA3AF',
+        text: '#FFFFFF'
+      }
+    }] : [{
+      action: 'cancel' as const,
+      text: 'Tutup',
+      icon: <X className="tw-w-4 tw-h-4" />,
+      onClick: onClose,
+      disabled: saving,
+      customColors: {
+        primary: '#6B7280',
+        secondary: '#4B5563',
+        gradient1: '#6B7280',
+        gradient2: '#9CA3AF',
+        text: '#FFFFFF'
+      }
+    }]),
+    {
+      action: 'save',
+      text: saving ? 'Menyimpan...' : 'Simpan Jadwal',
+      icon: <Check className="tw-w-4 tw-h-4" />,
+      onClick: handleSubmit,
+      disabled: saving,
+      loading: saving,
+      customColors: {
+        primary: '#8B5CF6',
+        secondary: '#7C3AED',
+        gradient1: '#8B5CF6',
+        gradient2: '#A855F7',
+        text: '#FFFFFF'
+      }
+    }
+  ];
+
+  /* ----------------------- Render ----------------------------------- */
   return (
     <>
-      {/* ========================= Modal ========================= */}
-      <Modal
+      <LearningModal
         show={isOpen}
-        onHide={() => { resetForm(); onClose(); }}
+        onHide={hasChanges ? () => {} : onClose}
+        title="Buat Jadwal Ujian Baru"
+        subtitle={`${selectedExams.length + customExams.length} ujian dipilih • ${hasChanges ? 'Ada perubahan' : 'Belum ada perubahan'}`}
+        icon={<Calendar className="tw-w-5 tw-h-5" />}
         size="xl"
-        centered
-        backdrop="static"
-        className="tw-font-sans"
+        width="95vw"
+        height="90vh"
+        scrollable={true}
+        topButtons={topButtons}
+        bottomButtons={bottomButtons}
+        preventCloseOnOutsideClick={hasChanges}
       >
-        <div className="tw-bg-gradient-to-br tw-from-purple-50 tw-to-indigo-50 tw-rounded-lg tw-shadow-2xl tw-overflow-hidden">
-          {/* ---------- HEADER ---------- */}
-          <Modal.Header className="tw-bg-gradient-to-r tw-from-purple-600 tw-to-indigo-600 tw-text-white tw-py-4">
-            <div className="tw-flex tw-items-center tw-gap-3">
-              <div className="tw-bg-white/20 tw-p-2 tw-rounded-lg">
-                <Calendar size={24} />
+        <div className="tw-space-y-6">
+          {/* Error Display */}
+          {Object.keys(errors).length > 0 && (
+            <div className="tw-bg-red-50 tw-border tw-border-red-200 tw-rounded-lg tw-p-4">
+              <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
+                <XCircle className="tw-w-4 tw-h-4 tw-text-red-500" />
+                <span className="tw-font-semibold tw-text-red-700">Error</span>
               </div>
-              <Modal.Title className="tw-font-bold tw-text-xl">
-                Buat Jadwal Ujian Baru
-              </Modal.Title>
+              {Object.values(errors).map((e,i)=>(
+                <div key={i} className="tw-text-red-700 tw-text-sm">{e}</div>
+              ))}
             </div>
-          </Modal.Header>
+          )}
 
-          {/* ---------- BODY ---------- */}
-          <Modal.Body className="tw-p-6 tw-max-h-[75vh] tw-overflow-y-auto">
-            {/* error list */}
-            {Object.keys(errors).length > 0 && (
-              <div className="tw-bg-red-50 tw-border tw-border-red-200 tw-rounded-lg tw-p-4 tw-mb-4 tw-flex tw-items-center">
-                <X className="tw-text-red-500 tw-mr-2" />
-                <div className="tw-text-red-700">
-                  {Object.values(errors).map((e,i)=><div key={i}>{e}</div>)}
+          <Form>
+            {/* -------- Nama, Grup, Tipe -------- */}
+            <Row className="tw-mb-6">
+              <Col md={4}>
+                <Form.Group>
+                  <Form.Label className="tw-flex tw-items-center tw-gap-2 tw-text-purple-700 tw-font-semibold">
+                    <FileText size={16}/> Nama Jadwal <span className="tw-text-red-500">*</span>
+                  </Form.Label>
+                  <Form.Control
+                    value={name}
+                    onChange={e=>setName(e.target.value)}
+                    placeholder="Nama jadwal ujian"
+                    className="tw-border-2 tw-border-purple-200 focus:tw-border-purple-500 tw-rounded-lg tw-text-base tw-p-3"
+                    isInvalid={!!errors.name}
+                  />
+                </Form.Group>
+              </Col>
+
+              <Col md={4}>
+                <SearchSingleField
+                  label="Grup Ujian"
+                  value={examGroup}
+                  options={examGroups}
+                  onChange={setExamGroup}
+                  onInputChange={dFetchGroups}
+                  isLoading={lg}
+                  icon={<Award size={16}/>}
+                  required
+                  error={errors.examGroup}
+                />
+              </Col>
+
+              <Col md={4}>
+                <SearchSingleField
+                  label="Tipe Ujian"
+                  value={examType}
+                  options={examTypes}
+                  onChange={setExamType}
+                  onInputChange={dFetchTypes}
+                  isLoading={lt}
+                  icon={<BookOpen size={16}/>}
+                  required
+                  error={errors.examType}
+                />
+              </Col>
+            </Row>
+
+            {/* -------- Deskripsi -------- */}
+            <Form.Group className="tw-mb-6">
+              <Form.Label className="tw-flex tw-items-center tw-gap-2 tw-text-purple-700 tw-font-semibold">
+                <AlignLeft size={16}/> Deskripsi
+              </Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                value={description}
+                onChange={e=>setDescription(e.target.value)}
+                className="tw-border-2 tw-border-purple-200 focus:tw-border-purple-500 tw-rounded-lg tw-text-base tw-p-3"
+                placeholder="Deskripsi jadwal ujian"
+              />
+            </Form.Group>
+
+            {/* -------- Waktu -------- */}
+            <DateRangeField
+              label="Waktu Pelaksanaan"
+              startDate={startTime}
+              endDate={endTime}
+              onStartDateChange={setStart}
+              onEndDateChange={setEnd}
+              anytime={anytime}
+              onAnytimeChange={setAnytime}
+              error={errors.dateRange}
+              required
+              icon={<Calendar size={16}/>}
+            />
+
+            {/* -------- Option Cards -------- */}
+            <div className="tw-mb-6">
+              <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-4 tw-block">
+                Pengaturan Jadwal
+              </Form.Label>
+              <Row className="tw-g-3">
+                <Col md={6} lg={4}>
+                  <OptionCard title="Gratis" icon={Check} state={isFree} setState={setIsFree}/>
+                </Col>
+                <Col md={6} lg={4}>
+                  <OptionCard title="Status Aktif" icon={Check} state={isValid} setState={setIsValid}/>
+                </Col>
+                <Col md={6} lg={4}>
+                  <OptionCard title="Berpindah Ujian Otomatis" icon={Zap} state={autoSwitchExam} setState={setAuto}/>
+                </Col>
+                <Col md={6} lg={4}>
+                  <OptionCard title="Acak Urutan Ujian" icon={Shuffle} state={randomExamOrder} setState={setRandom}/>
+                </Col>
+                <Col md={6} lg={4}>
+                  <OptionCard title="Pembobotan Nilai" icon={Settings} state={weightedScore} setState={setWeighted}/>
+                </Col>
+              </Row>
+            </div>
+
+            {/* --------- Pilih Ujian --------- */}
+            <SearchMultipleField
+              label="Ujian Terkait"
+              value={selectedExams}
+              options={allExamOptions}
+              onChange={setSelected}
+              onInputChange={dFetchExams}
+              isLoading={le}
+              error={errors.exams}
+              required
+              icon={<List size={16}/>}
+              placeholder="Cari ujian..."
+            />
+
+            {/* --------- Custom Ujian --------- */}
+            <div className="tw-mb-6">
+              <div className="tw-flex tw-items-center tw-justify-between tw-mb-4">
+                <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-0 tw-flex tw-items-center tw-gap-2">
+                  <PlusCircle size={16}/> Buat Ujian Baru
+                </Form.Label>
+                <button
+                  type="button"
+                  onClick={()=>setShowCreate(true)}
+                  className="tw-px-4 tw-py-2 tw-bg-gradient-to-r tw-from-green-600 tw-to-emerald-600 tw-text-white tw-rounded-lg tw-font-semibold tw-shadow-lg hover:tw-scale-105 tw-transition-transform tw-flex tw-items-center tw-gap-2"
+                >
+                  <PlusCircle size={16}/> Buat Ujian
+                </button>
+              </div>
+
+              {customExams.length > 0 && (
+                <div className="tw-bg-green-50 tw-border-2 tw-border-green-200 tw-rounded-lg tw-p-4">
+                  <div className="tw-font-semibold tw-text-green-700 tw-mb-3 tw-flex tw-items-center tw-gap-2">
+                    <CheckCircle size={16} className="tw-text-green-600" />
+                    Ujian yang Dibuat ({customExams.length}):
+                  </div>
+                  <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-3">
+                    {customExams.map((ex:any,idx:number)=>{
+                      const total = ex.question_id_list?.length ??
+                                    ex.question_ids?.length ??
+                                    ex.questions?.length ?? 0;
+                      return (
+                        <div key={idx} className="tw-bg-white tw-border tw-border-green-300 tw-rounded-lg tw-p-3 tw-flex tw-items-center tw-justify-between tw-shadow-sm">
+                          <div>
+                            <div className="tw-font-semibold tw-text-green-800">{ex.name}</div>
+                            <div className="tw-text-sm tw-text-green-600">
+                              {ex.duration} menit • {total} soal
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={()=>setCustom(prev=>prev.filter((_,i)=>i!==idx))}
+                            className="tw-p-2 tw-text-red-500 hover:tw-bg-red-50 tw-rounded-lg tw-transition-colors"
+                          >
+                            <Trash2 size={16}/>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Changes indicator */}
+            {hasChanges && (
+              <div className="tw-bg-orange-50 tw-border tw-border-orange-200 tw-rounded-lg tw-p-3">
+                <div className="tw-flex tw-items-center tw-gap-2 tw-text-orange-700">
+                  <span className="tw-w-2 tw-h-2 tw-bg-orange-400 tw-rounded-full tw-animate-pulse"></span>
+                  <span className="tw-font-medium tw-text-sm">
+                    Ada perubahan yang belum disimpan
+                  </span>
                 </div>
               </div>
             )}
-
-            <Form>
-              {/* -------- Nama, Grup, Tipe -------- */}
-              <Row className="tw-mb-6">
-                <Col md={4}>
-                  <Form.Group>
-                    <Form.Label className="tw-flex tw-items-center tw-gap-2 tw-text-purple-700 tw-font-semibold">
-                      <FileText size={16}/> Nama Jadwal <span className="tw-text-red-500">*</span>
-                    </Form.Label>
-                    <Form.Control
-                      value={name}
-                      onChange={e=>setName(e.target.value)}
-                      placeholder="Nama jadwal ujian"
-                      className="tw-border-2 tw-border-purple-200 focus:tw-border-purple-500 tw-rounded-lg"
-                    />
-                  </Form.Group>
-                </Col>
-
-                <Col md={4}>
-                  <SearchSingleField
-                    label="Grup Ujian"
-                    value={examGroup}
-                    options={examGroups}
-                    onChange={setExamGroup}
-                    onInputChange={dFetchGroups}
-                    isLoading={lg}
-                    icon={<Award size={16}/>}
-                    required
-                  />
-                </Col>
-
-                <Col md={4}>
-                  <SearchSingleField
-                    label="Tipe Ujian"
-                    value={examType}
-                    options={examTypes}
-                    onChange={setExamType}
-                    onInputChange={dFetchTypes}
-                    isLoading={lt}
-                    icon={<BookOpen size={16}/>}
-                    required
-                  />
-                </Col>
-              </Row>
-
-              {/* -------- Deskripsi -------- */}
-              <Form.Group className="tw-mb-6">
-                <Form.Label className="tw-flex tw-items-center tw-gap-2 tw-text-purple-700 tw-font-semibold">
-                  <AlignLeft size={16}/> Deskripsi
-                </Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={3}
-                  value={description}
-                  onChange={e=>setDescription(e.target.value)}
-                  className="tw-border-2 tw-border-purple-200 focus:tw-border-purple-500 tw-rounded-lg"
-                  placeholder="Deskripsi jadwal ujian"
-                />
-              </Form.Group>
-
-              {/* -------- Waktu -------- */}
-              <DateRangeField
-                label="Waktu Pelaksanaan"
-                startDate={startTime}
-                endDate={endTime}
-                onStartDateChange={setStart}
-                onEndDateChange={setEnd}
-                anytime={anytime}
-                onAnytimeChange={setAnytime}
-                error={errors.dateRange}
-                required
-                icon={<Calendar size={16}/>}
-              />
-
-              {/* -------- Option Cards -------- */}
-              <Row className="tw-mb-6">
-                <Col md={4}><OptionCard title="Gratis" icon={Check} state={isFree} setState={setIsFree}/></Col>
-                <Col md={4}><OptionCard title="Status Aktif" icon={Check} state={isValid} setState={setIsValid}/></Col>
-                <Col md={4}><OptionCard title="Berpindah Ujian Otomatis" icon={Zap} state={autoSwitchExam} setState={setAuto}/></Col>
-                <Col md={4} className="tw-mt-4"><OptionCard title="Acak Urutan Ujian" icon={Shuffle} state={randomExamOrder} setState={setRandom}/></Col>
-                <Col md={4} className="tw-mt-4"><OptionCard title="Pembobotan Nilai" icon={Settings} state={weightedScore} setState={setWeighted}/></Col>
-              </Row>
-
-              {/* --------- Pilih Ujian --------- */}
-              <SearchMultipleField
-                label="Ujian Terkait"
-                value={selectedExams}
-                options={allExamOptions}
-                onChange={setSelected}
-                onInputChange={dFetchExams}
-                isLoading={le}
-                error={errors.exams}
-                required
-                icon={<List size={16}/>}
-                placeholder="Cari ujian..."
-              />
-
-              {/* --------- Custom Ujian --------- */}
-              <div className="tw-mb-6">
-                <Button
-                  variant="outline-primary"
-                  onClick={()=>setShowCreate(true)}
-                  className="tw-flex tw-items-center tw-gap-2 tw-font-medium tw-mb-2"
-                >
-                  <PlusCircle size={16}/> Buat Ujian
-                </Button>
-
-                {customExams.length>0 && (
-                  <>
-                    <div className="tw-font-semibold tw-text-purple-700 tw-mb-1">
-                      Ujian yang Dibuat:
-                    </div>
-                    <ul className="tw-list-disc tw-ml-6">
-                      {customExams.map((ex:any,idx:number)=>{
-                        const total = ex.question_id_list?.length ??
-                                      ex.question_ids?.length ??
-                                      ex.questions?.length ?? 0;
-                        return (
-                          <li key={idx} className="tw-flex tw-items-center tw-gap-2">
-                            <span>
-                              <b>{ex.name}</b> ({ex.duration} m) – {total} soal
-                            </span>
-                            <Button
-                              variant="outline-danger"
-                              size="sm"
-                              onClick={()=>setCustom(prev=>prev.filter((_,i)=>i!==idx))}
-                            >
-                              <Trash2 size={14}/>
-                            </Button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </>
-                )}
-              </div>
-            </Form>
-          </Modal.Body>
-
-          {/* ---------- FOOTER ---------- */}
-          <Modal.Footer className="tw-bg-gray-50 tw-border-0 tw-p-6">
-            <div className="tw-flex tw-flex-col sm:tw-flex-row tw-gap-3 tw-w-full">
-              <Button
-                variant="outline-secondary"
-                onClick={()=>{resetForm(); onClose();}}
-                disabled={saving}
-                className="tw-flex-1 tw-border-gray-300"
-              >
-                <X size={16} className="tw-mr-2"/> Batal
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleSubmit}
-                disabled={saving}
-                className="tw-flex-1 tw-bg-gradient-to-r tw-from-purple-600 tw-to-indigo-600 tw-shadow-lg"
-              >
-                {saving ? (
-                  <>
-                    <Spinner animation="border" size="sm" className="tw-mr-2"/>
-                    Menyimpan...
-                  </>
-                ) : (
-                  <>
-                    <Check size={16} className="tw-mr-2"/> Simpan Jadwal
-                  </>
-                )}
-              </Button>
-            </div>
-          </Modal.Footer>
+          </Form>
         </div>
-      </Modal>
+      </LearningModal>
 
       {/* ------------ Modal Buat Ujian ------------ */}
       <CreateExamModal

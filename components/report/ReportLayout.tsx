@@ -75,20 +75,6 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
   return (
     <div className="tw-py-4">
       {/* Debug info in development */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="tw-bg-blue-50 tw-border tw-border-blue-200 tw-rounded-lg tw-p-2 tw-mb-4 tw-mx-2 sm:tw-mx-0">
-          <div className="tw-text-xs tw-text-blue-600">
-            <strong>Debug Info:</strong> Search Mode: {searchMode} | 
-            Records: {totalRecords} | 
-            Current Search: "{globalSearch}" |
-            Visible Columns: {visibleColumns.length} (ID hidden) |
-            Active Filters: {Object.keys(filterValues).filter(key => filterValues[key] !== '' && filterValues[key] !== null && filterValues[key] !== undefined).length}
-            {searchMode === 'server' && globalSearch && (
-              <span className="tw-ml-2 tw-text-orange-600">(Server-side search active)</span>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Header with Title and Action Buttons */}
       <ReportHeader

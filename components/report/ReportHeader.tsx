@@ -1,8 +1,8 @@
 // components/report/ReportHeader.tsx
 
 import React from 'react';
-import { Button } from 'react-bootstrap';
 import { ActionButton, ColumnConfig, ExportConfig } from '../../types/report';
+import { ButtonGradient, ActionType } from '../button/ButtonTemplate';
 import ExportDropdown from './ExportDropdown';
 
 interface ReportHeaderProps {
@@ -24,16 +24,86 @@ const ReportHeader: React.FC<ReportHeaderProps> = ({
   visibleColumns = [],
   loading = false 
 }) => {
-  const getVariantClass = (variant: ActionButton['variant'] = 'primary') => {
-    const variantMap = {
-      primary: 'tw-bg-purple-600 tw-border-purple-600 hover:tw-bg-purple-700',
-      secondary: 'tw-bg-gray-600 tw-border-gray-600 hover:tw-bg-gray-700',
-      success: 'tw-bg-green-600 tw-border-green-600 hover:tw-bg-green-700',
-      warning: 'tw-bg-yellow-600 tw-border-yellow-600 hover:tw-bg-yellow-700',
-      danger: 'tw-bg-red-600 tw-border-red-600 hover:tw-bg-red-700',
-      info: 'tw-bg-blue-600 tw-border-blue-600 hover:tw-bg-blue-700'
+  // Map variant ke custom colors untuk ButtonGradient
+  const getCustomColors = (variant: ActionButton['variant'] = 'primary') => {
+    const colorMap = {
+      primary: {
+        primary: '#8B5CF6',
+        secondary: '#7C3AED',
+        gradient1: '#8B5CF6',
+        gradient2: '#A855F7',
+        text: '#FFFFFF'
+      },
+      secondary: {
+        primary: '#6B7280',
+        secondary: '#4B5563',
+        gradient1: '#6B7280',
+        gradient2: '#9CA3AF',
+        text: '#FFFFFF'
+      },
+      success: {
+        primary: '#10B981',
+        secondary: '#059669',
+        gradient1: '#10B981',
+        gradient2: '#34D399',
+        text: '#FFFFFF'
+      },
+      warning: {
+        primary: '#F59E0B',
+        secondary: '#D97706',
+        gradient1: '#F59E0B',
+        gradient2: '#FBBF24',
+        text: '#FFFFFF'
+      },
+      danger: {
+        primary: '#EF4444',
+        secondary: '#DC2626',
+        gradient1: '#EF4444',
+        gradient2: '#F87171',
+        text: '#FFFFFF'
+      },
+      info: {
+        primary: '#3B82F6',
+        secondary: '#2563EB',
+        gradient1: '#3B82F6',
+        gradient2: '#60A5FA',
+        text: '#FFFFFF'
+      }
     };
-    return variantMap[variant];
+    return colorMap[variant];
+  };
+
+  // Map variant ke action type yang sesuai
+  const getActionType = (variant: ActionButton['variant'] = 'primary', label: string): ActionType => {
+    // Coba detect dari label dulu
+    const labelLower = label.toLowerCase();
+    
+    // Common action mappings berdasarkan label
+    if (labelLower.includes('add') || labelLower.includes('tambah') || labelLower.includes('create') || labelLower.includes('buat')) return 'add';
+    if (labelLower.includes('edit') || labelLower.includes('ubah') || labelLower.includes('update')) return 'edit';
+    if (labelLower.includes('delete') || labelLower.includes('hapus') || labelLower.includes('remove')) return 'delete';
+    if (labelLower.includes('view') || labelLower.includes('lihat') || labelLower.includes('detail')) return 'view';
+    if (labelLower.includes('save') || labelLower.includes('simpan')) return 'save';
+    if (labelLower.includes('export') || labelLower.includes('ekspor')) return 'export';
+    if (labelLower.includes('import') || labelLower.includes('impor')) return 'import';
+    if (labelLower.includes('download') || labelLower.includes('unduh')) return 'download';
+    if (labelLower.includes('upload') || labelLower.includes('unggah')) return 'upload';
+    if (labelLower.includes('refresh') || labelLower.includes('reload') || labelLower.includes('muat ulang')) return 'refresh';
+    if (labelLower.includes('search') || labelLower.includes('cari')) return 'search';
+    if (labelLower.includes('filter')) return 'filter';
+    if (labelLower.includes('print') || labelLower.includes('cetak')) return 'export';
+    if (labelLower.includes('settings') || labelLower.includes('pengaturan')) return 'settings';
+    if (labelLower.includes('help') || labelLower.includes('bantuan')) return 'custom';
+    
+    // Fallback berdasarkan variant
+    switch (variant) {
+      case 'success': return 'save';
+      case 'danger': return 'delete';
+      case 'warning': return 'edit';
+      case 'info': return 'view';
+      case 'secondary': return 'settings';
+      default: return 'custom';
+    }
   };
 
   return (
@@ -67,20 +137,33 @@ const ReportHeader: React.FC<ReportHeaderProps> = ({
             </div>
           )}
           
-          {/* Action Buttons */}
+          {/* Action Buttons - Using ButtonGradient */}
           {actionButtons.map((button, index) => (
-            <Button
-              key={index}
-              onClick={button.onClick}
-              disabled={loading}
-              className={`tw-text-white tw-border-0 tw-px-3 sm:tw-px-4 tw-py-2 tw-rounded-lg tw-font-medium tw-transition-all tw-duration-200 tw-shadow-md hover:tw-shadow-lg hover:tw-scale-105 tw-flex tw-items-center tw-justify-center tw-gap-2 tw-text-sm sm:tw-text-base tw-w-full sm:tw-w-auto ${getVariantClass(button.variant)}`}
-            >
-              {button.icon && <span className="tw-text-base sm:tw-text-lg tw-flex-shrink-0">{button.icon}</span>}
-              <span className="tw-truncate">{button.label}</span>
-            </Button>
+            <div key={index} className="tw-w-full sm:tw-w-auto">
+              <ButtonGradient
+                action={getActionType(button.variant, button.label)}
+                customText={button.label}
+                customIcon={button.icon || undefined}
+                customColors={getCustomColors(button.variant)}
+                onClick={() => button.onClick()}
+                disabled={loading}
+                size="md"
+                className="tw-w-full sm:tw-w-auto tw-min-w-[120px] tw-shadow-md hover:tw-shadow-lg"
+              />
+            </div>
           ))}
         </div>
       </div>
+      
+      {/* Loading Indicator */}
+      {loading && (
+        <div className="tw-mt-4 tw-flex tw-items-center tw-justify-center tw-gap-2">
+          <div className="tw-w-4 tw-h-4 tw-bg-white tw-rounded-full tw-animate-bounce" style={{ animationDelay: '0ms' }}></div>
+          <div className="tw-w-4 tw-h-4 tw-bg-white tw-rounded-full tw-animate-bounce" style={{ animationDelay: '150ms' }}></div>
+          <div className="tw-w-4 tw-h-4 tw-bg-white tw-rounded-full tw-animate-bounce" style={{ animationDelay: '300ms' }}></div>
+          <span className="tw-text-white tw-text-sm tw-ml-2">Memuat data...</span>
+        </div>
+      )}
     </div>
   );
 };

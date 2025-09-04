@@ -1,203 +1,447 @@
-'use client';
+// pages/panel/exam/ranking/index.tsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
+import { FaEye, FaTrophy, FaUsers, FaStar, FaMapMarkerAlt, FaClock, FaChartBar } from 'react-icons/fa';
+import { Award, BarChart3, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import PageTemplate from '../../../../components/layout/ReportLayout';
-import defaultTableConfig from './table-column.json';
-import filterConfig from './filter-config.json';
-import axios from 'axios';
+import MainLayout from '../../../../components/layout/DashboardLayout';
+import ReportLayout from '../../../../components/report/ReportLayout';
+import { ReportConfig, ColumnConfig } from '../../../../types/report';
 
-const RankingPage: React.FC = () => {
+const UserRankingPage: React.FC = () => {
   const router = useRouter();
-  const [currentFilters, setCurrentFilters] = useState({
-    examType: "All",
-    exam_schedule: "All"
-  });
-  const pageTemplateRef = useRef<any>(null);
-  const initialDataFetchedRef = useRef<boolean>(false);
 
-  const fetchData = async (params: any) => {
-    console.log("Fetch data called with params:", params);
+  // Custom formatters untuk kolom-kolom tertentu
+  const formatRankPosition = (value: string) => {
+    if (!value) return '-';
+    const rank = parseInt(value);
     
-    if (!initialDataFetchedRef.current && pageTemplateRef.current?.isFilterModalOpen) {
-      console.log("Preventing initial fetch while filter modal is open");
-      return { data: [], total: 0, totalPages: 0 };
+    // Badge colors berdasarkan ranking
+    let badgeColor = 'tw-bg-gray-100 tw-text-gray-800';
+    let icon = <FaTrophy className="tw-w-3 tw-h-3" />;
+    
+    if (rank === 1) {
+      badgeColor = 'tw-bg-gradient-to-r tw-from-yellow-400 tw-to-yellow-600 tw-text-white';
+      icon = <FaTrophy className="tw-w-3 tw-h-3 tw-text-yellow-200" />;
+    } else if (rank <= 3) {
+      badgeColor = 'tw-bg-gradient-to-r tw-from-orange-400 tw-to-orange-600 tw-text-white';
+      icon = <FaTrophy className="tw-w-3 tw-h-3 tw-text-orange-200" />;
+    } else if (rank <= 10) {
+      badgeColor = 'tw-bg-gradient-to-r tw-from-blue-400 tw-to-blue-600 tw-text-white';
+    } else {
+      badgeColor = 'tw-bg-gray-100 tw-text-gray-700';
     }
     
-    try {
-      // Merge incoming params with currentFilters to ensure all filters are included
-      const mergedParams = { ...currentFilters, ...params };
-      const apiParams = { ...mergedParams };
-      
-      console.log("Current filters state:", {
-        examType: apiParams.examType,
-        examSchedule: apiParams.exam_schedule
-      });
-      
-      // Use environment variable for API URL
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-      const url = `${apiUrl}/ranking/user-exam-rankings`;
-      
-      if (apiParams.examType && apiParams.examType !== 'All') {
-        apiParams.exam_type = apiParams.examType;
-      }
-      
-      delete apiParams.examType;
-      delete apiParams.exam_schedule;
-      
-      console.log("Fetching from URL:", url, "with params:", apiParams);
-      
-      // Get auth token from localStorage (client-side only)
-      const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-      
-      const response = await axios.get(url, { 
-        params: apiParams,
-        headers: {
-          ...(authToken && { Authorization: `Bearer ${authToken}` })
-        }
-      });
-      
-      console.log("API response:", response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      return { data: [], total: 0, totalPages: 0 };
+    return (
+      <div className="tw-text-center">
+        <div className={`tw-inline-flex tw-items-center tw-gap-2 tw-px-3 tw-py-2 tw-rounded-full tw-font-bold tw-text-sm tw-shadow-sm ${badgeColor}`}>
+          {icon}
+          <span>#{rank}</span>
+        </div>
+      </div>
+    );
+  };
+
+  const formatExamScheduleName = (value: string) => {
+    if (!value) return '-';
+    return (
+      <div className="tw-font-semibold tw-text-gray-800 tw-leading-tight">
+        <div className="tw-text-base tw-mb-1">{value}</div>
+        <div className="tw-text-xs tw-text-purple-600 tw-font-medium">Klik Detail untuk melihat lebih lanjut</div>
+      </div>
+    );
+  };
+
+  const formatExamType = (value: string) => {
+    if (!value) {
+      return (
+        <div className="tw-text-center">
+          <span className="tw-bg-gray-100 tw-text-gray-500 tw-px-3 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium tw-italic">
+            Tidak diketahui
+          </span>
+        </div>
+      );
     }
+    
+    // Color mapping untuk exam type
+    const typeColors = {
+      'SNBT': 'tw-bg-gradient-to-r tw-from-purple-500 tw-to-indigo-500 tw-text-white',
+      'UTBK': 'tw-bg-gradient-to-r tw-from-blue-500 tw-to-cyan-500 tw-text-white',
+      'TPS': 'tw-bg-gradient-to-r tw-from-green-500 tw-to-emerald-500 tw-text-white',
+      'TKA': 'tw-bg-gradient-to-r tw-from-orange-500 tw-to-red-500 tw-text-white'
+    };
+    
+    const colorClass = typeColors[value as keyof typeof typeColors] || 'tw-bg-gray-500 tw-text-white';
+    
+    return (
+      <div className="tw-text-center">
+        <span className={`tw-px-4 tw-py-2 tw-rounded-full tw-text-sm tw-font-bold tw-shadow-md ${colorClass}`}>
+          {value}
+        </span>
+      </div>
+    );
   };
 
-  useEffect(() => {
-    console.log("Effect triggered: filters changed", currentFilters);
+  const formatParticipants = (value: string) => {
+    if (!value) return '-';
+    const count = parseInt(value);
     
-    if (initialDataFetchedRef.current && pageTemplateRef.current) {
-      // A small delay to ensure state is fully updated before refetching
-      setTimeout(() => {
-        if (pageTemplateRef.current.refetchData) {
-          console.log("Triggering refetch with updated filters", currentFilters);
-          pageTemplateRef.current.refetchData();
-        }
-      }, 100);
+    return (
+      <div className="tw-text-center">
+        <div className="tw-flex tw-items-center tw-justify-center tw-gap-2">
+          <FaUsers className="tw-text-blue-600 tw-w-4 tw-h-4" />
+          <span className="tw-text-lg tw-font-bold tw-text-blue-700">{count}</span>
+        </div>
+        <div className="tw-text-xs tw-text-gray-500">
+          {count === 1 ? 'peserta' : 'peserta'}
+        </div>
+      </div>
+    );
+  };
+
+  const formatScore = (value: string, label: string) => {
+    if (!value) return '-';
+    const score = parseInt(value);
+    
+    // Color berdasarkan score
+    let scoreColor = 'tw-text-red-600';
+    if (score >= 80) scoreColor = 'tw-text-green-600';
+    else if (score >= 60) scoreColor = 'tw-text-blue-600';
+    else if (score >= 40) scoreColor = 'tw-text-orange-600';
+    
+    return (
+      <div className="tw-text-center">
+        <div className={`tw-text-xl tw-font-bold ${scoreColor}`}>
+          {score}
+        </div>
+        <div className="tw-text-xs tw-text-gray-500">{label}</div>
+      </div>
+    );
+  };
+
+  const formatDateTime = (value: string) => {
+    if (!value) {
+      return (
+        <div className="tw-text-center">
+          <span className="tw-text-gray-400 tw-italic tw-flex tw-items-center tw-justify-center tw-gap-1">
+            <FaClock className="tw-w-3 tw-h-3" />
+            Belum ada waktu
+          </span>
+        </div>
+      );
     }
-  }, [currentFilters]);
-
-  const initialFilters = {
-    examType: "All",
-    exam_schedule: "All",
-    isFree: "All",
-    isValid: "All",
-    dateRange: "none",
-    startDate: null,
-    endDate: null,
-    groupProduct: "All",
-    series: "All"
+    
+    const date = new Date(value);
+    
+    // Indonesian days of week
+    const daysIndonesian = [
+      'Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'
+    ];
+    
+    // Get day name in Indonesian
+    const dayName = daysIndonesian[date.getDay()];
+    
+    return (
+      <div className="tw-text-center">
+        <div className="tw-font-medium tw-text-gray-800 tw-flex tw-items-center tw-justify-center tw-gap-1 tw-text-sm">
+          <FaClock className="tw-w-3 tw-h-3 tw-text-purple-600" />
+          {dayName}
+        </div>
+        <div className="tw-text-xs tw-text-gray-600">
+          {date.toLocaleDateString('id-ID')}
+        </div>
+        <div className="tw-text-xs tw-text-gray-500">
+          {date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+        </div>
+      </div>
+    );
   };
 
-  const customFormatters = {
-    waktu: (value: string | Date) => {
-      if (!value) return '-';
-      
-      // Convert string to Date object if needed
-      const date = value instanceof Date ? value : new Date(value);
-      
-      // Indonesian days of week
-      const daysIndonesian = [
-        'Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'
-      ];
-      
-      // Get day name in Indonesian
-      const dayName = daysIndonesian[date.getDay()];
-      
-      // Format date as dd/mm/yyyy
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0'); // +1 because months are 0-indexed
-      const year = date.getFullYear();
-      
-      // Combine day name and formatted date
-      return `${dayName}, ${day}/${month}/${year}`;
-    }
+  const formatLocation = (kota: string, provinsi: string, rankKota: string, rankProvinsi: string) => {
+    return (
+      <div className="tw-text-center tw-space-y-2">
+        <div className="tw-flex tw-items-center tw-justify-center tw-gap-1 tw-text-sm tw-font-medium tw-text-gray-800">
+          <FaMapMarkerAlt className="tw-w-3 tw-h-3 tw-text-red-500" />
+          <span>{kota || 'Unknown'}</span>
+        </div>
+        <div className="tw-text-xs tw-text-gray-600">{provinsi || 'Unknown'}</div>
+        <div className="tw-flex tw-gap-1 tw-justify-center tw-flex-wrap">
+          <span className="tw-bg-blue-100 tw-text-blue-700 tw-px-2 tw-py-1 tw-rounded tw-text-xs tw-font-medium">
+            Kota: #{rankKota || 'N/A'}
+          </span>
+          <span className="tw-bg-green-100 tw-text-green-700 tw-px-2 tw-py-1 tw-rounded tw-text-xs tw-font-medium">
+            Prov: #{rankProvinsi || 'N/A'}
+          </span>
+        </div>
+      </div>
+    );
   };
 
-  const handleFilterChange = (newFilters: any) => {
-    console.log("Filter change handler called with:", newFilters);
-    initialDataFetchedRef.current = true;
+  // Handler functions
+  const handleViewDetail = (row: any) => {
+    console.log('View ranking detail:', row);
+    const examType = encodeURIComponent(row.exam_type || '');
+    const examScheduleId = encodeURIComponent(row.exam_schedule_id || '');
+    const examScheduleName = encodeURIComponent(row.exam_schedule_name || '');
     
-    // Update filters in a single state update to avoid race conditions
-    setCurrentFilters({
-      examType: newFilters.examType,
-      exam_schedule: newFilters.exam_schedule
-    });
-    
-    // Handle resetting dependent fields
-    if (newFilters.examType !== currentFilters.examType && newFilters.examType !== 'All') {
-      const updatedFilters = { ...newFilters, exam_schedule: 'All' };
-      console.log("Resetting exam_schedule to 'All' due to exam type change. Updated filters:", updatedFilters);
-      return updatedFilters;
-    }
-
-    return newFilters;
-  };
-
-  const handleFilterModalClose = () => {
-    console.log("Filter modal closed");
-    initialDataFetchedRef.current = true;
-  };
-
-  const handleViewDetail = (record: any) => {
-    console.log("View Detail clicked with record:", record);
-    
-    // Extract all needed information
-    const examType = encodeURIComponent(record.exam_type || '');
-    const examScheduleId = encodeURIComponent(record.exam_schedule_id || '');
-    const examScheduleName = encodeURIComponent(record.exam_schedule_name || '');
-    
-    // Navigate with all three parameters using Next.js router
+    // Navigate to detail page with query parameters using Next.js router
     router.push(`/panel/exam/ranking/detail?exam_type=${examType}&exam=${examScheduleId}&esn=${examScheduleName}`);
   };
 
-  const getCustomActions = (record: any) => {
-    return [
+  const handleRefreshData = () => {
+    console.log('Refresh ranking data');
+    // The ReportLayout will handle refresh through its refresh function
+    window.location.reload();
+  };
+
+  const handleAnalysisRanking = () => {
+    console.log('Open ranking analysis');
+    // TODO: Implement ranking analysis modal or navigate to analysis page
+    router.push('/panel/exam/ranking/analysis');
+  };
+
+  // Definisi kolom-kolom berdasarkan data
+  const columns: ColumnConfig[] = [
+    {
+      key: 'no',
+      label: 'No',
+      type: 'number',
+      width: 70,
+      colGroup: 'basic'
+    },
+    {
+      key: 'rank',
+      label: 'Peringkat',
+      type: 'string',
+      width: 120,
+      colGroup: 'ranking',
+      formatter: formatRankPosition
+    },
+    {
+      key: 'exam_schedule_name',
+      label: 'Nama Ujian',
+      type: 'string',
+      width: 280,
+      colGroup: 'exam_info',
+      formatter: formatExamScheduleName
+    },
+    {
+      key: 'exam_type',
+      label: 'Tipe Ujian',
+      type: 'string',
+      width: 140,
+      colGroup: 'exam_info',
+      formatter: formatExamType
+    },
+    {
+      key: 'peserta',
+      label: 'Total Peserta',
+      type: 'string',
+      width: 120,
+      colGroup: 'participants',
+      formatter: formatParticipants
+    },
+    {
+      key: 'skor_total',
+      label: 'Skor Total',
+      type: 'string',
+      width: 120,
+      colGroup: 'scores',
+      formatter: (value) => formatScore(value, 'total')
+    },
+    {
+      key: 'avg_skor',
+      label: 'Skor Rata-rata',
+      type: 'string',
+      width: 130,
+      colGroup: 'scores',
+      formatter: (value) => formatScore(value, 'rata-rata')
+    },
+    {
+      key: 'waktu',
+      label: 'Waktu Ujian',
+      type: 'datetime',
+      width: 160,
+      colGroup: 'time',
+      formatter: formatDateTime
+    },
+    {
+      key: 'location',
+      label: 'Lokasi & Ranking Daerah',
+      type: 'string',
+      width: 220,
+      colGroup: 'location',
+      formatter: (value, row) => formatLocation(row.kota, row.provinsi, row.rank_kota, row.rank_provinsi)
+    }
+  ];
+
+  // Konfigurasi report dengan sistem batch filtering
+  const reportConfig: ReportConfig = {
+    title: 'Ranking Pengguna Ujian (User Ranking)',
+    showDebugInfo: false, // Hide debug info
+    columns,
+    colGroups: [
       {
-        icon: 'file-text',
-        label: 'View Detail',
-        onClick: () => {
-          console.log("View Detail action clicked with record:", record);
-          handleViewDetail(record);
-        },
-        color: 'green'
+        key: 'basic',
+        label: 'Informasi Dasar',
+        columns: ['no']
       },
       {
-        icon: 'bar-chart-2',
-        label: 'Check Result',
-        onClick: () => {
-          // Navigate to exam results using Next.js router with state
-          // Note: Next.js doesn't support state in router.push, so we'll use query params or sessionStorage
-          if (typeof window !== 'undefined') {
-            sessionStorage.setItem('examResultState', JSON.stringify({
-              examType: record.exam_type || currentFilters.examType,
-              examId: record.id
-            }));
-          }
-          router.push(`/exam-results/${record.id}`);
-        },
-        color: 'blue'
+        key: 'ranking',
+        label: 'Peringkat',
+        columns: ['rank']
+      },
+      {
+        key: 'exam_info',
+        label: 'Informasi Ujian',
+        columns: ['exam_schedule_name', 'exam_type']
+      },
+      {
+        key: 'participants',
+        label: 'Peserta',
+        columns: ['peserta']
+      },
+      {
+        key: 'scores',
+        label: 'Nilai',
+        columns: ['skor_total', 'avg_skor']
+      },
+      {
+        key: 'time',
+        label: 'Waktu',
+        columns: ['waktu']
+      },
+      {
+        key: 'location',
+        label: 'Lokasi',
+        columns: ['location']
       }
-    ];
+    ],
+    filters: [
+      {
+        key: 'exam_schedule_name',
+        type: 'text',
+        label: 'Nama Ujian'
+      },
+      {
+        key: 'exam_type',
+        type: 'select',
+        label: 'Tipe Ujian',
+        apiEndpoint: '/ranking/exam-types',
+        debounceMs: 300
+      },
+      {
+        key: 'rank',
+        type: 'number',
+        label: 'Ranking (Maksimal)'
+      },
+      {
+        key: 'peserta',
+        type: 'number',
+        label: 'Minimal Peserta'
+      },
+      {
+        key: 'skor_total',
+        type: 'number',
+        label: 'Skor Total (Minimal)'
+      },
+      {
+        key: 'avg_skor',
+        type: 'number',
+        label: 'Skor Rata-rata (Minimal)'
+      },
+      {
+        key: 'kota',
+        type: 'select',
+        label: 'Kota',
+        apiEndpoint: '/ranking/cities',
+        debounceMs: 300
+      },
+      {
+        key: 'provinsi',
+        type: 'select',
+        label: 'Provinsi',
+        apiEndpoint: '/ranking/provinces',
+        debounceMs: 300
+      },
+      {
+        key: 'waktu',
+        type: 'date',
+        label: 'Tanggal Ujian (Dari)'
+      },
+      {
+        key: 'waktu_sampai',
+        type: 'date',
+        label: 'Tanggal Ujian (Sampai)'
+      }
+    ],
+    defaultSort: [
+      { key: 'rank', direction: 'asc' }
+    ],
+    defaultVisibleColumns: [
+      'rank', 
+      'exam_schedule_name', 
+      'exam_type', 
+      'peserta',
+      'skor_total',
+      'avg_skor',
+      'waktu',
+      'location'
+    ],
+    defaultFreezeColumn: 'rank',
+    showIcon: true,
+    showRowNumber: true,
+    pageSize: 10,
+    rowHeight: 90, // Increased height untuk accommodating location info
+    exportConfig: {
+      enabled: true,
+      filename: 'user_ranking',
+      formats: ['excel', 'csv', 'pdf']
+    },
+    actionColumn: {
+      enabled: true,
+      label: 'Aksi',
+      width: 150,
+      sticky: false,
+      buttons: [
+        {
+          label: 'Detail',
+          icon: React.createElement(FaEye),
+          variant: 'outline-info',
+          size: 'sm',
+          onClick: handleViewDetail
+        }
+      ]
+    },
+    actionButtons: [
+      {
+        label: 'Analisis Ranking',
+        icon: React.createElement(BarChart3),
+        variant: 'info',
+        onClick: handleAnalysisRanking
+      },
+      {
+        label: 'Refresh Data',
+        icon: React.createElement(RefreshCw),
+        variant: 'secondary',
+        onClick: handleRefreshData
+      }
+    ]
   };
 
   return (
-    <PageTemplate
-      ref={pageTemplateRef}
-      title="Exam Rank Database"
-      fetchData={fetchData}
-      tableConfig={defaultTableConfig}
-      filterConfig={filterConfig}
-      initialFilters={initialFilters}
-      onDetail={handleViewDetail}
-      onFilterChange={handleFilterChange}
-      onFilterModalClose={handleFilterModalClose}
-      customActions={getCustomActions}
-      customFormatters={customFormatters}
-    />
+    <MainLayout>
+      <div className="tw-min-h-screen tw-bg-gradient-to-br tw-from-blue-50 tw-via-white tw-to-blue-50">
+        {/* Main Report Layout */}
+        <ReportLayout
+          config={reportConfig}
+          apiEndpoint="/ranking/user-exam-rankings"
+          fetchOnMount={true}
+          searchMode="server"
+        />
+      </div>
+    </MainLayout>
   );
 };
 
-export default RankingPage;
+export default UserRankingPage;

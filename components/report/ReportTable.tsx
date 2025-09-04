@@ -1,9 +1,10 @@
 // components/report/ReportTable.tsx
 
 import React, { useMemo } from 'react';
-import { Table, Spinner, Button } from 'react-bootstrap';
+import { Table, Spinner } from 'react-bootstrap';
 import { FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import { ColumnConfig, SortConfig, ColGroup, ActionColumnButton } from '../../types/report';
+import { ButtonGradient, ActionType } from '../button/ButtonTemplate';
 import { buildColGroups, getDefaultFormatter } from '../../utils/reportUtils';
 
 interface ReportTableProps {
@@ -18,6 +19,7 @@ interface ReportTableProps {
   showIcon?: boolean;
   showRowNumber?: boolean;
   rowHeight?: number;
+  maxHeight?: string; // New prop for custom max height
   actionColumn?: {
     enabled: boolean;
     label?: string;
@@ -38,6 +40,7 @@ const ReportTable: React.FC<ReportTableProps> = ({
   loading = false,
   showIcon = false,
   showRowNumber = true,
+  maxHeight = 'calc(100vh - 200px)', // Default to viewport minus header/footer space
   actionColumn
 }) => {
   const effectiveColGroups = useMemo(() => {
@@ -75,42 +78,62 @@ const ReportTable: React.FC<ReportTableProps> = ({
     );
   };
 
+  // Map variant ke action type dan custom colors untuk ButtonGradient
+  const getActionTypeAndColors = (variant: ActionColumnButton['variant'], label: string) => {
+    const labelLower = label.toLowerCase();
+    
+    // Smart detection berdasarkan label
+    let actionType: ActionType = 'custom';
+    if (labelLower.includes('detail') || labelLower.includes('view') || labelLower.includes('lihat')) actionType = 'view';
+    else if (labelLower.includes('edit') || labelLower.includes('ubah')) actionType = 'edit';
+    else if (labelLower.includes('delete') || labelLower.includes('hapus') || labelLower.includes('remove')) actionType = 'delete';
+    else if (labelLower.includes('copy') || labelLower.includes('salin')) actionType = 'copy';
+    else if (labelLower.includes('download') || labelLower.includes('unduh')) actionType = 'download';
+    else if (labelLower.includes('print') || labelLower.includes('cetak')) actionType = 'export';
+
+    // Custom colors berdasarkan variant
+    const colorMap = {
+      'primary': { primary: '#3B82F6', secondary: '#2563EB', gradient1: '#3B82F6', gradient2: '#60A5FA', text: '#FFFFFF' },
+      'secondary': { primary: '#6B7280', secondary: '#4B5563', gradient1: '#6B7280', gradient2: '#9CA3AF', text: '#FFFFFF' },
+      'success': { primary: '#10B981', secondary: '#059669', gradient1: '#10B981', gradient2: '#34D399', text: '#FFFFFF' },
+      'warning': { primary: '#F59E0B', secondary: '#D97706', gradient1: '#F59E0B', gradient2: '#FBBF24', text: '#FFFFFF' },
+      'danger': { primary: '#EF4444', secondary: '#DC2626', gradient1: '#EF4444', gradient2: '#F87171', text: '#FFFFFF' },
+      'info': { primary: '#06B6D4', secondary: '#0891B2', gradient1: '#06B6D4', gradient2: '#22D3EE', text: '#FFFFFF' },
+      'outline-primary': { primary: '#3B82F6', secondary: '#2563EB', gradient1: '#EFF6FF', gradient2: '#DBEAFE', text: '#3B82F6' },
+      'outline-secondary': { primary: '#6B7280', secondary: '#4B5563', gradient1: '#F9FAFB', gradient2: '#F3F4F6', text: '#6B7280' },
+      'outline-success': { primary: '#10B981', secondary: '#059669', gradient1: '#F0FDF4', gradient2: '#DCFCE7', text: '#10B981' },
+      'outline-warning': { primary: '#F59E0B', secondary: '#D97706', gradient1: '#FFFBEB', gradient2: '#FEF3C7', text: '#F59E0B' },
+      'outline-danger': { primary: '#EF4444', secondary: '#DC2626', gradient1: '#FEF2F2', gradient2: '#FEE2E2', text: '#EF4444' },
+      'outline-info': { primary: '#06B6D4', secondary: '#0891B2', gradient1: '#F0F9FF', gradient2: '#E0F2FE', text: '#06B6D4' }
+    };
+
+    return {
+      actionType,
+      customColors: colorMap[variant || 'primary'] || colorMap.primary
+    };
+  };
+
   const renderActionButtons = (row: any, rowIndex: number) => {
     if (!actionColumn?.enabled || !actionColumn.buttons?.length) return null;
 
     return (
-      <div className="tw-flex tw-gap-1 tw-justify-center tw-items-center tw-px-2">
+      <div className="tw-flex tw-gap-1 tw-justify-center tw-items-center tw-px-2 tw-flex-wrap">
         {actionColumn.buttons.map((button, buttonIndex) => {
-          const getButtonVariantClass = (variant: ActionColumnButton['variant'] = 'primary') => {
-            const variantMap = {
-              primary: 'btn-primary',
-              secondary: 'btn-secondary',
-              success: 'btn-success',
-              warning: 'btn-warning',
-              danger: 'btn-danger',
-              info: 'btn-info',
-              'outline-primary': 'btn-outline-primary',
-              'outline-secondary': 'btn-outline-secondary',
-              'outline-success': 'btn-outline-success',
-              'outline-warning': 'btn-outline-warning',
-              'outline-danger': 'btn-outline-danger',
-              'outline-info': 'btn-outline-info'
-            };
-            return variantMap[variant] || 'btn-primary';
-          };
-
+          const { actionType, customColors } = getActionTypeAndColors(button.variant, button.label);
+          
           return (
-            <Button
-              key={buttonIndex}
-              size={button.size || 'sm'}
-              className={`${getButtonVariantClass(button.variant)} tw-flex tw-items-center tw-gap-1 tw-px-2 tw-py-1 ${button.className || ''}`}
-              onClick={() => button.onClick(row, rowIndex)}
-              disabled={loading}
-              title={button.label}
-            >
-              {button.icon && <span className="tw-text-xs">{button.icon}</span>}
-              <span className="tw-hidden sm:tw-inline tw-text-xs">{button.label}</span>
-            </Button>
+            <div key={buttonIndex} className="tw-flex-shrink-0">
+              <ButtonGradient
+                action={actionType}
+                customText={button.label}
+                customIcon={button.icon || undefined}
+                customColors={customColors}
+                onClick={() => button.onClick(row, rowIndex)}
+                disabled={loading}
+                size="sm"
+                className={`tw-min-w-[80px] tw-text-xs ${button.className || ''}`}
+              />
+            </div>
           );
         })}
       </div>
@@ -176,9 +199,15 @@ const ReportTable: React.FC<ReportTableProps> = ({
   }
 
   return (
-    <div className="tw-bg-white tw-rounded-lg tw-shadow-sm tw-border tw-border-gray-200 tw-overflow-hidden tw-relative tw-z-0 tw-mx-2 sm:tw-mx-0">
-      <div className="tw-overflow-x-auto tw-overflow-y-auto" style={{ maxHeight: '70vh' }}>
-        <Table className="tw-mb-0" style={{ minWidth: '100%' }}>
+    <div className="tw-bg-white tw-rounded-lg tw-shadow-sm tw-border tw-border-gray-200 tw-overflow-hidden tw-relative tw-z-0 tw-mx-2 sm:tw-mx-0 tw-h-full">
+      <div 
+        className="tw-overflow-x-auto tw-overflow-y-auto" 
+        style={{ 
+          maxHeight: maxHeight,
+          minHeight: '500px' // Minimum height to ensure table is tall enough
+        }}
+      >
+        <Table className="tw-mb-0 tw-h-full" style={{ minWidth: '100%' }}>
           <thead className="tw-sticky tw-top-0 tw-z-20">
             {renderColGroupHeaders()}
             <tr className="tw-bg-gradient-to-r tw-from-gray-50 tw-to-gray-100">
@@ -279,7 +308,7 @@ const ReportTable: React.FC<ReportTableProps> = ({
                 <tr
                   key={rowIndex}
                   className="tw-border-b tw-border-gray-100 hover:tw-bg-gray-50 tw-transition-colors"
-                  style={{ height: '60px' }}
+                  style={{ height: '70px' }} // Increased height to accommodate ButtonGradient
                 >
                   {showIcon && (
                     <td
@@ -337,7 +366,7 @@ const ReportTable: React.FC<ReportTableProps> = ({
 
                   {actionColumn?.enabled && (
                     <td
-                      className={`tw-text-center tw-align-middle tw-px-2 ${
+                      className={`tw-text-center tw-align-middle tw-px-2 tw-py-2 ${
                         actionColumn.sticky ? 'tw-sticky tw-right-0 tw-bg-white tw-z-10 hover:tw-bg-gray-50 tw-shadow-lg' : ''
                       }`}
                       style={{

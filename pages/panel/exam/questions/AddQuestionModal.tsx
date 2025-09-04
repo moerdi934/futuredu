@@ -1,15 +1,56 @@
 'use client';
 
+/**
+ * ./AddQuestionModal.tsx
+ * --------------------------------------------------------------------------
+ * Modal "Tambah Soal Baru" – Updated untuk menggunakan ModalTemplate dan ButtonTemplate
+ * Menggunakan ReportSuiteModal dan form components yang konsisten
+ * Termasuk button untuk buat banyak sekaligus ke /panel/exam/questions/create-bulk
+ * --------------------------------------------------------------------------
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Modal, Form, Row, Col, Card, Spinner } from 'react-bootstrap';
-import { Plus, BookOpen, FileText, Check, X, Zap, Bookmark, FilePlus } from 'lucide-react';
+import {
+  Form,
+  Row,
+  Col,
+  Card,
+  Button,
+  Spinner
+} from 'react-bootstrap';
 import axios from 'axios';
 import debounce from 'lodash/debounce';
+
+import {
+  SearchSingleField,
+  SelectCustomField
+} from '../../../../components/form/FormComponentLayout';
+
+import {
+  BookOpen,
+  FileText,
+  Check,
+  X,
+  Bookmark,
+  FilePlus,
+  Plus,
+  RotateCcw,
+  XCircle,
+  CheckCircle,
+  Award,
+  Target,
+  User,
+  Zap
+} from 'lucide-react';
+
+import { ReportSuiteModal, ModalButton } from '../../../../components/modal/ModalTemplate';
 import SuperEditor from '../../../../components/supereditor/SuperEditor';
 import { useAuth } from '../../../../context/AuthContext';
-import { SearchSingleField, SelectCustomField } from '../../../../components/form/FormComponentLayout';
 
+/* -------------------------------------------------------------------------- */
+/*  Types                                                                     */
+/* -------------------------------------------------------------------------- */
 interface Question {
   exam_type_id: number | string;
   id_subtopik: number | string;
@@ -46,43 +87,84 @@ interface Passage {
   passage: string;
 }
 
-const AddQuestionModal: React.FC<AddQuestionModalProps> = ({ isOpen, onClose, onSave }) => {
+interface SelectOption {
+  label: string;
+  value: number;
+  code?: string;
+  NextID?: string;
+}
+
+interface FormErrors {
+  [key: string]: string | undefined;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Component                                                                 */
+/* -------------------------------------------------------------------------- */
+const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
+  isOpen,
+  onClose,
+  onSave
+}) => {
   const router = useRouter();
   const { id } = useAuth();
   const userId = id || null;
 
-  const [bidang, setBidang] = useState<{ label: string; value: number } | null>(null);
-  const [topik, setTopik] = useState<{ label: string; value: number } | null>(null);
-  const [subTopik, setSubTopik] = useState<{ label: string; value: number; NextID?: string } | null>(null);
+  /* -------------------------- State ---------------------------------- */
+  const [bidang, setBidang] = useState<SelectOption | null>(null);
+  const [topik, setTopik] = useState<SelectOption | null>(null);
+  const [subTopik, setSubTopik] = useState<SelectOption | null>(null);
   const [questionCode, setQuestionCode] = useState<string>('');
-  const [bidangOptions, setBidangOptions] = useState<{ label: string; value: number }[]>([]);
-  const [topikOptions, setTopikOptions] = useState<{ label: string; value: number }[]>([]);
-  const [subTopikOptions, setSubTopikOptions] = useState<{ label: string; value: number; NextID?: string }[]>([]);
+  
+  const [bidangOptions, setBidangOptions] = useState<SelectOption[]>([]);
+  const [topikOptions, setTopikOptions] = useState<SelectOption[]>([]);
+  const [subTopikOptions, setSubTopikOptions] = useState<SelectOption[]>([]);
+  
   const [questionType, setQuestionType] = useState<string>('single-choice');
+  const [questionText, setQuestionText] = useState<string>('');
+  const [level, setLevel] = useState<number | null>(null);
+  
+  // Options for single/multiple choice
   const [options, setOptions] = useState<string[]>(['']);
   const [correctAnswer, setCorrectAnswer] = useState<number[]>([]);
+  
+  // Statements for true/false
   const [statements, setStatements] = useState<string[]>(['']);
+  
+  // Answer for number/text
   const [answer, setAnswer] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
-  const [isLoadingBidang, setIsLoadingBidang] = useState(false);
-  const [isLoadingTopik, setIsLoadingTopik] = useState(false);
-  const [isLoadingSubTopik, setIsLoadingSubTopik] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [questionText, setQuestionText] = useState<string>('');
+  
+  // Passage related
   const [hasPassage, setHasPassage] = useState(false);
   const [createNewPassage, setCreateNewPassage] = useState(false);
   const [passage, setPassage] = useState<Passage | null>(null);
   const [passageSearchResults, setPassageSearchResults] = useState<Passage[]>([]);
-  const [isLoadingPassage, setIsLoadingPassage] = useState(false);
   const [newPassageTitle, setNewPassageTitle] = useState('');
   const [newPassageContent, setNewPassageContent] = useState('');
+  const [passageSearchTerm, setPassageSearchTerm] = useState('');
+  
+  // Explanation
   const [hasExplanation, setHasExplanation] = useState(false);
   const [explanationContent, setExplanationContent] = useState('');
-  const [passageSearchTerm, setPassageSearchTerm] = useState('');
-  const [level, setLevel] = useState<number | null>(null);
+  
+  // Loading states
+  const [isLoadingBidang, setIsLoadingBidang] = useState(false);
+  const [isLoadingTopik, setIsLoadingTopik] = useState(false);
+  const [isLoadingSubTopik, setIsLoadingSubTopik] = useState(false);
+  const [isLoadingPassage, setIsLoadingPassage] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Error handling
+  const [errors, setErrors] = useState<FormErrors>({});
+  
+  // Success modal
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [savedQuestionCode, setSavedQuestionCode] = useState<string>('');
+  
+  // Track changes for modal
+  const [hasChanges, setHasChanges] = useState(false);
 
+  /* ---------------------- Constants ------------------------------- */
   const optionLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
   
   const questionTypeOptions = [
@@ -100,39 +182,58 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({ isOpen, onClose, on
     { label: '4 - Pro', value: 4 },
     { label: '5 - Expert', value: 5 }
   ];
-  
-  const selectedQuestionType = questionTypeOptions.find(opt => opt.value === questionType) || questionTypeOptions[0];
 
+  /* ---------------------- Check for changes --------------------------- */
+  useEffect(() => {
+    const hasData = bidang !== null || 
+                   topik !== null || 
+                   subTopik !== null ||
+                   questionText.trim() !== '' ||
+                   level !== null ||
+                   hasPassage ||
+                   hasExplanation ||
+                   (questionType === 'single-choice' || questionType === 'multiple-choice') && options.some(opt => opt.trim() !== '') ||
+                   questionType === 'true-false' && statements.some(stmt => stmt.trim() !== '') ||
+                   (questionType === 'number' || questionType === 'text') && answer.trim() !== '';
+    setHasChanges(hasData);
+  }, [bidang, topik, subTopik, questionText, level, hasPassage, hasExplanation, 
+      options, statements, answer, questionType]);
+
+  /* ---------------------- Helper Functions ---------------------------- */
   const extractCodeFromLabel = (label: string): string => {
     if (!label) return '';
     const parts = label.split(' - ');
     return parts[0]?.trim() || '';
   };
 
-const fetchBidang = async (searchTerm: string = ''): Promise<void> => {
-  setIsLoadingBidang(true);
-  try {
-    const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/exam-types/search?search=${searchTerm}&kind=1`);
-    
-    
-    if (response.data && Array.isArray(response.data.examTypes)) {
-      const formattedOptions = response.data.examTypes.map((exam: ExamType) => ({
-        label: `${String(exam.code || '')} - ${String(exam.name || '')}`.trim(),
-        value: exam.id,
-        code: exam.code
-      }));
+  const getTextFromHtml = (html: string): string => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || tempDiv.innerText || '';
+  };
+
+  /* ---------------------- Fetch Functions ----------------------------- */
+  const fetchBidang = async (searchTerm: string = ''): Promise<void> => {
+    setIsLoadingBidang(true);
+    try {
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/exam-types/search?search=${searchTerm}&kind=1`);
       
-      setBidangOptions(formattedOptions);
-    } else {
+      if (response.data && Array.isArray(response.data.examTypes)) {
+        const formattedOptions = response.data.examTypes.map((exam: ExamType) => ({
+          label: `${String(exam.code || '')} - ${String(exam.name || '')}`.trim(),
+          value: exam.id,
+          code: exam.code
+        }));
+        setBidangOptions(formattedOptions);
+      } else {
+        setBidangOptions([]);
+      }
+    } catch (error) {
       setBidangOptions([]);
+    } finally {
+      setIsLoadingBidang(false);
     }
-  } catch (error) {
-    console.error('Error fetching bidang:', error); // Debug log
-    setBidangOptions([]);
-  } finally {
-    setIsLoadingBidang(false);
-  }
-};
+  };
 
   const fetchTopik = async (searchTerm: string = ''): Promise<void> => {
     if (!bidang) return;
@@ -198,28 +299,13 @@ const fetchBidang = async (searchTerm: string = ''): Promise<void> => {
     }
   };
 
-  const createNewPassageHandler = async (): Promise<number> => {
-    try {
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/questions/passage`, {
-        title: newPassageTitle,
-        passage: newPassageContent,
-        create_user_id: userId
-      }, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken')}`
-        }
-      });
-      return response.data.id;
-    } catch (error) {
-      throw new Error('Failed to create passage');
-    }
-  };
-
+  /* ---------------------- Debounced Functions ------------------------- */
   const debouncedFetchBidang = debounce(fetchBidang, 300);
   const debouncedFetchTopik = debounce(fetchTopik, 300);
   const debouncedFetchSubTopik = debounce(fetchSubTopik, 300);
   const debouncedFetchPassages = debounce(fetchPassages, 500);
 
+  /* ---------------------- Effects ------------------------------------- */
   useEffect(() => {
     if (isOpen) {
       fetchBidang('');
@@ -238,6 +324,7 @@ const fetchBidang = async (searchTerm: string = ''): Promise<void> => {
     }
   }, [passageSearchTerm]);
 
+  // Generate question code
   useEffect(() => {
     if (bidang && topik && subTopik && subTopik.NextID) {
       try {
@@ -264,6 +351,7 @@ const fetchBidang = async (searchTerm: string = ''): Promise<void> => {
     }
   }, [bidang, topik, subTopik, bidangOptions, topikOptions, subTopikOptions]);
 
+  // Cascade dropdowns
   useEffect(() => {
     if (bidang) {
       fetchTopik('');
@@ -283,35 +371,148 @@ const fetchBidang = async (searchTerm: string = ''): Promise<void> => {
       setSubTopik(null);
     }
   }, [topik]);
-  
-  const handleClose = () => {
-    setError(null);
+
+  /* ---------------------- Reset Functions ----------------------------- */
+  const resetForm = () => {
     setBidang(null);
     setTopik(null);
     setSubTopik(null);
     setQuestionCode('');
     setQuestionType('single-choice');
+    setQuestionText('');
+    setLevel(null);
     setOptions(['']);
     setCorrectAnswer([]);
     setStatements(['']);
     setAnswer('');
-    setBidangOptions([]);
-    setTopikOptions([]);
-    setSubTopikOptions([]);
-    setQuestionText('');
-    setIsSaving(false);
     setHasPassage(false);
     setCreateNewPassage(false);
     setPassage(null);
     setPassageSearchResults([]);
-    setHasExplanation(false);
-    setExplanationContent('');
     setNewPassageTitle('');
     setNewPassageContent('');
-    setLevel(null);
+    setPassageSearchTerm('');
+    setHasExplanation(false);
+    setExplanationContent('');
+    setErrors({});
+    setIsSaving(false);
     setShowSuccessModal(false);
     setSavedQuestionCode('');
-    onClose();
+    setHasChanges(false);
+    
+    // Reset options
+    setBidangOptions([]);
+    setTopikOptions([]);
+    setSubTopikOptions([]);
+  };
+
+  /* ---------------------- Validation ---------------------------------- */
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    if (!subTopik) {
+      newErrors.subTopik = 'Sub Topik wajib dipilih';
+    }
+    
+    if (level === null) {
+      newErrors.level = 'Level wajib dipilih';
+    }
+    
+    const questionPlainText = getTextFromHtml(questionText).trim();
+    if (!questionPlainText) {
+      newErrors.questionText = 'Teks soal tidak boleh kosong';
+    }
+    
+    if (questionType === 'single-choice' || questionType === 'multiple-choice') {
+      if (options.length < 2) {
+        newErrors.options = 'Minimal dua opsi diperlukan';
+      }
+      
+      for (let i = 0; i < options.length; i++) {
+        const optionPlainText = getTextFromHtml(options[i]).trim();
+        if (!optionPlainText) {
+          newErrors.options = `Opsi ${optionLabels[i]} tidak boleh kosong`;
+          break;
+        }
+      }
+      
+      if (correctAnswer.length === 0) {
+        newErrors.correctAnswer = 'Minimal satu jawaban benar harus dipilih';
+      }
+    }
+    
+    if (questionType === 'true-false') {
+      for (let i = 0; i < statements.length; i++) {
+        if (!statements[i].trim()) {
+          newErrors.statements = `Pernyataan ${i + 1} tidak boleh kosong`;
+          break;
+        }
+      }
+      if (correctAnswer.length !== statements.length) {
+        newErrors.statements = 'Setiap pernyataan harus memiliki jawaban benar/salah';
+      }
+    }
+    
+    if (questionType === 'number' || questionType === 'text') {
+      if (!answer.trim()) {
+        newErrors.answer = 'Jawaban tidak boleh kosong';
+      }
+    }
+    
+    if (hasPassage && createNewPassage) {
+      if (!newPassageTitle.trim()) {
+        newErrors.passageTitle = 'Judul bacaan diperlukan';
+      }
+      const passagePlainText = getTextFromHtml(newPassageContent).trim();
+      if (!passagePlainText) {
+        newErrors.passageContent = 'Konten bacaan tidak boleh kosong';
+      }
+    }
+    
+    if (hasPassage && !createNewPassage && !passage) {
+      newErrors.passage = 'Pilih bacaan atau buat bacaan baru';
+    }
+    
+    if (hasExplanation) {
+      const explanationPlainText = getTextFromHtml(explanationContent).trim();
+      if (!explanationPlainText) {
+        newErrors.explanation = 'Pembahasan tidak boleh kosong';
+      }
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  /* ---------------------- Handlers ------------------------------------ */
+  const createNewPassageHandler = async (): Promise<number> => {
+    try {
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/questions/passage`, {
+        title: newPassageTitle,
+        passage: newPassageContent,
+        create_user_id: userId
+      }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`
+        }
+      });
+      return response.data.id;
+    } catch (error) {
+      throw new Error('Failed to create passage');
+    }
+  };
+
+  const handleBulkCreate = () => {
+    if (hasChanges) {
+      if (window.confirm('Ada perubahan yang belum disimpan. Yakin ingin ke halaman buat banyak?')) {
+        resetForm();
+        onClose();
+        router.push('/panel/exam/questions/create-bulk');
+      }
+    } else {
+      onClose();
+      router.push('/panel/exam/questions/create-bulk');
+    }
   };
 
   const handleAddOption = () => {
@@ -319,25 +520,9 @@ const fetchBidang = async (searchTerm: string = ''): Promise<void> => {
     setOptions([...options, '']);
   };
 
-  const handleStatementChange = (value: string, index: number) => {
-    const updatedStatements = [...statements];
-    updatedStatements[index] = value;
-    setStatements(updatedStatements);
-  };
-
   const handleAddStatement = () => {
     setStatements([...statements, '']);
     setCorrectAnswer([...correctAnswer, 0]);
-  };
-
-  const handleAnswerChange = (value: string) => {
-    setAnswer(value);
-  };
-
-  const handleTrueFalseChange = (index: number, value: boolean) => {
-    const updatedCorrectAnswers = [...correctAnswer];
-    updatedCorrectAnswers[index] = value ? 1 : 0;
-    setCorrectAnswer(updatedCorrectAnswers);
   };
 
   const handleCorrectAnswerChange = (index: number) => {
@@ -352,96 +537,10 @@ const fetchBidang = async (searchTerm: string = ''): Promise<void> => {
     }
   };
 
-  const getTextFromHtml = (html: string): string => {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    return tempDiv.textContent || tempDiv.innerText || '';
-  };
-
-  const validateForm = (): boolean => {
-    if (!subTopik) {
-      setError('Sub Topik is required.');
-      return false;
-    }
-    
-    if (level === null) {
-      setError('Level is required.');
-      return false;
-    }
-    
-    const questionPlainText = getTextFromHtml(questionText).trim();
-    if (!questionPlainText) {
-      setError('Question text cannot be empty.');
-      return false;
-    }
-    
-    if (questionType === 'single-choice' || questionType === 'multiple-choice') {
-      if (options.length < 2) {
-        setError('At least two options are required.');
-        return false;
-      }
-      
-      for (let i = 0; i < options.length; i++) {
-        const optionPlainText = getTextFromHtml(options[i]).trim();
-        if (!optionPlainText) {
-          setError(`Option ${optionLabels[i]} cannot be empty.`);
-          return false;
-        }
-      }
-      
-      if (correctAnswer.length === 0) {
-        setError('At least one correct answer must be selected.');
-        return false;
-      }
-    }
-    
-    if (questionType === 'true-false') {
-      for (let i = 0; i < statements.length; i++) {
-        if (!statements[i].trim()) {
-          setError(`Statement ${i + 1} cannot be empty.`);
-          return false;
-        }
-      }
-      if (correctAnswer.length !== statements.length) {
-        setError('Each statement must have a true/false answer.');
-        return false;
-      }
-    }
-    
-    if (questionType === 'number' || questionType === 'text') {
-      if (!answer.trim()) {
-        setError('Answer cannot be empty.');
-        return false;
-      }
-    }
-    
-    if (hasPassage && createNewPassage) {
-      if (!newPassageTitle.trim()) {
-        setError('Passage title is required.');
-        return false;
-      }
-      const passagePlainText = getTextFromHtml(newPassageContent).trim();
-      if (!passagePlainText) {
-        setError('Passage content cannot be empty.');
-        return false;
-      }
-    }
-    
-    if (hasPassage && !createNewPassage && !passage) {
-      setError('Please select a passage or create a new one.');
-      return false;
-    }
-    
-    if (hasExplanation) {
-      const explanationPlainText = getTextFromHtml(explanationContent).trim();
-      if (!explanationPlainText) {
-        setError('Explanation cannot be empty when enabled.');
-        return false;
-      }
-    }
-    
-    setError(null);
-    return true;
+  const handleTrueFalseChange = (index: number, value: boolean) => {
+    const updatedCorrectAnswers = [...correctAnswer];
+    updatedCorrectAnswers[index] = value ? 1 : 0;
+    setCorrectAnswer(updatedCorrectAnswers);
   };
 
   const handleSave = async () => {
@@ -498,7 +597,7 @@ const fetchBidang = async (searchTerm: string = ''): Promise<void> => {
       setShowSuccessModal(true);
       
     } catch (error: any) {
-      setError(error.response?.data?.error || 'Failed to save the question. Please try again.');
+      setErrors({ api: error.response?.data?.error || 'Gagal menyimpan soal. Silakan coba lagi.' });
     } finally {
       setIsSaving(false);
     }
@@ -526,107 +625,254 @@ const fetchBidang = async (searchTerm: string = ''): Promise<void> => {
     };
     
     onSave(newQuestion);
-    handleClose();
+    resetForm();
+    onClose();
   };
 
-  if (!isOpen) return null;
+  /* ---------------------- UI Helpers ---------------------------------- */
+  const OptionCard = ({
+    title, icon: Icon, state, setState
+  }: {
+    title: string;
+    icon: React.ComponentType<{ size?: number }>;
+    state: boolean;
+    setState: (val: boolean) => void;
+  }) => (
+    <Card className="tw-border-2 tw-border-purple-200 tw-rounded-lg tw-shadow-sm hover:tw-shadow-md tw-transition-shadow">
+      <Card.Body className="tw-p-4">
+        <div className="tw-flex tw-items-center tw-justify-between">
+          <div className="tw-flex tw-items-center tw-gap-2">
+            <div className="tw-bg-purple-100 tw-p-1 tw-rounded">
+              <Icon size={16} className="tw-text-purple-600" />
+            </div>
+            <span className="tw-font-semibold tw-text-purple-700">{title}</span>
+          </div>
+          <div className="tw-flex tw-gap-2">
+            <button
+              type="button"
+              onClick={() => setState(true)}
+              className={`tw-px-3 tw-py-1 tw-rounded-lg tw-font-medium tw-text-sm tw-transition-colors ${
+                state
+                  ? 'tw-bg-green-500 tw-border-green-500 tw-text-white'
+                  : 'tw-border tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50'
+              }`}
+            >
+              Ya
+            </button>
+            <button
+              type="button"
+              onClick={() => setState(false)}
+              className={`tw-px-3 tw-py-1 tw-rounded-lg tw-font-medium tw-text-sm tw-transition-colors ${
+                !state
+                  ? 'tw-bg-green-500 tw-border-green-500 tw-text-white'
+                  : 'tw-border tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50'
+              }`}
+            >
+              Tidak
+            </button>
+          </div>
+        </div>
+      </Card.Body>
+    </Card>
+  );
 
+  /* ---------------------- Modal Buttons ------------------------------- */
+  const topButtons: ModalButton[] = [
+    {
+      action: 'custom',
+      text: 'Buat Banyak',
+      icon: <Zap className="tw-w-4 tw-h-4" />,
+      onClick: handleBulkCreate,
+      disabled: isSaving,
+      size: 'sm',
+      customColors: {
+        primary: '#3B82F6',
+        secondary: '#2563EB',
+        gradient1: '#3B82F6',
+        gradient2: '#60A5FA',
+        text: '#FFFFFF'
+      }
+    },
+    {
+      action: 'reset',
+      text: 'Reset Form',
+      icon: <RotateCcw className="tw-w-4 tw-h-4" />,
+      onClick: resetForm,
+      disabled: !hasChanges || isSaving,
+      size: 'sm',
+      customColors: {
+        primary: '#F59E0B',
+        secondary: '#D97706',
+        gradient1: '#F59E0B',
+        gradient2: '#FBBF24',
+        text: '#FFFFFF'
+      }
+    }
+  ];
+
+  const bottomButtons: ModalButton[] = [
+    ...(hasChanges ? [{
+      action: 'cancel' as const,
+      text: 'Batal',
+      icon: <X className="tw-w-4 tw-h-4" />,
+      onClick: () => {
+        if (window.confirm('Ada perubahan yang belum disimpan. Yakin ingin menutup?')) {
+          resetForm();
+          onClose();
+        }
+      },
+      disabled: isSaving,
+      customColors: {
+        primary: '#6B7280',
+        secondary: '#4B5563',
+        gradient1: '#6B7280',
+        gradient2: '#9CA3AF',
+        text: '#FFFFFF'
+      }
+    }] : [{
+      action: 'cancel' as const,
+      text: 'Tutup',
+      icon: <X className="tw-w-4 tw-h-4" />,
+      onClick: () => {
+        resetForm();
+        onClose();
+      },
+      disabled: isSaving,
+      customColors: {
+        primary: '#6B7280',
+        secondary: '#4B5563',
+        gradient1: '#6B7280',
+        gradient2: '#9CA3AF',
+        text: '#FFFFFF'
+      }
+    }]),
+    {
+      action: 'save',
+      text: isSaving ? 'Menyimpan...' : 'Simpan Soal',
+      icon: <Check className="tw-w-4 tw-h-4" />,
+      onClick: handleSave,
+      disabled: isSaving,
+      loading: isSaving,
+      customColors: {
+        primary: '#8B5CF6',
+        secondary: '#7C3AED',
+        gradient1: '#8B5CF6',
+        gradient2: '#A855F7',
+        text: '#FFFFFF'
+      }
+    }
+  ];
+
+  const selectedQuestionType = questionTypeOptions.find(opt => opt.value === questionType) || questionTypeOptions[0];
+
+  /* ----------------------- Render ----------------------------------- */
   return (
     <>
-      <Modal 
-        show={isOpen} 
-        onHide={handleClose} 
-        size="xl" 
-        centered 
-        backdrop="static"
-        className="tw-font-sans"
+      <ReportSuiteModal
+        show={isOpen}
+        onHide={hasChanges ? () => {} : () => { resetForm(); onClose(); }}
+        title="Buat Soal Baru"
+        subtitle={`${questionCode || 'Kode belum dibuat'} • Level ${level || '-'} • ${hasChanges ? 'Ada perubahan' : 'Belum ada perubahan'}`}
+        icon={<BookOpen className="tw-w-5 tw-h-5" />}
+        size="xl"
+        width="95vw"
+        height="90vh"
+        scrollable={true}
+        topButtons={topButtons}
+        bottomButtons={bottomButtons}
+        preventCloseOnOutsideClick={hasChanges}
       >
-        <div className="tw-bg-gradient-to-br tw-from-purple-50 tw-to-indigo-50 tw-rounded-lg tw-shadow-2xl tw-border-0 tw-overflow-hidden">
-          <Modal.Header className="tw-bg-gradient-to-r tw-from-purple-600 tw-to-indigo-600 tw-text-white tw-border-0 tw-py-4">
-            <div className="tw-flex tw-items-center tw-space-x-3">
-              <div className="tw-bg-white/20 tw-p-2 tw-rounded-lg">
-                <BookOpen className="tw-w-6 tw-h-6" />
+        <div className="tw-space-y-6">
+          {/* Error Display */}
+          {Object.keys(errors).length > 0 && (
+            <div className="tw-bg-red-50 tw-border tw-border-red-200 tw-rounded-lg tw-p-4">
+              <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
+                <XCircle className="tw-w-4 tw-h-4 tw-text-red-500" />
+                <span className="tw-font-semibold tw-text-red-700">Error</span>
               </div>
-              <Modal.Title className="tw-text-xl tw-font-bold">
-                Buat Soal Baru
-              </Modal.Title>
+              {Object.values(errors).map((error, i) => (
+                <div key={i} className="tw-text-red-700 tw-text-sm">{error}</div>
+              ))}
             </div>
-            <Button 
-              variant="light"
-              className="tw-bg-white/20 tw-border-white/30 tw-text-white hover:tw-bg-white/30 tw-transition-all tw-duration-200 tw-font-medium tw-rounded-lg tw-px-4 tw-py-2 tw-flex tw-items-center tw-space-x-2"
-              onClick={() => router.push('/panel/exam/questions/create-bulk')}
-            >
-              <Zap className="tw-w-4 tw-h-4" />
-              <span>Buat Banyak</span>
-            </Button>
-          </Modal.Header>
-          
-          <Modal.Body className="tw-p-6 tw-max-h-[70vh] tw-overflow-y-auto">
-            <div className="tw-sticky tw-top-0 tw-z-10 tw-mb-4">
-              {error && (
-                <div className="tw-bg-red-50 tw-border tw-border-red-200 tw-rounded-lg tw-p-4 tw-flex tw-items-center tw-space-x-3 tw-shadow-md">
-                  <X className="tw-w-5 tw-h-5 tw-text-red-500 tw-flex-shrink-0" />
-                  <div className="tw-text-red-700 tw-font-medium">{error}</div>
-                </div>
-              )}
-            </div>
-            
-            <Form>
-              <div className="tw-grid tw-grid-cols-1 lg:tw-grid-cols-3 tw-gap-4 tw-mb-6">
-                <div className="tw-space-y-2">
-<SearchSingleField
-  label="Bidang"
-  value={bidang}
-  options={bidangOptions}
-  onChange={(newValue) => {
-    setBidang(newValue);
-    setTopik(null);
-    setSubTopik(null);
-    setTopikOptions([]);
-    setSubTopikOptions([]);
-    setQuestionCode('');
-  }}
-  onInputChange={debouncedFetchBidang}
-  isLoading={isLoadingBidang}
-  required={true}
-/>
-                </div>
-                
-                {bidang && (
-                  <div className="tw-space-y-2">
-                    <SearchSingleField
-                      label="Topik"
-                      value={topik}
-                      options={topikOptions}
-                      onChange={(newValue) => {
-                        setTopik(newValue);
-                        setSubTopik(null);
-                        setSubTopikOptions([]);
-                        setQuestionCode('');
-                      }}
-                      onInputChange={debouncedFetchTopik}
-                      isLoading={isLoadingTopik}
-                      required={true}
-                    />
-                  </div>
-                )}
-                
-                {topik && (
-                  <div className="tw-space-y-2">
-                    <SearchSingleField
-                      label="Sub Topik"
-                      value={subTopik}
-                      options={subTopikOptions}
-                      onChange={(newValue) => setSubTopik(newValue)}
-                      onInputChange={debouncedFetchSubTopik}
-                      isLoading={isLoadingSubTopik}
-                      required={true}
-                    />
-                  </div>
-                )}
-              </div>
+          )}
 
-              <div className="tw-mb-6">
+          <Form>
+            {/* -------- Bidang, Topik, Sub Topik -------- */}
+            <Row className="tw-mb-6">
+              <Col md={4}>
+                <SearchSingleField
+                  label="Bidang"
+                  value={bidang}
+                  options={bidangOptions}
+                  onChange={(newValue) => {
+                    setBidang(newValue);
+                    setTopik(null);
+                    setSubTopik(null);
+                    setTopikOptions([]);
+                    setSubTopikOptions([]);
+                    setQuestionCode('');
+                  }}
+                  onInputChange={debouncedFetchBidang}
+                  isLoading={isLoadingBidang}
+                  icon={<Award size={16} />}
+                  required
+                  error={errors.bidang}
+                />
+              </Col>
+
+              <Col md={4}>
+                <SearchSingleField
+                  label="Topik"
+                  value={topik}
+                  options={topikOptions}
+                  onChange={(newValue) => {
+                    setTopik(newValue);
+                    setSubTopik(null);
+                    setSubTopikOptions([]);
+                    setQuestionCode('');
+                  }}
+                  onInputChange={debouncedFetchTopik}
+                  isLoading={isLoadingTopik}
+                  icon={<BookOpen size={16} />}
+                  required
+                  error={errors.topik}
+                  disabled={!bidang}
+                />
+              </Col>
+
+              <Col md={4}>
+                <SearchSingleField
+                  label="Sub Topik"
+                  value={subTopik}
+                  options={subTopikOptions}
+                  onChange={(newValue) => setSubTopik(newValue)}
+                  onInputChange={debouncedFetchSubTopik}
+                  isLoading={isLoadingSubTopik}
+                  icon={<Target size={16} />}
+                  required
+                  error={errors.subTopik}
+                  disabled={!topik}
+                />
+              </Col>
+            </Row>
+
+            {/* -------- Kode Soal & Level -------- */}
+            <Row className="tw-mb-6">
+              <Col md={8}>
+                <Form.Group>
+                  <Form.Label className="tw-flex tw-items-center tw-gap-2 tw-text-purple-700 tw-font-semibold">
+                    <FileText size={16}/> Kode Soal
+                  </Form.Label>
+                  <Form.Control
+                    value={questionCode}
+                    readOnly
+                    placeholder="Kode akan dibuat otomatis setelah memilih sub topik"
+                    className="tw-border-2 tw-border-purple-200 tw-bg-gray-50 tw-rounded-lg tw-text-base tw-p-3 tw-font-mono"
+                  />
+                </Form.Group>
+              </Col>
+
+              <Col md={4}>
                 <SelectCustomField
                   label="Level"
                   value={level !== null ? levelOptions.find(opt => opt.value === level) || null : null}
@@ -634,183 +880,210 @@ const fetchBidang = async (searchTerm: string = ''): Promise<void> => {
                   onChange={(newValue) => {
                     setLevel(newValue ? newValue.value : null);
                   }}
-                  required={true}
+                  icon={<User size={16} />}
+                  required
+                  error={errors.level}
                 />
-              </div>
+              </Col>
+            </Row>
 
-              <div className="tw-mb-6">
-                <Form.Group>
-                  <div className="tw-flex tw-items-center tw-space-x-3 tw-mb-3">
-                    <Form.Check
-                      type="checkbox"
-                      id="has-passage"
-                      label={<span className="tw-text-purple-700 tw-font-semibold">Ada Bacaan</span>}
-                      checked={hasPassage}
-                      onChange={(e) => setHasPassage(e.target.checked)}
-                    />
-                    <Bookmark className="tw-w-4 tw-h-4 tw-text-purple-600" />
+            {/* -------- Tipe Soal -------- */}
+            <SelectCustomField
+              label="Tipe Soal"
+              value={selectedQuestionType}
+              options={questionTypeOptions}
+              onChange={(newValue) => {
+                setQuestionType(newValue?.value?.toString() || 'single-choice');
+                // Reset related fields when question type changes
+                setOptions(['']);
+                setCorrectAnswer([]);
+                setStatements(['']);
+                setAnswer('');
+              }}
+              icon={<BookOpen size={16} />}
+              required
+            />
+
+            {/* -------- Bacaan (Optional) -------- */}
+            <div className="tw-mb-6">
+              <OptionCard 
+                title="Ada Bacaan" 
+                icon={Bookmark} 
+                state={hasPassage} 
+                setState={setHasPassage} 
+              />
+              
+              {hasPassage && (
+                <div className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-4 tw-shadow-sm tw-mt-4">
+                  <div className="tw-flex tw-space-x-4 tw-mb-4">
+                    <button
+                      type="button"
+                      onClick={() => setCreateNewPassage(false)}
+                      className={`tw-flex-1 tw-px-4 tw-py-2 tw-rounded-lg tw-font-medium tw-transition-colors ${
+                        !createNewPassage
+                          ? 'tw-bg-purple-600 tw-text-white'
+                          : 'tw-border-2 tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50'
+                      }`}
+                    >
+                      Pilih Bacaan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCreateNewPassage(true)}
+                      className={`tw-flex-1 tw-px-4 tw-py-2 tw-rounded-lg tw-font-medium tw-transition-colors ${
+                        createNewPassage
+                          ? 'tw-bg-purple-600 tw-text-white'
+                          : 'tw-border-2 tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50'
+                      }`}
+                    >
+                      Buat Baru
+                    </button>
                   </div>
                   
-                  {hasPassage && (
-                    <div className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-4 tw-shadow-sm tw-mt-2">
-                      <div className="tw-flex tw-space-x-4 tw-mb-4">
-                        <Button
-                          variant={!createNewPassage ? 'primary' : 'outline-secondary'}
-                          className="tw-flex-1"
-                          onClick={() => setCreateNewPassage(false)}
-                        >
-                          Pilih Bacaan
-                        </Button>
-                        <Button
-                          variant={createNewPassage ? 'primary' : 'outline-secondary'}
-                          className="tw-flex-1"
-                          onClick={() => setCreateNewPassage(true)}
-                        >
-                          Buat Baru
-                        </Button>
-                      </div>
+                  {!createNewPassage ? (
+                    <div className="tw-space-y-3">
+                      <SearchSingleField
+                        label="Cari Bacaan"
+                        value={passage ? { label: passage.title, value: passage.id } : null}
+                        options={passageSearchResults.map(p => ({
+                          label: p.title,
+                          value: p.id
+                        }))}
+                        onChange={(newValue) => {
+                          if (newValue) {
+                            const selected = passageSearchResults.find(p => p.id === newValue.value);
+                            setPassage(selected || null);
+                          } else {
+                            setPassage(null);
+                          }
+                        }}
+                        onInputChange={(value) => setPassageSearchTerm(value)}
+                        isLoading={isLoadingPassage}
+                        required={hasPassage}
+                        error={errors.passage}
+                      />
                       
-                      {!createNewPassage ? (
-                        <div className="tw-space-y-3">
-                          <SearchSingleField
-                            label="Cari Bacaan"
-                            value={passage ? { label: passage.title, value: passage.id } : null}
-                            options={passageSearchResults.map(p => ({
-                              label: p.title,
-                              value: p.id
-                            }))}
-                            onChange={(newValue) => {
-                              if (newValue) {
-                                const selected = passageSearchResults.find(p => p.id === newValue.value);
-                                setPassage(selected || null);
-                              } else {
-                                setPassage(null);
-                              }
-                            }}
-                            onInputChange={(value) => setPassageSearchTerm(value)}
-                            isLoading={isLoadingPassage}
-                            required={true}
+                      {passage && (
+                        <div className="tw-mt-4">
+                          <div className="tw-text-purple-700 tw-font-medium tw-mb-2">Isi Bacaan:</div>
+                          <div 
+                            className="tw-bg-gray-50 tw-rounded-lg tw-p-3 tw-border tw-border-gray-200 tw-prose tw-max-w-none tw-max-h-32 tw-overflow-y-auto"
+                            dangerouslySetInnerHTML={{ __html: passage.passage }} 
                           />
-                          
-                          {passage && (
-                            <div className="tw-mt-4">
-                              <div className="tw-text-purple-700 tw-font-medium tw-mb-2">Isi Bacaan:</div>
-                              <div 
-                                className="tw-bg-gray-50 tw-rounded-lg tw-p-3 tw-border tw-border-gray-200 tw-prose tw-max-w-none"
-                                dangerouslySetInnerHTML={{ __html: passage.passage }} 
-                              />
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="tw-space-y-3">
-                          <Form.Group className="tw-mb-3">
-                            <Form.Label className="tw-text-purple-700 tw-font-medium">Judul Bacaan <span className="tw-text-red-500">*</span></Form.Label>
-                            <Form.Control
-                              type="text"
-                              value={newPassageTitle}
-                              onChange={(e) => setNewPassageTitle(e.target.value)}
-                              placeholder="Masukkan judul bacaan"
-                              className="tw-border-purple-200 tw-rounded-lg"
-                            />
-                          </Form.Group>
-                          
-                          <Form.Group>
-                            <Form.Label className="tw-text-purple-700 tw-font-medium">Isi Bacaan <span className="tw-text-red-500">*</span></Form.Label>
-                            <div className="tw-bg-gray-50 tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-shadow-sm">
-                              <SuperEditor 
-                                onChange={setNewPassageContent}
-                                initialValue="<p>Mulai mengetik bacaan disini...</p>"
-                              />
-                            </div>
-                          </Form.Group>
                         </div>
                       )}
                     </div>
-                  )}
-                </Form.Group>
-              </div>
-
-              <div className="tw-mb-6">
-                <SelectCustomField
-                  label="Tipe Soal"
-                  value={selectedQuestionType}
-                  options={questionTypeOptions}
-                  onChange={(newValue) => {
-                    setQuestionType(newValue?.value?.toString() || 'single-choice');
-                  }}
-                  required={true}
-                />
-              </div>
-
-              <div className="tw-mb-6">
-                <Form.Group>
-                  <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-3 tw-flex tw-items-center tw-space-x-2">
-                    <BookOpen className="tw-w-4 tw-h-4" />
-                    <span>Teks Soal <span className="tw-text-red-500">*</span></span>
-                  </Form.Label>
-                  <div className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-shadow-sm">
-                    <SuperEditor 
-                      onChange={setQuestionText}
-                      initialValue="<p>Mulai mengetik soal disini...</p>"
-                    />
-                  </div>
-                </Form.Group>
-              </div>
-
-              {(questionType === 'single-choice' || questionType === 'multiple-choice') && (
-                <div className="tw-mb-6">
-                  <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-4 tw-flex tw-items-center tw-space-x-2">
-                    <div className="tw-bg-purple-100 tw-p-1 tw-rounded">
-                      <Check className="tw-w-4 tw-h-4 tw-text-purple-600" />
+                  ) : (
+                    <div className="tw-space-y-3">
+                      <Form.Group className="tw-mb-3">
+                        <Form.Label className="tw-text-purple-700 tw-font-medium">
+                          Judul Bacaan <span className="tw-text-red-500">*</span>
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          value={newPassageTitle}
+                          onChange={(e) => setNewPassageTitle(e.target.value)}
+                          placeholder="Masukkan judul bacaan"
+                          className="tw-border-purple-200 tw-rounded-lg tw-p-3"
+                          isInvalid={!!errors.passageTitle}
+                        />
+                      </Form.Group>
+                      
+                      <Form.Group>
+                        <Form.Label className="tw-text-purple-700 tw-font-medium">
+                          Isi Bacaan <span className="tw-text-red-500">*</span>
+                        </Form.Label>
+                        <div className="tw-bg-gray-50 tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-shadow-sm">
+                          <SuperEditor 
+                            onChange={setNewPassageContent}
+                            initialValue="<p>Mulai mengetik bacaan disini...</p>"
+                            height="150px"
+                          />
+                        </div>
+                        {errors.passageContent && (
+                          <div className="tw-text-red-600 tw-text-sm tw-mt-1">{errors.passageContent}</div>
+                        )}
+                      </Form.Group>
                     </div>
-                    <span>Opsi Jawaban</span>
-                  </Form.Label>
-                  <Row className="tw-g-4">
-                    {options.map((option, index) => (
-                      <Col xs={12} md={6} key={index} className="tw-mb-4">
-                        <Card className="tw-border-2 tw-border-purple-200 tw-rounded-lg tw-shadow-sm hover:tw-shadow-md tw-transition-all tw-duration-200">
-                          <Card.Body className="tw-p-4">
-                            <div className="tw-flex tw-items-center tw-justify-between tw-mb-3">
-                              <div className="tw-flex tw-items-center tw-space-x-2">
-                                <div className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-indigo-500 tw-text-white tw-w-8 tw-h-8 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-font-bold tw-text-sm">
-                                  {optionLabels[index]}
-                                </div>
-                                <span className="tw-text-purple-700 tw-font-medium">Opsi {optionLabels[index]}</span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* -------- Teks Soal -------- */}
+            <div className="tw-mb-6">
+              <Form.Group>
+                <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-3 tw-flex tw-items-center tw-space-x-2">
+                  <BookOpen className="tw-w-4 tw-h-4" />
+                  <span>Teks Soal <span className="tw-text-red-500">*</span></span>
+                </Form.Label>
+                <div className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-shadow-sm">
+                  <SuperEditor 
+                    onChange={setQuestionText}
+                    initialValue="<p>Mulai mengetik soal disini...</p>"
+                    height="120px"
+                  />
+                </div>
+                {errors.questionText && (
+                  <div className="tw-text-red-600 tw-text-sm tw-mt-1">{errors.questionText}</div>
+                )}
+              </Form.Group>
+            </div>
+
+            {/* -------- Single/Multiple Choice Options -------- */}
+            {(questionType === 'single-choice' || questionType === 'multiple-choice') && (
+              <div className="tw-mb-6">
+                <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-4 tw-flex tw-items-center tw-space-x-2">
+                  <div className="tw-bg-purple-100 tw-p-1 tw-rounded">
+                    <Check className="tw-w-4 tw-h-4 tw-text-purple-600" />
+                  </div>
+                  <span>Opsi Jawaban</span>
+                </Form.Label>
+                <Row className="tw-g-4">
+                  {options.map((option, index) => (
+                    <Col xs={12} md={6} key={index} className="tw-mb-4">
+                      <Card className="tw-border-2 tw-border-purple-200 tw-rounded-lg tw-shadow-sm hover:tw-shadow-md tw-transition-all tw-duration-200">
+                        <Card.Body className="tw-p-4">
+                          <div className="tw-flex tw-items-center tw-justify-between tw-mb-3">
+                            <div className="tw-flex tw-items-center tw-space-x-2">
+                              <div className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-indigo-500 tw-text-white tw-w-8 tw-h-8 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-font-bold tw-text-sm">
+                                {optionLabels[index]}
                               </div>
-                              <Button
-                                variant={correctAnswer.includes(index) ? 'success' : 'outline-secondary'}
-                                size="sm"
-                                onClick={() => handleCorrectAnswerChange(index)}
-                                className={`tw-rounded-lg tw-font-medium tw-transition-all tw-duration-200 ${
-                                  correctAnswer.includes(index) 
-                                    ? 'tw-bg-green-500 tw-border-green-500 hover:tw-bg-green-600' 
-                                    : 'tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50'
-                                }`}
-                              >
-                                {correctAnswer.includes(index) ? (
-                                  <><Check className="tw-w-4 tw-h-4 tw-me-1" />Benar</>
-                                ) : (
-                                  'Tandai Benar'
-                                )}
-                              </Button>
+                              <span className="tw-text-purple-700 tw-font-medium">Opsi {optionLabels[index]}</span>
                             </div>
-                            <div className="tw-bg-gray-50 tw-rounded-lg tw-border tw-border-gray-200">
-                              <SuperEditor
-                                onChange={(html) => {
-                                  const newOptions = [...options];
-                                  newOptions[index] = html;
-                                  setOptions(newOptions);
-                                }}
-                                initialValue="<p>Masukkan teks opsi...</p>"
-                                height="80px"
-                              />
-                            </div>
-                          </Card.Body>
-                        </Card>
-                      </Col>
-                    ))}
-                  </Row>
+                            <button
+                              type="button"
+                              onClick={() => handleCorrectAnswerChange(index)}
+                              className={`tw-px-3 tw-py-1 tw-rounded-lg tw-font-medium tw-text-sm tw-transition-all tw-duration-200 tw-flex tw-items-center tw-gap-1 ${
+                                correctAnswer.includes(index) 
+                                  ? 'tw-bg-green-500 tw-border-green-500 tw-text-white hover:tw-bg-green-600' 
+                                  : 'tw-border-2 tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50'
+                              }`}
+                            >
+                              {correctAnswer.includes(index) ? (
+                                <><Check className="tw-w-4 tw-h-4" />Benar</>
+                              ) : (
+                                'Tandai Benar'
+                              )}
+                            </button>
+                          </div>
+                          <div className="tw-bg-gray-50 tw-rounded-lg tw-border tw-border-gray-200">
+                            <SuperEditor
+                              onChange={(html) => {
+                                const newOptions = [...options];
+                                newOptions[index] = html;
+                                setOptions(newOptions);
+                              }}
+                              initialValue="<p>Masukkan teks opsi...</p>"
+                              height="80px"
+                            />
+                          </div>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+                <div className="tw-flex tw-justify-between tw-items-center">
                   <Button 
                     variant="outline-primary" 
                     onClick={handleAddOption}
@@ -820,236 +1093,237 @@ const fetchBidang = async (searchTerm: string = ''): Promise<void> => {
                     <Plus className="tw-w-4 tw-h-4" />
                     <span>Tambah Opsi</span>
                   </Button>
+                  
+                  {errors.options && (
+                    <div className="tw-text-red-600 tw-text-sm">{errors.options}</div>
+                  )}
+                  {errors.correctAnswer && (
+                    <div className="tw-text-red-600 tw-text-sm">{errors.correctAnswer}</div>
+                  )}
                 </div>
-              )}
+              </div>
+            )}
 
-              {questionType === 'true-false' && (
-                <div className="tw-mb-6">
-                  <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-4 tw-flex tw-items-center tw-space-x-2">
-                    <BookOpen className="tw-w-4 tw-h-4" />
-                    <span>Pernyataan</span>
-                  </Form.Label>
-                  <div className="tw-space-y-4">
-                    {statements.map((statement, index) => (
-                      <div key={index} className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-4 tw-shadow-sm">
-                        <Row className="tw-items-center">
-                          <Col xs={12} md={8} className="tw-mb-3 md:tw-mb-0">
-                            <Form.Control
-                              type="text"
-                              value={statement}
-                              onChange={(e) => handleStatementChange(e.target.value, index)}
-                              placeholder={`Pernyataan ${index + 1}`}
-                              className="tw-border-purple-200 tw-rounded-lg tw-px-4 tw-py-2 tw-text-base"
-                            />
-                          </Col>
-                          <Col xs={12} md={4}>
-                            <div className="tw-flex tw-space-x-2">
-                              <Button
-                                variant={correctAnswer[index] === 1 ? 'success' : 'outline-secondary'}
-                                size="sm"
-                                onClick={() => handleTrueFalseChange(index, true)}
-                                className={`tw-flex-1 tw-rounded-lg tw-font-medium ${
-                                  correctAnswer[index] === 1 
-                                    ? 'tw-bg-green-500 tw-border-green-500' 
-                                    : 'tw-border-purple-300 tw-text-purple-600'
-                                }`}
-                              >
-                                Benar
-                              </Button>
-                              <Button
-                                variant={correctAnswer[index] === 0 ? 'success' : 'outline-secondary'}
-                                size="sm"
-                                onClick={() => handleTrueFalseChange(index, false)}
-                                className={`tw-flex-1 tw-rounded-lg tw-font-medium ${
-                                  correctAnswer[index] === 0 
-                                    ? 'tw-bg-green-500 tw-border-green-500' 
-                                    : 'tw-border-purple-300 tw-text-purple-600'
-                                }`}
-                              >
-                                Salah
-                              </Button>
-                            </div>
-                          </Col>
-                        </Row>
-                      </div>
-                    ))}
-                  </div>
+            {/* -------- True/False Statements -------- */}
+            {questionType === 'true-false' && (
+              <div className="tw-mb-6">
+                <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-4 tw-flex tw-items-center tw-space-x-2">
+                  <BookOpen className="tw-w-4 tw-h-4" />
+                  <span>Pernyataan</span>
+                </Form.Label>
+                <div className="tw-space-y-4">
+                  {statements.map((statement, index) => (
+                    <div key={index} className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-4 tw-shadow-sm">
+                      <Row className="tw-items-center">
+                        <Col xs={12} md={8} className="tw-mb-3 md:tw-mb-0">
+                          <Form.Control
+                            type="text"
+                            value={statement}
+                            onChange={(e) => {
+                              const updatedStatements = [...statements];
+                              updatedStatements[index] = e.target.value;
+                              setStatements(updatedStatements);
+                            }}
+                            placeholder={`Pernyataan ${index + 1}`}
+                            className="tw-border-purple-200 tw-rounded-lg tw-px-4 tw-py-2 tw-text-base"
+                          />
+                        </Col>
+                        <Col xs={12} md={4}>
+                          <div className="tw-flex tw-space-x-2">
+                            <button
+                              type="button"
+                              onClick={() => handleTrueFalseChange(index, true)}
+                              className={`tw-flex-1 tw-px-3 tw-py-2 tw-rounded-lg tw-font-medium tw-text-sm tw-transition-colors ${
+                                correctAnswer[index] === 1 
+                                  ? 'tw-bg-green-500 tw-border-green-500 tw-text-white' 
+                                  : 'tw-border-2 tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50'
+                              }`}
+                            >
+                              Benar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleTrueFalseChange(index, false)}
+                              className={`tw-flex-1 tw-px-3 tw-py-2 tw-rounded-lg tw-font-medium tw-text-sm tw-transition-colors ${
+                                correctAnswer[index] === 0 
+                                  ? 'tw-bg-green-500 tw-border-green-500 tw-text-white' 
+                                  : 'tw-border-2 tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50'
+                              }`}
+                            >
+                              Salah
+                            </button>
+                          </div>
+                        </Col>
+                      </Row>
+                    </div>
+                  ))}
+                </div>
+                <div className="tw-flex tw-justify-between tw-items-center tw-mt-4">
                   <Button 
                     variant="outline-secondary" 
                     onClick={handleAddStatement}
-                    className="tw-mt-4 tw-border-2 tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50 tw-font-medium tw-rounded-lg tw-px-4 tw-py-2 tw-flex tw-items-center tw-space-x-2"
+                    className="tw-border-2 tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50 tw-font-medium tw-rounded-lg tw-px-4 tw-py-2 tw-flex tw-items-center tw-space-x-2"
                   >
                     <Plus className="tw-w-4 tw-h-4" />
                     <span>Tambah Pernyataan</span>
                   </Button>
+                  
+                  {errors.statements && (
+                    <div className="tw-text-red-600 tw-text-sm">{errors.statements}</div>
+                  )}
                 </div>
-              )}
+              </div>
+            )}
 
-              {(questionType === 'number' || questionType === 'text') && (
-                <div className="tw-mb-6">
-                  <Form.Group>
-                    <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-3 tw-flex tw-items-center tw-space-x-2">
-                      <Check className="tw-w-4 tw-h-4" />
-                      <span>Jawaban Benar</span>
-                    </Form.Label>
-                    <Form.Control
-                      type={questionType === 'number' ? 'number' : 'text'}
-                      value={answer}
-                      onChange={(e) => setAnswer(e.target.value)}
-                      placeholder={questionType === 'number' ? 'Masukkan angka' : 'Masukkan jawaban teks'}
-                      className="tw-border-2 tw-border-purple-200 tw-rounded-lg tw-px-4 tw-py-3 tw-text-lg focus:tw-border-purple-500 focus:tw-ring-2 focus:tw-ring-purple-200"
-                    />
-                  </Form.Group>
-                </div>
-              )}
-
+            {/* -------- Number/Text Answer -------- */}
+            {(questionType === 'number' || questionType === 'text') && (
               <div className="tw-mb-6">
                 <Form.Group>
-                  <div className="tw-flex tw-items-center tw-space-x-3 tw-mb-3">
-                    <Form.Check
-                      type="checkbox"
-                      id="has-explanation"
-                      label={<span className="tw-text-purple-700 tw-font-semibold">Ada Pembahasan</span>}
-                      checked={hasExplanation}
-                      onChange={(e) => setHasExplanation(e.target.checked)}
-                    />
-                    <FileText className="tw-w-4 tw-h-4 tw-text-purple-600" />
-                  </div>
-                  
-                  {hasExplanation && (
-                    <div className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-shadow-sm tw-mt-2">
-                      <Form.Group>
-                        <Form.Label className="tw-text-purple-700 tw-font-medium">Isi Pembahasan <span className="tw-text-red-500">*</span></Form.Label>
-                        <div className="tw-bg-gray-50 tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2">
-                          <SuperEditor 
-                            onChange={setExplanationContent}
-                            initialValue="<p>Mulai mengetik pembahasan disini...</p>"
-                          />
-                        </div>
-                      </Form.Group>
-                    </div>
+                  <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-3 tw-flex tw-items-center tw-space-x-2">
+                    <Check className="tw-w-4 tw-h-4" />
+                    <span>Jawaban Benar <span className="tw-text-red-500">*</span></span>
+                  </Form.Label>
+                  <Form.Control
+                    type={questionType === 'number' ? 'number' : 'text'}
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                    placeholder={questionType === 'number' ? 'Masukkan angka' : 'Masukkan jawaban teks'}
+                    className="tw-border-2 tw-border-purple-200 tw-rounded-lg tw-px-4 tw-py-3 tw-text-lg focus:tw-border-purple-500 focus:tw-ring-2 focus:tw-ring-purple-200"
+                    isInvalid={!!errors.answer}
+                  />
+                  {errors.answer && (
+                    <div className="tw-text-red-600 tw-text-sm tw-mt-1">{errors.answer}</div>
                   )}
                 </Form.Group>
               </div>
-            </Form>
-          </Modal.Body>
-          
-          <Modal.Footer className="tw-bg-gray-50 tw-border-0 tw-p-6">
-            <div className="tw-flex tw-flex-col sm:tw-flex-row tw-space-y-2 sm:tw-space-y-0 sm:tw-space-x-3 tw-w-full">
-              <Button 
-                variant="outline-secondary" 
-                onClick={handleClose}
-                disabled={isSaving}
-                className="tw-flex-1 sm:tw-flex-none tw-border-2 tw-border-gray-300 tw-text-gray-600 hover:tw-bg-gray-100 tw-font-medium tw-rounded-lg tw-px-6 tw-py-2 tw-flex tw-items-center tw-justify-center tw-space-x-2"
-              >
-                <X className="tw-w-4 tw-h-4" />
-                <span>Batal</span>
-              </Button>
-              <Button 
-                variant="primary" 
-                onClick={handleSave}
-                disabled={isSaving}
-                className="tw-flex-1 sm:tw-flex-none tw-bg-gradient-to-r tw-from-purple-600 tw-to-indigo-600 tw-border-0 hover:tw-from-purple-700 hover:tw-to-indigo-700 tw-font-medium tw-rounded-lg tw-px-6 tw-py-2 tw-flex tw-items-center tw-justify-center tw-space-x-2 tw-transition-all tw-duration-200 tw-shadow-lg hover:tw-shadow-xl"
-              >
-                {isSaving ? (
-                  <>
-                    <Spinner animation="border" size="sm" className="tw-mr-2" />
-                    Menyimpan...
-                  </>
-                ) : (
-                  <>
-                    <Check className="tw-w-4 tw-h-4" />
-                    <span>Simpan Soal</span>
-                  </>
-                )}
-              </Button>
-            </div>
-          </Modal.Footer>
-        </div>
-      </Modal>
+            )}
 
-      <Modal 
-        show={showSuccessModal} 
-        onHide={handleCloseSuccessModal}
-        size="md" 
-        centered 
-        backdrop="static"
-        className="tw-font-sans"
-      >
-        <div className="tw-bg-gradient-to-br tw-from-green-50 tw-to-emerald-50 tw-rounded-lg tw-shadow-2xl tw-border-0 tw-overflow-hidden">
-          <Modal.Header className="tw-bg-gradient-to-r tw-from-green-600 tw-to-emerald-600 tw-text-white tw-border-0 tw-py-4 tw-px-4 sm:tw-px-6">
-            <div className="tw-flex tw-items-center tw-space-x-3 tw-w-full">
-              <div className="tw-bg-white/20 tw-p-2 tw-rounded-lg tw-flex-shrink-0">
-                <Check className="tw-w-5 tw-h-5 sm:tw-w-6 sm:tw-h-6" />
-              </div>
-              <Modal.Title className="tw-text-lg sm:tw-text-xl tw-font-bold tw-truncate">
-                Berhasil Dibuat!
-              </Modal.Title>
+            {/* -------- Pembahasan (Optional) -------- */}
+            <div className="tw-mb-6">
+              <OptionCard 
+                title="Ada Pembahasan" 
+                icon={FileText} 
+                state={hasExplanation} 
+                setState={setHasExplanation} 
+              />
+              
+              {hasExplanation && (
+                <div className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-4 tw-shadow-sm tw-mt-4">
+                  <Form.Group>
+                    <Form.Label className="tw-text-purple-700 tw-font-medium">
+                      Isi Pembahasan <span className="tw-text-red-500">*</span>
+                    </Form.Label>
+                    <div className="tw-bg-gray-50 tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2">
+                      <SuperEditor 
+                        onChange={setExplanationContent}
+                        initialValue="<p>Mulai mengetik pembahasan disini...</p>"
+                        height="120px"
+                      />
+                    </div>
+                    {errors.explanation && (
+                      <div className="tw-text-red-600 tw-text-sm tw-mt-1">{errors.explanation}</div>
+                    )}
+                  </Form.Group>
+                </div>
+              )}
             </div>
-          </Modal.Header>
-          
-          <Modal.Body className="tw-p-4 sm:tw-p-6 tw-text-center">
-            <div className="tw-mb-4">
-              <div className="tw-bg-green-100 tw-rounded-full tw-w-12 tw-h-12 sm:tw-w-16 sm:tw-h-16 tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-4">
-                <Check className="tw-w-6 tw-h-6 sm:tw-w-8 sm:tw-h-8 tw-text-green-600" />
-              </div>
-              <h4 className="tw-text-lg sm:tw-text-xl tw-font-bold tw-text-gray-800 tw-mb-2">
-                Soal Berhasil Dibuat!
-              </h4>
-              <p className="tw-text-sm sm:tw-text-base tw-text-gray-600 tw-mb-4 tw-px-2">
-                Soal telah berhasil dibuat dengan kode soal:
-              </p>
-              <div className="tw-bg-gradient-to-r tw-from-purple-100 tw-to-indigo-100 tw-rounded-lg tw-p-3 sm:tw-p-4 tw-border-2 tw-border-purple-200 tw-mx-2 sm:tw-mx-0">
-                <div className="tw-text-lg sm:tw-text-2xl tw-font-bold tw-text-purple-800 tw-tracking-wider tw-break-all">
-                  {savedQuestionCode}
+
+            {/* Changes indicator */}
+            {hasChanges && (
+              <div className="tw-bg-orange-50 tw-border tw-border-orange-200 tw-rounded-lg tw-p-3">
+                <div className="tw-flex tw-items-center tw-gap-2 tw-text-orange-700">
+                  <span className="tw-w-2 tw-h-2 tw-bg-orange-400 tw-rounded-full tw-animate-pulse"></span>
+                  <span className="tw-font-medium tw-text-sm">
+                    Ada perubahan yang belum disimpan
+                  </span>
                 </div>
               </div>
-            </div>
-            
-            <div className="tw-flex tw-flex-col sm:tw-flex-row tw-gap-3 tw-mt-6">
-              <Button 
-                variant="outline-primary"
-                onClick={() => {
-                  setError(null);
-                  setBidang(null);
-                  setTopik(null);
-                  setSubTopik(null);
-                  setQuestionCode('');
-                  setQuestionType('single-choice');
-                  setOptions(['']);
-                  setCorrectAnswer([]);
-                  setStatements(['']);
-                  setAnswer('');
-                  setQuestionText('');
-                  setHasPassage(false);
-                  setCreateNewPassage(false);
-                  setPassage(null);
-                  setHasExplanation(false);
-                  setExplanationContent('');
-                  setNewPassageTitle('');
-                  setNewPassageContent('');
-                  setLevel(null);
-                  setShowSuccessModal(false);
-                  setSavedQuestionCode('');
-                }}
-                className="tw-flex-1 tw-border-2 tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50 tw-font-medium tw-rounded-lg tw-px-4 tw-py-2 tw-flex tw-items-center tw-justify-center tw-space-x-2 tw-transition-all tw-duration-200"
-              >
-                <FilePlus className="tw-w-4 tw-h-4" />
-                <span className="tw-text-sm sm:tw-text-base">Buat Lagi</span>
-              </Button>
-              
-              <Button 
-                variant="primary" 
-                onClick={handleCloseSuccessModal}
-                className="tw-flex-1 tw-bg-gradient-to-r tw-from-green-600 tw-to-emerald-600 tw-border-0 hover:tw-from-green-700 hover:tw-to-emerald-700 tw-font-medium tw-rounded-lg tw-px-4 tw-py-2 tw-flex tw-items-center tw-justify-center tw-space-x-2 tw-transition-all tw-duration-200 tw-shadow-lg hover:tw-shadow-xl"
-              >
-                <Check className="tw-w-4 tw-h-4" />
-                <span className="tw-text-sm sm:tw-text-base">Selesai</span>
-              </Button>
-            </div>
-          </Modal.Body>
+            )}
+          </Form>
         </div>
-      </Modal>
+      </ReportSuiteModal>
+
+      {/* Success Modal */}
+      <ReportSuiteModal
+        show={showSuccessModal}
+        onHide={() => {}}
+        title="Berhasil Dibuat!"
+        subtitle={`Soal dengan kode ${savedQuestionCode} telah berhasil dibuat`}
+        icon={<CheckCircle className="tw-w-5 tw-h-5" />}
+        size="md"
+        width="500px"
+        height="400px"
+        scrollable={false}
+        bottomButtons={[
+          {
+            action: 'create',
+            text: 'Buat Lagi',
+            icon: <FilePlus className="tw-w-4 tw-h-4" />,
+            onClick: () => {
+              setErrors({});
+              setBidang(null);
+              setTopik(null);
+              setSubTopik(null);
+              setQuestionCode('');
+              setQuestionType('single-choice');
+              setOptions(['']);
+              setCorrectAnswer([]);
+              setStatements(['']);
+              setAnswer('');
+              setQuestionText('');
+              setHasPassage(false);
+              setCreateNewPassage(false);
+              setPassage(null);
+              setHasExplanation(false);
+              setExplanationContent('');
+              setNewPassageTitle('');
+              setNewPassageContent('');
+              setLevel(null);
+              setShowSuccessModal(false);
+              setSavedQuestionCode('');
+              setHasChanges(false);
+            },
+            customColors: {
+              primary: '#F59E0B',
+              secondary: '#D97706',
+              gradient1: '#F59E0B',
+              gradient2: '#FBBF24',
+              text: '#FFFFFF'
+            }
+          },
+          {
+            action: 'done',
+            text: 'Selesai',
+            icon: <Check className="tw-w-4 tw-h-4" />,
+            onClick: handleCloseSuccessModal,
+            customColors: {
+              primary: '#10B981',
+              secondary: '#059669',
+              gradient1: '#10B981',
+              gradient2: '#34D399',
+              text: '#FFFFFF'
+            }
+          }
+        ]}
+        preventCloseOnOutsideClick={true}
+      >
+        <div className="tw-text-center tw-py-6">
+          <div className="tw-bg-green-100 tw-rounded-full tw-w-16 tw-h-16 tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-4">
+            <CheckCircle className="tw-w-8 tw-h-8 tw-text-green-600" />
+          </div>
+          <h4 className="tw-text-xl tw-font-bold tw-text-gray-800 tw-mb-2">
+            Soal Berhasil Dibuat!
+          </h4>
+          <p className="tw-text-gray-600 tw-mb-4">
+            Soal telah berhasil dibuat dengan kode soal:
+          </p>
+          <div className="tw-bg-gradient-to-r tw-from-purple-100 tw-to-indigo-100 tw-rounded-lg tw-p-4 tw-border-2 tw-border-purple-200">
+            <div className="tw-text-2xl tw-font-bold tw-text-purple-800 tw-tracking-wider tw-break-all">
+              {savedQuestionCode}
+            </div>
+          </div>
+        </div>
+      </ReportSuiteModal>
     </>
   );
 };
