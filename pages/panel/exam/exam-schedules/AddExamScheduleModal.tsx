@@ -4,7 +4,7 @@
  * ./AddExamScheduleModal.tsx
  * --------------------------------------------------------------------------
  * Modal "Tambah Jadwal Ujian" – Updated untuk integrasi dengan AddExamModal
- * Menggunakan ModalTemplate dan ButtonTemplate
+ * Menggunakan ModalTemplate dan enhanced FormComponentLayout components
  * --------------------------------------------------------------------------
  */
 
@@ -22,7 +22,10 @@ import debounce from 'lodash/debounce';
 import {
   SearchSingleField,
   SearchMultipleField,
-  DateRangeField
+  DateRangeField,
+  ShortFormField,
+  WideFormField,
+  YesNoField
 } from '../../../../components/form/FormComponentLayout';
 
 import {
@@ -41,7 +44,8 @@ import {
   Trash2,
   RotateCcw,
   XCircle,
-  CheckCircle
+  CheckCircle,
+  Gift
 } from 'lucide-react';
 
 import { LearningModal, ModalButton } from '../../../../components/modal/ModalTemplate';
@@ -168,10 +172,24 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
   const fetchExams = async (q='') => {
     setLE(true);
     try {
+      // Build URL with search and selected_ids parameters
+      const selectedIds = selectedExams.map(exam => exam.value).filter(Boolean);
+      const params = new URLSearchParams();
+      
+      if (q.trim()) {
+        params.set('query', q.trim());
+      }
+      
+      if (selectedIds.length > 0) {
+        params.set('selected_ids', selectedIds.join(','));
+      }
+      
+      params.set('limit', '20'); // Increased limit for better UX
+      
       const { data } = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/exam/search`,
-        { params: { query: q, limit: 10 } }
+        `${process.env.NEXT_PUBLIC_API_URL}/exam/search?${params.toString()}`
       );
+      
       setExamOptions(
         (data.data || []).map((e:any):SelectOption=>({
           value: e.id,
@@ -179,12 +197,17 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
           _raw : e
         }))
       );
-    } finally { setLE(false); }
+    } catch (error) {
+      console.error('Failed to fetch exams:', error);
+      setExamOptions([]);
+    } finally { 
+      setLE(false); 
+    }
   };
 
   const dFetchGroups = debounce(fetchGroups, 300);
   const dFetchTypes  = debounce(fetchTypes,  300);
-  const dFetchExams  = debounce(fetchExams,  300);
+  const dFetchExams  = debounce(fetchExams,  500); // Slightly longer debounce for exams
 
   /* initial load setiap kali modal dibuka */
   useEffect(() => {
@@ -194,6 +217,13 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
       fetchExams('');
     }
   }, [isOpen]);
+
+  // Refetch exams when selectedExams changes
+  useEffect(() => {
+    if (isOpen) {
+      fetchExams('');
+    }
+  }, [selectedExams, isOpen]);
 
   /* ------------------------- Reset helper ---------------------------- */
   const resetForm = () => {
@@ -220,7 +250,10 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
     if (Object.keys(v).length) { setErrors(v); return; }
 
     /* -------- id ujian unik (tanpa duplikat) -------- */
-    const examIds = Array.from(new Set(selectedExams.map(e => e.value)));
+    const examIds = Array.from(new Set([
+      ...selectedExams.map(e => e.value),
+      ...customExams.map(e => e.id)
+    ]));
 
     setSaving(true);
     try {
@@ -244,58 +277,14 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
       onSave(data);
       resetForm(); 
       onClose();
-    } catch { 
-      setErrors({ api: 'Gagal menyimpan jadwal ujian. Silakan coba lagi.' });
+    } catch (error: any) { 
+      console.error('Submit error:', error);
+      setErrors({ 
+        api: error.response?.data?.message || 'Gagal menyimpan jadwal ujian. Silakan coba lagi.' 
+      });
     }
     finally { setSaving(false); }
   };
-
-  /* -------------------------- UI helpers ---------------------------- */
-  const OptionCard = ({
-    title, icon:Icon, state, setState
-  }: {
-    title: string;
-    icon : React.ComponentType<{ size?: number }>;
-    state: boolean;
-    setState: (val: boolean) => void;
-  }) => (
-    <Card className="tw-border-2 tw-border-purple-200 tw-rounded-lg tw-shadow-sm hover:tw-shadow-md tw-transition-shadow">
-      <Card.Body className="tw-p-4">
-        <div className="tw-flex tw-items-center tw-justify-between">
-          <div className="tw-flex tw-items-center tw-gap-2">
-            <div className="tw-bg-purple-100 tw-p-1 tw-rounded">
-              <Icon size={16} className="tw-text-purple-600" />
-            </div>
-            <span className="tw-font-semibold tw-text-purple-700">{title}</span>
-          </div>
-          <div className="tw-flex tw-gap-2">
-            <button
-              type="button"
-              onClick={() => setState(true)}
-              className={`tw-px-3 tw-py-1 tw-rounded-lg tw-font-medium tw-text-sm tw-transition-colors ${
-                state
-                  ? 'tw-bg-green-500 tw-border-green-500 tw-text-white'
-                  : 'tw-border tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50'
-              }`}
-            >
-              Ya
-            </button>
-            <button
-              type="button"
-              onClick={() => setState(false)}
-              className={`tw-px-3 tw-py-1 tw-rounded-lg tw-font-medium tw-text-sm tw-transition-colors ${
-                !state
-                  ? 'tw-bg-green-500 tw-border-green-500 tw-text-white'
-                  : 'tw-border tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50'
-              }`}
-            >
-              Tidak
-            </button>
-          </div>
-        </div>
-      </Card.Body>
-    </Card>
-  );
 
   /* gabungkan opsi server + ujian kustom */
   const allExamOptions: SelectOption[] = [
@@ -306,6 +295,9 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
       _raw : ex
     }))
   ];
+
+  // Total selected exams count
+  const totalSelectedExams = selectedExams.length + customExams.length;
 
   /* ---------------------- Modal Buttons ------------------------------- */
   const topButtons: ModalButton[] = [
@@ -383,7 +375,7 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
         show={isOpen}
         onHide={hasChanges ? () => {} : onClose}
         title="Buat Jadwal Ujian Baru"
-        subtitle={`${selectedExams.length + customExams.length} ujian dipilih • ${hasChanges ? 'Ada perubahan' : 'Belum ada perubahan'}`}
+        subtitle={`${totalSelectedExams} ujian dipilih • ${hasChanges ? 'Ada perubahan' : 'Belum ada perubahan'}`}
         icon={<Calendar className="tw-w-5 tw-h-5" />}
         size="xl"
         width="95vw"
@@ -411,18 +403,13 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
             {/* -------- Nama, Grup, Tipe -------- */}
             <Row className="tw-mb-6">
               <Col md={4}>
-                <Form.Group>
-                  <Form.Label className="tw-flex tw-items-center tw-gap-2 tw-text-purple-700 tw-font-semibold">
-                    <FileText size={16}/> Nama Jadwal <span className="tw-text-red-500">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    value={name}
-                    onChange={e=>setName(e.target.value)}
-                    placeholder="Nama jadwal ujian"
-                    className="tw-border-2 tw-border-purple-200 focus:tw-border-purple-500 tw-rounded-lg tw-text-base tw-p-3"
-                    isInvalid={!!errors.name}
-                  />
-                </Form.Group>
+                <ShortFormField
+                  label="Nama Jadwal"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  error={errors.name}
+                  required
+                />
               </Col>
 
               <Col md={4}>
@@ -455,19 +442,11 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
             </Row>
 
             {/* -------- Deskripsi -------- */}
-            <Form.Group className="tw-mb-6">
-              <Form.Label className="tw-flex tw-items-center tw-gap-2 tw-text-purple-700 tw-font-semibold">
-                <AlignLeft size={16}/> Deskripsi
-              </Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                value={description}
-                onChange={e=>setDescription(e.target.value)}
-                className="tw-border-2 tw-border-purple-200 focus:tw-border-purple-500 tw-rounded-lg tw-text-base tw-p-3"
-                placeholder="Deskripsi jadwal ujian"
-              />
-            </Form.Group>
+            <WideFormField
+              label="Deskripsi"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
 
             {/* -------- Waktu -------- */}
             <DateRangeField
@@ -483,26 +462,81 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
               icon={<Calendar size={16}/>}
             />
 
-            {/* -------- Option Cards -------- */}
+            {/* -------- Enhanced Option Cards using YesNoField -------- */}
             <div className="tw-mb-6">
-              <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-4 tw-block">
-                Pengaturan Jadwal
-              </Form.Label>
+              <h4 className="tw-text-purple-700 tw-font-semibold tw-mb-4 tw-flex tw-items-center tw-gap-2">
+                <Settings size={16}/> Pengaturan Jadwal
+              </h4>
               <Row className="tw-g-3">
                 <Col md={6} lg={4}>
-                  <OptionCard title="Gratis" icon={Check} state={isFree} setState={setIsFree}/>
+                  <YesNoField
+                    label="Gratis"
+                    checked={isFree}
+                    onChange={setIsFree}
+                    icon={<Gift size={16} />}
+                    color="tw-text-purple-700"
+                    selectedColor="tw-bg-gradient-to-r tw-from-green-500 tw-to-emerald-500 tw-text-white"
+                    yesText="Gratis"
+                    noText="Berbayar"
+                    variant="card"
+                    description="Apakah jadwal ujian ini gratis atau berbayar?"
+                  />
                 </Col>
                 <Col md={6} lg={4}>
-                  <OptionCard title="Status Aktif" icon={Check} state={isValid} setState={setIsValid}/>
+                  <YesNoField
+                    label="Status Aktif"
+                    checked={isValid}
+                    onChange={setIsValid}
+                    icon={<CheckCircle size={16} />}
+                    color="tw-text-purple-700"
+                    selectedColor="tw-bg-gradient-to-r tw-from-green-500 tw-to-emerald-500 tw-text-white"
+                    yesText="Aktif"
+                    noText="Nonaktif"
+                    variant="card"
+                    description="Status ketersediaan jadwal ujian"
+                  />
                 </Col>
                 <Col md={6} lg={4}>
-                  <OptionCard title="Berpindah Ujian Otomatis" icon={Zap} state={autoSwitchExam} setState={setAuto}/>
+                  <YesNoField
+                    label="Berpindah Ujian Otomatis"
+                    checked={autoSwitchExam}
+                    onChange={setAuto}
+                    icon={<Zap size={16} />}
+                    color="tw-text-purple-700"
+                    selectedColor="tw-bg-gradient-to-r tw-from-blue-500 tw-to-indigo-500 tw-text-white"
+                    yesText="Otomatis"
+                    noText="Manual"
+                    variant="card"
+                    description="Berpindah ke ujian berikutnya secara otomatis"
+                  />
                 </Col>
                 <Col md={6} lg={4}>
-                  <OptionCard title="Acak Urutan Ujian" icon={Shuffle} state={randomExamOrder} setState={setRandom}/>
+                  <YesNoField
+                    label="Acak Urutan Ujian"
+                    checked={randomExamOrder}
+                    onChange={setRandom}
+                    icon={<Shuffle size={16} />}
+                    color="tw-text-purple-700"
+                    selectedColor="tw-bg-gradient-to-r tw-from-orange-500 tw-to-red-500 tw-text-white"
+                    yesText="Acak"
+                    noText="Berurutan"
+                    variant="card"
+                    description="Mengacak urutan ujian untuk setiap peserta"
+                  />
                 </Col>
                 <Col md={6} lg={4}>
-                  <OptionCard title="Pembobotan Nilai" icon={Settings} state={weightedScore} setState={setWeighted}/>
+                  <YesNoField
+                    label="Pembobotan Nilai"
+                    checked={weightedScore}
+                    onChange={setWeighted}
+                    icon={<Award size={16} />}
+                    color="tw-text-purple-700"
+                    selectedColor="tw-bg-gradient-to-r tw-from-purple-500 tw-to-pink-500 tw-text-white"
+                    yesText="Ya"
+                    noText="Tidak"
+                    variant="card"
+                    description="Menggunakan pembobotan dalam penilaian"
+                  />
                 </Col>
               </Row>
             </div>
@@ -569,6 +603,38 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Summary Section */}
+            {totalSelectedExams > 0 && (
+              <div className="tw-bg-purple-50 tw-border tw-border-purple-200 tw-rounded-lg tw-p-4 tw-mb-6">
+                <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
+                  <CheckCircle className="tw-w-5 tw-h-5 tw-text-purple-600" />
+                  <span className="tw-font-semibold tw-text-purple-700">
+                    Ringkasan Jadwal
+                  </span>
+                </div>
+                <div className="tw-grid tw-grid-cols-2 md:tw-grid-cols-4 tw-gap-4 tw-text-sm">
+                  <div>
+                    <span className="tw-text-purple-600">Total Ujian:</span>
+                    <div className="tw-font-semibold tw-text-purple-800">{totalSelectedExams}</div>
+                  </div>
+                  <div>
+                    <span className="tw-text-purple-600">Ujian Existing:</span>
+                    <div className="tw-font-semibold tw-text-purple-800">{selectedExams.length}</div>
+                  </div>
+                  <div>
+                    <span className="tw-text-purple-600">Ujian Baru:</span>
+                    <div className="tw-font-semibold tw-text-purple-800">{customExams.length}</div>
+                  </div>
+                  <div>
+                    <span className="tw-text-purple-600">Status:</span>
+                    <div className={`tw-font-semibold ${isValid ? 'tw-text-green-600' : 'tw-text-red-600'}`}>
+                      {isValid ? 'Aktif' : 'Tidak Aktif'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Changes indicator */}
             {hasChanges && (

@@ -3,8 +3,8 @@
 /**
  * ./AddQuestionModal.tsx
  * --------------------------------------------------------------------------
- * Modal "Tambah Soal Baru" – Updated untuk menggunakan ModalTemplate dan ButtonTemplate
- * Menggunakan ReportSuiteModal dan form components yang konsisten
+ * Modal "Tambah Soal Baru" – Updated untuk menggunakan LearningModal dan FormComponentLayout
+ * Menggunakan LearningModal dan form components yang konsisten dengan AddExamModal
  * Termasuk button untuk buat banyak sekaligus ke /panel/exam/questions/create-bulk
  * --------------------------------------------------------------------------
  */
@@ -17,14 +17,16 @@ import {
   Col,
   Card,
   Button,
-  Spinner
+  Alert
 } from 'react-bootstrap';
 import axios from 'axios';
 import debounce from 'lodash/debounce';
 
 import {
   SearchSingleField,
-  SelectCustomField
+  SelectCustomField,
+  ShortFormField,
+  YesNoField
 } from '../../../../components/form/FormComponentLayout';
 
 import {
@@ -44,7 +46,7 @@ import {
   Zap
 } from 'lucide-react';
 
-import { ReportSuiteModal, ModalButton } from '../../../../components/modal/ModalTemplate';
+import { LearningModal, ModalButton } from '../../../../components/modal/ModalTemplate';
 import SuperEditor from '../../../../components/supereditor/SuperEditor';
 import { useAuth } from '../../../../context/AuthContext';
 
@@ -629,53 +631,6 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
     onClose();
   };
 
-  /* ---------------------- UI Helpers ---------------------------------- */
-  const OptionCard = ({
-    title, icon: Icon, state, setState
-  }: {
-    title: string;
-    icon: React.ComponentType<{ size?: number }>;
-    state: boolean;
-    setState: (val: boolean) => void;
-  }) => (
-    <Card className="tw-border-2 tw-border-purple-200 tw-rounded-lg tw-shadow-sm hover:tw-shadow-md tw-transition-shadow">
-      <Card.Body className="tw-p-4">
-        <div className="tw-flex tw-items-center tw-justify-between">
-          <div className="tw-flex tw-items-center tw-gap-2">
-            <div className="tw-bg-purple-100 tw-p-1 tw-rounded">
-              <Icon size={16} className="tw-text-purple-600" />
-            </div>
-            <span className="tw-font-semibold tw-text-purple-700">{title}</span>
-          </div>
-          <div className="tw-flex tw-gap-2">
-            <button
-              type="button"
-              onClick={() => setState(true)}
-              className={`tw-px-3 tw-py-1 tw-rounded-lg tw-font-medium tw-text-sm tw-transition-colors ${
-                state
-                  ? 'tw-bg-green-500 tw-border-green-500 tw-text-white'
-                  : 'tw-border tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50'
-              }`}
-            >
-              Ya
-            </button>
-            <button
-              type="button"
-              onClick={() => setState(false)}
-              className={`tw-px-3 tw-py-1 tw-rounded-lg tw-font-medium tw-text-sm tw-transition-colors ${
-                !state
-                  ? 'tw-bg-green-500 tw-border-green-500 tw-text-white'
-                  : 'tw-border tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50'
-              }`}
-            >
-              Tidak
-            </button>
-          </div>
-        </div>
-      </Card.Body>
-    </Card>
-  );
-
   /* ---------------------- Modal Buttons ------------------------------- */
   const topButtons: ModalButton[] = [
     {
@@ -768,7 +723,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
   /* ----------------------- Render ----------------------------------- */
   return (
     <>
-      <ReportSuiteModal
+      <LearningModal
         show={isOpen}
         onHide={hasChanges ? () => {} : () => { resetForm(); onClose(); }}
         title="Buat Soal Baru"
@@ -836,7 +791,6 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                   icon={<BookOpen size={16} />}
                   required
                   error={errors.topik}
-                  disabled={!bidang}
                 />
               </Col>
 
@@ -851,7 +805,6 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                   icon={<Target size={16} />}
                   required
                   error={errors.subTopik}
-                  disabled={!topik}
                 />
               </Col>
             </Row>
@@ -859,17 +812,14 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
             {/* -------- Kode Soal & Level -------- */}
             <Row className="tw-mb-6">
               <Col md={8}>
-                <Form.Group>
-                  <Form.Label className="tw-flex tw-items-center tw-gap-2 tw-text-purple-700 tw-font-semibold">
-                    <FileText size={16}/> Kode Soal
-                  </Form.Label>
-                  <Form.Control
-                    value={questionCode}
-                    readOnly
-                    placeholder="Kode akan dibuat otomatis setelah memilih sub topik"
-                    className="tw-border-2 tw-border-purple-200 tw-bg-gray-50 tw-rounded-lg tw-text-base tw-p-3 tw-font-mono"
-                  />
-                </Form.Group>
+                <ShortFormField
+                  label="Kode Soal"
+                  value={questionCode}
+                  onChange={() => {}} // Read only
+                  isFixed={true}
+                  fixedValue={questionCode}
+                  required
+                />
               </Col>
 
               <Col md={4}>
@@ -880,7 +830,6 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                   onChange={(newValue) => {
                     setLevel(newValue ? newValue.value : null);
                   }}
-                  icon={<User size={16} />}
                   required
                   error={errors.level}
                 />
@@ -900,17 +849,22 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                 setStatements(['']);
                 setAnswer('');
               }}
-              icon={<BookOpen size={16} />}
               required
             />
 
             {/* -------- Bacaan (Optional) -------- */}
             <div className="tw-mb-6">
-              <OptionCard 
-                title="Ada Bacaan" 
-                icon={Bookmark} 
-                state={hasPassage} 
-                setState={setHasPassage} 
+              <YesNoField
+                label="Ada Bacaan"
+                checked={hasPassage}
+                onChange={setHasPassage}
+                icon={<Bookmark size={16} />}
+                color="tw-text-purple-700"
+                selectedColor="tw-bg-gradient-to-r tw-from-green-500 tw-to-emerald-500 tw-text-white"
+                yesText="Ya"
+                noText="Tidak"
+                variant="card"
+                description="Apakah soal ini memerlukan bacaan?"
               />
               
               {hasPassage && (
@@ -975,23 +929,17 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                     </div>
                   ) : (
                     <div className="tw-space-y-3">
-                      <Form.Group className="tw-mb-3">
-                        <Form.Label className="tw-text-purple-700 tw-font-medium">
-                          Judul Bacaan <span className="tw-text-red-500">*</span>
-                        </Form.Label>
-                        <Form.Control
-                          type="text"
-                          value={newPassageTitle}
-                          onChange={(e) => setNewPassageTitle(e.target.value)}
-                          placeholder="Masukkan judul bacaan"
-                          className="tw-border-purple-200 tw-rounded-lg tw-p-3"
-                          isInvalid={!!errors.passageTitle}
-                        />
-                      </Form.Group>
+                      <ShortFormField
+                        label="Judul Bacaan"
+                        value={newPassageTitle}
+                        onChange={(e) => setNewPassageTitle(e.target.value)}
+                        required
+                        error={errors.passageTitle}
+                      />
                       
                       <Form.Group>
-                        <Form.Label className="tw-text-purple-700 tw-font-medium">
-                          Isi Bacaan <span className="tw-text-red-500">*</span>
+                        <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-3 tw-flex tw-items-center tw-space-x-2">
+                          <span>Isi Bacaan <span className="tw-text-red-500">*</span></span>
                         </Form.Label>
                         <div className="tw-bg-gray-50 tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-shadow-sm">
                           <SuperEditor 
@@ -1178,40 +1126,36 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
             {/* -------- Number/Text Answer -------- */}
             {(questionType === 'number' || questionType === 'text') && (
               <div className="tw-mb-6">
-                <Form.Group>
-                  <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-3 tw-flex tw-items-center tw-space-x-2">
-                    <Check className="tw-w-4 tw-h-4" />
-                    <span>Jawaban Benar <span className="tw-text-red-500">*</span></span>
-                  </Form.Label>
-                  <Form.Control
-                    type={questionType === 'number' ? 'number' : 'text'}
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
-                    placeholder={questionType === 'number' ? 'Masukkan angka' : 'Masukkan jawaban teks'}
-                    className="tw-border-2 tw-border-purple-200 tw-rounded-lg tw-px-4 tw-py-3 tw-text-lg focus:tw-border-purple-500 focus:tw-ring-2 focus:tw-ring-purple-200"
-                    isInvalid={!!errors.answer}
-                  />
-                  {errors.answer && (
-                    <div className="tw-text-red-600 tw-text-sm tw-mt-1">{errors.answer}</div>
-                  )}
-                </Form.Group>
+                <ShortFormField
+                  label="Jawaban Benar"
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
+                  required
+                  error={errors.answer}
+                />
               </div>
             )}
 
             {/* -------- Pembahasan (Optional) -------- */}
             <div className="tw-mb-6">
-              <OptionCard 
-                title="Ada Pembahasan" 
-                icon={FileText} 
-                state={hasExplanation} 
-                setState={setHasExplanation} 
+              <YesNoField
+                label="Ada Pembahasan"
+                checked={hasExplanation}
+                onChange={setHasExplanation}
+                icon={<FileText size={16} />}
+                color="tw-text-purple-700"
+                selectedColor="tw-bg-gradient-to-r tw-from-green-500 tw-to-emerald-500 tw-text-white"
+                yesText="Ya"
+                noText="Tidak"
+                variant="card"
+                description="Apakah soal ini memerlukan pembahasan?"
               />
               
               {hasExplanation && (
                 <div className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-4 tw-shadow-sm tw-mt-4">
                   <Form.Group>
-                    <Form.Label className="tw-text-purple-700 tw-font-medium">
-                      Isi Pembahasan <span className="tw-text-red-500">*</span>
+                    <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-3 tw-flex tw-items-center tw-space-x-2">
+                      <span>Isi Pembahasan <span className="tw-text-red-500">*</span></span>
                     </Form.Label>
                     <div className="tw-bg-gray-50 tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2">
                       <SuperEditor 
@@ -1228,6 +1172,46 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
               )}
             </div>
 
+            {/* Summary Section */}
+            {(questionCode || level !== null) && (
+              <div className="tw-bg-purple-50 tw-border tw-border-purple-200 tw-rounded-lg tw-p-4 tw-mb-6">
+                <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
+                  <CheckCircle className="tw-w-5 tw-h-5 tw-text-purple-600" />
+                  <span className="tw-font-semibold tw-text-purple-700">
+                    Ringkasan Soal
+                  </span>
+                </div>
+                <div className="tw-grid tw-grid-cols-2 md:tw-grid-cols-4 tw-gap-4 tw-text-sm">
+                  <div>
+                    <span className="tw-text-purple-600">Kode:</span>
+                    <div className="tw-font-semibold tw-text-purple-800 tw-truncate">
+                      {questionCode || 'Belum dibuat'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="tw-text-purple-600">Level:</span>
+                    <div className="tw-font-semibold tw-text-purple-800">
+                      {level !== null ? `Level ${level}` : 'Belum dipilih'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="tw-text-purple-600">Tipe:</span>
+                    <div className="tw-font-semibold tw-text-purple-800">
+                      {selectedQuestionType.label}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="tw-text-purple-600">Fitur:</span>
+                    <div className="tw-font-semibold tw-text-purple-800">
+                      {hasPassage && hasExplanation ? 'Bacaan + Pembahasan' :
+                       hasPassage ? 'Bacaan' :
+                       hasExplanation ? 'Pembahasan' : 'Standar'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Changes indicator */}
             {hasChanges && (
               <div className="tw-bg-orange-50 tw-border tw-border-orange-200 tw-rounded-lg tw-p-3">
@@ -1241,10 +1225,10 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
             )}
           </Form>
         </div>
-      </ReportSuiteModal>
+      </LearningModal>
 
       {/* Success Modal */}
-      <ReportSuiteModal
+      <LearningModal
         show={showSuccessModal}
         onHide={() => {}}
         title="Berhasil Dibuat!"
@@ -1323,7 +1307,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
             </div>
           </div>
         </div>
-      </ReportSuiteModal>
+      </LearningModal>
     </>
   );
 };

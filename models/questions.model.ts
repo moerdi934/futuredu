@@ -117,20 +117,22 @@ const makeSeed = (examString: string, level: number): number => {
 };
 
 // Model Functions
-export const searchQuestionsByCodeOrId = async (search: string): Promise<QuestionSearchResult[]> => {
+export const searchQuestionsByCodeOrId = async (search?: string, selectedIds?: string): Promise<QuestionSearchResult[]> => {
   try {
-    if (!search || search.trim() === '') {
-      return [];
-    }
-
     const query = `
       SELECT id, code
       FROM   questions
-      WHERE  code ILIKE $1 OR CAST(id AS text) ILIKE $1
+      WHERE  ($1::text IS NULL OR $1 = '' OR code ILIKE $1 OR CAST(id AS text) ILIKE $1)
+      ${selectedIds ? 'AND id NOT IN (' + selectedIds.split(',').map((_, i) => `$${i + 2}`).join(',') + ')' : ''}
       ORDER  BY md5(id::text)
-      LIMIT  15;
+      LIMIT  20;
     `;
-    const values = [`%${search}%`];
+    
+    const values = [`%${search || ''}%`];
+    if (selectedIds) {
+      values.push(...selectedIds.split(','));
+    }
+    
     const result = await pool.query(query, values);
 
     return result.rows.map(row => ({

@@ -2,100 +2,156 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Form, InputGroup, Button, Card, Row, Col } from 'react-bootstrap';
+import { Form, InputGroup, Card, Row, Col } from 'react-bootstrap';
 import { Calendar } from 'lucide-react';
 import Select from "react-select";
 import { ChangeEvent } from 'react';
 import { SingleValue, MultiValue, ActionMeta } from 'react-select';
 import { Eye, EyeOff, Clock, ChevronLeft, ChevronRight, CheckCircle } from 'lucide-react';
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
+import { ButtonGradient, ActionType } from '../button/ButtonTemplate';
 
 // API Base URL from environment
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-// API Helper Functions
+// Enhanced API Client with Axios
 const apiClient = {
-  async get(endpoint: string) {
+  async get(endpoint: string, config?: AxiosRequestConfig): Promise<any> {
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'GET',
+      const response: AxiosResponse = await axios.get(`${API_BASE_URL}${endpoint}`, {
         headers: {
           'Content-Type': 'application/json',
         },
+        ...config,
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      return await response.json();
+      return response.data;
     } catch (error) {
       console.error('API GET Error:', error);
+      if (axios.isAxiosError(error)) {
+        throw new Error(`API Error: ${error.response?.status} - ${error.response?.statusText || error.message}`);
+      }
       throw error;
     }
   },
 
-  async post(endpoint: string, data: any) {
+  async post(endpoint: string, data: any, config?: AxiosRequestConfig): Promise<any> {
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'POST',
+      const response: AxiosResponse = await axios.post(`${API_BASE_URL}${endpoint}`, data, {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        ...config,
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      return await response.json();
+      return response.data;
     } catch (error) {
       console.error('API POST Error:', error);
+      if (axios.isAxiosError(error)) {
+        throw new Error(`API Error: ${error.response?.status} - ${error.response?.statusText || error.message}`);
+      }
       throw error;
     }
   },
 
-  async put(endpoint: string, data: any) {
+  async put(endpoint: string, data: any, config?: AxiosRequestConfig): Promise<any> {
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'PUT',
+      const response: AxiosResponse = await axios.put(`${API_BASE_URL}${endpoint}`, data, {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        ...config,
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      return await response.json();
+      return response.data;
     } catch (error) {
       console.error('API PUT Error:', error);
+      if (axios.isAxiosError(error)) {
+        throw new Error(`API Error: ${error.response?.status} - ${error.response?.statusText || error.message}`);
+      }
       throw error;
     }
   },
 
-  async delete(endpoint: string) {
+  async delete(endpoint: string, config?: AxiosRequestConfig): Promise<any> {
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'DELETE',
+      const response: AxiosResponse = await axios.delete(`${API_BASE_URL}${endpoint}`, {
         headers: {
           'Content-Type': 'application/json',
         },
+        ...config,
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      return await response.json();
+      return response.data;
     } catch (error) {
       console.error('API DELETE Error:', error);
+      if (axios.isAxiosError(error)) {
+        throw new Error(`API Error: ${error.response?.status} - ${error.response?.statusText || error.message}`);
+      }
+      throw error;
+    }
+  },
+
+  async patch(endpoint: string, data: any, config?: AxiosRequestConfig): Promise<any> {
+    try {
+      const response: AxiosResponse = await axios.patch(`${API_BASE_URL}${endpoint}`, data, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        ...config,
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('API PATCH Error:', error);
+      if (axios.isAxiosError(error)) {
+        throw new Error(`API Error: ${error.response?.status} - ${error.response?.statusText || error.message}`);
+      }
       throw error;
     }
   }
 };
+
+// Configure axios defaults
+axios.defaults.timeout = 10000; // 10 seconds
+axios.defaults.withCredentials = true;
+
+// Request interceptor for adding auth tokens
+axios.interceptors.request.use(
+  (config) => {
+    // Add auth token if available
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for handling errors
+axios.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    // Handle common errors
+    if (error.response?.status === 401) {
+      // Handle unauthorized access
+      localStorage.removeItem('auth_token');
+      window.location.href = '/login';
+    } else if (error.response?.status === 403) {
+      // Handle forbidden access
+      console.warn('Access forbidden');
+    } else if (error.response?.status >= 500) {
+      // Handle server errors
+      console.error('Server error occurred');
+    }
+    return Promise.reject(error);
+  }
+);
 
 export interface SelectOption {
   label: string;
@@ -111,6 +167,9 @@ export interface SelectCustomProps {
   required?: boolean;
   placeholder?: string;
   apiEndpoint?: string;
+  onClear?: () => void;
+  onApply?: () => void;
+  loading?: boolean;
 }
 
 export interface ShortFormProps {
@@ -125,12 +184,18 @@ export interface ShortFormProps {
   regex?: string;
   regexErrorMessage?: string;
   isPassword?: boolean;
+  onSave?: () => void;
+  onClear?: () => void;
+  loading?: boolean;
 }
 
 export interface WideFormProps {
   label: string;
   value: string;
   onChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
+  onSave?: () => void;
+  onClear?: () => void;
+  loading?: boolean;
 }
 
 export interface SearchSingleProps {
@@ -145,6 +210,8 @@ export interface SearchSingleProps {
   apiEndpoint?: string;
   debounceMs?: number;
   icon?: React.ReactNode;
+  onRefresh?: () => void;
+  onClear?: () => void;
 }
 
 export interface SearchMultipleProps {
@@ -160,12 +227,46 @@ export interface SearchMultipleProps {
   debounceMs?: number;
   icon?: React.ReactNode;
   placeholder?: string;
+  onRefresh?: () => void;
+  onClear?: () => void;
+  onApply?: () => void;
 }
 
 export interface YesNoProps {
   label: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  icon?: React.ReactNode;
+  color?: string;
+  selectedColor?: string;
+  yesText?: string;
+  noText?: string;
+  variant?: 'card' | 'checkbox';
+  description?: string;
+  onApply?: () => void;
+  onReset?: () => void;
+  loading?: boolean;
+}
+
+export interface OptionCardProps {
+  label: string;
+  selectedValue: string | number;
+  options: Array<{
+    value: string | number;
+    label: string;
+    description?: string;
+  }>;
+  onChange: (value: string | number) => void;
+  icon?: React.ReactNode;
+  color?: string;
+  selectedColor?: string;
+  variant?: 'horizontal' | 'vertical';
+  description?: string;
+  error?: string;
+  required?: boolean;
+  onApply?: () => void;
+  onReset?: () => void;
+  loading?: boolean;
 }
 
 export interface DateRangeProps {
@@ -180,9 +281,11 @@ export interface DateRangeProps {
   required?: boolean;
   icon?: React.ReactNode;
   labelColor?: string;
+  onApply?: () => void;
+  onReset?: () => void;
+  loading?: boolean;
 }
 
-// NEW: Date Field Props
 export interface DateFieldProps {
   label: string;
   value: Date | null;
@@ -190,9 +293,11 @@ export interface DateFieldProps {
   error?: string;
   required?: boolean;
   placeholder?: string;
+  onSave?: () => void;
+  onClear?: () => void;
+  loading?: boolean;
 }
 
-// NEW: Number Field Props
 export interface NumberFieldProps {
   label: string;
   value: string | number;
@@ -203,9 +308,11 @@ export interface NumberFieldProps {
   min?: number;
   max?: number;
   step?: number;
+  onSave?: () => void;
+  onClear?: () => void;
+  loading?: boolean;
 }
 
-// NEW: Boolean Field Props (Radio/Checkbox style)
 export interface BooleanFieldProps {
   label: string;
   value: boolean | null;
@@ -215,6 +322,9 @@ export interface BooleanFieldProps {
   type?: 'radio' | 'select';
   trueLabel?: string;
   falseLabel?: string;
+  onApply?: () => void;
+  onReset?: () => void;
+  loading?: boolean;
 }
 
 export interface EnhancedSearchSingleProps extends SearchSingleProps {
@@ -403,6 +513,9 @@ const useDebounce = (value: string, delay: number) => {
   return debouncedValue;
 };
 
+// SSR Safe function to check if we're in browser
+const isBrowser = () => typeof window !== 'undefined';
+
 export const SearchSingleField: React.FC<EnhancedSearchSingleProps> = ({ 
   label, 
   value, 
@@ -416,18 +529,52 @@ export const SearchSingleField: React.FC<EnhancedSearchSingleProps> = ({
   debounceMs = 300,
   preserveExistingParams = false,
   customSearchParam = 'search',
-  icon
+  icon,
+  onRefresh,
+  onClear
 }) => {
   const [options, setOptions] = useState<SelectOption[]>(initialOptions);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const debouncedSearchTerm = useDebounce(searchTerm, debounceMs);
   const selectRef = useRef<any>(null);
+
+  // Set mounted state after component mounts (SSR fix)
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleInputChange = (newValue: string) => {
     setSearchTerm(newValue);
     if (onInputChange) {
       onInputChange(newValue);
+    }
+  };
+
+  const handleMenuOpen = () => setIsMenuOpen(true);
+  const handleMenuClose = () => setIsMenuOpen(false);
+
+  const handleRefresh = () => {
+    if (onRefresh) {
+      onRefresh();
+    } else {
+      // Default refresh behavior
+      setSearchTerm('');
+      if (apiEndpoint) {
+        fetchOptions('');
+      }
+    }
+  };
+
+  const handleClear = () => {
+    if (onClear) {
+      onClear();
+    } else {
+      // Default clear behavior
+      onChange(null, { action: 'clear', removedValue: value, option: null });
+      setSearchTerm('');
     }
   };
 
@@ -456,25 +603,25 @@ export const SearchSingleField: React.FC<EnhancedSearchSingleProps> = ({
     }
   };
 
-  useEffect(() => {
-    const searchOptions = async () => {
-      if (!apiEndpoint) return;
-      
-      setIsLoading(true);
-      try {
-        const endpoint = buildApiEndpoint(apiEndpoint, debouncedSearchTerm);
-        const data = await apiClient.get(endpoint);
-        setOptions(data);
-      } catch (error) {
-        console.error('Failed to search options:', error);
-        setOptions(initialOptions);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchOptions = async (searchValue: string) => {
+    if (!apiEndpoint) return;
+    
+    setIsLoading(true);
+    try {
+      const endpoint = buildApiEndpoint(apiEndpoint, searchValue);
+      const data = await apiClient.get(endpoint);
+      setOptions(data);
+    } catch (error) {
+      console.error('Failed to search options:', error);
+      setOptions(initialOptions);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     if (debouncedSearchTerm !== '' || !apiEndpoint) {
-      searchOptions();
+      fetchOptions(debouncedSearchTerm);
     }
   }, [debouncedSearchTerm, apiEndpoint, initialOptions, preserveExistingParams, customSearchParam]);
 
@@ -492,41 +639,252 @@ export const SearchSingleField: React.FC<EnhancedSearchSingleProps> = ({
     label.toLowerCase().includes('kelurahan')
   );
 
-  const selectStyles = isLocationField ? customSelectStyles : customSelectStylesEducation;
+  // Super high z-index to ensure dropdown is always on top
+  const getZIndex = (isOpen: boolean, isLocation: boolean) => {
+    if (!isOpen) return 1;
+    return isLocation ? 999999 : 99999;
+  };
+
+  // Custom styles with very high z-index and proper stacking context
+  const customSelectStylesFixed = {
+    control: (provided: any, state: any) => ({
+      ...provided,
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      backdropFilter: 'blur(4px)',
+      border: state.isFocused ? '2px solid #667eea' : '2px solid transparent',
+      borderRadius: '12px',
+      padding: '8px 12px',
+      color: '#374151',
+      boxShadow: state.isFocused 
+        ? '0 0 0 3px rgba(102, 126, 234, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+        : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      position: 'relative',
+      zIndex: state.isFocused ? 10 : 1,
+      transition: 'all 0.15s ease',
+      '&:hover': {
+        borderColor: '#667eea',
+      }
+    }),
+    input: (provided: any) => ({
+      ...provided,
+      color: '#374151',
+    }),
+    placeholder: (provided: any) => ({
+      ...provided,
+      color: '#9CA3AF',
+    }),
+    singleValue: (provided: any) => ({
+      ...provided,
+      color: '#374151',
+    }),
+    menu: (provided: any) => ({
+      ...provided,
+      backgroundColor: '#ffffff',
+      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+      borderRadius: '12px',
+      border: '2px solid #E5E7EB',
+      // Positioning - always below the control
+      position: 'absolute',
+      top: '100%',
+      left: 0,
+      right: 0,
+      marginTop: '4px',
+      // Super high z-index to be above everything
+      zIndex: getZIndex(isMenuOpen, isLocationField),
+      width: '100%',
+      transform: 'none',
+      // Ensure it creates its own stacking context
+      isolation: 'isolate'
+    }),
+    menuPortal: (provided: any) => ({
+      ...provided,
+      zIndex: getZIndex(isMenuOpen, isLocationField)
+    }),
+    menuList: (provided: any) => ({
+      ...provided,
+      padding: '8px',
+      maxHeight: '220px',
+      overflowY: 'auto',
+      // Custom scrollbar
+      '&::-webkit-scrollbar': {
+        width: '6px',
+      },
+      '&::-webkit-scrollbar-track': {
+        background: '#f1f1f1',
+        borderRadius: '3px',
+      },
+      '&::-webkit-scrollbar-thumb': {
+        background: '#c1c1c1',
+        borderRadius: '3px',
+        '&:hover': {
+          background: '#a8a8a8',
+        },
+      },
+    }),
+    option: (provided: any, state: any) => ({
+      ...provided,
+      backgroundColor: state.isSelected 
+        ? '#667eea' 
+        : state.isFocused 
+          ? '#F3F4F6' 
+          : '#ffffff',
+      color: state.isSelected 
+        ? '#ffffff' 
+        : '#374151',
+      borderRadius: '8px',
+      margin: '2px 0',
+      padding: '12px 16px',
+      cursor: 'pointer',
+      fontWeight: state.isSelected ? '600' : '400',
+      transition: 'all 0.15s ease',
+      '&:hover': {
+        backgroundColor: state.isSelected ? '#5a67d8' : '#F3F4F6',
+        transform: 'translateX(2px)',
+      },
+      '&:active': {
+        transform: 'translateX(1px)',
+      }
+    }),
+    noOptionsMessage: (provided: any) => ({
+      ...provided,
+      color: '#6B7280',
+      padding: '12px 16px',
+      fontStyle: 'italic',
+    }),
+    loadingMessage: (provided: any) => ({
+      ...provided,
+      color: '#6B7280',
+      padding: '12px 16px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+    }),
+    indicatorSeparator: (provided: any) => ({
+      ...provided,
+      backgroundColor: '#D1D5DB',
+    }),
+    dropdownIndicator: (provided: any, state: any) => ({
+      ...provided,
+      color: state.isFocused ? '#667eea' : '#9CA3AF',
+      transform: state.selectProps.menuIsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+      transition: 'transform 0.15s ease, color 0.15s ease',
+      '&:hover': {
+        color: '#667eea',
+      }
+    }),
+    clearIndicator: (provided: any) => ({
+      ...provided,
+      color: '#9CA3AF',
+      '&:hover': {
+        color: '#EF4444',
+      }
+    }),
+  };
+
+  // Don't render until mounted (SSR fix)
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <Form.Group className="mb-3" ref={selectRef}>
-      <Form.Label className="tw-flex tw-items-center tw-gap-2 tw-text-purple-700 tw-font-semibold">
+      <Form.Label className="tw-flex tw-items-center tw-gap-2 tw-text-purple-700 tw-font-semibold tw-mb-2">
         {icon} {label} {required && <span className="tw-text-red-500">*</span>}
       </Form.Label>
-      <div style={{ position: 'relative' }}>
+      
+      {/* Action buttons */}
+      <div className="tw-flex tw-gap-2 tw-mb-2">
+        {onRefresh && (
+          <ButtonGradient
+            action="refresh"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading || externalLoading}
+          />
+        )}
+        {onClear && (
+          <ButtonGradient
+            action="clear"
+            size="sm"
+            onClick={handleClear}
+            disabled={isLoading || externalLoading}
+          />
+        )}
+      </div>
+      
+      <div 
+        style={{ 
+          position: 'relative', 
+          zIndex: isMenuOpen ? (isLocationField ? 99999 : 9999) : 1,
+          // Create stacking context
+          isolation: 'isolate'
+        }}
+      >
         <Select
           value={value}
           options={validatedOptions}
           onChange={onChange}
           onInputChange={handleInputChange}
+          onMenuOpen={handleMenuOpen}
+          onMenuClose={handleMenuClose}
           isLoading={isLoading || externalLoading}
           isClearable
           isSearchable
           className={error ? 'is-invalid' : ''}
-          styles={selectStyles}
+          styles={customSelectStylesFixed}
           placeholder="Type to search..."
           noOptionsMessage={() => "No options found"}
           loadingMessage={() => "Loading..."}
-          menuPortalTarget={document.body}
+          // Don't use portal to maintain positioning control
+          menuPortalTarget={null}
+          // Better positioning and behavior
           menuShouldScrollIntoView={false}
           menuShouldBlockScroll={false}
+          menuPlacement="bottom"
+          menuPosition="absolute"
+          // Close menu on scroll to prevent positioning issues
+          closeMenuOnScroll={true}
+          // Better filter performance
           filterOption={(option, inputValue) => {
             if (!inputValue) return true;
             const searchValue = String(inputValue || '').toLowerCase();
             const label = String(option.label || '').toLowerCase();
             return label.includes(searchValue);
           }}
+          // Loading and no options styling
+          components={{
+            LoadingMessage: ({ children, ...props }) => (
+              <div {...props.innerProps} style={props.getStyles('loadingMessage', props)}>
+                <div className="tw-inline-block tw-w-4 tw-h-4 tw-border-2 tw-border-purple-200 tw-border-t-purple-600 tw-rounded-full tw-animate-spin"></div>
+                {children}
+              </div>
+            ),
+            NoOptionsMessage: ({ children, ...props }) => (
+              <div {...props.innerProps} style={props.getStyles('noOptionsMessage', props)}>
+                <span className="tw-text-gray-500">{children}</span>
+              </div>
+            ),
+          }}
         />
+        {/* Invisible overlay when menu is open to prevent interaction with elements below */}
+        {isMenuOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: getZIndex(isMenuOpen, isLocationField) - 1,
+              backgroundColor: 'transparent',
+              pointerEvents: 'none'
+            }}
+          />
+        )}
       </div>
       {error && (
-        <div className="invalid-feedback" style={{ display: 'block' }}>
-          {error}
+        <div className="invalid-feedback" style={{ display: 'block', marginTop: '4px' }}>
+          <span className="tw-text-red-600 tw-text-sm tw-font-medium">{error}</span>
         </div>
       )}
     </Form.Group>
@@ -544,7 +902,10 @@ export const ShortFormField: React.FC<ShortFormProps> = ({
   isRegex = false,
   regex = '',
   regexErrorMessage = 'Input does not match the required pattern',
-  isPassword = false
+  isPassword = false,
+  onSave,
+  onClear,
+  loading = false
 }) => {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -576,11 +937,49 @@ export const ShortFormField: React.FC<ShortFormProps> = ({
     setShowPassword(!showPassword);
   };
 
+  const handleSave = () => {
+    if (onSave) onSave();
+  };
+
+  const handleClear = () => {
+    if (onClear) {
+      onClear();
+    } else {
+      // Default clear behavior
+      const fakeEvent = {
+        target: { value: '' }
+      } as ChangeEvent<HTMLInputElement>;
+      onChange(fakeEvent);
+    }
+  };
+
   return (
     <Form.Group className="mb-3">
-      <Form.Label className="tw-font-semibold tw-text-white tw-mb-2">
+      <Form.Label className="tw-font-semibold tw-text-purple-700 tw-font-semibold tw-mb-2">
         {label} {required && <span className="text-danger">*</span>}
       </Form.Label>
+      
+      {/* Action buttons */}
+      <div className="tw-flex tw-gap-2 tw-mb-2">
+        {onSave && (
+          <ButtonGradient
+            action="save"
+            size="sm"
+            onClick={handleSave}
+            disabled={loading || isFixed}
+            loading={loading}
+          />
+        )}
+        {onClear && (
+          <ButtonGradient
+            action="clear"
+            size="sm"
+            onClick={handleClear}
+            disabled={loading || isFixed}
+          />
+        )}
+      </div>
+
       {isPassword ? (
         <InputGroup>
           <Form.Control
@@ -588,7 +987,7 @@ export const ShortFormField: React.FC<ShortFormProps> = ({
             value={isFixed ? fixedValue : value}
             onChange={handleChange}
             isInvalid={!!error || (isRegex && !validateRegex(value))}
-            disabled={isFixed}
+            disabled={isFixed || loading}
             className="tw-border-0 tw-rounded-xl tw-shadow-sm tw-bg-white/95 tw-backdrop-blur-sm tw-text-gray-800 tw-py-3"
           />
           <InputGroup.Text 
@@ -608,7 +1007,7 @@ export const ShortFormField: React.FC<ShortFormProps> = ({
           value={isFixed ? fixedValue : value}
           onChange={handleChange}
           isInvalid={!!error || (isRegex && !validateRegex(value))}
-          disabled={isFixed}
+          disabled={isFixed || loading}
           className="tw-border-0 tw-rounded-xl tw-shadow-sm tw-bg-white/95 tw-backdrop-blur-sm tw-text-gray-800 tw-py-3"
         />
       )}
@@ -629,11 +1028,32 @@ export const SelectCustomField: React.FC<SelectCustomProps> = ({
   error,
   required = false,
   placeholder = 'Select an option...',
-  apiEndpoint
+  apiEndpoint,
+  onClear,
+  onApply,
+  loading = false
 }) => {
   const [options, setOptions] = useState<SelectOption[]>(initialOptions);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const selectRef = useRef<any>(null);
+
+  // Set mounted state after component mounts (SSR fix)
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const handleClear = () => {
+    if (onClear) {
+      onClear();
+    } else {
+      onChange(null, { action: 'clear', removedValue: value, option: null });
+    }
+  };
+
+  const handleApply = () => {
+    if (onApply) onApply();
+  };
 
   useEffect(() => {
     const fetchOptions = async () => {
@@ -651,25 +1071,54 @@ export const SelectCustomField: React.FC<SelectCustomProps> = ({
       }
     };
 
-    fetchOptions();
-  }, [apiEndpoint, initialOptions]);
+    if (isMounted) {
+      fetchOptions();
+    }
+  }, [apiEndpoint, initialOptions, isMounted]);
+
+  // Don't render until mounted (SSR fix)
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <Form.Group className="mb-3" ref={selectRef}>
-      <Form.Label className="tw-font-semibold tw-text-white tw-mb-2">
+      <Form.Label className="tw-font-semibold tw-text-purple-700 tw-font-semibold tw-mb-2">
         {label} {required && <span className="text-danger">*</span>}
       </Form.Label>
+      
+      {/* Action buttons */}
+      <div className="tw-flex tw-gap-2 tw-mb-2">
+        {onApply && (
+          <ButtonGradient
+            action="apply"
+            size="sm"
+            onClick={handleApply}
+            disabled={isLoading || loading}
+            loading={loading}
+          />
+        )}
+        {onClear && (
+          <ButtonGradient
+            action="clear"
+            size="sm"
+            onClick={handleClear}
+            disabled={isLoading || loading}
+          />
+        )}
+      </div>
+
       <Select
         value={value}
         options={options}
         onChange={onChange}
         isSearchable={false}
         isClearable={true}
-        isLoading={isLoading}
+        isLoading={isLoading || loading}
         placeholder={placeholder}
         className={error ? 'is-invalid' : ''}
         classNamePrefix="select"
-        menuPortalTarget={document.body}
+        menuPortalTarget={isBrowser() ? document.body : null}
         styles={customSelectStylesEducation}
         menuShouldScrollIntoView={false}
         menuShouldBlockScroll={false}
@@ -686,19 +1135,62 @@ export const SelectCustomField: React.FC<SelectCustomProps> = ({
 export const WideFormField: React.FC<WideFormProps> = ({ 
   label, 
   value, 
-  onChange 
-}) => (
-  <Form.Group className="mb-3">
-    <Form.Label className="tw-font-semibold tw-text-white tw-mb-2">{label}</Form.Label>
-    <Form.Control
-      as="textarea"
-      rows={3}
-      value={value}
-      onChange={onChange}
-      className="tw-border-0 tw-rounded-xl tw-shadow-sm tw-bg-white/95 tw-backdrop-blur-sm tw-text-gray-800 tw-py-3"
-    />
-  </Form.Group>
-);
+  onChange,
+  onSave,
+  onClear,
+  loading = false
+}) => {
+  const handleSave = () => {
+    if (onSave) onSave();
+  };
+
+  const handleClear = () => {
+    if (onClear) {
+      onClear();
+    } else {
+      const fakeEvent = {
+        target: { value: '' }
+      } as ChangeEvent<HTMLTextAreaElement>;
+      onChange(fakeEvent);
+    }
+  };
+
+  return (
+    <Form.Group className="mb-3">
+      <Form.Label className="tw-font-semibold tw-text-purple-700 tw-font-semibold tw-mb-2">{label}</Form.Label>
+      
+      {/* Action buttons */}
+      <div className="tw-flex tw-gap-2 tw-mb-2">
+        {onSave && (
+          <ButtonGradient
+            action="save"
+            size="sm"
+            onClick={handleSave}
+            disabled={loading}
+            loading={loading}
+          />
+        )}
+        {onClear && (
+          <ButtonGradient
+            action="clear"
+            size="sm"
+            onClick={handleClear}
+            disabled={loading}
+          />
+        )}
+      </div>
+
+      <Form.Control
+        as="textarea"
+        rows={3}
+        value={value}
+        onChange={onChange}
+        disabled={loading}
+        className="tw-border-0 tw-rounded-xl tw-shadow-sm tw-bg-white/95 tw-backdrop-blur-sm tw-text-gray-800 tw-py-3"
+      />
+    </Form.Group>
+  );
+};
 
 export const SearchMultipleField: React.FC<SearchMultipleProps> = ({ 
   label, 
@@ -712,13 +1204,23 @@ export const SearchMultipleField: React.FC<SearchMultipleProps> = ({
   apiEndpoint,
   debounceMs = 300,
   icon,
-  placeholder = "Type to search..."
+  placeholder = "Type to search...",
+  onRefresh,
+  onClear,
+  onApply
 }) => {
   const [options, setOptions] = useState<SelectOption[]>(initialOptions);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const debouncedSearchTerm = useDebounce(searchTerm, debounceMs);
   const selectRef = useRef<any>(null);
+
+  // Set mounted state after component mounts (SSR fix)
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleInputChange = (newValue: string) => {
     setSearchTerm(newValue);
@@ -727,55 +1229,431 @@ export const SearchMultipleField: React.FC<SearchMultipleProps> = ({
     }
   };
 
-  useEffect(() => {
-    const searchOptions = async () => {
-      if (!apiEndpoint) return;
-      
-      setIsLoading(true);
-      try {
-        const endpoint = debouncedSearchTerm 
-          ? `${apiEndpoint}?search=${encodeURIComponent(debouncedSearchTerm)}`
-          : apiEndpoint;
-        
-        const data = await apiClient.get(endpoint);
-        setOptions(data);
-      } catch (error) {
-        console.error('Failed to search options:', error);
-        setOptions(initialOptions);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const handleMenuOpen = () => setIsMenuOpen(true);
+  const handleMenuClose = () => setIsMenuOpen(false);
 
-    if (debouncedSearchTerm !== '' || !apiEndpoint) {
-      searchOptions();
+  const handleRefresh = () => {
+    if (onRefresh) {
+      onRefresh();
+    } else {
+      setSearchTerm('');
+      if (apiEndpoint) {
+        fetchOptions('');
+      }
     }
-  }, [debouncedSearchTerm, apiEndpoint, initialOptions]);
+  };
+
+  const handleClear = () => {
+    if (onClear) {
+      onClear();
+    } else {
+      onChange([], { action: 'clear', removedValues: value, option: null });
+      setSearchTerm('');
+    }
+  };
+
+  const handleApply = () => {
+    if (onApply) onApply();
+  };
+
+  useEffect(() => {
+    setOptions(initialOptions);
+  }, [initialOptions]);
+
+  // Build API endpoint with selected IDs for exclusion filter
+  const buildApiEndpoint = (baseEndpoint: string, searchValue: string): string => {
+    if (!baseEndpoint) return '';
+    
+    try {
+      const url = new URL(baseEndpoint, 'http://localhost');
+      
+      // Add search parameter
+      if (searchValue.trim()) {
+        url.searchParams.set('search', searchValue.trim());
+      }
+      
+      // Add selected_id array parameter for backend exclusion
+      const selectedIds = value.map(item => String(item.value)).filter(Boolean);
+      if (selectedIds.length > 0) {
+        // Send as comma-separated string or multiple params based on backend preference
+        url.searchParams.set('selected_ids', selectedIds.join(','));
+        // Alternative: selectedIds.forEach(id => url.searchParams.append('selected_id[]', id));
+      }
+      
+      return url.pathname + url.search;
+    } catch (error) {
+      console.error('Error building API endpoint:', error);
+      const hasParams = baseEndpoint.includes('?');
+      const separator = hasParams ? '&' : '?';
+      let endpoint = baseEndpoint;
+      
+      if (searchValue.trim()) {
+        endpoint += `${separator}search=${encodeURIComponent(searchValue.trim())}`;
+      }
+      
+      const selectedIds = value.map(item => String(item.value)).filter(Boolean);
+      if (selectedIds.length > 0) {
+        const nextSeparator = endpoint.includes('?') ? '&' : '?';
+        endpoint += `${nextSeparator}selected_ids=${selectedIds.join(',')}`;
+      }
+      
+      return endpoint;
+    }
+  };
+
+  const fetchOptions = async (searchValue: string) => {
+    if (!apiEndpoint) return;
+    
+    setIsLoading(true);
+    try {
+      const endpoint = buildApiEndpoint(apiEndpoint, searchValue);
+      const data = await apiClient.get(endpoint);
+      setOptions(data);
+    } catch (error) {
+      console.error('Failed to search options:', error);
+      setOptions(initialOptions);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isMounted) {
+      fetchOptions(debouncedSearchTerm);
+    }
+  }, [debouncedSearchTerm, apiEndpoint, initialOptions, value, isMounted]); // Add value as dependency
+
+  // Initial fetch when options are empty and apiEndpoint exists
+  useEffect(() => {
+    if (isMounted && apiEndpoint && options.length === 0 && !isLoading && !searchTerm) {
+      const initialFetch = async () => {
+        setIsLoading(true);
+        try {
+          const endpoint = buildApiEndpoint(apiEndpoint, '');
+          const data = await apiClient.get(endpoint);
+          setOptions(data);
+        } catch (error) {
+          console.error('Failed to fetch initial options:', error);
+          setOptions(initialOptions);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      initialFetch();
+    }
+  }, [apiEndpoint, options.length, isLoading, searchTerm, initialOptions, isMounted]);
+
+  // Super high z-index to ensure dropdown is always on top
+  const getZIndex = (isOpen: boolean) => {
+    if (!isOpen) return 1;
+    return 99999; // High z-index for multiple select
+  };
+
+  // Custom styles with very high z-index and proper stacking context
+  const customMultiSelectStyles = {
+    control: (provided: any, state: any) => ({
+      ...provided,
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      backdropFilter: 'blur(4px)',
+      border: state.isFocused ? '2px solid #667eea' : '2px solid transparent',
+      borderRadius: '12px',
+      padding: '8px 12px',
+      color: '#374151',
+      boxShadow: state.isFocused 
+        ? '0 0 0 3px rgba(102, 126, 234, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+        : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      position: 'relative',
+      zIndex: state.isFocused ? 10 : 1,
+      transition: 'all 0.15s ease',
+      minHeight: '48px',
+      '&:hover': {
+        borderColor: '#667eea',
+      }
+    }),
+    input: (provided: any) => ({
+      ...provided,
+      color: '#374151',
+    }),
+    placeholder: (provided: any) => ({
+      ...provided,
+      color: '#9CA3AF',
+    }),
+    multiValue: (provided: any) => ({
+      ...provided,
+      backgroundColor: '#EDE9FE',
+      borderRadius: '8px',
+      border: '1px solid #C4B5FD',
+      margin: '2px',
+    }),
+    multiValueLabel: (provided: any) => ({
+      ...provided,
+      color: '#5B21B6',
+      fontWeight: '500',
+      fontSize: '14px',
+      padding: '4px 8px',
+    }),
+    multiValueRemove: (provided: any) => ({
+      ...provided,
+      color: '#7C3AED',
+      borderRadius: '0 6px 6px 0',
+      '&:hover': {
+        backgroundColor: '#C4B5FD',
+        color: '#5B21B6',
+      }
+    }),
+    menu: (provided: any) => ({
+      ...provided,
+      backgroundColor: '#ffffff',
+      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+      borderRadius: '12px',
+      border: '2px solid #E5E7EB',
+      // Positioning - always below the control
+      position: 'absolute',
+      top: '100%',
+      left: 0,
+      right: 0,
+      marginTop: '4px',
+      // Super high z-index to be above everything
+      zIndex: getZIndex(isMenuOpen),
+      width: '100%',
+      transform: 'none',
+      // Ensure it creates its own stacking context
+      isolation: 'isolate'
+    }),
+    menuPortal: (provided: any) => ({
+      ...provided,
+      zIndex: getZIndex(isMenuOpen)
+    }),
+    menuList: (provided: any) => ({
+      ...provided,
+      padding: '8px',
+      // Limit to 5 visible items (approximately 50px per item + padding)
+      maxHeight: '260px', // 5 items * ~50px + padding
+      overflowY: 'auto',
+      // Custom scrollbar for better UX when scrolling
+      '&::-webkit-scrollbar': {
+        width: '8px',
+      },
+      '&::-webkit-scrollbar-track': {
+        background: '#f8f9fa',
+        borderRadius: '4px',
+        margin: '4px',
+      },
+      '&::-webkit-scrollbar-thumb': {
+        background: 'linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%)',
+        borderRadius: '4px',
+        border: '1px solid #e2e8f0',
+        '&:hover': {
+          background: 'linear-gradient(180deg, #94a3b8 0%, #64748b 100%)',
+        },
+      },
+    }),
+    option: (provided: any, state: any) => ({
+      ...provided,
+      backgroundColor: state.isSelected 
+        ? '#667eea' 
+        : state.isFocused 
+          ? '#F3F4F6' 
+          : '#ffffff',
+      color: state.isSelected 
+        ? '#ffffff' 
+        : '#374151',
+      borderRadius: '8px',
+      margin: '2px 0',
+      padding: '12px 16px',
+      cursor: 'pointer',
+      fontWeight: state.isSelected ? '600' : '400',
+      transition: 'all 0.15s ease',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      '&:hover': {
+        backgroundColor: state.isSelected ? '#5a67d8' : '#F3F4F6',
+        transform: 'translateX(2px)',
+      },
+      '&:active': {
+        transform: 'translateX(1px)',
+      }
+    }),
+    noOptionsMessage: (provided: any) => ({
+      ...provided,
+      color: '#6B7280',
+      padding: '12px 16px',
+      fontStyle: 'italic',
+    }),
+    loadingMessage: (provided: any) => ({
+      ...provided,
+      color: '#6B7280',
+      padding: '12px 16px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+    }),
+    indicatorSeparator: (provided: any) => ({
+      ...provided,
+      backgroundColor: '#D1D5DB',
+    }),
+    dropdownIndicator: (provided: any, state: any) => ({
+      ...provided,
+      color: state.isFocused ? '#667eea' : '#9CA3AF',
+      transform: state.selectProps.menuIsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+      transition: 'transform 0.15s ease, color 0.15s ease',
+      '&:hover': {
+        color: '#667eea',
+      }
+    }),
+    clearIndicator: (provided: any) => ({
+      ...provided,
+      color: '#9CA3AF',
+      '&:hover': {
+        color: '#EF4444',
+      }
+    }),
+  };
+
+  // Don't render until mounted (SSR fix)
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <Form.Group className="mb-3" ref={selectRef}>
-      <Form.Label className="tw-flex tw-items-center tw-gap-2 tw-text-purple-700 tw-font-semibold">
+      <Form.Label className="tw-flex tw-items-center tw-gap-2 tw-text-purple-700 tw-font-semibold tw-mb-2">
         {icon} {label} {required && <span className="tw-text-red-500">*</span>}
       </Form.Label>
-      <Select
-        isMulti
-        value={value}
-        options={options}
-        onChange={onChange}
-        onInputChange={handleInputChange}
-        isLoading={isLoading || externalLoading}
-        className={error ? 'is-invalid' : ''}
-        placeholder={placeholder}
-        noOptionsMessage={() => "No options found"}
-        loadingMessage={() => "Loading..."}
-        styles={customSelectStylesEducation}
-        menuPortalTarget={document.body}
-        menuShouldScrollIntoView={false}
-        menuShouldBlockScroll={false}
-      />
+      
+      {/* Action buttons */}
+      <div className="tw-flex tw-gap-2 tw-mb-2">
+        {onRefresh && (
+          <ButtonGradient
+            action="refresh"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading || externalLoading}
+          />
+        )}
+        {onClear && (
+          <ButtonGradient
+            action="clear"
+            size="sm"
+            onClick={handleClear}
+            disabled={isLoading || externalLoading}
+          />
+        )}
+        {onApply && (
+          <ButtonGradient
+            action="apply"
+            size="sm"
+            onClick={handleApply}
+            disabled={isLoading || externalLoading}
+            customText={`Apply (${value.length})`}
+          />
+        )}
+      </div>
+
+      <div 
+        style={{ 
+          position: 'relative', 
+          zIndex: isMenuOpen ? 9999 : 1,
+          isolation: 'isolate'
+        }}
+      >
+        <Select
+          isMulti
+          value={value}
+          options={options}
+          onChange={onChange}
+          onInputChange={handleInputChange}
+          onMenuOpen={handleMenuOpen}
+          onMenuClose={handleMenuClose}
+          isLoading={isLoading || externalLoading}
+          className={error ? 'is-invalid' : ''}
+          placeholder={placeholder}
+          noOptionsMessage={() => "No options found"}
+          loadingMessage={() => "Loading..."}
+          styles={customMultiSelectStyles}
+          // Don't use portal to maintain positioning control
+          menuPortalTarget={null}
+          // Better positioning and behavior
+          menuShouldScrollIntoView={false}
+          menuShouldBlockScroll={false}
+          menuPlacement="bottom"
+          menuPosition="absolute"
+          // Close menu on scroll to prevent positioning issues
+          closeMenuOnScroll={true}
+          // Better filter performance
+          filterOption={(option, inputValue) => {
+            if (!inputValue) return true;
+            const searchValue = String(inputValue || '').toLowerCase();
+            const label = String(option.label || '').toLowerCase();
+            return label.includes(searchValue);
+          }}
+          // Enhanced components
+          components={{
+            LoadingMessage: ({ children, ...props }) => (
+              <div {...props.innerProps} style={props.getStyles('loadingMessage', props)}>
+                <div className="tw-inline-block tw-w-4 tw-h-4 tw-border-2 tw-border-purple-200 tw-border-t-purple-600 tw-rounded-full tw-animate-spin"></div>
+                {children}
+              </div>
+            ),
+            NoOptionsMessage: ({ children, ...props }) => (
+              <div {...props.innerProps} style={props.getStyles('noOptionsMessage', props)}>
+                <span className="tw-text-gray-500">{children}</span>
+              </div>
+            ),
+            Option: ({ children, ...props }) => (
+              <div {...props.innerProps} style={props.getStyles('option', props)}>
+                {props.isSelected && (
+                  <div className="tw-w-4 tw-h-4 tw-bg-white tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mr-2">
+                    <div className="tw-w-2 tw-h-2 tw-bg-purple-600 tw-rounded-full"></div>
+                  </div>
+                )}
+                <span className="tw-flex-1">{children}</span>
+              </div>
+            ),
+            MultiValue: ({ children, ...props }) => (
+              <div style={props.getStyles('multiValue', props)} className="tw-group">
+                <div style={props.getStyles('multiValueLabel', props)}>
+                  {children}
+                </div>
+                <div 
+                  {...props.removeProps}
+                  style={props.getStyles('multiValueRemove', props)}
+                  className="tw-flex tw-items-center tw-justify-center tw-w-6 tw-h-6 tw-cursor-pointer hover:tw-scale-110 tw-transition-transform"
+                >
+                  ×
+                </div>
+              </div>
+            ),
+          }}
+        />
+        {/* Invisible overlay when menu is open */}
+        {isMenuOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: getZIndex(isMenuOpen) - 1,
+              backgroundColor: 'transparent',
+              pointerEvents: 'none'
+            }}
+          />
+        )}
+      </div>
       {error && (
-        <div className="invalid-feedback" style={{ display: 'block' }}>
-          {error}
+        <div className="invalid-feedback" style={{ display: 'block', marginTop: '4px' }}>
+          <span className="tw-text-red-600 tw-text-sm tw-font-medium">{error}</span>
+        </div>
+      )}
+      
+      {/* Selected items count display */}
+      {value.length > 0 && (
+        <div className="tw-mt-2 tw-text-sm tw-text-purple-600">
+          <span className="tw-font-medium">{value.length}</span> item{value.length > 1 ? 's' : ''} selected
         </div>
       )}
     </Form.Group>
@@ -785,18 +1663,274 @@ export const SearchMultipleField: React.FC<SearchMultipleProps> = ({
 export const YesNoField: React.FC<YesNoProps> = ({ 
   label, 
   checked, 
-  onChange 
-}) => (
-  <Form.Group className="mb-3">
-    <Form.Check
-      type="checkbox"
-      label={label}
-      checked={checked}
-      onChange={(e) => onChange(e.target.checked)}
-      className="tw-text-white"
-    />
-  </Form.Group>
-);
+  onChange,
+  icon,
+  color = 'tw-text-purple-700',
+  selectedColor = 'tw-bg-gradient-to-r tw-from-green-500 tw-to-emerald-500 tw-text-white',
+  yesText = 'Ya',
+  noText = 'Tidak',
+  variant = 'card',
+  description,
+  onApply,
+  onReset,
+  loading = false
+}) => {
+  const handleApply = () => {
+    if (onApply) onApply();
+  };
+
+  const handleReset = () => {
+    if (onReset) {
+      onReset();
+    } else {
+      onChange(false);
+    }
+  };
+
+  // If variant is checkbox, use the old style
+  if (variant === 'checkbox') {
+    return (
+      <Form.Group className="mb-3">
+        {/* Action buttons for checkbox variant */}
+        <div className="tw-flex tw-gap-2 tw-mb-2">
+          {onApply && (
+            <ButtonGradient
+              action="apply"
+              size="sm"
+              onClick={handleApply}
+              disabled={loading}
+              loading={loading}
+            />
+          )}
+          {onReset && (
+            <ButtonGradient
+              action="reset"
+              size="sm"
+              onClick={handleReset}
+              disabled={loading}
+            />
+          )}
+        </div>
+        <Form.Check
+          type="checkbox"
+          label={label}
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          disabled={loading}
+          className="tw-text-white"
+        />
+        {description && (
+          <Form.Text className="tw-text-gray-400 tw-text-sm tw-mt-1">
+            {description}
+          </Form.Text>
+        )}
+      </Form.Group>
+    );
+  }
+
+  // Card variant (new enhanced style)
+  return (
+    <Form.Group className="mb-3">
+      <Form.Label className={`tw-font-semibold tw-mb-3 tw-flex tw-items-center tw-gap-2 ${color}`}>
+        {icon} {label}
+      </Form.Label>
+      {description && (
+        <p className="tw-text-gray-600 tw-text-sm tw-mb-3">{description}</p>
+      )}
+      
+      {/* Action buttons for card variant */}
+      <div className="tw-flex tw-gap-2 tw-mb-3">
+        {onApply && (
+          <ButtonGradient
+            action="apply"
+            size="sm"
+            onClick={handleApply}
+            disabled={loading}
+            loading={loading}
+          />
+        )}
+        {onReset && (
+          <ButtonGradient
+            action="reset"
+            size="sm"
+            onClick={handleReset}
+            disabled={loading}
+          />
+        )}
+      </div>
+
+      <Card className="tw-border-2 tw-border-purple-200 tw-rounded-lg tw-shadow-sm hover:tw-shadow-md tw-transition-shadow">
+        <Card.Body className="tw-p-4">
+          <div className="tw-flex tw-items-center tw-justify-between">
+            <div className="tw-flex tw-items-center tw-gap-3">
+              {icon && (
+                <div className="tw-bg-purple-100 tw-p-2 tw-rounded-lg">
+                  {React.cloneElement(icon as React.ReactElement, { 
+                size: 18, 
+                className: "tw-text-purple-600" 
+              })}
+              </div>
+              )}
+              <span className={`tw-font-semibold ${color}`}>{label}</span>
+            </div>
+            <div className="tw-flex tw-gap-2">
+              <button
+                type="button"
+                onClick={() => onChange(true)}
+                disabled={loading}
+                className={`tw-px-4 tw-py-2 tw-rounded-lg tw-font-medium tw-text-sm tw-transition-all tw-duration-200 tw-border-2 ${
+                  checked
+                    ? `${selectedColor} tw-border-green-500 tw-shadow-md tw-scale-105`
+                    : `tw-border-purple-300 ${color} hover:tw-bg-purple-50 tw-bg-white`
+                } ${loading ? 'tw-opacity-50 tw-cursor-not-allowed' : ''}`}
+              >
+                {yesText}
+              </button>
+              <button
+                type="button"
+                onClick={() => onChange(false)}
+                disabled={loading}
+                className={`tw-px-4 tw-py-2 tw-rounded-lg tw-font-medium tw-text-sm tw-transition-all tw-duration-200 tw-border-2 ${
+                  !checked
+                    ? `${selectedColor} tw-border-green-500 tw-shadow-md tw-scale-105`
+                    : `tw-border-purple-300 ${color} hover:tw-bg-purple-50 tw-bg-white`
+                } ${loading ? 'tw-opacity-50 tw-cursor-not-allowed' : ''}`}
+              >
+                {noText}
+              </button>
+            </div>
+          </div>
+        </Card.Body>
+      </Card>
+    </Form.Group>
+  );
+};
+
+export const OptionCard: React.FC<OptionCardProps> = ({
+  label,
+  selectedValue,
+  options,
+  onChange,
+  icon,
+  color = 'tw-text-purple-700',
+  selectedColor = 'tw-bg-gradient-to-r tw-from-purple-500 tw-to-indigo-500 tw-text-white',
+  variant = 'horizontal',
+  description,
+  error,
+  required = false,
+  onApply,
+  onReset,
+  loading = false
+}) => {
+  const handleApply = () => {
+    if (onApply) onApply();
+  };
+
+  const handleReset = () => {
+    if (onReset) {
+      onReset();
+    } else {
+      // Reset to first option or empty
+      if (options.length > 0) {
+        onChange(options[0].value);
+      }
+    }
+  };
+
+  return (
+    <Form.Group className="mb-3">
+      <Form.Label className={`tw-font-semibold tw-mb-3 tw-flex tw-items-center tw-gap-2 ${color}`}>
+        {icon} {label} {required && <span className="tw-text-red-500">*</span>}
+      </Form.Label>
+      {description && (
+        <p className="tw-text-gray-600 tw-text-sm tw-mb-3">{description}</p>
+      )}
+      
+      {/* Action buttons */}
+      <div className="tw-flex tw-gap-2 tw-mb-3">
+        {onApply && (
+          <ButtonGradient
+            action="apply"
+            size="sm"
+            onClick={handleApply}
+            disabled={loading}
+            loading={loading}
+          />
+        )}
+        {onReset && (
+          <ButtonGradient
+            action="reset"
+            size="sm"
+            onClick={handleReset}
+            disabled={loading}
+          />
+        )}
+      </div>
+      
+      <Card className={`tw-border-2 tw-rounded-lg tw-shadow-sm hover:tw-shadow-md tw-transition-shadow ${
+        error ? 'tw-border-red-300' : 'tw-border-purple-200'
+      }`}>
+        <Card.Body className="tw-p-4">
+          <div className="tw-flex tw-items-center tw-justify-between tw-mb-4">
+            <div className="tw-flex tw-items-center tw-gap-3">
+              {icon && (
+                <div className={`tw-p-2 tw-rounded-lg ${
+                  error ? 'tw-bg-red-100' : 'tw-bg-purple-100'
+                }`}>
+                  {React.cloneElement(icon as React.ReactElement, { 
+                    size: 18, 
+                    className: error ? "tw-text-red-600" : "tw-text-purple-600"
+                  })}
+                </div>
+              )}
+              <span className={`tw-font-semibold ${error ? 'tw-text-red-700' : color}`}>
+                {label}
+              </span>
+            </div>
+          </div>
+          
+          <div className={`tw-flex tw-gap-3 ${
+            variant === 'vertical' ? 'tw-flex-col' : 'tw-flex-row tw-flex-wrap'
+          }`}>
+            {options.map((option) => {
+              const isSelected = selectedValue === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => onChange(option.value)}
+                  disabled={loading}
+                  className={`tw-px-4 tw-py-3 tw-rounded-lg tw-font-medium tw-text-sm tw-transition-all tw-duration-200 tw-border-2 tw-flex-1 tw-min-w-0 ${
+                    isSelected
+                      ? `${selectedColor} tw-border-purple-500 tw-shadow-md tw-scale-105`
+                      : `tw-border-purple-300 ${color} hover:tw-bg-purple-50 tw-bg-white hover:tw-scale-102`
+                  } ${loading ? 'tw-opacity-50 tw-cursor-not-allowed' : ''}`}
+                >
+                  <div className="tw-text-center">
+                    <div className="tw-font-semibold">{option.label}</div>
+                    {option.description && (
+                      <div className={`tw-text-xs tw-mt-1 tw-opacity-75 ${
+                        isSelected ? 'tw-text-white' : 'tw-text-gray-500'
+                      }`}>
+                        {option.description}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </Card.Body>
+      </Card>
+      
+      {error && (
+        <div className="tw-text-red-600 tw-text-sm tw-mt-2 tw-font-medium">
+          {error}
+        </div>
+      )}
+    </Form.Group>
+  );
+};
 
 export const DateRangeField: React.FC<DateRangeProps> = ({
   label,
@@ -809,7 +1943,10 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
   error,
   required = false,
   icon = <Calendar className="tw-w-5 tw-h-5" />,
-  labelColor = "tw-text-purple-700"
+  labelColor = "tw-text-purple-700",
+  onApply,
+  onReset,
+  loading = false
 }) => {
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
@@ -821,6 +1958,21 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
   const startPickerRef = useRef<HTMLDivElement>(null);
   const endPickerRef = useRef<HTMLDivElement>(null);
   const hourContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleApply = () => {
+    if (onApply) onApply();
+  };
+
+  const handleReset = () => {
+    if (onReset) {
+      onReset();
+    } else {
+      // Default reset behavior
+      onStartDateChange(null);
+      onEndDateChange(null);
+      onAnytimeChange(true);
+    }
+  };
 
   // Close pickers when clicking outside
   useEffect(() => {
@@ -1003,7 +2155,7 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
           <button
             type="button"
             onClick={() => !isDisabled && handleDateSelect(day)}
-            disabled={isDisabled}
+            disabled={isDisabled || loading}
             className={buttonClass}
           >
             {day}
@@ -1106,13 +2258,14 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
           
           {/* Hour scroll controls with mouse wheel support */}
           <div className="tw-flex tw-flex-col tw-items-center tw-gap-1">
-            <button
-              type="button"
+            <ButtonGradient
+              action="custom"
+              size="sm"
+              customText="▲"
               onClick={scrollHourUp}
-              className="tw-p-1 tw-text-purple-600 hover:tw-bg-purple-50 tw-rounded"
-            >
-              ▲
-            </button>
+              disabled={loading}
+              className="tw-min-w-[40px] tw-px-2 tw-py-1"
+            />
             
             <div 
               ref={hourContainerRef}
@@ -1145,7 +2298,7 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
                     <button
                       type="button"
                       onClick={() => !isDisabled && handleTimeSelect(hour, selectedTime.minute)}
-                      disabled={isDisabled}
+                      disabled={isDisabled || loading}
                       className={buttonClass}
                     >
                       {hour.toString().padStart(2, '0')}
@@ -1158,13 +2311,14 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
               })}
             </div>
             
-            <button
-              type="button"
+            <ButtonGradient
+              action="custom"
+              size="sm"
+              customText="▼"
               onClick={scrollHourDown}
-              className="tw-p-1 tw-text-purple-600 hover:tw-bg-purple-50 tw-rounded"
-            >
-              ▼
-            </button>
+              disabled={loading}
+              className="tw-min-w-[40px] tw-px-2 tw-py-1"
+            />
           </div>
         </div>
         
@@ -1173,13 +2327,14 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
           
           {/* Minute scroll controls with mouse wheel support */}
           <div className="tw-flex tw-flex-col tw-items-center tw-gap-1">
-            <button
-              type="button"
+            <ButtonGradient
+              action="custom"
+              size="sm"
+              customText="▲"
               onClick={scrollMinuteUp}
-              className="tw-p-1 tw-text-purple-600 hover:tw-bg-purple-50 tw-rounded"
-            >
-              ▲
-            </button>
+              disabled={loading}
+              className="tw-min-w-[40px] tw-px-2 tw-py-1"
+            />
             
             <div 
               className="tw-space-y-1 tw-w-full tw-cursor-pointer"
@@ -1211,7 +2366,7 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
                     <button
                       type="button"
                       onClick={() => !isDisabled && handleTimeSelect(selectedTime.hour, minute)}
-                      disabled={isDisabled}
+                      disabled={isDisabled || loading}
                       className={buttonClass}
                     >
                       {minute.toString().padStart(2, '0')}
@@ -1224,13 +2379,14 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
               })}
             </div>
             
-            <button
-              type="button"
+            <ButtonGradient
+              action="custom"
+              size="sm"
+              customText="▼"
               onClick={scrollMinuteDown}
-              className="tw-p-1 tw-text-purple-600 hover:tw-bg-purple-50 tw-rounded"
-            >
-              ▼
-            </button>
+              disabled={loading}
+              className="tw-min-w-[40px] tw-px-2 tw-py-1"
+            />
           </div>
         </div>
       </div>
@@ -1252,22 +2408,23 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
         {/* Header */}
         <div className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-pink-500 tw-p-4 tw-text-white">
           <div className="tw-flex tw-items-center tw-justify-between">
-            <button
-              type="button"
+            <ButtonGradient
+              action="back"
+              size="sm"
               onClick={(e) => {
                 e.preventDefault();
                 setCurrentMonth(currentMonth === 0 ? 11 : currentMonth - 1);
                 if (currentMonth === 0) setCurrentYear(currentYear - 1);
               }}
-              className="tw-p-2 tw-rounded-xl hover:tw-bg-white/20 tw-transition-colors"
-            >
-              <ChevronLeft className="tw-w-5 tw-h-5" />
-            </button>
+              disabled={loading}
+              className="tw-bg-white/20 hover:tw-bg-white/30"
+            />
             
             <div className="tw-flex tw-gap-2">
               <select
                 value={currentMonth}
                 onChange={(e) => setCurrentMonth(parseInt(e.target.value))}
+                disabled={loading}
                 className="tw-bg-white/20 tw-text-white tw-rounded-lg tw-px-3 tw-py-1 tw-text-sm tw-font-semibold"
               >
                 {months.map((month, index) => (
@@ -1280,6 +2437,7 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
               <select
                 value={currentYear}
                 onChange={(e) => setCurrentYear(parseInt(e.target.value))}
+                disabled={loading}
                 className="tw-bg-white/20 tw-text-white tw-rounded-lg tw-px-3 tw-py-1 tw-text-sm tw-font-semibold"
               >
                 {Array.from({ length: 20 }, (_, i) => currentYear - 10 + i).map(year => (
@@ -1290,23 +2448,24 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
               </select>
             </div>
             
-            <button
-              type="button"
+            <ButtonGradient
+              action="forward"
+              size="sm"
               onClick={(e) => {
                 e.preventDefault();
                 setCurrentMonth(currentMonth === 11 ? 0 : currentMonth + 1);
                 if (currentMonth === 11) setCurrentYear(currentYear + 1);
               }}
-              className="tw-p-2 tw-rounded-xl hover:tw-bg-white/20 tw-transition-colors"
-            >
-              <ChevronRight className="tw-w-5 tw-h-5" />
-            </button>
+              disabled={loading}
+              className="tw-bg-white/20 hover:tw-bg-white/30"
+            />
           </div>
           
           {/* Close button */}
           <div className="tw-flex tw-justify-end tw-mt-2">
-            <button
-              type="button"
+            <ButtonGradient
+              action="done"
+              size="sm"
               onClick={() => {
                 if (isSelectingStart) {
                   setShowStartPicker(false);
@@ -1314,10 +2473,9 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
                   setShowEndPicker(false);
                 }
               }}
-              className="tw-px-4 tw-py-2 tw-bg-white/20 tw-text-white tw-rounded-lg tw-text-sm tw-font-medium hover:tw-bg-white/30 tw-transition-colors"
-            >
-              Selesai
-            </button>
+              disabled={loading}
+              className="tw-bg-white/20 hover:tw-bg-white/30"
+            />
           </div>
         </div>
 
@@ -1365,6 +2523,7 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
                 type="checkbox"
                 checked={anytime}
                 onChange={(e) => onAnytimeChange(e.target.checked)}
+                disabled={loading}
                 className="tw-sr-only"
               />
               <div className={`
@@ -1380,6 +2539,27 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
         </div>
       </div>
 
+      {/* Action buttons */}
+      <div className="tw-flex tw-gap-2 tw-mb-4">
+        {onApply && (
+          <ButtonGradient
+            action="apply"
+            size="sm"
+            onClick={handleApply}
+            disabled={loading}
+            loading={loading}
+          />
+        )}
+        {onReset && (
+          <ButtonGradient
+            action="reset"
+            size="sm"
+            onClick={handleReset}
+            disabled={loading}
+          />
+        )}
+      </div>
+
       {/* Date Inputs */}
       {!anytime && (
         <div className="tw-grid tw-grid-cols-1 lg:tw-grid-cols-2 tw-gap-6">
@@ -1391,7 +2571,8 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
             <button
               type="button"
               onClick={openStartPicker}
-              className="tw-w-full tw-p-4 tw-bg-white tw-rounded-xl tw-border-2 tw-border-purple-200 hover:tw-border-purple-400 tw-transition-all tw-duration-200 tw-text-left tw-group hover:tw-shadow-lg"
+              disabled={loading}
+              className="tw-w-full tw-p-4 tw-bg-white tw-rounded-xl tw-border-2 tw-border-purple-200 hover:tw-border-purple-400 tw-transition-all tw-duration-200 tw-text-left tw-group hover:tw-shadow-lg disabled:tw-opacity-50 disabled:tw-cursor-not-allowed"
             >
               <div className="tw-flex tw-items-center tw-gap-3">
                 <Calendar className="tw-w-5 tw-h-5 tw-text-purple-500 tw-group-hover:tw-text-purple-700 tw-transition-colors" />
@@ -1412,7 +2593,8 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
             <button
               type="button"
               onClick={openEndPicker}
-              className="tw-w-full tw-p-4 tw-bg-white tw-rounded-xl tw-border-2 tw-border-purple-200 hover:tw-border-purple-400 tw-transition-all tw-duration-200 tw-text-left tw-group hover:tw-shadow-lg"
+              disabled={loading}
+              className="tw-w-full tw-p-4 tw-bg-white tw-rounded-xl tw-border-2 tw-border-purple-200 hover:tw-border-purple-400 tw-transition-all tw-duration-200 tw-text-left tw-group hover:tw-shadow-lg disabled:tw-opacity-50 disabled:tw-cursor-not-allowed"
             >
               <div className="tw-flex tw-items-center tw-gap-3">
                 <Clock className="tw-w-5 tw-h-5 tw-text-purple-500 tw-group-hover:tw-text-purple-700 tw-transition-colors" />
@@ -1440,9 +2622,12 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
               { label: '1 Hari', minutes: 1440 },
               { label: '1 Minggu', minutes: 10080 }
             ].map((preset) => (
-              <button
+              <ButtonGradient
                 key={preset.label}
-                type="button"
+                action="custom"
+                size="sm"
+                customText={preset.label}
+                disabled={loading}
                 onClick={(e) => {
                   e.preventDefault();
                   
@@ -1458,17 +2643,14 @@ export const DateRangeField: React.FC<DateRangeProps> = ({
                     onEndDateChange(end);
                   }
                 }}
-                className="tw-flex tw-flex-col tw-items-center tw-gap-2 tw-p-3 tw-bg-gradient-to-br tw-from-purple-50 tw-to-pink-50 tw-rounded-xl tw-border tw-border-purple-200 hover:tw-from-purple-100 hover:tw-to-pink-100 tw-transition-all tw-duration-200 hover:tw-scale-105 hover:tw-shadow-md tw-group"
-              >
-                <span className="tw-text-sm tw-font-semibold tw-text-purple-700">
-                  {preset.label}
-                </span>
-                {startDate && (
-                  <span className="tw-text-xs tw-text-purple-500">
-                    dari start time
-                  </span>
-                )}
-              </button>
+                className="tw-flex tw-flex-col tw-items-center tw-gap-2"
+                customColors={{
+                  gradient1: '#F3E8FF',
+                  gradient2: '#E9D5FF',
+                  text: '#7C3AED',
+                  primary: '#A855F7'
+                }}
+              />
             ))}
           </div>
         </div>
@@ -1496,11 +2678,26 @@ export const DateField: React.FC<DateFieldProps> = ({
   onChange,
   error,
   required = false,
-  placeholder = "Select date"
+  placeholder = "Select date",
+  onSave,
+  onClear,
+  loading = false
 }) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const dateValue = e.target.value ? new Date(e.target.value) : null;
     onChange(dateValue);
+  };
+
+  const handleSave = () => {
+    if (onSave) onSave();
+  };
+
+  const handleClear = () => {
+    if (onClear) {
+      onClear();
+    } else {
+      onChange(null);
+    }
   };
 
   const formatDateForInput = (date: Date | null): string => {
@@ -1513,6 +2710,28 @@ export const DateField: React.FC<DateFieldProps> = ({
       <Form.Label className="tw-font-semibold tw-text-white tw-mb-2">
         {label} {required && <span className="text-danger">*</span>}
       </Form.Label>
+      
+      {/* Action buttons */}
+      <div className="tw-flex tw-gap-2 tw-mb-2">
+        {onSave && (
+          <ButtonGradient
+            action="save"
+            size="sm"
+            onClick={handleSave}
+            disabled={loading}
+            loading={loading}
+          />
+        )}
+        {onClear && (
+          <ButtonGradient
+            action="clear"
+            size="sm"
+            onClick={handleClear}
+            disabled={loading}
+          />
+        )}
+      </div>
+
       <InputGroup>
         <InputGroup.Text className="tw-bg-white/95 tw-border-0 tw-rounded-l-xl">
           <Calendar size={16} />
@@ -1522,6 +2741,7 @@ export const DateField: React.FC<DateFieldProps> = ({
           value={formatDateForInput(value)}
           onChange={handleChange}
           isInvalid={!!error}
+          disabled={loading}
           className="tw-border-0 tw-rounded-r-xl tw-bg-white/95 tw-text-gray-800"
           placeholder={placeholder}
         />
@@ -1545,30 +2765,73 @@ export const NumberField: React.FC<NumberFieldProps> = ({
   placeholder,
   min,
   max,
-  step = 1
-}) => (
-  <Form.Group className="mb-3">
-    <Form.Label className="tw-font-semibold tw-text-white tw-mb-2">
-      {label} {required && <span className="text-danger">*</span>}
-    </Form.Label>
-    <Form.Control
-      type="number"
-      value={value}
-      onChange={onChange}
-      isInvalid={!!error}
-      placeholder={placeholder}
-      min={min}
-      max={max}
-      step={step}
-      className="tw-border-0 tw-rounded-xl tw-shadow-sm tw-bg-white/95 tw-backdrop-blur-sm tw-text-gray-800 tw-py-3"
-    />
-    {error && (
-      <Form.Control.Feedback type="invalid">
-        {error}
-      </Form.Control.Feedback>
-    )}
-  </Form.Group>
-);
+  step = 1,
+  onSave,
+  onClear,
+  loading = false
+}) => {
+  const handleSave = () => {
+    if (onSave) onSave();
+  };
+
+  const handleClear = () => {
+    if (onClear) {
+      onClear();
+    } else {
+      const fakeEvent = {
+        target: { value: '' }
+      } as ChangeEvent<HTMLInputElement>;
+      onChange(fakeEvent);
+    }
+  };
+
+  return (
+    <Form.Group className="mb-3">
+      <Form.Label className="tw-font-semibold tw-text-white tw-mb-2">
+        {label} {required && <span className="text-danger">*</span>}
+      </Form.Label>
+      
+      {/* Action buttons */}
+      <div className="tw-flex tw-gap-2 tw-mb-2">
+        {onSave && (
+          <ButtonGradient
+            action="save"
+            size="sm"
+            onClick={handleSave}
+            disabled={loading}
+            loading={loading}
+          />
+        )}
+        {onClear && (
+          <ButtonGradient
+            action="clear"
+            size="sm"
+            onClick={handleClear}
+            disabled={loading}
+          />
+        )}
+      </div>
+
+      <Form.Control
+        type="number"
+        value={value}
+        onChange={onChange}
+        isInvalid={!!error}
+        placeholder={placeholder}
+        min={min}
+        max={max}
+        step={step}
+        disabled={loading}
+        className="tw-border-0 tw-rounded-xl tw-shadow-sm tw-bg-white/95 tw-backdrop-blur-sm tw-text-gray-800 tw-py-3"
+      />
+      {error && (
+        <Form.Control.Feedback type="invalid">
+          {error}
+        </Form.Control.Feedback>
+      )}
+    </Form.Group>
+  );
+};
 
 // NEW: Boolean Field Component (Radio/Select style)
 export const BooleanField: React.FC<BooleanFieldProps> = ({
@@ -1579,14 +2842,51 @@ export const BooleanField: React.FC<BooleanFieldProps> = ({
   required = false,
   type = 'select',
   trueLabel = 'Ya',
-  falseLabel = 'Tidak'
+  falseLabel = 'Tidak',
+  onApply,
+  onReset,
+  loading = false
 }) => {
+  const handleApply = () => {
+    if (onApply) onApply();
+  };
+
+  const handleReset = () => {
+    if (onReset) {
+      onReset();
+    } else {
+      onChange(null);
+    }
+  };
+
   if (type === 'radio') {
     return (
       <Form.Group className="mb-3">
         <Form.Label className="tw-font-semibold tw-text-white tw-mb-2">
           {label} {required && <span className="text-danger">*</span>}
         </Form.Label>
+        
+        {/* Action buttons */}
+        <div className="tw-flex tw-gap-2 tw-mb-2">
+          {onApply && (
+            <ButtonGradient
+              action="apply"
+              size="sm"
+              onClick={handleApply}
+              disabled={loading}
+              loading={loading}
+            />
+          )}
+          {onReset && (
+            <ButtonGradient
+              action="reset"
+              size="sm"
+              onClick={handleReset}
+              disabled={loading}
+            />
+          )}
+        </div>
+
         <div className="tw-flex tw-gap-4">
           <Form.Check
             type="radio"
@@ -1595,6 +2895,7 @@ export const BooleanField: React.FC<BooleanFieldProps> = ({
             label={trueLabel}
             checked={value === true}
             onChange={() => onChange(true)}
+            disabled={loading}
             className="tw-text-white"
           />
           <Form.Check
@@ -1604,6 +2905,7 @@ export const BooleanField: React.FC<BooleanFieldProps> = ({
             label={falseLabel}
             checked={value === false}
             onChange={() => onChange(false)}
+            disabled={loading}
             className="tw-text-white"
           />
         </div>
@@ -1622,6 +2924,28 @@ export const BooleanField: React.FC<BooleanFieldProps> = ({
       <Form.Label className="tw-font-semibold tw-text-white tw-mb-2">
         {label} {required && <span className="text-danger">*</span>}
       </Form.Label>
+      
+      {/* Action buttons */}
+      <div className="tw-flex tw-gap-2 tw-mb-2">
+        {onApply && (
+          <ButtonGradient
+            action="apply"
+            size="sm"
+            onClick={handleApply}
+            disabled={loading}
+            loading={loading}
+          />
+        )}
+        {onReset && (
+          <ButtonGradient
+            action="reset"
+            size="sm"
+            onClick={handleReset}
+            disabled={loading}
+          />
+        )}
+      </div>
+
       <Form.Select
         value={value === null ? '' : value.toString()}
         onChange={(e) => {
@@ -1630,6 +2954,7 @@ export const BooleanField: React.FC<BooleanFieldProps> = ({
           else onChange(val === 'true');
         }}
         isInvalid={!!error}
+        disabled={loading}
         className="tw-border-0 tw-rounded-xl tw-shadow-sm tw-bg-white/95 tw-backdrop-blur-sm tw-text-gray-800 tw-py-3"
       >
         <option value="">Pilih {label}</option>
@@ -1684,5 +3009,6 @@ export default {
   NumberField,
   BooleanField,
   SelectCustomField,
+  OptionCard,
   apiClient
 };

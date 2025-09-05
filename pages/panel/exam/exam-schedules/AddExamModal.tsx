@@ -5,6 +5,7 @@
  * --------------------------------------------------------------------------
  * Modal "Buat Ujian" – menggunakan ModalTemplate dan ButtonTemplate
  * Dengan fitur import CSV untuk soal ujian
+ * Updated to use enhanced FormComponentLayout components
  * --------------------------------------------------------------------------
  */
 
@@ -18,7 +19,6 @@ import React, {
 import { Form, Spinner, Alert } from 'react-bootstrap';
 import axios from 'axios';
 import debounce from 'lodash/debounce';
-import Select, { ActionMeta, MultiValue } from 'react-select';
 import { 
   PlusCircle, 
   Timer, 
@@ -31,10 +31,17 @@ import {
   XCircle,
   X,
   Check,
-  RotateCcw
+  RotateCcw,
+  Settings
 } from 'lucide-react';
 
-import { SearchSingleField } from '../../../../components/form/FormComponentLayout';
+import { 
+  SearchSingleField, 
+  SearchMultipleField,
+  ShortFormField,
+  NumberField,
+  OptionCard
+} from '../../../../components/form/FormComponentLayout';
 import { LearningModal, ModalButton } from '../../../../components/modal/ModalTemplate';
 
 /* -------------------------------------------------------------------------- */
@@ -104,8 +111,10 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
   const [saving, setSaving]              = useState(false);
   const [errors, setErrors]              = useState<Record<string,string>>({});
 
+  // Question selection mode
+  const [questionMode, setQuestionMode]  = useState<'manual' | 'csv'>('manual');
+
   // CSV Import states
-  const [useCSVImport, setUseCSVImport]  = useState(false);
   const [csvFile, setCsvFile]            = useState<File | null>(null);
   const [csvQuestions, setCsvQuestions]  = useState<CSVQuestion[]>([]);
   const [verificationResponse, setVerificationResponse] = useState<VerificationResponse | null>(null);
@@ -130,23 +139,40 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
   const fetchQuestions = async (keyword = '') => {
     setLoadingQuestions(true);
     try {
+      // Build URL with search and selected_ids parameters for exclusion
+      const selectedIds = selectedQuestions.map(q => q.value).filter(Boolean);
+      const params = new URLSearchParams();
+      
+      if (keyword.trim()) {
+        params.set('search', keyword.trim());
+      }
+      
+      if (selectedIds.length > 0) {
+        params.set('selected_ids', selectedIds.join(','));
+      }
+      
+      params.set('limit', '20'); // Increased limit for better UX
+      
       const { data } = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/questions/search`,
-        { params: { search: keyword, limit: 15 } }
+        `${process.env.NEXT_PUBLIC_API_URL}/questions/search?${params.toString()}`
       );
-      setQuestionOpts(
-        (data?.data || []).map(
-          (q: any): SelectOption => ({
-            value: q.id,
-            label: q.code
-              ? `${q.code}`
-              : q.question
-                ? `${q.id} - ${q.question.slice(0, 40)}…`
-                : String(q.id),
-            _raw: q
-          })
-        )
+      
+      const newOptions = (data?.data || []).map(
+        (q: any): SelectOption => ({
+          value: q.id,
+          label: q.code
+            ? `${q.code}`
+            : q.question
+              ? `${q.id} - ${q.question.slice(0, 40)}…`
+              : String(q.id),
+          _raw: q
+        })
       );
+      
+      setQuestionOpts(newOptions);
+    } catch (error) {
+      console.error('Failed to fetch questions:', error);
+      setQuestionOpts([]);
     } finally {
       setLoadingQuestions(false);
     }
@@ -271,8 +297,9 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
     }
   };
 
-  const toggleImportMode = (useCSV: boolean) => {
-    setUseCSVImport(useCSV);
+  const handleQuestionModeChange = (mode: string | number) => {
+    const newMode = mode as 'manual' | 'csv';
+    setQuestionMode(newMode);
     setSelected([]);
     setCsvFile(null);
     setCsvQuestions([]);
@@ -283,10 +310,15 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    
+    // Fetch initial questions when switching to manual mode
+    if (newMode === 'manual') {
+      fetchQuestions('');
+    }
   };
 
   /* ------------------------ Debounce setup ---------------------------- */
-  const debouncedFetchQuestions = useMemo(() => debounce(fetchQuestions, 300), []);
+  const debouncedFetchQuestions = useMemo(() => debounce(fetchQuestions, 500), [selectedQuestions]);
   const debouncedFetchGroups    = useMemo(() => debounce(fetchExamGroups, 300), []);
 
   useEffect(() => () => {
@@ -300,8 +332,10 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
     setDuration('');
     setSelected([]);
     setExamGroup(null);
+    setQuestionOpts([]);
+    setExamGroupOpts([]);
     setErrors({});
-    setUseCSVImport(false);
+    setQuestionMode('manual');
     setCsvFile(null);
     setCsvQuestions([]);
     setVerificationResponse(null);
@@ -317,10 +351,24 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
   useEffect(() => {
     if (show) {
       resetForm();
-      fetchQuestions('');
+      // Initial fetch for both exam groups and questions (if not using CSV)
       fetchExamGroups('');
+      if (questionMode === 'manual') {
+        fetchQuestions('');
+      }
     }
   }, [show]);
+
+  // Refetch questions when selectedQuestions changes (for exclusion) - only in manual mode
+  useEffect(() => {
+    if (show && questionMode === 'manual' && questionOpts.length > 0) {
+      // Delay to avoid too many API calls
+      const timer = setTimeout(() => {
+        fetchQuestions('');
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedQuestions, show, questionMode]);
 
   /* ----------------------------- Save --------------------------------- */
   const handleSave = async () => {
@@ -329,7 +377,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
     if (!duration)             err.duration = 'Durasi wajib diisi';
     if (!examGroup)            err.group    = 'Grup ujian wajib dipilih';
     
-    if (useCSVImport) {
+    if (questionMode === 'csv') {
       if (!csvVerified || selectedQuestions.length === 0) {
         err.question = 'CSV harus diverifikasi dan berisi soal yang valid';
       }
@@ -348,7 +396,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
       const payload = {
         name            : examName.trim(),
         duration        : Number(duration),
-        exam_group      : examGroup.value,
+        exam_group      : examGroup!.value,
         question_id_list: selectedQuestions.map(q => q.value)
       };
 
@@ -361,8 +409,11 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
       onAddExam(data);
       resetForm();
       onClose();
-    } catch {
-      setErrors({ api: 'Gagal menyimpan ujian. Silakan coba lagi.' });
+    } catch (error: any) {
+      console.error('Save exam error:', error);
+      setErrors({ 
+        api: error.response?.data?.message || 'Gagal menyimpan ujian. Silakan coba lagi.' 
+      });
     } finally {
       setSaving(false);
     }
@@ -374,18 +425,13 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
     [debouncedFetchGroups]
   );
 
-  const onInputChangeQuestions = useCallback(
-    (input: string, meta: ActionMeta<SelectOption>) => {
-      if (meta.action === 'input-change') debouncedFetchQuestions(input);
-      return input;
+  const handleQuestionsInputChange = useCallback(
+    (input: string) => { 
+      if (questionMode === 'manual') {
+        debouncedFetchQuestions(input); 
+      }
     },
-    [debouncedFetchQuestions]
-  );
-
-  const filterOption = useCallback(
-    (opt: { label: string }, raw: string) =>
-      opt.label.toLowerCase().includes(raw.toLowerCase()),
-    []
+    [debouncedFetchQuestions, questionMode]
   );
 
   /* ---------------------- Modal Buttons ------------------------------- */
@@ -556,7 +602,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
       show={show}
       onHide={hasChanges ? () => {} : onClose}
       title="Buat Ujian Baru"
-      subtitle={`${selectedQuestions.length} soal dipilih • ${useCSVImport ? 'Mode: CSV Import' : 'Mode: Manual'}`}
+      subtitle={`${selectedQuestions.length} soal dipilih • Mode: ${questionMode === 'csv' ? 'CSV Import' : 'Manual'}`}
       icon={<PlusCircle className="tw-w-5 tw-h-5" />}
       size="xl"
       width="90vw"
@@ -568,98 +614,84 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
     >
       <div className="tw-space-y-6">
         {/* Error Display */}
-        {Object.keys(errors).length > 0 && (
+        {Object.values(errors).filter(e => e && e.trim()).length > 0 && (
           <div className="tw-bg-red-50 tw-border tw-border-red-200 tw-rounded-lg tw-p-4">
             <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
               <XCircle className="tw-w-4 tw-h-4 tw-text-red-500" />
               <span className="tw-font-semibold tw-text-red-700">Error</span>
             </div>
-            {Object.values(errors).map((e,i)=>(
-              <div key={i} className="tw-text-red-700 tw-text-sm">{e}</div>
-            ))}
+            {Object.values(errors)
+              .filter(e => e && e.trim()) // Filter out empty strings
+              .map((e, i) => (
+                <div key={i} className="tw-text-red-700 tw-text-sm">{e}</div>
+              ))
+            }
           </div>
         )}
 
         <Form>
           {/* Nama Ujian */}
-          <Form.Group className="tw-mb-6">
-            <Form.Label className="tw-text-blue-700 tw-font-semibold tw-flex tw-items-center tw-gap-2">
-              <FileText className="tw-w-4 tw-h-4" />
-              Nama Ujian <span className="tw-text-red-500">*</span>
-            </Form.Label>
-            <Form.Control
-              value={examName}
-              onChange={e=>setExamName(e.target.value)}
-              placeholder="Masukkan nama ujian"
-              className="tw-border-2 tw-border-blue-200 focus:tw-border-blue-500 tw-rounded-lg tw-text-base tw-p-3"
-              isInvalid={!!errors.name}
-            />
-          </Form.Group>
+          <ShortFormField
+            label="Nama Ujian"
+            value={examName}
+            onChange={(e) => setExamName(e.target.value)}
+            error={errors.name}
+            required
+          />
 
           {/* Grup Ujian */}
-          <div className="tw-mb-6">
-            <SearchSingleField
-              label="Grup Ujian"
-              value={examGroup}
-              options={examGroupOpts}
-              onChange={setExamGroup}
-              onInputChange={handleGroupInputChange}
-              isLoading={loadingGroups}
-              icon={<Award size={16}/>}
-              required
-              error={errors.group}
-            />
-          </div>
+          <SearchSingleField
+            label="Grup Ujian"
+            value={examGroup}
+            options={examGroupOpts}
+            onChange={setExamGroup}
+            onInputChange={handleGroupInputChange}
+            isLoading={loadingGroups}
+            icon={<Award size={16}/>}
+            required
+            error={errors.group}
+          />
 
           {/* Durasi */}
-          <Form.Group className="tw-mb-6">
-            <Form.Label className="tw-text-blue-700 tw-font-semibold tw-flex tw-items-center tw-gap-2">
-              <Timer className="tw-w-4 tw-h-4" />
-              Durasi (menit) <span className="tw-text-red-500">*</span>
-            </Form.Label>
-            <Form.Control
-              type="number"
-              min={1}
-              value={duration}
-              onChange={e => setDuration(e.target.value ? Number(e.target.value) : '')}
-              placeholder="Masukkan durasi ujian dalam menit"
-              className="tw-border-2 tw-border-blue-200 focus:tw-border-blue-500 tw-rounded-lg tw-text-base tw-p-3"
-              isInvalid={!!errors.duration}
-            />
-          </Form.Group>
+          <NumberField
+            label="Durasi (menit)"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value ? Number(e.target.value) : '')}
+            error={errors.duration}
+            required
+            placeholder="Masukkan durasi ujian dalam menit"
+            min={1}
+          />
 
-          {/* Mode Selection */}
-          <Form.Group className="tw-mb-6">
-            <Form.Label className="tw-text-blue-700 tw-font-semibold tw-flex tw-items-center tw-gap-2">
-              <List className="tw-w-4 tw-h-4" />
-              Metode Pemilihan Soal <span className="tw-text-red-500">*</span>
-            </Form.Label>
-            <div className="tw-flex tw-gap-6 tw-mt-3 tw-p-4 tw-bg-blue-50 tw-rounded-lg tw-border-2 tw-border-blue-200">
-              <Form.Check
-                type="radio"
-                id="manual-select"
-                name="questionMode"
-                label="Pilih Manual"
-                checked={!useCSVImport}
-                onChange={() => toggleImportMode(false)}
-                className="tw-flex tw-items-center tw-text-base tw-font-medium"
-              />
-              <Form.Check
-                type="radio"
-                id="csv-import"
-                name="questionMode"
-                label="Import CSV"
-                checked={useCSVImport}
-                onChange={() => toggleImportMode(true)}
-                className="tw-flex tw-items-center tw-text-base tw-font-medium"
-              />
-            </div>
-          </Form.Group>
+          {/* Mode Selection using OptionCard */}
+          <OptionCard
+            label="Metode Pemilihan Soal"
+            selectedValue={questionMode}
+            options={[
+              {
+                value: 'manual',
+                label: 'Pilih Manual',
+                description: 'Pilih soal satu per satu dari database'
+              },
+              {
+                value: 'csv',
+                label: 'Import CSV',
+                description: 'Upload file CSV berisi daftar soal'
+              }
+            ]}
+            onChange={handleQuestionModeChange}
+            icon={<Settings className="tw-w-4 tw-h-4" />}
+            color="tw-text-purple-700"
+            selectedColor="tw-bg-gradient-to-r tw-from-blue-500 tw-to-indigo-500 tw-text-white"
+            variant="horizontal"
+            required
+            error={errors.questionMode}
+          />
 
           {/* CSV Import Section */}
-          {useCSVImport && (
+          {questionMode === 'csv' && (
             <Form.Group className="tw-mb-6">
-              <Form.Label className="tw-text-blue-700 tw-font-semibold tw-flex tw-items-center tw-gap-2">
+              <Form.Label className="tw-text-purple-700 tw-font-semibold tw-flex tw-items-center tw-gap-2">
                 <Upload className="tw-w-4 tw-h-4" />
                 Import File CSV
               </Form.Label>
@@ -705,64 +737,33 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
             </Form.Group>
           )}
 
-          {/* Manual Question Selection */}
-          {!useCSVImport && (
-            <Form.Group className="tw-mb-6">
-              <Form.Label className="tw-text-blue-700 tw-font-semibold tw-flex tw-items-center tw-gap-2">
-                <List className="tw-w-4 tw-h-4" />
-                Soal Ujian <span className="tw-text-red-500">*</span>
-              </Form.Label>
-              <div className="tw-p-4 tw-bg-blue-50 tw-rounded-lg tw-border-2 tw-border-blue-200">
-                <Select
-                  instanceId="question-select"
-                  isMulti
-                  placeholder="Ketik untuk mencari soal…"
-                  components={{ DropdownIndicator: () => <List size={16}/> }}
-                  value={selectedQuestions}
-                  options={questionOpts}
-                  onChange={(v: MultiValue<SelectOption>) => setSelected(v as SelectOption[])}
-                  onInputChange={onInputChangeQuestions}
-                  filterOption={filterOption}
-                  isLoading={loadingQuestions}
-                  closeMenuOnScroll={false}
-                  menuPosition="fixed"
-                  menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
-                  styles={{ 
-                    menuPortal: base => ({ ...base, zIndex: 9999 }),
-                    control: (base) => ({
-                      ...base,
-                      minHeight: '48px',
-                      fontSize: '16px',
-                      border: '2px solid #BFDBFE',
-                      '&:hover': {
-                        border: '2px solid #3B82F6'
-                      },
-                      '&:focus': {
-                        border: '2px solid #3B82F6',
-                        boxShadow: '0 0 0 1px #3B82F6'
-                      }
-                    })
-                  }}
-                  classNamePrefix="select"
-                />
-                {errors.question && (
-                  <div className="tw-text-red-600 tw-mt-2 tw-text-sm">{errors.question}</div>
-                )}
-              </div>
-            </Form.Group>
+          {/* Manual Question Selection using SearchMultipleField */}
+          {questionMode === 'manual' && (
+            <SearchMultipleField
+              label="Soal Ujian"
+              value={selectedQuestions}
+              options={questionOpts}
+              onChange={setSelected}
+              onInputChange={handleQuestionsInputChange}
+              isLoading={loadingQuestions}
+              error={errors.question}
+              required
+              icon={<List size={16}/>}
+              placeholder="Ketik untuk mencari soal..."
+            />
           )}
 
           {/* CSV Questions Display */}
-          {useCSVImport && csvVerified && selectedQuestions.length > 0 && (
+          {questionMode === 'csv' && csvVerified && selectedQuestions.length > 0 && (
             <Form.Group className="tw-mb-6">
-              <Form.Label className="tw-text-blue-700 tw-font-semibold tw-flex tw-items-center tw-gap-2">
+              <Form.Label className="tw-text-purple-700 tw-font-semibold tw-flex tw-items-center tw-gap-2">
                 <CheckCircle className="tw-w-4 tw-h-4" />
                 Soal Terpilih dari CSV
               </Form.Label>
               <div className="tw-border-2 tw-border-blue-200 tw-rounded-lg tw-p-4 tw-bg-blue-50 tw-min-h-[100px]">
                 <div className="tw-text-sm tw-text-gray-600 tw-mb-3 tw-flex tw-items-center tw-justify-between">
                   <span>{selectedQuestions.length} soal terpilih</span>
-                  <span className="tw-text-xs tw-bg-blue-200 tw-text-blue-800 tw-px-2 tw-py-1 tw-rounded-full">
+                  <span className="tw-text-xs tw-bg-blue-200 tw-text-purple-800 tw-px-2 tw-py-1 tw-rounded-full">
                     Mode CSV - Tidak dapat diubah
                   </span>
                 </div>
@@ -773,8 +774,8 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                         key={idx}
                         className="tw-bg-white tw-border tw-border-blue-300 tw-px-3 tw-py-2 tw-rounded-lg tw-text-sm tw-font-mono tw-flex tw-items-center tw-justify-between tw-shadow-sm"
                       >
-                        <span className="tw-font-semibold tw-text-blue-800 tw-truncate">{q.label}</span>
-                        <span className="tw-text-blue-600 tw-opacity-75 tw-text-xs tw-ml-2 tw-flex-shrink-0">#{q.value}</span>
+                        <span className="tw-font-semibold tw-text-purple-800 tw-truncate">{q.label}</span>
+                        <span className="tw-text-purple-600 tw-opacity-75 tw-text-xs tw-ml-2 tw-flex-shrink-0">#{q.value}</span>
                       </div>
                     ))}
                   </div>
@@ -784,6 +785,42 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
                 <div className="tw-text-red-600 tw-mt-2 tw-text-sm">{errors.question}</div>
               )}
             </Form.Group>
+          )}
+
+          {/* Summary Section */}
+          {selectedQuestions.length > 0 && (
+            <div className="tw-bg-blue-50 tw-border tw-border-blue-200 tw-rounded-lg tw-p-4 tw-mb-6">
+              <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
+                <CheckCircle className="tw-w-5 tw-h-5 tw-text-purple-600" />
+                <span className="tw-font-semibold tw-text-purple-700">
+                  Ringkasan Ujian
+                </span>
+              </div>
+              <div className="tw-grid tw-grid-cols-2 md:tw-grid-cols-4 tw-gap-4 tw-text-sm">
+                <div>
+                  <span className="tw-text-purple-600">Nama:</span>
+                  <div className="tw-font-semibold tw-text-purple-800 tw-truncate">
+                    {examName || 'Belum diisi'}
+                  </div>
+                </div>
+                <div>
+                  <span className="tw-text-purple-600">Total Soal:</span>
+                  <div className="tw-font-semibold tw-text-purple-800">{selectedQuestions.length}</div>
+                </div>
+                <div>
+                  <span className="tw-text-purple-600">Durasi:</span>
+                  <div className="tw-font-semibold tw-text-purple-800">
+                    {duration ? `${duration} menit` : 'Belum diisi'}
+                  </div>
+                </div>
+                <div>
+                  <span className="tw-text-purple-600">Grup:</span>
+                  <div className="tw-font-semibold tw-text-purple-800 tw-truncate">
+                    {examGroup?.label || 'Belum dipilih'}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Changes indicator */}

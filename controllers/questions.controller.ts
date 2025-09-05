@@ -68,10 +68,30 @@ const encryptData = (data: any): string => {
 
 // Controller Functions
 export const searchQuestions = async (req: NextApiRequest, res: NextApiResponse) => {
-  const { search } = req.query;
+  const { search, selected_ids, limit = 20 } = req.query;
 
   try {
-    const results = await questionModel.searchQuestionsByCodeOrId(search as string);
+    // Jika tidak ada search dan tidak ada selected_ids, return semua questions (limited)
+    if ((!search || search.toString().trim() === '') && !selected_ids) {
+      const query = `
+        SELECT id, code
+        FROM   questions
+        ORDER  BY md5(id::text)
+        LIMIT  $1;
+      `;
+      const result = await pool.query(query, [parseInt(limit.toString())]);
+      
+      return res.status(200).json({
+        message: 'Questions retrieved successfully',
+        data: result.rows.map(row => ({
+          id: row.id,
+          code: row.code
+        })),
+      });
+    }
+
+    // Handle search dengan exclusion
+    const results = await questionModel.searchQuestionsByCodeOrId(search as string, selected_ids as string);
     return res.status(200).json({
       message: 'Questions retrieved successfully',
       data: results,
