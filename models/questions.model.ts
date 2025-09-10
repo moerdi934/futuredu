@@ -17,7 +17,7 @@ export interface Question {
   edit_user_id?: string;
   create_date?: Date;
   edit_date?: Date;
-  pembahasan?: string;
+  explanation?: string;
   level?: number;
   exam_id_list?: number[];
 }
@@ -544,7 +544,7 @@ export const createQuestion = async (questionData: Partial<Question>, create_use
   const client = await pool.connect();
   
   try {
-    const defaultPembahasan = `
+    const defaultExplanation = `
     <div>
       <h4>Pembahasan belum tersedia secara spesifik.</h4>
       <p>Silakan cek kembali soal dan diskusikan dengan pengajar atau teman sekelas.</p>
@@ -568,9 +568,14 @@ export const createQuestion = async (questionData: Partial<Question>, create_use
       statements,
       passage_id,
       code,
-      pembahasan,
+      explanation,
       level
     } = questionData;
+
+    // Ensure question_topic_type is not null or empty
+    if (!question_topic_type) {
+      throw new Error('question_topic_type is required and cannot be null or empty');
+    }
 
     const result = await client.query(insertQuery, [
       question_topic_type,
@@ -582,7 +587,7 @@ export const createQuestion = async (questionData: Partial<Question>, create_use
       passage_id,
       code,
       create_user_id,
-      pembahasan || defaultPembahasan,
+      explanation || defaultExplanation,
       level
     ]);
 
@@ -604,22 +609,21 @@ export const createBulkQuestions = async (questions: Partial<Question>[], create
     
     const insertQuery = `
       INSERT INTO questions 
-        (exam_id, question_type, question_text, options, correct_answer, statements, create_user_id, question_topic_type, edit_date) 
+        (question_topic_type, question_type, question_text, options, correct_answer, statements, create_user_id, edit_date) 
       VALUES 
-        ($1, $2, $3, $4, $5, $6, $7, $8, null) 
+        ($1, $2, $3, $4, $5, $6, $7, null) 
       RETURNING *
     `;
 
     for (const question of questions) {
       const result = await pool.query(insertQuery, [
-        (question as any).exam_id,
+        question.question_topic_type,
         question.question_type,
         question.question_text,
         question.options,
         question.correct_answer,
         question.statements,
-        create_user_id,
-        question.question_topic_type
+        create_user_id
       ]);
 
       createdQuestions.push(result.rows[0]);
@@ -677,22 +681,20 @@ export const updateBulkQuestions = async (questions: Partial<Question>[], edit_u
     const updateQuery = `
       UPDATE questions 
       SET 
-        exam_id = $1,
-        question_type = $2,
-        question_text = $3,
-        options = $4,
-        correct_answer = $5,
-        statements = $6,
-        edit_user_id = $7,
-        question_topic_type = $8,
+        question_type = $1,
+        question_text = $2,
+        options = $3,
+        correct_answer = $4,
+        statements = $5,
+        edit_user_id = $6,
+        question_topic_type = $7,
         edit_date = CURRENT_TIMESTAMP
-      WHERE id = $9
+      WHERE id = $8
       RETURNING *
     `;
 
     for (const question of questions) {
       const result = await pool.query(updateQuery, [
-        (question as any).exam_id,
         question.question_type,
         question.question_text,
         question.options,

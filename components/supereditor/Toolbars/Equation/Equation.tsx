@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, Button, Form, Badge } from 'react-bootstrap';
+import { Form } from 'react-bootstrap';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import { X, Check, Trash } from 'lucide-react';
+import { Calculator, Trash2, BookOpen } from 'lucide-react';
+import { LearningModal } from '../../../modal/ModalTemplate';
+import { ButtonGradient } from '../../../button/ButtonTemplate';
 
 const EquationModal = ({ isOpen, onClose, onInsert, onDelete, initialEquation = '', initialDisplayMode = false, isEditing = false }) => {
   const [equation, setEquation] = useState(initialEquation || (initialDisplayMode ? '\\begin{align*}\n\n\\end{align*}' : ''));
@@ -12,6 +14,7 @@ const EquationModal = ({ isOpen, onClose, onInsert, onDelete, initialEquation = 
   const [preview, setPreview] = useState('');
   const [error, setError] = useState(null);
   const [activeSymbolCategory, setActiveSymbolCategory] = useState('basic');
+  const [loading, setLoading] = useState(false);
   const textareaRef = useRef(null);
 
   const symbolCategories = {
@@ -194,215 +197,298 @@ const EquationModal = ({ isOpen, onClose, onInsert, onDelete, initialEquation = 
     }, 10);
   };
 
-  const handleInsert = () => {
+  const handleInsert = async () => {
     if (!equation || error) return;
     
-    onInsert({
-      equation,
-      displayMode
-    });
-    
-    if (!isEditing) {
-      setEquation(displayMode ? '\\begin{align*}\n\n\\end{align*}' : '');
+    setLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 300)); // Simulate processing
+      
+      onInsert({
+        equation,
+        displayMode
+      });
+      
+      if (!isEditing) {
+        setEquation(displayMode ? '\\begin{align*}\n\n\\end{align*}' : '');
+      }
+      
+      onClose();
+    } catch (error) {
+      console.error('Error inserting equation:', error);
+    } finally {
+      setLoading(false);
     }
   };
   
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (onDelete) {
-      onDelete();
+      setLoading(true);
+      try {
+        await new Promise(resolve => setTimeout(resolve, 200)); // Simulate processing
+        onDelete();
+        onClose();
+      } catch (error) {
+        console.error('Error deleting equation:', error);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
-  const handleCloseClick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onClose();
+  const handleClear = () => {
+    setEquation(displayMode ? '\\begin{align*}\n\n\\end{align*}' : '');
+    setError(null);
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
   };
 
-  const handleCategoryClick = (e, category) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setActiveSymbolCategory(category);
-  };
+  // Define modal buttons
+  const topButtons = [
+    {
+      action: 'clear' as const,
+      text: 'Clear',
+      onClick: handleClear,
+      disabled: loading || !equation
+    }
+  ];
 
-  const handleSymbolClick = (e, symbol) => {
-    e.preventDefault();
-    e.stopPropagation();
-    insertSymbol(symbol);
-  };
-
-  const handleRadioChange = (e, isDisplay) => {
-    e.preventDefault();
-    e.stopPropagation();
-    handleEquationTypeChange(isDisplay);
-  };
-
-  const handleCancelClick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onClose();
-  };
-
-  const handleInsertClick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    handleInsert();
-  };
-
-  const handleDeleteClick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    handleDelete();
-  };
+  const bottomButtons = [
+    ...(isEditing ? [{
+      action: 'delete' as const,
+      text: 'Delete Equation',
+      onClick: handleDelete,
+      disabled: loading,
+      loading: loading,
+      customIcon: <Trash2 className="tw-w-4 tw-h-4" />
+    }] : []),
+    {
+      action: 'cancel' as const,
+      text: 'Cancel',
+      onClick: onClose,
+      disabled: loading
+    },
+    {
+      action: 'save' as const,
+      text: isEditing ? 'Update Equation' : 'Insert Equation',
+      onClick: handleInsert,
+      disabled: !equation || !!error || loading,
+      loading: loading
+    }
+  ];
 
   return (
-    <Modal 
-      show={isOpen} 
-      onHide={onClose} 
-      size="lg" 
-      centered 
-      className="tw-font-sans"
-      backdrop="static"
+    <LearningModal
+      show={isOpen}
+      onHide={onClose}
+      title={isEditing ? 'Edit Mathematical Equation' : 'Insert Mathematical Equation'}
+      subtitle="Create beautiful mathematical expressions with LaTeX"
+      icon={<BookOpen className="tw-w-5 tw-h-5" />}
+      size="xl"
+      width="100vw"
+      height="100vh"
+      topButtons={topButtons}
+      bottomButtons={bottomButtons}
+      showCloseButton={true}
+      preventCloseOnOutsideClick={loading}
     >
-      <Modal.Header className="tw-bg-purple-700 tw-text-white">
-        <Modal.Title>{isEditing ? 'Edit Equation' : 'Insert Equation'}</Modal.Title>
-        <div className="tw-ms-auto tw-flex tw-items-center">
-          <Button 
-            variant="link" 
-            className="tw-ms-auto tw-p-0 tw-text-white" 
-            onClick={handleCloseClick}
-          >
-            <X size={20} />
-          </Button>
-        </div>
-      </Modal.Header>
-      <Modal.Body className="tw-p-4">
-        <Form onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-          <Form.Group className="tw-mb-3">
-            <div className="tw-flex tw-items-center tw-flex-wrap">
-              <Form.Label className="tw-mb-0 tw-me-3 tw-font-medium">Equation Type:</Form.Label>
-              <div className="tw-flex tw-items-center">
-                <Form.Check 
-                  type="radio"
-                  id="inline-equation"
-                  name="equation-type"
-                  label="Inline ($...$)"
-                  checked={!displayMode}
-                  onChange={(e) => handleRadioChange(e, false)}
-                  className="tw-me-3"
-                  inline
-                />
-                <Form.Check 
-                  type="radio"
-                  id="display-equation"
-                  name="equation-type"
-                  label="Display ($$...$$)"
-                  checked={displayMode}
-                  onChange={(e) => handleRadioChange(e, true)}
-                  inline
-                />
-              </div>
-            </div>
-          </Form.Group>
+      <div className="tw-space-y-6">
+        {/* Equation Type Selection */}
+        <div className="tw-bg-white tw-rounded-xl tw-p-6 tw-shadow-sm tw-border tw-border-purple-100">
+          <h3 className="tw-text-lg tw-font-semibold tw-text-purple-700 tw-mb-4 tw-flex tw-items-center tw-gap-2">
+            <Calculator className="tw-w-5 tw-h-5" />
+            Equation Type
+          </h3>
           
-          <div className="tw-mb-3">
-            <div className="tw-flex tw-flex-wrap tw-gap-1 tw-mb-2">
-              {Object.keys(symbolCategories).map(category => (
-                <Badge 
-                  key={category}
-                  as="button"
-                  onClick={(e) => handleCategoryClick(e, category)}
-                  className={`tw-px-2 tw-py-1 tw-text-xs tw-rounded tw-border-0 tw-cursor-pointer ${
-                    activeSymbolCategory === category 
-                      ? 'tw-bg-purple-600 tw-text-white' 
-                      : 'tw-bg-gray-200 tw-text-gray-800'
-                  }`}
-                >
-                  {category.charAt(0).toUpperCase() + category.slice(1)}
-                </Badge>
-              ))}
-            </div>
-            <div className="tw-flex tw-flex-wrap tw-gap-1 tw-p-2 tw-border tw-border-gray-300 tw-rounded tw-mb-3 tw-overflow-x-auto">
-              {symbolCategories[activeSymbolCategory].map((item, index) => {
-                const displaySymbol = katex.renderToString(item.symbol, {
-                  throwOnError: false
-                });
-                
-                return (
-                  <button
-                    key={index}
-                    className="tw-w-10 tw-h-10 tw-flex tw-items-center tw-justify-center tw-bg-gray-50 tw-border tw-border-gray-300 tw-rounded hover:tw-bg-purple-50"
-                    onClick={(e) => handleSymbolClick(e, item.symbol)}
-                    title={item.description}
-                    dangerouslySetInnerHTML={{ __html: displaySymbol }}
-                    type="button"
-                  />
-                );
-              })}
-            </div>
+          <div className="tw-flex tw-gap-3">
+            <ButtonGradient
+              action="custom"
+              customText="Inline ($...$)"
+              onClick={() => handleEquationTypeChange(false)}
+              size="md"
+              disabled={loading}
+              customColors={!displayMode ? {
+                gradient1: '#8B5CF6',
+                gradient2: '#A855F7',
+                text: '#FFFFFF'
+              } : {
+                gradient1: '#F3F4F6',
+                gradient2: '#E5E7EB',
+                text: '#6B7280'
+              }}
+              className="tw-flex-1"
+            />
+            <ButtonGradient
+              action="custom"
+              customText="Display ($$...$$)"
+              onClick={() => handleEquationTypeChange(true)}
+              size="md"
+              disabled={loading}
+              customColors={displayMode ? {
+                gradient1: '#8B5CF6',
+                gradient2: '#A855F7',
+                text: '#FFFFFF'
+              } : {
+                gradient1: '#F3F4F6',
+                gradient2: '#E5E7EB',
+                text: '#6B7280'
+              }}
+              className="tw-flex-1"
+            />
           </div>
           
-          <Form.Group className="tw-mb-3">
-            <Form.Control
-              as="textarea"
-              ref={textareaRef}
-              id="equation-editor"
-              className="tw-font-mono"
-              value={equation}
-              onChange={(e) => setEquation(e.target.value)}
-              rows={5}
-            />
-            {error && (
-              <Form.Text className="tw-text-red-500">
-                {error}
-              </Form.Text>
-            )}
-          </Form.Group>
-          
-          <Form.Group className="tw-mb-3">
-            <Form.Label className="tw-font-medium">Preview:</Form.Label>
-            <div 
-              className={`tw-border tw-border-gray-300 tw-rounded tw-p-4 tw-min-h-20 tw-flex tw-items-center ${displayMode ? 'tw-justify-center' : ''}`}
-              dangerouslySetInnerHTML={{ __html: preview || '<span class="tw-text-gray-400">Equation preview will appear here</span>' }}
-            />
-          </Form.Group>
-        </Form>
-      </Modal.Body>
-      <Modal.Footer className="tw-flex tw-justify-between">
-        {isEditing && (
-          <Button 
-            variant="danger"
-            onClick={handleDeleteClick}
-            title="Ctrl+D"
-            className="tw-me-auto"
-            type="button"
-          >
-            <Trash size={16} className="tw-inline tw-me-1" /> Delete
-          </Button>
-        )}
-        <div>
-          <Button 
-            variant="secondary"
-            onClick={handleCancelClick}
-            title="Esc"
-            className="tw-me-2"
-            type="button"
-          >
-            Cancel
-          </Button>
-          <Button 
-            variant="primary"
-            onClick={handleInsertClick}
-            disabled={!equation || error}
-            title="Ctrl+Enter"
-            className="tw-bg-purple-600 tw-border-purple-600 hover:tw-bg-purple-700"
-            type="button"
-          >
-            <Check size={16} className="tw-inline tw-me-1" /> {isEditing ? 'Update' : 'Insert'}
-          </Button>
+          <div className="tw-mt-3 tw-text-sm tw-text-purple-600">
+            <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-3">
+              <div className="tw-flex tw-items-center tw-gap-2">
+                <span className="tw-font-medium">Inline:</span>
+                <span>For equations within text</span>
+              </div>
+              <div className="tw-flex tw-items-center tw-gap-2">
+                <span className="tw-font-medium">Display:</span>
+                <span>For standalone equations</span>
+              </div>
+            </div>
+          </div>
         </div>
-      </Modal.Footer>
-    </Modal>
+
+        {/* Symbol Categories */}
+        <div className="tw-bg-white tw-rounded-xl tw-p-6 tw-shadow-sm tw-border tw-border-purple-100">
+          <h3 className="tw-text-lg tw-font-semibold tw-text-purple-700 tw-mb-4">Symbol Categories</h3>
+          
+          <div className="tw-flex tw-flex-wrap tw-gap-2 tw-mb-4">
+            {Object.keys(symbolCategories).map(category => (
+              <ButtonGradient
+                key={category}
+                action="custom"
+                customText={category.charAt(0).toUpperCase() + category.slice(1)}
+                onClick={() => setActiveSymbolCategory(category)}
+                size="sm"
+                disabled={loading}
+                customColors={activeSymbolCategory === category ? {
+                  gradient1: '#8B5CF6',
+                  gradient2: '#A855F7',
+                  text: '#FFFFFF'
+                } : {
+                  gradient1: '#F9FAFB',
+                  gradient2: '#F3F4F6',
+                  text: '#6B7280'
+                }}
+              />
+            ))}
+          </div>
+          
+          <div className="tw-grid tw-grid-cols-5 sm:tw-grid-cols-8 md:tw-grid-cols-10 tw-gap-2 tw-p-4 tw-border-2 tw-border-purple-200 tw-rounded-xl tw-bg-purple-50 tw-max-h-48 tw-overflow-y-auto">
+            {symbolCategories[activeSymbolCategory].map((item, index) => {
+              const displaySymbol = katex.renderToString(item.symbol, {
+                throwOnError: false
+              });
+              
+              return (
+                <button
+                  key={index}
+                  className="tw-w-12 tw-h-12 tw-flex tw-items-center tw-justify-center tw-bg-white tw-border-2 tw-border-purple-200 tw-rounded-lg hover:tw-bg-purple-100 hover:tw-border-purple-400 tw-transition-all tw-duration-200 hover:tw-scale-110 disabled:tw-opacity-50 disabled:tw-cursor-not-allowed"
+                  onClick={() => insertSymbol(item.symbol)}
+                  title={item.description}
+                  dangerouslySetInnerHTML={{ __html: displaySymbol }}
+                  type="button"
+                  disabled={loading}
+                />
+              );
+            })}
+          </div>
+        </div>
+        
+        {/* Equation Editor */}
+        <div className="tw-bg-white tw-rounded-xl tw-p-6 tw-shadow-sm tw-border tw-border-purple-100">
+          <h3 className="tw-text-lg tw-font-semibold tw-text-purple-700 tw-mb-4">LaTeX Equation Editor</h3>
+          
+          <Form.Control
+            as="textarea"
+            ref={textareaRef}
+            className="tw-font-mono tw-border-2 tw-border-purple-200 tw-rounded-xl tw-p-4 focus:tw-border-purple-400 focus:tw-outline-none tw-transition-colors tw-resize-none"
+            value={equation}
+            onChange={(e) => setEquation(e.target.value)}
+            rows={6}
+            disabled={loading}
+            placeholder={displayMode ? 
+              "Enter your LaTeX equation here...\n\nExample:\n\\begin{align*}\nf(x) &= x^2 + 2x + 1 \\\\\n&= (x + 1)^2\n\\end{align*}" :
+              "Enter your LaTeX equation here...\n\nExample: E = mc^2"
+            }
+            style={{
+              fontSize: '14px',
+              lineHeight: '1.5'
+            }}
+          />
+          
+          {error && (
+            <div className="tw-mt-3 tw-p-3 tw-bg-red-50 tw-border tw-border-red-200 tw-rounded-lg">
+              <div className="tw-flex tw-items-center tw-gap-2">
+                <span className="tw-text-red-600 tw-font-medium">Error:</span>
+                <span className="tw-text-red-700 tw-text-sm">{error}</span>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Preview */}
+        <div className="tw-bg-white tw-rounded-xl tw-p-6 tw-shadow-sm tw-border tw-border-purple-100">
+          <h3 className="tw-text-lg tw-font-semibold tw-text-purple-700 tw-mb-4">Live Preview</h3>
+          
+          <div 
+            className={`tw-border-2 tw-border-purple-200 tw-rounded-xl tw-p-6 tw-min-h-24 tw-flex tw-items-center tw-bg-gradient-to-br tw-from-purple-50 tw-to-blue-50 ${
+              displayMode ? 'tw-justify-center' : 'tw-justify-start'
+            }`}
+            dangerouslySetInnerHTML={{ 
+              __html: preview || '<span class="tw-text-gray-400 tw-italic">Equation preview will appear here...</span>' 
+            }}
+          />
+          
+          {equation && !error && (
+            <div className="tw-mt-3 tw-text-xs tw-text-purple-600 tw-bg-purple-50 tw-rounded-lg tw-p-2">
+              Type: {displayMode ? 'Display Mode (Block)' : 'Inline Mode'} • 
+              Characters: {equation.length} • 
+              Press Ctrl+Enter to insert
+            </div>
+          )}
+        </div>
+
+        {/* Help Section */}
+        <div className="tw-bg-gradient-to-r tw-from-blue-50 tw-to-purple-50 tw-rounded-xl tw-p-6 tw-border tw-border-blue-200">
+          <h3 className="tw-text-lg tw-font-semibold tw-text-blue-700 tw-mb-3">LaTeX Quick Tips</h3>
+          <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4 tw-text-sm tw-text-blue-600">
+            <div className="tw-space-y-2">
+              <div className="tw-flex tw-items-start tw-gap-2">
+                <span className="tw-text-blue-500 tw-font-bold">•</span>
+                Use <code className="tw-bg-white tw-px-1 tw-rounded">^{}</code> for superscripts: <code>x^2</code>
+              </div>
+              <div className="tw-flex tw-items-start tw-gap-2">
+                <span className="tw-text-blue-500 tw-font-bold">•</span>
+                Use <code className="tw-bg-white tw-px-1 tw-rounded">_{}</code> for subscripts: <code>x_n</code>
+              </div>
+              <div className="tw-flex tw-items-start tw-gap-2">
+                <span className="tw-text-blue-500 tw-font-bold">•</span>
+                Use <code className="tw-bg-white tw-px-1 tw-rounded">\frac{}{}</code> for fractions
+              </div>
+            </div>
+            <div className="tw-space-y-2">
+              <div className="tw-flex tw-items-start tw-gap-2">
+                <span className="tw-text-blue-500 tw-font-bold">•</span>
+                Use <code className="tw-bg-white tw-px-1 tw-rounded">\sqrt{}</code> for square roots
+              </div>
+              <div className="tw-flex tw-items-start tw-gap-2">
+                <span className="tw-text-blue-500 tw-font-bold">•</span>
+                Click symbols above to insert them instantly
+              </div>
+              <div className="tw-flex tw-items-start tw-gap-2">
+                <span className="tw-text-blue-500 tw-font-bold">•</span>
+                Double-click any equation to edit it later
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </LearningModal>
   );
 };
 

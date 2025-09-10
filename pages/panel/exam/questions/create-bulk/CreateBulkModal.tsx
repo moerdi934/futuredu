@@ -1,8 +1,10 @@
+// pages/panel/exam/questions/create-bulk/CreateBulkModal.tsx
 'use client';
 
 import React from 'react';
-import { Modal, Button, Table } from 'react-bootstrap';
-import { Download, X, Plus, List } from 'lucide-react';
+import { Table } from 'react-bootstrap';
+import { List, Plus, Download, ArrowRight } from 'lucide-react';
+import { ReportSuiteModal, ModalButton } from '../../../../../components/modal/ModalTemplate';
 
 interface CreateBulkModalProps {
   show: boolean;
@@ -17,7 +19,7 @@ interface CreateBulkModalProps {
 const CreateBulkModal: React.FC<CreateBulkModalProps> = ({
   show,
   onHide,
-  data = [], // Add default empty array
+  data = [],
   autoExported,
   onReset,
   onExport,
@@ -39,90 +41,128 @@ const CreateBulkModal: React.FC<CreateBulkModalProps> = ({
     return null;
   }
 
+  // Define bottom buttons using the template
+  const bottomButtons: ModalButton[] = [
+    {
+      action: 'add',
+      text: 'Buat Ulang',
+      icon: <Plus className="tw-w-4 tw-h-4" />,
+      onClick: onReset,
+      variant: 'secondary',
+      size: 'md'
+    },
+    {
+      action: 'export',
+      text: 'Export CSV',
+      icon: <Download className="tw-w-4 tw-h-4" />,
+      onClick: onExport,
+      variant: 'info',
+      size: 'md'
+    },
+    {
+      action: 'navigate',
+      text: 'Ke Daftar Soal',
+      icon: <ArrowRight className="tw-w-4 tw-h-4" />,
+      onClick: onNavigate,
+      variant: 'primary',
+      size: 'md',
+      customColors: {
+        gradient1: '#8B5CF6',
+        gradient2: '#6366F1',
+        text: '#FFFFFF'
+      }
+    }
+  ];
+
   return (
-    <Modal 
-      show={show} 
-      onHide={onHide} 
+    <ReportSuiteModal
+      show={show}
+      onHide={onHide}
+      title="Soal Berhasil Dibuat!"
+      subtitle={`Berhasil membuat ${data.length} soal. Detail soal yang dibuat:`}
       size="lg"
-      centered
-      backdrop="static"
-      className="tw-font-sans"
+      icon={<List className="tw-w-5 tw-h-5" />}
+      scrollable={true}
+      bottomButtons={bottomButtons}
+      showCloseButton={true}
+      preventCloseOnOutsideClick={true}
     >
-      <div className="tw-bg-white tw-rounded-lg tw-shadow-2xl tw-border-0 tw-overflow-hidden">
-        <Modal.Header className="tw-bg-gradient-to-r tw-from-green-500 tw-to-emerald-600 tw-text-white tw-border-0 tw-py-4">
-          <div className="tw-flex tw-items-center tw-space-x-3">
-            <List className="tw-w-6 tw-h-6" />
-            <Modal.Title className="tw-text-xl tw-font-bold">
-              Soal Berhasil Dibuat!
-            </Modal.Title>
-          </div>
-          <Button
-            variant="light"
-            className="tw-bg-white/20 tw-border-white/30 tw-text-white hover:tw-bg-white/30"
-            onClick={onHide}
-          >
-            <X className="tw-w-4 tw-h-4" />
-          </Button>
-        </Modal.Header>
-        
-        <Modal.Body className="tw-p-6 tw-max-h-[60vh] tw-overflow-y-auto">
-          <div className="tw-bg-emerald-50 tw-rounded-lg tw-p-4 tw-mb-5">
-            <p className="tw-text-emerald-700 tw-font-medium">
-              Berhasil membuat <span className="tw-font-bold">{data.length} soal</span>. 
-              Detail soal yang dibuat:
-            </p>
-          </div>
-          
-          <Table striped bordered hover className="tw-rounded-lg tw-overflow-hidden">
-            <thead className="tw-bg-purple-100">
-              <tr>
-                <th className="tw-font-semibold tw-text-purple-800">Kode Soal</th>
-                <th className="tw-font-semibold tw-text-purple-800">Tipe Soal</th>
-                <th className="tw-font-semibold tw-text-purple-800">Level</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((item, index) => (
-                <tr key={index}>
-                  <td className="tw-font-mono">{item?.code || 'N/A'}</td>
-                  <td>{getQuestionTypeLabel(item?.question_type || '')}</td>
-                  <td className="tw-text-center">{item?.level || 'N/A'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </Modal.Body>
-        
-        <Modal.Footer className="tw-bg-gray-50 tw-border-0 tw-p-6">
-          <div className="tw-flex tw-flex-col sm:tw-flex-row tw-gap-3 tw-w-full">
-            <Button
-              variant="outline-secondary"
-              onClick={onReset}
-              className="tw-flex-1 tw-flex tw-items-center tw-justify-center tw-space-x-2 tw-border-2 tw-border-gray-300 tw-text-gray-600 hover:tw-bg-gray-100"
-            >
-              <Plus className="tw-w-4 tw-h-4" />
-              <span>Buat Ulang</span>
-            </Button>
-            
-            <Button
-              variant="outline-primary"
-              onClick={onExport}
-              className="tw-flex-1 tw-flex tw-items-center tw-justify-center tw-space-x-2 tw-border-2 tw-border-blue-300 tw-text-blue-600 hover:tw-bg-blue-50"
-            >
-              <Download className="tw-w-4 tw-h-4" />
-              <span>Export CSV</span>
-            </Button>
-            
-            <Button
-              onClick={onNavigate}
-              className="tw-flex-1 tw-bg-gradient-to-r tw-from-purple-600 tw-to-indigo-600 tw-border-0 tw-text-white hover:tw-from-purple-700 hover:tw-to-indigo-700"
-            >
-              Ke Daftar Soal
-            </Button>
-          </div>
-        </Modal.Footer>
+      {/* Success Message */}
+      <div className="tw-bg-emerald-50 tw-rounded-lg tw-p-4 tw-mb-5 tw-border-l-4 tw-border-emerald-500">
+        <p className="tw-text-emerald-700 tw-font-medium tw-flex tw-items-center tw-gap-2">
+          <span className="tw-flex tw-w-2 tw-h-2 tw-bg-emerald-500 tw-rounded-full tw-animate-pulse"></span>
+          Berhasil membuat <span className="tw-font-bold tw-text-emerald-800">{data.length} soal</span>
+        </p>
       </div>
-    </Modal>
+      
+      {/* Questions Table */}
+      <div className="tw-bg-white tw-rounded-xl tw-shadow-sm tw-border tw-border-purple-200 tw-overflow-hidden">
+        <Table className="tw-mb-0" hover>
+          <thead>
+            <tr className="tw-bg-gradient-to-r tw-from-purple-100 tw-to-violet-100">
+              <th className="tw-font-semibold tw-text-purple-800 tw-py-3 tw-px-4 tw-border-b tw-border-purple-200">
+                Kode Soal
+              </th>
+              <th className="tw-font-semibold tw-text-purple-800 tw-py-3 tw-px-4 tw-border-b tw-border-purple-200">
+                Tipe Soal
+              </th>
+              <th className="tw-font-semibold tw-text-purple-800 tw-py-3 tw-px-4 tw-border-b tw-border-purple-200 tw-text-center">
+                Level
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((item, index) => (
+              <tr key={index} className="hover:tw-bg-purple-50 tw-transition-colors tw-duration-200">
+                <td className="tw-font-mono tw-py-3 tw-px-4 tw-border-b tw-border-gray-100 tw-text-gray-700">
+                  {item?.code || 'N/A'}
+                </td>
+                <td className="tw-py-3 tw-px-4 tw-border-b tw-border-gray-100 tw-text-gray-700">
+                  <span className="tw-inline-flex tw-items-center tw-px-2 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium tw-bg-blue-100 tw-text-blue-800">
+                    {getQuestionTypeLabel(item?.question_type || '')}
+                  </span>
+                </td>
+                <td className="tw-py-3 tw-px-4 tw-border-b tw-border-gray-100 tw-text-center">
+                  <span className="tw-inline-flex tw-items-center tw-justify-center tw-w-8 tw-h-8 tw-rounded-full tw-bg-purple-100 tw-text-purple-800 tw-font-semibold tw-text-sm">
+                    {item?.level || 'N/A'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </div>
+
+      {/* Additional Info */}
+      {autoExported && (
+        <div className="tw-mt-4 tw-bg-blue-50 tw-rounded-lg tw-p-3 tw-border-l-4 tw-border-blue-400">
+          <p className="tw-text-blue-700 tw-text-sm tw-flex tw-items-center tw-gap-2">
+            <Download className="tw-w-4 tw-h-4" />
+            File CSV telah otomatis diunduh ke komputer Anda.
+          </p>
+        </div>
+      )}
+
+      {/* Summary Stats */}
+      <div className="tw-mt-4 tw-grid tw-grid-cols-2 sm:tw-grid-cols-3 tw-gap-3">
+        <div className="tw-bg-gradient-to-br tw-from-green-100 tw-to-emerald-100 tw-rounded-lg tw-p-3 tw-text-center">
+          <div className="tw-text-green-600 tw-font-bold tw-text-lg">{data.length}</div>
+          <div className="tw-text-green-700 tw-text-xs tw-font-medium">Total Soal</div>
+        </div>
+        <div className="tw-bg-gradient-to-br tw-from-blue-100 tw-to-sky-100 tw-rounded-lg tw-p-3 tw-text-center">
+          <div className="tw-text-blue-600 tw-font-bold tw-text-lg">
+            {new Set(data.map(item => item?.question_type)).size}
+          </div>
+          <div className="tw-text-blue-700 tw-text-xs tw-font-medium">Jenis Soal</div>
+        </div>
+        <div className="tw-bg-gradient-to-br tw-from-purple-100 tw-to-violet-100 tw-rounded-lg tw-p-3 tw-text-center sm:tw-col-span-1 tw-col-span-2">
+          <div className="tw-text-purple-600 tw-font-bold tw-text-lg">
+            {new Set(data.map(item => item?.level)).size}
+          </div>
+          <div className="tw-text-purple-700 tw-text-xs tw-font-medium">Level Berbeda</div>
+        </div>
+      </div>
+    </ReportSuiteModal>
   );
 };
 

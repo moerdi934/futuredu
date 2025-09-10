@@ -15,6 +15,7 @@ export interface ClassGetOptions {
   studentId?: string;
   startDate?: string;
   endDate?: string;
+  includeDeleted?: string; // 'false' | 'true' | 'only_deleted'
 }
 
 export interface ClassData {
@@ -60,6 +61,10 @@ export interface ClassRow {
   starter_user_id: string;
   is_started: boolean;
   status: string;
+  is_deleted: boolean;
+  delete_reason?: string;
+  delete_user_id?: string;
+  delete_date?: string;
   total?: number;
 }
 
@@ -81,7 +86,8 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
     teacherId = '',
     studentId = '',
     startDate = '',
-    endDate = ''
+    endDate = '',
+    includeDeleted = 'false'
   } = options;
 
   const offset = (page - 1) * limit;
@@ -107,7 +113,12 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
       e.id event_id,
       e.starter_user_id,
       e.is_started,
+      c.is_deleted,
+      c.delete_reason,
+      c.delete_user_id,
+      c.delete_date,
       case
+        when c.is_deleted = true then 'Deleted'
         when fs.start_time<now() and fs.end_time is null then 'Started'
         when fs.end_time is not null then 'Finished'
         when fs.start_time is null then 'Not Start'
@@ -137,11 +148,22 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
   const values: any[] = [];
   const conditions: string[] = [];
 
+  // Handle delete filter logic
+  if (includeDeleted === 'false') {
+    // Show only active records (default behavior)
+    conditions.push('AND (c.is_deleted IS NULL OR c.is_deleted = false)');
+  } else if (includeDeleted === 'only_deleted') {
+    // Show only deleted records
+    conditions.push('AND c.is_deleted = true');
+  }
+  // If includeDeleted === 'true', show all records (no additional condition)
+
   // Filter by status (ignore if "All")
   if (status && status !== 'All') {
     values.push(status);
     conditions.push(`
       AND (case
+        when c.is_deleted = true then 'Deleted'
         when fs.start_time<now() and fs.end_time is null then 'Started'
         when fs.end_time is not null then 'Finished'
         when fs.start_time is null then 'Not Start'
@@ -218,10 +240,15 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
       c.create_date,
       c.edit_user_id,
       c.edit_date,
+      c.is_deleted,
+      c.delete_reason,
+      c.delete_user_id,
+      c.delete_date,
       e.id, 
       e.starter_user_id,
       e.is_started,
       case
+        when c.is_deleted = true then 'Deleted'
         when fs.start_time<now() and fs.end_time is null then 'Started'
         when fs.end_time is not null then 'Finished'
         when fs.start_time is null then 'Not Start'
@@ -234,7 +261,7 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
   `;
 
   // Sorting
-  const validSortFields = ['id', 'name', 'course_name', 'description', 'teacher_name', 'start_date', 'end_date', 'creator_name'];
+  const validSortFields = ['id', 'name', 'course_name', 'description', 'teacher_name', 'start_date', 'end_date', 'creator_name', 'delete_date'];
   if (validSortFields.includes(sortField.toLowerCase()) && ['asc', 'desc'].includes(sortOrder.toLowerCase())) {
     query += ` ORDER BY ${sortField} ${sortOrder.toUpperCase()}`;
   } else {
@@ -249,8 +276,8 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
   };
 };
 
-export const getClassesById = async (id: string): Promise<ClassRow | null> => {
-  const query = `
+export const getClassesById = async (id: string, includeDeleted: boolean = false): Promise<ClassRow | null> => {
+  let query = `
   SELECT 
     c.id,
     c.name,
@@ -258,25 +285,57 @@ export const getClassesById = async (id: string): Promise<ClassRow | null> => {
     co.title AS course_name,
     c.description,
     c.teacher_id,
-    u.username AS teacher_name,
+    u.user_code || '-' ||ua.nama_lengkap AS teacher_name,
     c.student_list,
-    COALESCE(ARRAY_AGG(s.username) FILTER (WHERE s.username IS NOT NULL), '{}') AS student_list_names,
+    COALESCE(ARRAY_AGG(s.user_code || '-' ||ua3.nama_lengkap) FILTER (WHERE ua3.nama_lengkap IS NOT NULL), '{}') AS student_list_names,
     c.start_date,
     c.end_date,
-    cu.username AS creator_name,
+    cu.user_code || '-' ||ua2.nama_lengkap AS creator_name,
     c.create_user_id,
     c.create_date,
     c.edit_user_id,
     c.edit_date,
+    c.is_deleted,
+    c.delete_reason,
+    c.delete_user_id,
+    c.delete_date,
     e.id event_id,
-    e.starter_user_id
+    e.starter_user_id,
+    e.is_started,
+    case
+      when c.is_deleted = true then 'Deleted'
+      when fs.start_time<now() and fs.end_time is null then 'Started'
+      when fs.end_time is not null then 'Finished'
+      when fs.start_time is null then 'Not Start'
+      else 'Not Start'
+    end status
   FROM classes c
   LEFT JOIN courses co ON c.course_id = co.id
   LEFT JOIN users u ON c.teacher_id = u.id
+  LEFT JOIN user_account ua ON ua.user_id = u.user_id
   LEFT JOIN users cu ON c.create_user_id = cu.id
+  LEFT JOIN user_account ua2 ON ua2.user_id = cu.user_id
   LEFT JOIN users s ON s.id = ANY(c.student_list)
+  LEFT JOIN user_account ua3 ON ua3.user_id = s.user_id
   LEFT JOIN events e ON e.master_id = c.id
-   WHERE c.id = $1 and e.event_type = 1
+  LEFT JOIN (
+      SELECT f.*
+      FROM fsession f
+      WHERE f.create_date = (
+          SELECT MAX(f2.create_date)
+          FROM fsession f2
+          WHERE f2.eventid = f.eventid
+      )
+  ) fs ON fs.eventid = e.id
+  WHERE c.id = $1 and e.event_type = 1
+  `;
+
+  // Add soft delete filter if not including deleted records
+  if (!includeDeleted) {
+    query += ` AND (c.is_deleted IS NULL OR c.is_deleted = false)`;
+  }
+
+  query += `
   GROUP BY 
     c.course_id,
     c.teacher_id,
@@ -284,18 +343,33 @@ export const getClassesById = async (id: string): Promise<ClassRow | null> => {
     c.name,
     co.title,
     c.description,
-    u.username,
+    ua.nama_lengkap,
     c.student_list,
     c.start_date,
     c.end_date,
-    cu.username,
+    ua2.nama_lengkap,
+    u.user_code,
+    cu.user_code,
     c.create_user_id,
     c.create_date,
     c.edit_user_id,
     c.edit_date,
+    c.is_deleted,
+    c.delete_reason,
+    c.delete_user_id,
+    c.delete_date,
     e.id, 
-    e.starter_user_id
-`;
+    e.starter_user_id,
+    e.is_started,
+    case
+      when c.is_deleted = true then 'Deleted'
+      when fs.start_time<now() and fs.end_time is null then 'Started'
+      when fs.end_time is not null then 'Finished'
+      when fs.start_time is null then 'Not Start'
+      else 'Not Start'
+    end
+  `;
+
   const result = await pool.query(query, [id]);
   return result.rows[0] || null;
 };
@@ -303,8 +377,8 @@ export const getClassesById = async (id: string): Promise<ClassRow | null> => {
 export const createClass = async (data: ClassData): Promise<ClassRow> => {
   const query = `
     INSERT INTO classes 
-      (name, course_id, description, teacher_id, student_list, start_date, end_date, create_user_id, create_date)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+      (name, course_id, description, teacher_id, student_list, start_date, end_date, create_user_id, create_date, is_deleted)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), false)
     RETURNING *;
   `;
   const values = [
@@ -335,7 +409,7 @@ export const updateClass = async (id: string, data: ClassUpdateData): Promise<Cl
       end_date = $7,
       edit_user_id = $8,
       edit_date = NOW()
-    WHERE id = $9
+    WHERE id = $9 AND (is_deleted IS NULL OR is_deleted = false)
     RETURNING *;
   `;
   const values = [
@@ -353,8 +427,45 @@ export const updateClass = async (id: string, data: ClassUpdateData): Promise<Cl
   return result.rows[0];
 };
 
+// Soft delete function
+export const softDeleteClass = async (id: string, deleteUserId: string, deleteReason: string): Promise<ClassRow> => {
+  const query = `
+    UPDATE classes 
+    SET 
+      is_deleted = true,
+      delete_reason = $2,
+      delete_user_id = $3,
+      delete_date = NOW(),
+      edit_user_id = $3,
+      edit_date = NOW()
+    WHERE id = $1 AND (is_deleted IS NULL OR is_deleted = false)
+    RETURNING *;
+  `;
+  const result = await pool.query(query, [id, deleteReason, deleteUserId]);
+  return result.rows[0];
+};
+
+// Hard delete function (for admin use only)
 export const deleteClass = async (id: string): Promise<ClassRow> => {
   const query = `DELETE FROM classes WHERE id = $1 RETURNING *;`;
   const result = await pool.query(query, [id]);
+  return result.rows[0];
+};
+
+// Restore soft deleted class
+export const restoreClass = async (id: string, restoreUserId: string): Promise<ClassRow> => {
+  const query = `
+    UPDATE classes 
+    SET 
+      is_deleted = false,
+      delete_reason = NULL,
+      delete_user_id = NULL,
+      delete_date = NULL,
+      edit_user_id = $2,
+      edit_date = NOW()
+    WHERE id = $1 AND is_deleted = true
+    RETURNING *;
+  `;
+  const result = await pool.query(query, [id, restoreUserId]);
   return result.rows[0];
 };

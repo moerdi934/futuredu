@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, RefObject } from 'react';
-import { Table as TableIcon, Plus, Minus, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { Table as TableIcon, Plus, Minus, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Trash2, Grid3X3, Edit } from 'lucide-react';
+import { LearningModal } from '../../../modal/ModalTemplate';
+import { ButtonGradient } from '../../../button/ButtonTemplate';
+import { ShortFormField, SelectCustomField } from '../../../form/FormComponentLayout';
 
 interface TableData {
   html: string;
@@ -28,6 +31,20 @@ interface TableFloaterProps {
   onClose: () => void;
 }
 
+interface EditingTable {
+  element: HTMLElement;
+  data: string[][];
+  hasHeader: boolean;
+  style: string;
+}
+
+interface TableComponentProps {
+  editorRef: RefObject<HTMLElement>;
+  setEditingTable: (editingTable: EditingTable | null) => void;
+  setShowTableModal: (show: boolean) => void;
+  handleChange: () => void;
+}
+
 const TableModal: React.FC<TableModalProps> = ({ 
   isOpen, 
   onClose, 
@@ -40,45 +57,28 @@ const TableModal: React.FC<TableModalProps> = ({
   const [tableData, setTableData] = useState<string[][]>([]);
   const [hasHeader, setHasHeader] = useState(true);
   const [tableStyle, setTableStyle] = useState('bordered');
+  const [loading, setLoading] = useState(false);
 
+  // Initialize table data when modal opens
   useEffect(() => {
-    if (initialTable && isEditing) {
-      const parsedTable = parseTableFromHtml(initialTable);
-      setRows(parsedTable.rows);
-      setCols(parsedTable.cols);
-      setTableData(parsedTable.data);
-      setHasHeader(parsedTable.hasHeader);
-      setTableStyle(parsedTable.style);
-    } else {
-      initializeTable(rows, cols);
-    }
-  }, [isOpen, initialTable, isEditing, rows, cols]);
-
-  // Add event listener for keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (!isOpen) return;
-      
-      // Ctrl+Enter to submit table
-      if (event.ctrlKey && event.key === 'Enter') {
-        event.preventDefault();
-        handleSubmit();
-      }
-      
-      // Escape to close modal
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-      }
-    };
-
     if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.removeEventListener('keydown', handleKeyDown);
-      };
+      if (initialTable && isEditing) {
+        const parsedTable = parseTableFromHtml(initialTable);
+        setRows(parsedTable.rows);
+        setCols(parsedTable.cols);
+        setTableData(parsedTable.data);
+        setHasHeader(parsedTable.hasHeader);
+        setTableStyle(parsedTable.style);
+      } else {
+        // Reset to defaults for new table
+        setRows(3);
+        setCols(3);
+        setHasHeader(true);
+        setTableStyle('bordered');
+        initializeTable(3, 3);
+      }
     }
-  }, [isOpen, onClose]);
+  }, [isOpen, initialTable, isEditing]);
 
   const parseTableFromHtml = (htmlTable: string) => {
     if (typeof window === 'undefined') {
@@ -133,31 +133,33 @@ const TableModal: React.FC<TableModalProps> = ({
   };
 
   const handleRowsChange = (newRows: number) => {
-    setRows(newRows);
+    const validRows = Math.max(1, Math.min(20, newRows));
+    setRows(validRows);
     const newData = [...tableData];
     
-    if (newRows > tableData.length) {
-      for (let i = tableData.length; i < newRows; i++) {
+    if (validRows > tableData.length) {
+      for (let i = tableData.length; i < validRows; i++) {
         const row = new Array(cols).fill('');
         newData.push(row);
       }
-    } else if (newRows < tableData.length) {
-      newData.splice(newRows);
+    } else if (validRows < tableData.length) {
+      newData.splice(validRows);
     }
     
     setTableData(newData);
   };
 
   const handleColsChange = (newCols: number) => {
-    setCols(newCols);
+    const validCols = Math.max(1, Math.min(10, newCols));
+    setCols(validCols);
     const newData = tableData.map(row => {
       const newRow = [...row];
-      if (newCols > row.length) {
-        for (let i = row.length; i < newCols; i++) {
+      if (validCols > row.length) {
+        for (let i = row.length; i < validCols; i++) {
           newRow.push('');
         }
-      } else if (newCols < row.length) {
-        newRow.splice(newCols);
+      } else if (validCols < row.length) {
+        newRow.splice(validCols);
       }
       return newRow;
     });
@@ -170,17 +172,15 @@ const TableModal: React.FC<TableModalProps> = ({
     setTableData(newData);
   };
 
-  const addRow = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const newRow = new Array(cols).fill('');
-    setTableData([...tableData, newRow]);
-    setRows(rows + 1);
+  const addRow = () => {
+    if (rows < 20) {
+      const newRow = new Array(cols).fill('');
+      setTableData([...tableData, newRow]);
+      setRows(rows + 1);
+    }
   };
 
-  const removeRow = (e: React.MouseEvent, index: number) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const removeRow = (index: number) => {
     if (tableData.length > 1) {
       const newData = tableData.filter((_, i) => i !== index);
       setTableData(newData);
@@ -188,17 +188,15 @@ const TableModal: React.FC<TableModalProps> = ({
     }
   };
 
-  const addColumn = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const newData = tableData.map(row => [...row, '']);
-    setTableData(newData);
-    setCols(cols + 1);
+  const addColumn = () => {
+    if (cols < 10) {
+      const newData = tableData.map(row => [...row, '']);
+      setTableData(newData);
+      setCols(cols + 1);
+    }
   };
 
-  const removeColumn = (e: React.MouseEvent, index: number) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const removeColumn = (index: number) => {
     if (cols > 1) {
       const newData = tableData.map(row => row.filter((_, i) => i !== index));
       setTableData(newData);
@@ -250,189 +248,302 @@ const TableModal: React.FC<TableModalProps> = ({
     return html;
   };
 
-  const handleSubmit = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing
+      const tableHtml = generateTableHtml();
+      onInsert({ html: tableHtml, data: tableData, hasHeader, style: tableStyle });
+    } catch (error) {
+      console.error('Error inserting table:', error);
+    } finally {
+      setLoading(false);
     }
-    const tableHtml = generateTableHtml();
-    onInsert({ html: tableHtml, data: tableData, hasHeader, style: tableStyle });
   };
 
-  if (!isOpen) return null;
+  const handleClear = () => {
+    setRows(3);
+    setCols(3);
+    setHasHeader(true);
+    setTableStyle('bordered');
+    initializeTable(3, 3);
+  };
+
+  // Style options for select
+  const styleOptions = [
+    { label: 'Bordered', value: 'bordered' },
+    { label: 'Striped', value: 'striped' },
+    { label: 'Borderless', value: 'borderless' }
+  ];
+
+  const selectedStyleOption = styleOptions.find(option => option.value === tableStyle) || null;
+
+  const modalButtons = [
+    {
+      action: 'cancel' as const,
+      text: 'Cancel',
+      onClick: onClose,
+      disabled: loading
+    },
+    {
+      action: 'save' as const,
+      text: isEditing ? 'Update Table' : 'Insert Table',
+      onClick: handleSubmit,
+      disabled: loading,
+      loading: loading
+    }
+  ];
+
+  const topButtons = [
+    {
+      action: 'clear' as const,
+      text: 'Clear All',
+      onClick: handleClear,
+      disabled: loading
+    }
+  ];
 
   return (
-    <div className="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-flex tw-items-center tw-justify-center tw-z-50">
-      <div className="tw-bg-white tw-rounded-lg tw-shadow-xl tw-max-w-4xl tw-w-full tw-max-h-[90vh] tw-overflow-hidden tw-m-4">
-        <div className="tw-bg-purple-100 tw-p-4 tw-border-b tw-border-purple-200">
-          <div className="tw-flex tw-justify-between tw-items-center">
-            <div>
-              <h2 className="tw-text-purple-800 tw-text-xl tw-font-bold">
-                {isEditing ? 'Edit Table' : 'Insert Table'}
-              </h2>
-              <p className="tw-text-sm tw-text-purple-600 tw-mt-1">(Ctrl+Enter to insert)</p>
-            </div>
-            <button 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onClose();
-              }}
-              className="tw-text-purple-600 tw-hover:tw-text-purple-800 tw-text-xl tw-font-bold tw-w-8 tw-h-8 tw-flex tw-items-center tw-justify-center tw-rounded-full tw-hover:tw-bg-purple-200"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-        
-        <div className="tw-p-4 tw-max-h-[calc(90vh-120px)] tw-overflow-auto">
+    <LearningModal
+      show={isOpen}
+      onHide={onClose}
+      title={isEditing ? 'Edit Table' : 'Insert Table'}
+      subtitle="Create and customize your table structure"
+      icon={<Grid3X3 className="tw-w-5 tw-h-5" />}
+      size="xl"
+      width="90vw"
+      height="85vh"
+      topButtons={topButtons}
+      bottomButtons={modalButtons}
+      showCloseButton={true}
+      preventCloseOnOutsideClick={loading}
+    >
+      <div className="tw-space-y-6">
+        {/* Table Configuration */}
+        <div className="tw-bg-white tw-rounded-xl tw-p-6 tw-shadow-sm tw-border tw-border-purple-100">
+          <h3 className="tw-text-lg tw-font-semibold tw-text-purple-700 tw-mb-4 tw-flex tw-items-center tw-gap-2">
+            <TableIcon className="tw-w-5 tw-h-5" />
+            Table Configuration
+          </h3>
+          
           <div className="tw-grid tw-grid-cols-2 md:tw-grid-cols-4 tw-gap-4 tw-mb-4">
-            <div>
-              <label className="tw-text-purple-700 tw-font-medium tw-block tw-mb-1">Rows</label>
-              <input
-                type="number"
-                min="1"
-                max="20"
-                value={rows}
-                onChange={(e) => handleRowsChange(parseInt(e.target.value) || 1)}
-                className="tw-w-full tw-border tw-border-purple-300 tw-rounded tw-px-2 tw-py-1"
-              />
-            </div>
-            <div>
-              <label className="tw-text-purple-700 tw-font-medium tw-block tw-mb-1">Columns</label>
-              <input
-                type="number"
-                min="1"
-                max="10"
-                value={cols}
-                onChange={(e) => handleColsChange(parseInt(e.target.value) || 1)}
-                className="tw-w-full tw-border tw-border-purple-300 tw-rounded tw-px-2 tw-py-1"
-              />
-            </div>
-            <div>
-              <label className="tw-text-purple-700 tw-font-medium tw-block tw-mb-1">Style</label>
-              <select
-                value={tableStyle}
-                onChange={(e) => setTableStyle(e.target.value)}
-                className="tw-w-full tw-border tw-border-purple-300 tw-rounded tw-px-2 tw-py-1"
-              >
-                <option value="bordered">Bordered</option>
-                <option value="striped">Striped</option>
-                <option value="borderless">Borderless</option>
-              </select>
-            </div>
-            <div className="tw-flex tw-items-end">
-              <label className="tw-flex tw-items-center tw-text-purple-700">
+            <ShortFormField
+              label="Rows"
+              type="number"
+              value={rows.toString()}
+              onChange={(value) => handleRowsChange(parseInt(value) || 1)}
+              placeholder="3"
+              min="1"
+              max="20"
+              disabled={loading}
+            />
+            
+            <ShortFormField
+              label="Columns"
+              type="number"
+              value={cols.toString()}
+              onChange={(value) => handleColsChange(parseInt(value) || 1)}
+              placeholder="3"
+              min="1"
+              max="10"
+              disabled={loading}
+            />
+            
+            <SelectCustomField
+              label="Table Style"
+              value={selectedStyleOption}
+              options={styleOptions}
+              onChange={(option) => setTableStyle(option?.value || 'bordered')}
+              placeholder="Select style..."
+              loading={loading}
+            />
+            
+            <div className="tw-flex tw-flex-col tw-gap-2">
+              <label className="tw-text-sm tw-font-medium tw-text-purple-700">Options</label>
+              <label className="tw-flex tw-items-center tw-text-purple-700 tw-text-sm">
                 <input
                   type="checkbox"
                   checked={hasHeader}
                   onChange={(e) => setHasHeader(e.target.checked)}
-                  className="tw-mr-2"
+                  className="tw-mr-2 tw-accent-purple-600"
+                  disabled={loading}
                 />
-                Has Header
+                Has Header Row
               </label>
             </div>
           </div>
+        </div>
 
-          <div className="tw-overflow-x-auto">
-            <table className="tw-w-full tw-border-collapse tw-border tw-border-purple-300">
-              <tbody>
-                {tableData.map((row, rowIndex) => (
-                  <tr key={rowIndex} className={hasHeader && rowIndex === 0 ? 'tw-bg-purple-100' : ''}>
-                    {row.map((cell, colIndex) => (
-                      <td key={colIndex} className="tw-border tw-border-purple-300 tw-p-1 tw-relative">
-                        {colIndex === 0 && (
-                          <div className="tw-absolute tw--left-8 tw-top-1/2 tw--translate-y-1/2 tw-flex tw-flex-col tw-gap-1">
-                            <button
-                              onClick={addRow}
-                              className="tw-p-1 tw-border tw-border-green-400 tw-text-green-700 tw-bg-white tw-rounded tw-hover:tw-bg-green-50"
-                            >
-                              <Plus size={12} />
-                            </button>
-                            {tableData.length > 1 && (
-                              <button
-                                onClick={(e) => removeRow(e, rowIndex)}
-                                className="tw-p-1 tw-border tw-border-red-400 tw-text-red-700 tw-bg-white tw-rounded tw-hover:tw-bg-red-50"
-                              >
-                                <Minus size={12} />
-                              </button>
-                            )}
-                          </div>
-                        )}
-                        
-                        {rowIndex === 0 && (
-                          <div className="tw-absolute tw--top-8 tw-left-1/2 tw--translate-x-1/2 tw-flex tw-gap-1">
-                            <button
-                              onClick={addColumn}
-                              className="tw-p-1 tw-border tw-border-green-400 tw-text-green-700 tw-bg-white tw-rounded tw-hover:tw-bg-green-50"
-                            >
-                              <Plus size={12} />
-                            </button>
-                            {row.length > 1 && (
-                              <button
-                                onClick={(e) => removeColumn(e, colIndex)}
-                                className="tw-p-1 tw-border tw-border-red-400 tw-text-red-700 tw-bg-white tw-rounded tw-hover:tw-bg-red-50"
-                              >
-                                <Minus size={12} />
-                              </button>
-                            )}
-                          </div>
-                        )}
-                        
-                        <input
-                          type="text"
-                          value={cell}
-                          onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
-                          className="tw-w-full tw-border-0 tw-p-1 tw-text-sm tw-bg-transparent"
-                          placeholder={hasHeader && rowIndex === 0 ? 'Header' : 'Cell'}
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Table Editor */}
+        <div className="tw-bg-white tw-rounded-xl tw-p-6 tw-shadow-sm tw-border tw-border-purple-100">
+          <h3 className="tw-text-lg tw-font-semibold tw-text-purple-700 tw-mb-4">
+            Table Content
+          </h3>
+          
+          <div className="tw-overflow-x-auto tw-bg-gray-50 tw-rounded-xl tw-p-4">
+            <div className="tw-relative tw-min-w-max">
+              <table className="tw-w-full tw-border-collapse tw-border tw-border-purple-300 tw-bg-white tw-rounded-lg tw-overflow-hidden">
+                <tbody>
+                  {tableData.map((row, rowIndex) => (
+                    <tr key={rowIndex} className={hasHeader && rowIndex === 0 ? 'tw-bg-purple-100' : ''}>
+                      {row.map((cell, colIndex) => (
+                        <td key={colIndex} className="tw-border tw-border-purple-300 tw-p-1 tw-relative tw-min-w-24">
+                          {/* Row controls - only show on first column */}
+                          {colIndex === 0 && (
+                            <div className="tw-absolute tw--left-20 tw-top-1/2 tw--translate-y-1/2 tw-flex tw-flex-col tw-gap-1">
+                              <ButtonGradient
+                                action="add"
+                                showText={false}
+                                customIcon={<Plus size={12} />}
+                                onClick={addRow}
+                                size="sm"
+                                disabled={loading || rows >= 20}
+                                customColors={{
+                                  primary: '#10B981',
+                                  secondary: '#059669',
+                                  gradient1: '#10B981',
+                                  gradient2: '#34D399',
+                                  text: '#FFFFFF'
+                                }}
+                              />
+                              {tableData.length > 1 && (
+                                <ButtonGradient
+                                  action="remove"
+                                  showText={false}
+                                  customIcon={<Minus size={12} />}
+                                  onClick={() => removeRow(rowIndex)}
+                                  size="sm"
+                                  disabled={loading}
+                                  customColors={{
+                                    primary: '#EF4444',
+                                    secondary: '#DC2626',
+                                    gradient1: '#EF4444',
+                                    gradient2: '#DC2626',
+                                    text: '#FFFFFF'
+                                  }}
+                                />
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Column controls - only show on first row */}
+                          {rowIndex === 0 && (
+                            <div className="tw-absolute tw--top-20 tw-left-1/2 tw--translate-x-1/2 tw-flex tw-gap-1">
+                              <ButtonGradient
+                                action="add"
+                                showText={false}
+                                customIcon={<Plus size={12} />}
+                                onClick={addColumn}
+                                size="sm"
+                                disabled={loading || cols >= 10}
+                                customColors={{
+                                  primary: '#10B981',
+                                  secondary: '#059669',
+                                  gradient1: '#10B981',
+                                  gradient2: '#34D399',
+                                  text: '#FFFFFF'
+                                }}
+                              />
+                              {row.length > 1 && (
+                                <ButtonGradient
+                                  action="remove"
+                                  showText={false}
+                                  customIcon={<Minus size={12} />}
+                                  onClick={() => removeColumn(colIndex)}
+                                  size="sm"
+                                  disabled={loading}
+                                  customColors={{
+                                    primary: '#EF4444',
+                                    secondary: '#DC2626',
+                                    gradient1: '#EF4444',
+                                    gradient2: '#DC2626',
+                                    text: '#FFFFFF'
+                                  }}
+                                />
+                              )}
+                            </div>
+                          )}
+                          
+                          <input
+                            type="text"
+                            value={cell}
+                            onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
+                            className="tw-w-full tw-border-0 tw-p-2 tw-text-sm tw-bg-transparent focus:tw-bg-white focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-purple-300 tw-rounded"
+                            placeholder={hasHeader && rowIndex === 0 ? 'Header' : 'Cell'}
+                            disabled={loading}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-        
-        <div className="tw-bg-purple-50 tw-p-4 tw-border-t tw-border-purple-200 tw-flex tw-justify-end tw-gap-2">
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onClose();
-            }}
-            className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-px-4 tw-py-2 tw-hover:tw-bg-purple-50"
-          >
-            Cancel
-          </button>
-          <button 
-            onClick={(e) => handleSubmit(e)}
-            className="tw-bg-purple-600 tw-text-white tw-rounded tw-px-4 tw-py-2 tw-hover:tw-bg-purple-700"
-          >
-            {isEditing ? 'Update Table' : 'Insert Table'}
-          </button>
+
+        {/* Table Preview */}
+        {tableData.length > 0 && (
+          <div className="tw-bg-white tw-rounded-xl tw-p-6 tw-shadow-sm tw-border tw-border-purple-100">
+            <h3 className="tw-text-lg tw-font-semibold tw-text-purple-700 tw-mb-4">
+              Table Preview
+            </h3>
+            
+            <div className="tw-overflow-x-auto tw-bg-gray-50 tw-rounded-xl tw-p-4">
+              <div dangerouslySetInnerHTML={{ __html: generateTableHtml() }} />
+            </div>
+          </div>
+        )}
+
+        {/* Help Section */}
+        <div className="tw-bg-gradient-to-r tw-from-blue-50 tw-to-purple-50 tw-rounded-xl tw-p-6 tw-border tw-border-blue-200">
+          <h3 className="tw-text-lg tw-font-semibold tw-text-blue-700 tw-mb-3">
+            Table Creation Tips
+          </h3>
+          <ul className="tw-space-y-2 tw-text-sm tw-text-blue-600">
+            <li className="tw-flex tw-items-start tw-gap-2">
+              <span className="tw-text-blue-500 tw-font-bold">•</span>
+              Use the + and - buttons to add or remove rows and columns
+            </li>
+            <li className="tw-flex tw-items-start tw-gap-2">
+              <span className="tw-text-blue-500 tw-font-bold">•</span>
+              Enable "Has Header Row" for tables with column titles
+            </li>
+            <li className="tw-flex tw-items-start tw-gap-2">
+              <span className="tw-text-blue-500 tw-font-bold">•</span>
+              Choose from bordered, striped, or borderless table styles
+            </li>
+            <li className="tw-flex tw-items-start tw-gap-2">
+              <span className="tw-text-blue-500 tw-font-bold">•</span>
+              Double-click any table after insertion to edit it again
+            </li>
+            <li className="tw-flex tw-items-start tw-gap-2">
+              <span className="tw-text-blue-500 tw-font-bold">•</span>
+              Click table cells for additional row/column options
+            </li>
+          </ul>
         </div>
       </div>
-    </div>
+    </LearningModal>
   );
 };
 
 const TableButton: React.FC<TableButtonProps> = ({ onClick }) => {
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onClick(e);
-  };
-
   return (
-    <button 
-      className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-text-sm tw-hover:tw-bg-purple-50 tw-transition-colors" 
-      onClick={handleClick}
-      title="Insert Table (Ctrl+Shift+B)"
-    >
-      <TableIcon size={16} />
-    </button>
+    <ButtonGradient
+      action="custom"
+      showText={false}
+      customIcon={<TableIcon className="tw-w-4 tw-h-4" />}
+      onClick={(e) => onClick(e!)}
+      size="sm"
+      customColors={{
+        primary: '#8B5CF6',
+        secondary: '#7C3AED',
+        gradient1: '#8B5CF6',
+        gradient2: '#A855F7',
+        text: '#FFFFFF'
+      }}
+    />
   );
 };
 
@@ -458,69 +569,118 @@ const TableFloater: React.FC<TableFloaterProps> = ({ cellElement, onAction, onCl
       key: 'addRowAbove', 
       label: 'Add Row Above', 
       icon: <ChevronUp size={12} />,
-      className: 'tw-text-green-600 tw-hover:tw-bg-green-50'
+      action: 'add' as const,
+      colors: {
+        primary: '#10B981',
+        secondary: '#059669',
+        gradient1: '#10B981',
+        gradient2: '#34D399',
+        text: '#FFFFFF'
+      }
     },
     { 
       key: 'addRowBelow', 
       label: 'Add Row Below', 
       icon: <ChevronDown size={12} />,
-      className: 'tw-text-green-600 tw-hover:tw-bg-green-50'
+      action: 'add' as const,
+      colors: {
+        primary: '#10B981',
+        secondary: '#059669',
+        gradient1: '#10B981',
+        gradient2: '#34D399',
+        text: '#FFFFFF'
+      }
     },
     { 
       key: 'addColumnLeft', 
       label: 'Add Column Left', 
       icon: <ChevronLeft size={12} />,
-      className: 'tw-text-green-600 tw-hover:tw-bg-green-50'
+      action: 'add' as const,
+      colors: {
+        primary: '#10B981',
+        secondary: '#059669',
+        gradient1: '#10B981',
+        gradient2: '#34D399',
+        text: '#FFFFFF'
+      }
     },
     { 
       key: 'addColumnRight', 
       label: 'Add Column Right', 
       icon: <ChevronRight size={12} />,
-      className: 'tw-text-green-600 tw-hover:tw-bg-green-50'
+      action: 'add' as const,
+      colors: {
+        primary: '#10B981',
+        secondary: '#059669',
+        gradient1: '#10B981',
+        gradient2: '#34D399',
+        text: '#FFFFFF'
+      }
     },
     { 
       key: 'deleteRow', 
       label: 'Delete Row', 
       icon: <Minus size={12} />,
-      className: 'tw-text-red-600 tw-hover:tw-bg-red-50'
+      action: 'delete' as const,
+      colors: {
+        primary: '#EF4444',
+        secondary: '#DC2626',
+        gradient1: '#EF4444',
+        gradient2: '#DC2626',
+        text: '#FFFFFF'
+      }
     },
     { 
       key: 'deleteColumn', 
       label: 'Delete Column', 
       icon: <Minus size={12} />,
-      className: 'tw-text-red-600 tw-hover:tw-bg-red-50'
+      action: 'delete' as const,
+      colors: {
+        primary: '#EF4444',
+        secondary: '#DC2626',
+        gradient1: '#EF4444',
+        gradient2: '#DC2626',
+        text: '#FFFFFF'
+      }
     },
     { 
       key: 'deleteTable', 
       label: 'Delete Table', 
       icon: <Trash2 size={12} />,
-      className: 'tw-text-red-600 tw-hover:tw-bg-red-50'
+      action: 'delete' as const,
+      colors: {
+        primary: '#EF4444',
+        secondary: '#DC2626',
+        gradient1: '#EF4444',
+        gradient2: '#DC2626',
+        text: '#FFFFFF'
+      }
     }
   ];
 
   return (
     <div
-      className="cte-table-floater tw-fixed tw-bg-white tw-border tw-border-purple-300 tw-rounded tw-shadow-lg tw-p-2 tw-z-50"
+      className="cte-table-floater tw-fixed tw-bg-white tw-border-2 tw-border-purple-300 tw-rounded-xl tw-shadow-lg tw-p-3 tw-z-50"
       style={{
         top: position.top,
         left: position.left
       }}
     >
-      <div className="tw-flex tw-flex-col tw-gap-1">
-        {actions.map(action => (
-          <button
-            key={action.key}
-            className={`tw-flex tw-items-center tw-gap-2 tw-px-3 tw-py-1 tw-text-xs tw-rounded tw-transition-colors tw-w-full tw-text-left ${action.className}`}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onAction(action.key);
+      <div className="tw-flex tw-flex-col tw-gap-2">
+        {actions.map(actionItem => (
+          <ButtonGradient
+            key={actionItem.key}
+            action={actionItem.action}
+            customText={actionItem.label}
+            customIcon={actionItem.icon}
+            onClick={() => {
+              onAction(actionItem.key);
               onClose();
             }}
-          >
-            {action.icon}
-            {action.label}
-          </button>
+            size="sm"
+            customColors={actionItem.colors}
+            className="tw-justify-start tw-min-w-36"
+          />
         ))}
       </div>
     </div>
@@ -551,7 +711,7 @@ const handleTableInsertion = (
       
       // Add empty paragraph after table
       const emptyParagraph = document.createElement('p');
-      emptyParagraph.innerHTML = '<br>';
+      emptyParagraph.innerHTML = '&nbsp;';
       
       const newRange = document.createRange();
       newRange.setStartAfter(tableWrapper);
@@ -569,7 +729,7 @@ const handleTableInsertion = (
       
       // Add empty paragraph after table
       const emptyParagraph = document.createElement('p');
-      emptyParagraph.innerHTML = '<br>';
+      emptyParagraph.innerHTML = '&nbsp;';
       
       editorRef.current.appendChild(tableWrapper);
       editorRef.current.appendChild(emptyParagraph);
@@ -788,16 +948,16 @@ const deleteColumnFromTable = (table: HTMLElement, colIndex: number): void => {
 
 const updateTableInEditor = (
   tableData: TableData, 
-  editingTable: HTMLElement, 
+  editingTable: EditingTable, 
   editorRef: RefObject<HTMLElement>, 
   setShowTableModal: (show: boolean) => void, 
-  setEditingTable: (table: HTMLElement | null) => void, 
+  setEditingTable: (table: EditingTable | null) => void, 
   handleChange: () => void
 ): boolean => {
   try {
-    if (!editingTable || !editorRef.current) return false;
+    if (!editingTable?.element || !editorRef.current) return false;
 
-    const tableWrapper = editingTable.closest('.cte-table-wrapper') as HTMLElement;
+    const tableWrapper = editingTable.element.closest('.cte-table-wrapper') as HTMLElement;
     if (tableWrapper) {
       tableWrapper.innerHTML = tableData.html;
       
@@ -905,6 +1065,7 @@ const getTableStyles = (): string => {
       border: none;
       cursor: pointer;
       z-index: 10;
+      transition: background-color 0.2s ease;
     }
     
     .cte-table-edit-btn:hover {
@@ -914,6 +1075,18 @@ const getTableStyles = (): string => {
     .cte-table-floater {
       min-width: 150px;
       max-width: 200px;
+      animation: fadeIn 0.2s ease-out;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
     
     .cte-table-floater button {
@@ -921,9 +1094,25 @@ const getTableStyles = (): string => {
       background: transparent;
     }
     
+    /* Responsive design */
     @media (max-width: 768px) {
       .cte-table-wrapper {
         overflow-x: scroll;
+        scrollbar-width: thin;
+        scrollbar-color: #c084fc #f3e8ff;
+      }
+      
+      .cte-table-wrapper::-webkit-scrollbar {
+        height: 6px;
+      }
+      
+      .cte-table-wrapper::-webkit-scrollbar-track {
+        background: #f3e8ff;
+      }
+      
+      .cte-table-wrapper::-webkit-scrollbar-thumb {
+        background: #c084fc;
+        border-radius: 3px;
       }
       
       .cte-table {
@@ -934,13 +1123,68 @@ const getTableStyles = (): string => {
         min-width: 120px;
         max-width: 150px;
       }
+      
+      .cte-table th,
+      .cte-table td {
+        padding: 6px;
+        font-size: 14px;
+      }
+    }
+    
+    /* Mobile specific styles */
+    @media (max-width: 480px) {
+      .cte-table th,
+      .cte-table td {
+        padding: 4px;
+        font-size: 13px;
+      }
+      
+      .cte-table-edit-btn {
+        top: -28px;
+        font-size: 11px;
+        padding: 3px 6px;
+      }
+    }
+    
+    /* Print styles */
+    @media print {
+      .cte-table-edit-btn {
+        display: none;
+      }
+      
+      .cte-table-floater {
+        display: none;
+      }
+      
+      .cte-table {
+        break-inside: avoid;
+      }
+    }
+    
+    /* Focus styles for accessibility */
+    .cte-table td:focus,
+    .cte-table th:focus {
+      outline: 2px solid #8b5cf6;
+      outline-offset: 2px;
+    }
+    
+    /* Table selection styles */
+    .cte-table td.selected,
+    .cte-table th.selected {
+      background-color: #e9d5ff !important;
     }
   `;
 };
 
+// Export components and utilities
+export const Button = TableButton;
+export const Modal = TableModal;
+export const Floater = TableFloater;
+
+// Main Table object with all functionality
 const Table = {
-  Modal: TableModal,
   Button: TableButton,
+  Modal: TableModal,
   Floater: TableFloater,
   handleTableInsertion,
   setupTableHandlers,
@@ -956,5 +1200,11 @@ export {
   handleTableInsertion, 
   setupTableHandlers, 
   updateTableInEditor, 
-  getTableStyles 
+  getTableStyles,
+  type TableData,
+  type TableModalProps,
+  type TableButtonProps,
+  type TableFloaterProps,
+  type EditingTable,
+  type TableComponentProps
 };

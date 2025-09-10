@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Bold, Italic, Underline, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, Strikethrough, Subscript, Superscript, Link } from 'lucide-react';
-import { Heading } from 'lucide-react';
+import { Bold, Italic, Underline, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, Strikethrough, Subscript, Superscript, Link, Heading, ChevronDown } from 'lucide-react';
+import { ButtonGradient } from '../../../button/ButtonTemplate';
 
 // Custom execCommand functions for semantic elements
 const execStrongCommand = (editorRef, handleChange) => {
@@ -45,134 +45,115 @@ const execEmCommand = (editorRef, handleChange) => {
   }
 };
 
-// Font style buttons (Bold, Italic, Underline, Strikethrough)
+// Font style buttons using ButtonGradient with tooltips (ICON-ONLY)
 export const BoldButton = ({ onClick, editorRef, handleChange }) => (
-  <button 
-    className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-text-sm tw-hover:tw-bg-purple-50 tw-transition-colors" 
-    onClick={(e) => {
-      e.preventDefault();
-      e.stopPropagation();
+  <ButtonGradient
+    action="edit"
+    customIcon={<Bold className="tw-w-4 tw-h-4" />}
+    onClick={() => {
       if (editorRef && handleChange) {
         execStrongCommand(editorRef, handleChange);
       } else {
         onClick?.();
       }
     }}
-    onMouseDown={(e) => e.preventDefault()}
-    title="Bold (Ctrl+B)"
-  >
-    <Bold size={16} />
-  </button>
+    size="md"
+    showText={false}
+    tooltip="Bold (Ctrl+B)"
+    className="tw-w-8 tw-h-8"
+  />
 );
 
 export const ItalicButton = ({ onClick, editorRef, handleChange }) => (
-  <button 
-    className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-text-sm tw-hover:tw-bg-purple-50 tw-transition-colors" 
-    onClick={(e) => {
-      e.preventDefault();
-      e.stopPropagation();
+  <ButtonGradient
+    action="edit"
+    customIcon={<Italic className="tw-w-4 tw-h-4" />}
+    onClick={() => {
       if (editorRef && handleChange) {
         execEmCommand(editorRef, handleChange);
       } else {
         onClick?.();
       }
     }}
-    onMouseDown={(e) => e.preventDefault()}
-    title="Italic (Ctrl+I)"
-  >
-    <Italic size={16} />
-  </button>
+    size="md"
+    showText={false}
+    tooltip="Italic (Ctrl+I)"
+    className="tw-w-8 tw-h-8"
+  />
 );
 
 export const UnderlineButton = ({ onClick }) => (
-  <button 
-    className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-text-sm tw-hover:tw-bg-purple-50 tw-transition-colors" 
-    onClick={(e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      onClick?.();
-    }}
-    onMouseDown={(e) => e.preventDefault()}
-    title="Underline (Ctrl+U)"
-  >
-    <Underline size={16} />
-  </button>
+  <ButtonGradient
+    action="edit"
+    customIcon={<Underline className="tw-w-4 tw-h-4" />}
+    onClick={onClick}
+    size="md"
+    showText={false}
+    tooltip="Underline (Ctrl+U)"
+    className="tw-w-8 tw-h-8"
+  />
 );
 
 export const StrikethroughButton = ({ onClick }) => (
-  <button 
-    className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-text-sm tw-hover:tw-bg-purple-50 tw-transition-colors" 
-    onClick={(e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      onClick?.();
-    }}
-    onMouseDown={(e) => e.preventDefault()}
-    title="Strikethrough (Ctrl+D)"
-  >
-    <Strikethrough size={16} />
-  </button>
+  <ButtonGradient
+    action="delete"
+    customIcon={<Strikethrough className="tw-w-4 tw-h-4" />}
+    onClick={onClick}
+    size="md"
+    showText={false}
+    tooltip="Strikethrough (Ctrl+Shift+X)"
+    className="tw-w-8 tw-h-8"
+  />
 );
 
 export const SubscriptButton = ({ onClick }) => (
-  <button 
-    className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-text-sm tw-hover:tw-bg-purple-50 tw-transition-colors" 
-    onClick={(e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      onClick?.();
-    }}
-    onMouseDown={(e) => e.preventDefault()}
-    title="Subscript (Ctrl+Shift+-)"
-  >
-    <Subscript size={16} />
-  </button>
+  <ButtonGradient
+    action="edit"
+    customIcon={<Subscript className="tw-w-4 tw-h-4" />}
+    onClick={onClick}
+    size="md"
+    showText={false}
+    tooltip="Subscript (Ctrl+,)"
+    className="tw-w-8 tw-h-8"
+  />
 );
 
 export const SuperscriptButton = ({ onClick }) => (
-  <button 
-    className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-text-sm tw-hover:tw-bg-purple-50 tw-transition-colors" 
-    onClick={(e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      onClick?.();
-    }}
-    onMouseDown={(e) => e.preventDefault()}
-    title="Superscript (Ctrl+Shift+=)"
-  >
-    <Superscript size={16} />
-  </button>
+  <ButtonGradient
+    action="edit"
+    customIcon={<Superscript className="tw-w-4 tw-h-4" />}
+    onClick={onClick}
+    size="md"
+    showText={false}
+    tooltip="Superscript (Ctrl+.)"
+    className="tw-w-8 tw-h-8"
+  />
 );
 
 export const HyperlinkButton = ({ onClick }) => (
-  <button 
-    className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-text-sm tw-hover:tw-bg-purple-50 tw-transition-colors" 
-    onClick={(e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      onClick?.();
-    }}
-    onMouseDown={(e) => e.preventDefault()}
-    title="Insert Link (Ctrl+Shift+L)"
-  >
-    <Link size={16} />
-  </button>
+  <ButtonGradient
+    action="link"
+    customIcon={<Link className="tw-w-4 tw-h-4" />}
+    onClick={onClick}
+    size="md"
+    showText={false}
+    tooltip="Insert Link (Ctrl+K)"
+    className="tw-w-8 tw-h-8"
+  />
 );
 
-// Font size dropdown with keyboard navigation
+// Font size dropdown with tooltip (WIDER for better text display)
 export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen }, ref) => {
   const [showFontSizeDropdown, setShowFontSizeDropdown] = useState(false);
-  const [currentFontSize, setCurrentFontSize] = useState('3'); // Default font size
+  const [currentFontSize, setCurrentFontSize] = useState('3');
   const fontSizes = ['1', '2', '3', '4', '5', '6', '7'];
   const dropdownRef = useRef(null);
   const savedSelectionRef = useRef(null);
   
-  // Sync with external state
   useEffect(() => {
     setShowFontSizeDropdown(isOpen || false);
   }, [isOpen]);
   
-  // Handle clicks outside the dropdown
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -182,15 +163,12 @@ export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen 
     }
     
     if (showFontSizeDropdown) {
-      // Save the current selection when dropdown opens
       const selection = window.getSelection();
       if (selection.rangeCount > 0) {
         savedSelectionRef.current = selection.getRangeAt(0).cloneRange();
         
-        // Get current font size
         try {
           const parentElement = selection.anchorNode.parentElement;
-          // Find the closest element with a font size
           let currentElement = parentElement;
           while (currentElement && !currentElement.getAttribute('size') && 
                 !currentElement.style.fontSize && 
@@ -198,14 +176,11 @@ export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen 
             currentElement = currentElement.parentElement;
           }
           
-          // Check if we found an element with font size
           if (currentElement && currentElement.getAttribute('size')) {
             setCurrentFontSize(currentElement.getAttribute('size'));
           } else if (currentElement && currentElement.style.fontSize) {
-            // Convert px to approximate font size
             const pxSize = parseInt(currentElement.style.fontSize);
             if (!isNaN(pxSize)) {
-              // Rough mapping from px to font size (1-7)
               const sizeMap = {
                 10: '1', 13: '2', 16: '3', 18: '4', 24: '5', 32: '6', 48: '7'
               };
@@ -215,7 +190,7 @@ export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen 
               setCurrentFontSize(sizeMap[closest]);
             }
           } else {
-            setCurrentFontSize('3'); // Default size if nothing is found
+            setCurrentFontSize('3');
           }
         } catch (e) {
           console.error('Error getting font size:', e);
@@ -232,7 +207,6 @@ export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen 
   }, [showFontSizeDropdown, onToggle]);
   
   const handleFontSizeSelect = (size) => {
-    // Restore the saved selection before applying the command
     if (savedSelectionRef.current) {
       const selection = window.getSelection();
       selection.removeAllRanges();
@@ -265,15 +239,12 @@ export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen 
     }
   };
 
-  // Expose methods through ref
   React.useImperativeHandle(ref, () => ({
     increaseFontSize,
     decreaseFontSize
   }));
   
-  const handleToggle = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleToggle = () => {
     const newState = !showFontSizeDropdown;
     setShowFontSizeDropdown(newState);
     if (onToggle) onToggle(newState);
@@ -281,34 +252,45 @@ export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen 
   
   return (
     <div className="tw-relative" ref={dropdownRef}>
-      <button 
-        className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-text-sm tw-flex tw-items-center tw-hover:tw-bg-purple-50 tw-transition-colors" 
+      <ButtonGradient
+        action="settings"
         onClick={handleToggle}
-        onMouseDown={(e) => e.preventDefault()}
-        title="Font Size (Ctrl+Shift+S)"
+        size="md"
+        showText={false}
+        tooltip={`Font Size: ${currentFontSize} (Ctrl+Shift+>/<)`}
+        className="tw-w-16 tw-h-8"
       >
-        <Type size={16} />
-        <span className="tw-ml-1">Size</span>
-      </button>
+        <div className="tw-flex tw-items-center tw-gap-1">
+          <Type className="tw-w-3 tw-h-3" />
+          <span className="tw-text-xs tw-font-bold">{currentFontSize}</span>
+        </div>
+      </ButtonGradient>
       
       {showFontSizeDropdown && (
-        <div className="tw-absolute tw-z-10 tw-mt-1 tw-bg-white tw-border tw-border-purple-300 tw-rounded tw-shadow-lg">
-          {fontSizes.map(size => (
-            <div 
-              key={size} 
-              className={`tw-px-4 tw-py-2 tw-cursor-pointer ${currentFontSize === size ? 'tw-bg-purple-200' : 'hover:tw-bg-purple-100'}`}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleFontSizeSelect(size);
-              }}
-              onMouseDown={(e) => e.preventDefault()}
-            >
-              <span style={{ fontSize: `${parseInt(size) * 0.25 + 0.5}rem` }}>
-                {size}
-              </span>
+        <div className="tw-absolute tw-z-50 tw-mt-1 tw-bg-white tw-border-2 tw-border-purple-300 tw-rounded-xl tw-shadow-2xl tw-min-w-[120px]">
+          <div className="tw-p-2">
+            <div className="tw-text-xs tw-font-semibold tw-text-purple-700 tw-mb-2 tw-px-2">Font Size</div>
+            <div className="tw-space-y-1">
+              {fontSizes.map(size => (
+                <button
+                  key={size} 
+                  className={`tw-w-full tw-px-3 tw-py-2 tw-text-left tw-rounded-lg tw-transition-all tw-duration-200 tw-flex tw-items-center tw-justify-between ${
+                    currentFontSize === size 
+                      ? 'tw-bg-purple-100 tw-text-purple-700 tw-font-semibold' 
+                      : 'hover:tw-bg-purple-50 tw-text-gray-700'
+                  }`}
+                  onClick={() => handleFontSizeSelect(size)}
+                >
+                  <span style={{ fontSize: `${parseInt(size) * 0.25 + 0.5}rem` }}>
+                    Size {size}
+                  </span>
+                  {currentFontSize === size && (
+                    <div className="tw-w-2 tw-h-2 tw-bg-purple-600 tw-rounded-full"></div>
+                  )}
+                </button>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       )}
     </div>
@@ -317,10 +299,10 @@ export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen 
 
 FontSizeButton.displayName = 'FontSizeButton';
 
-// Font name dropdown
+// Font name dropdown with tooltip (WIDER for font names)
 export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
   const [showFontNameDropdown, setShowFontNameDropdown] = useState(false);
-  const [currentFontName, setCurrentFontName] = useState('Arial'); // Default font
+  const [currentFontName, setCurrentFontName] = useState('Arial');
   const fontNames = [
     'Arial', 
     'Courier New', 
@@ -333,12 +315,10 @@ export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
   const dropdownRef = useRef(null);
   const savedSelectionRef = useRef(null);
   
-  // Sync with external state
   useEffect(() => {
     setShowFontNameDropdown(isOpen || false);
   }, [isOpen]);
   
-  // Handle clicks outside the dropdown
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -348,15 +328,12 @@ export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
     }
     
     if (showFontNameDropdown) {
-      // Save the current selection when dropdown opens
       const selection = window.getSelection();
       if (selection.rangeCount > 0) {
         savedSelectionRef.current = selection.getRangeAt(0).cloneRange();
         
-        // Get current font family
         try {
           const parentElement = selection.anchorNode.parentElement;
-          // Find the closest element with a font family
           let currentElement = parentElement;
           while (currentElement && !currentElement.getAttribute('face') && 
                 !getComputedStyle(currentElement).fontFamily && 
@@ -364,23 +341,19 @@ export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
             currentElement = currentElement.parentElement;
           }
           
-          // Check if we found an element with font family
           if (currentElement && currentElement.getAttribute('face')) {
             setCurrentFontName(currentElement.getAttribute('face'));
           } else if (currentElement) {
-            // Get computed font family
             const fontFamily = getComputedStyle(currentElement).fontFamily;
             if (fontFamily) {
-              // Extract the first font name from the font-family string
               const firstFont = fontFamily.split(',')[0].replace(/['"]/g, '').trim();
-              // Find the closest match in our fontNames array
               const matchedFont = fontNames.find(font => 
                 firstFont.toLowerCase().includes(font.toLowerCase())
               );
               setCurrentFontName(matchedFont || 'Arial');
             }
           } else {
-            setCurrentFontName('Arial'); // Default font if nothing is found
+            setCurrentFontName('Arial');
           }
         } catch (e) {
           console.error('Error getting font family:', e);
@@ -397,7 +370,6 @@ export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
   }, [showFontNameDropdown, fontNames, onToggle]);
   
   const handleFontNameSelect = (fontName) => {
-    // Restore the saved selection before applying the command
     if (savedSelectionRef.current) {
       const selection = window.getSelection();
       selection.removeAllRanges();
@@ -414,50 +386,68 @@ export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
     if (onToggle) onToggle(false);
   };
   
-  const handleToggle = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleToggle = () => {
     const newState = !showFontNameDropdown;
     setShowFontNameDropdown(newState);
     if (onToggle) onToggle(newState);
   };
   
+  const getShortFontName = (name) => {
+    if (name === 'Times New Roman') return 'Times';
+    if (name === 'Courier New') return 'Courier';
+    if (name === 'Trebuchet MS') return 'Trebuchet';
+    return name.length > 8 ? name.substring(0, 8) : name;
+  };
+  
   return (
     <div className="tw-relative" ref={dropdownRef}>
-      <button 
-        className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-text-sm tw-flex tw-items-center tw-hover:tw-bg-purple-50 tw-transition-colors" 
+      <ButtonGradient
+        action="settings"
         onClick={handleToggle}
-        onMouseDown={(e) => e.preventDefault()}
-        title="Font Family (Ctrl+Shift+Z)"
+        size="md"
+        showText={false}
+        tooltip={`Font: ${currentFontName}`}
+        className="tw-w-20 tw-h-8"
       >
-        <Type size={16} />
-        <span className="tw-ml-1">Font</span>
-      </button>
+        <div className="tw-flex tw-items-center tw-gap-1">
+          <Type className="tw-w-3 tw-h-3" />
+          <span className="tw-text-xs tw-font-medium tw-max-w-[40px] tw-truncate">
+            {getShortFontName(currentFontName)}
+          </span>
+        </div>
+      </ButtonGradient>
       
       {showFontNameDropdown && (
-        <div className="tw-absolute tw-z-10 tw-mt-1 tw-bg-white tw-border tw-border-purple-300 tw-rounded tw-shadow-lg tw-w-48">
-          {fontNames.map(fontName => (
-            <div 
-              key={fontName} 
-              className={`tw-px-4 tw-py-2 tw-cursor-pointer ${currentFontName === fontName ? 'tw-bg-purple-200' : 'hover:tw-bg-purple-100'}`}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleFontNameSelect(fontName);
-              }}
-              onMouseDown={(e) => e.preventDefault()}
-              style={{ fontFamily: fontName }}
-            >
-              {fontName}
+        <div className="tw-absolute tw-z-50 tw-mt-1 tw-bg-white tw-border-2 tw-border-purple-300 tw-rounded-xl tw-shadow-2xl tw-min-w-[200px]">
+          <div className="tw-p-2">
+            <div className="tw-text-xs tw-font-semibold tw-text-purple-700 tw-mb-2 tw-px-2">Font Family</div>
+            <div className="tw-space-y-1 tw-max-h-60 tw-overflow-y-auto">
+              {fontNames.map(fontName => (
+                <button
+                  key={fontName} 
+                  className={`tw-w-full tw-px-3 tw-py-2 tw-text-left tw-rounded-lg tw-transition-all tw-duration-200 tw-flex tw-items-center tw-justify-between ${
+                    currentFontName === fontName 
+                      ? 'tw-bg-purple-100 tw-text-purple-700 tw-font-semibold' 
+                      : 'hover:tw-bg-purple-50 tw-text-gray-700'
+                  }`}
+                  onClick={() => handleFontNameSelect(fontName)}
+                  style={{ fontFamily: fontName }}
+                >
+                  <span>{fontName}</span>
+                  {currentFontName === fontName && (
+                    <div className="tw-w-2 tw-h-2 tw-bg-purple-600 tw-rounded-full"></div>
+                  )}
+                </button>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       )}
     </div>
   );
 };
 
-// Text alignment dropdown with keyboard navigation
+// Text alignment dropdown with tooltip (ICON-ONLY)
 export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen }, ref) => {
   const [showAlignmentDropdown, setShowAlignmentDropdown] = useState(false);
   const [currentAlignment, setCurrentAlignment] = useState('left');
@@ -472,12 +462,10 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
   ];
   const dropdownRef = useRef(null);
   
-  // Sync with external state
   useEffect(() => {
     setShowAlignmentDropdown(isOpen || false);
   }, [isOpen]);
   
-  // Handle clicks outside the dropdown
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -487,7 +475,6 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
     }
 
     if (showAlignmentDropdown) {
-      // Save current selection when dropdown is opened
       const selection = window.getSelection();
       if (selection.rangeCount > 0) {
         savedSelectionRef.current = selection.getRangeAt(0).cloneRange();
@@ -502,7 +489,6 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
   }, [showAlignmentDropdown, onToggle]);
 
   const handleAlignmentSelect = (alignmentValue) => {
-    // Restore the saved selection before applying the command
     if (savedSelectionRef.current) {
       const selection = window.getSelection();
       selection.removeAllRanges();
@@ -520,7 +506,6 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
     };
     setCurrentAlignment(alignmentMap[alignmentValue]);
     
-    // Update index
     const index = alignmentOptions.findIndex(opt => opt.value === alignmentValue);
     setCurrentAlignmentIndex(index);
     
@@ -540,7 +525,6 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
     handleAlignmentSelect(newAlignment.value);
   };
 
-  // Expose methods through ref
   React.useImperativeHandle(ref, () => ({
     cycleNext: () => cycleAlignment('next'),
     cyclePrev: () => cycleAlignment('prev')
@@ -559,11 +543,22 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
     return option ? option.icon : AlignLeft;
   };
   
+  const getCurrentLabel = () => {
+    const option = alignmentOptions.find(opt => {
+      const alignmentMap = {
+        'justifyLeft': 'left',
+        'justifyCenter': 'center', 
+        'justifyRight': 'right',
+        'justifyFull': 'justify'
+      };
+      return alignmentMap[opt.value] === currentAlignment;
+    });
+    return option ? option.label : 'Left';
+  };
+  
   const CurrentIcon = getCurrentIcon();
   
-  const handleToggle = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleToggle = () => {
     const newState = !showAlignmentDropdown;
     setShowAlignmentDropdown(newState);
     if (onToggle) onToggle(newState);
@@ -571,44 +566,51 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
   
   return (
     <div className="tw-relative" ref={dropdownRef}>
-      <button 
-        className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-text-sm tw-flex tw-items-center tw-hover:tw-bg-purple-50 tw-transition-colors" 
+      <ButtonGradient
+        action="settings"
+        customIcon={<CurrentIcon className="tw-w-4 tw-h-4" />}
         onClick={handleToggle}
-        onMouseDown={(e) => e.preventDefault()}
-        title="Text Alignment (Ctrl+Shift+A)"
-      >
-        <CurrentIcon size={16} />
-        <span className="tw-ml-1">Align</span>
-      </button>
+        size="md"
+        showText={false}
+        tooltip={`Align ${getCurrentLabel()} (Ctrl+Shift+L/E/R/J)`}
+        className="tw-w-8 tw-h-8"
+      />
       
       {showAlignmentDropdown && (
-        <div className="tw-absolute tw-z-10 tw-mt-1 tw-bg-white tw-border tw-border-purple-300 tw-rounded tw-shadow-lg tw-w-32">
-          {alignmentOptions.map(option => {
-            const Icon = option.icon;
-            const alignmentMap = {
-              'justifyLeft': 'left',
-              'justifyCenter': 'center', 
-              'justifyRight': 'right',
-              'justifyFull': 'justify'
-            };
-            const isSelected = alignmentMap[option.value] === currentAlignment;
-            
-            return (
-              <div 
-                key={option.value} 
-                className={`tw-px-4 tw-py-2 tw-cursor-pointer tw-flex tw-items-center ${isSelected ? 'tw-bg-purple-200' : 'hover:tw-bg-purple-100'}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleAlignmentSelect(option.value);
-                }}
-                onMouseDown={(e) => e.preventDefault()}
-              >
-                <Icon size={16} className="tw-mr-2" />
-                {option.label}
-              </div>
-            );
-          })}
+        <div className="tw-absolute tw-z-50 tw-mt-1 tw-bg-white tw-border-2 tw-border-purple-300 tw-rounded-xl tw-shadow-2xl tw-min-w-[150px]">
+          <div className="tw-p-2">
+            <div className="tw-text-xs tw-font-semibold tw-text-purple-700 tw-mb-2 tw-px-2">Text Alignment</div>
+            <div className="tw-space-y-1">
+              {alignmentOptions.map(option => {
+                const Icon = option.icon;
+                const alignmentMap = {
+                  'justifyLeft': 'left',
+                  'justifyCenter': 'center', 
+                  'justifyRight': 'right',
+                  'justifyFull': 'justify'
+                };
+                const isSelected = alignmentMap[option.value] === currentAlignment;
+                
+                return (
+                  <button
+                    key={option.value} 
+                    className={`tw-w-full tw-px-3 tw-py-2 tw-text-left tw-rounded-lg tw-transition-all tw-duration-200 tw-flex tw-items-center tw-gap-3 ${
+                      isSelected 
+                        ? 'tw-bg-purple-100 tw-text-purple-700 tw-font-semibold' 
+                        : 'hover:tw-bg-purple-50 tw-text-gray-700'
+                    }`}
+                    onClick={() => handleAlignmentSelect(option.value)}
+                  >
+                    <Icon className="tw-w-4 tw-h-4" />
+                    <span className="tw-flex-1">{option.label}</span>
+                    {isSelected && (
+                      <div className="tw-w-2 tw-h-2 tw-bg-purple-600 tw-rounded-full"></div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -617,21 +619,21 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
 
 AlignmentButton.displayName = 'AlignmentButton';
 
+// Heading dropdown with tooltip (WIDER for heading text)
 export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }, ref) => {
   const [showHeadingDropdown, setShowHeadingDropdown] = useState(false);
   const [currentHeading, setCurrentHeading] = useState('normal');
   const savedSelectionRef = useRef(null);
   
   const headingOptions = [
-    { value: 'normal', label: 'Normal Text', tag: 'p' },
-    { value: 'h1', label: 'Heading 1', tag: 'h1' },
-    { value: 'h2', label: 'Heading 2', tag: 'h2' },
-    { value: 'h3', label: 'Heading 3', tag: 'h3' },
-    { value: 'h4', label: 'Heading 4', tag: 'h4' }
+    { value: 'normal', label: 'Normal Text', tag: 'p', shortLabel: 'P' },
+    { value: 'h1', label: 'Heading 1', tag: 'h1', shortLabel: 'H1' },
+    { value: 'h2', label: 'Heading 2', tag: 'h2', shortLabel: 'H2' },
+    { value: 'h3', label: 'Heading 3', tag: 'h3', shortLabel: 'H3' },
+    { value: 'h4', label: 'Heading 4', tag: 'h4', shortLabel: 'H4' }
   ];
   const dropdownRef = useRef(null);
   
-  // Methods for direct heading application (for keyboard shortcuts)
   const applyHeading = (level) => {
     if (level === 'normal') {
       execCommand('formatBlock', '<p>');
@@ -641,7 +643,6 @@ export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }
     setCurrentHeading(level === 'normal' ? 'normal' : `h${level}`);
   };
 
-  // Expose methods through ref
   React.useImperativeHandle(ref, () => ({
     applyH1: () => applyHeading(1),
     applyH2: () => applyHeading(2),
@@ -650,12 +651,10 @@ export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }
     applyNormal: () => applyHeading('normal')
   }));
   
-  // Sync with external state
   useEffect(() => {
     setShowHeadingDropdown(isOpen || false);
   }, [isOpen]);
   
-  // Handle clicks outside the dropdown
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -665,15 +664,12 @@ export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }
     }
     
     if (showHeadingDropdown) {
-      // Save the current selection when dropdown opens
       const selection = window.getSelection();
       if (selection.rangeCount > 0) {
         savedSelectionRef.current = selection.getRangeAt(0).cloneRange();
         
-        // Get current heading level
         try {
           const parentElement = selection.anchorNode.parentElement || selection.anchorNode;
-          // Find the closest heading element
           let currentElement = parentElement;
           while (currentElement && !['H1', 'H2', 'H3', 'H4'].includes(currentElement.tagName) && 
                 currentElement !== document.body) {
@@ -700,7 +696,6 @@ export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }
   }, [showHeadingDropdown, onToggle]);
   
   const handleHeadingSelect = (headingValue) => {
-    // Restore the saved selection before applying the command
     if (savedSelectionRef.current) {
       const selection = window.getSelection();
       selection.removeAllRanges();
@@ -729,10 +724,13 @@ export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }
     const option = headingOptions.find(opt => opt.value === currentHeading);
     return option ? option.label : 'Normal Text';
   };
+
+  const getCurrentShortLabel = () => {
+    const option = headingOptions.find(opt => opt.value === currentHeading);
+    return option ? option.shortLabel : 'P';
+  };
   
-  const handleToggle = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleToggle = () => {
     const newState = !showHeadingDropdown;
     setShowHeadingDropdown(newState);
     if (onToggle) onToggle(newState);
@@ -740,46 +738,57 @@ export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }
   
   return (
     <div className="tw-relative" ref={dropdownRef}>
-      <button 
-        className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-text-sm tw-flex tw-items-center tw-hover:tw-bg-purple-50 tw-transition-colors" 
+      <ButtonGradient
+        action="settings"
         onClick={handleToggle}
-        onMouseDown={(e) => e.preventDefault()}
-        title="Heading (Ctrl+Shift+G)"
+        size="md"
+        showText={false}
+        tooltip={`${getCurrentLabel()} (Ctrl+1-4)`}
+        className="tw-w-14 tw-h-8"
       >
-        <Heading size={16} />
-        <span className="tw-ml-1">{getCurrentLabel()}</span>
-      </button>
+        <div className="tw-flex tw-items-center tw-gap-1">
+          <Heading className="tw-w-3 tw-h-3" />
+          <span className="tw-text-xs tw-font-bold">{getCurrentShortLabel()}</span>
+        </div>
+      </ButtonGradient>
       
       {showHeadingDropdown && (
-        <div className="tw-absolute tw-z-10 tw-mt-1 tw-bg-white tw-border tw-border-purple-300 tw-rounded tw-shadow-lg tw-w-40">
-          {headingOptions.map(option => {
-            const isSelected = option.value === currentHeading;
-            
-            return (
-              <div 
-                key={option.value} 
-                className={`tw-px-4 tw-py-2 tw-cursor-pointer tw-flex tw-items-center ${isSelected ? 'tw-bg-purple-200' : 'hover:tw-bg-purple-100'}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleHeadingSelect(option.value);
-                }}
-                onMouseDown={(e) => e.preventDefault()}
-              >
-                <span 
-                  style={{ 
-                    fontSize: option.value === 'h1' ? '1.5em' : 
-                            option.value === 'h2' ? '1.3em' : 
-                            option.value === 'h3' ? '1.1em' :
-                            option.value === 'h4' ? '1em' : '0.9em',
-                    fontWeight: option.value !== 'normal' ? 'bold' : 'normal'
-                  }}
-                >
-                  {option.label}
-                </span>
-              </div>
-            );
-          })}
+        <div className="tw-absolute tw-z-50 tw-mt-1 tw-bg-white tw-border-2 tw-border-purple-300 tw-rounded-xl tw-shadow-2xl tw-min-w-[180px]">
+          <div className="tw-p-2">
+            <div className="tw-text-xs tw-font-semibold tw-text-purple-700 tw-mb-2 tw-px-2">Text Style</div>
+            <div className="tw-space-y-1">
+              {headingOptions.map(option => {
+                const isSelected = option.value === currentHeading;
+                
+                return (
+                  <button
+                    key={option.value} 
+                    className={`tw-w-full tw-px-3 tw-py-2 tw-text-left tw-rounded-lg tw-transition-all tw-duration-200 tw-flex tw-items-center tw-justify-between ${
+                      isSelected 
+                        ? 'tw-bg-purple-100 tw-text-purple-700 tw-font-semibold' 
+                        : 'hover:tw-bg-purple-50 tw-text-gray-700'
+                    }`}
+                    onClick={() => handleHeadingSelect(option.value)}
+                  >
+                    <span 
+                      style={{ 
+                        fontSize: option.value === 'h1' ? '1.5em' : 
+                                option.value === 'h2' ? '1.3em' : 
+                                option.value === 'h3' ? '1.1em' :
+                                option.value === 'h4' ? '1em' : '0.9em',
+                        fontWeight: option.value !== 'normal' ? 'bold' : 'normal'
+                      }}
+                    >
+                      {option.label}
+                    </span>
+                    {isSelected && (
+                      <div className="tw-w-2 tw-h-2 tw-bg-purple-600 tw-rounded-full"></div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -788,7 +797,7 @@ export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }
 
 HeadingButton.displayName = 'HeadingButton';
 
-// Common buttons group
+// Common buttons group using ButtonGradient with icon-only design
 export const FontButtons = ({ 
   execCommand, 
   editorRef, 
@@ -814,45 +823,64 @@ export const FontButtons = ({
   };
 
   return (
-    <>
-      <BoldButton 
-        onClick={() => execCommand('bold')} 
-        editorRef={editorRef}
-        handleChange={handleChange}
-      />
-      <ItalicButton 
-        onClick={() => execCommand('italic')} 
-        editorRef={editorRef}
-        handleChange={handleChange}
-      />
-      <UnderlineButton onClick={() => execCommand('underline')} />
-      <StrikethroughButton onClick={() => execCommand('strikeThrough')} />
-      <SubscriptButton onClick={() => execCommand('subscript')} />
-      <SuperscriptButton onClick={() => execCommand('superscript')} />
-      <HyperlinkButton onClick={handleHyperlink} />
-      <FontSizeButton 
-        ref={fontSizeButtonRef}
-        execCommand={execCommand}
-        isOpen={dropdownStates?.fontSize || false}
-        onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, fontSize: isOpen }))}
-      />
-      <FontNameButton 
-        execCommand={execCommand}
-        isOpen={dropdownStates?.fontName || false}
-        onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, fontName: isOpen }))}
-      />
-      <HeadingButton 
-        ref={headingButtonRef}
-        execCommand={execCommand}
-        isOpen={dropdownStates?.heading || false}
-        onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, heading: isOpen }))}
-      />
-      <AlignmentButton 
-        ref={alignmentButtonRef}
-        execCommand={execCommand}
-        isOpen={dropdownStates?.alignment || false}
-        onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, alignment: isOpen }))}
-      />
-    </>
+    <div className="tw-flex tw-flex-wrap tw-gap-2 tw-items-center">
+      {/* Text Formatting Buttons */}
+      <div className="tw-flex tw-gap-1 tw-items-center tw-bg-purple-50 tw-rounded-lg tw-p-1">
+        <BoldButton 
+          onClick={() => execCommand('bold')} 
+          editorRef={editorRef}
+          handleChange={handleChange}
+        />
+        <ItalicButton 
+          onClick={() => execCommand('italic')} 
+          editorRef={editorRef}
+          handleChange={handleChange}
+        />
+        <UnderlineButton onClick={() => execCommand('underline')} />
+        <StrikethroughButton onClick={() => execCommand('strikeThrough')} />
+      </div>
+
+      {/* Script Buttons */}
+      <div className="tw-flex tw-gap-1 tw-items-center tw-bg-blue-50 tw-rounded-lg tw-p-1">
+        <SubscriptButton onClick={() => execCommand('subscript')} />
+        <SuperscriptButton onClick={() => execCommand('superscript')} />
+      </div>
+
+      {/* Link Button */}
+      <div className="tw-flex tw-gap-1 tw-items-center tw-bg-blue-50 tw-rounded-lg tw-p-1">
+        <HyperlinkButton onClick={handleHyperlink} />
+      </div>
+
+      {/* Font Controls */}
+      <div className="tw-flex tw-gap-1 tw-items-center tw-bg-gray-50 tw-rounded-lg tw-p-1">
+        <FontSizeButton 
+          ref={fontSizeButtonRef}
+          execCommand={execCommand}
+          isOpen={dropdownStates?.fontSize || false}
+          onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, fontSize: isOpen }))}
+        />
+        <FontNameButton 
+          execCommand={execCommand}
+          isOpen={dropdownStates?.fontName || false}
+          onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, fontName: isOpen }))}
+        />
+      </div>
+
+      {/* Text Structure */}
+      <div className="tw-flex tw-gap-1 tw-items-center tw-bg-green-50 tw-rounded-lg tw-p-1">
+        <HeadingButton 
+          ref={headingButtonRef}
+          execCommand={execCommand}
+          isOpen={dropdownStates?.heading || false}
+          onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, heading: isOpen }))}
+        />
+        <AlignmentButton 
+          ref={alignmentButtonRef}
+          execCommand={execCommand}
+          isOpen={dropdownStates?.alignment || false}
+          onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, alignment: isOpen }))}
+        />
+      </div>
+    </div>
   );
 };

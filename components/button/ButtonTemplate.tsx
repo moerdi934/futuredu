@@ -1,5 +1,5 @@
 // components/button/ButtonTemplate.tsx
-import React from 'react';
+import React, { useState, useRef, useEffect, forwardRef } from 'react';
 import { 
   Save, 
   Trash2, 
@@ -146,7 +146,7 @@ export type ActionType =
 
 export interface ButtonTemplateProps {
   action: ActionType;
-  onClick?: (action: ActionType) => void;
+  onClick?: (event?: React.MouseEvent<HTMLButtonElement>) => void;
   disabled?: boolean;
   loading?: boolean;
   customText?: string;
@@ -163,6 +163,8 @@ export interface ButtonTemplateProps {
   };
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  showText?: boolean;
+  children?: React.ReactNode;
 }
 
 // Comprehensive color schemes for all actions
@@ -214,7 +216,10 @@ const getActionColors = (action: ActionType) => {
     'preferences': { primary: '#6B7280', secondary: '#4B5563', light: '#F9FAFB', dark: '#374151', gradient1: '#6B7280', gradient2: '#9CA3AF', border: '#4B5563', text: '#FFFFFF' },
     'invite': { primary: '#10B981', secondary: '#059669', light: '#F0FDF4', dark: '#047857', gradient1: '#10B981', gradient2: '#34D399', border: '#059669', text: '#FFFFFF' },
     
-    // Content Actions - Various colors
+    // Custom - Default purple
+    'custom': { primary: '#8B5CF6', secondary: '#7C3AED', light: '#F3E8FF', dark: '#6D28D9', gradient1: '#8B5CF6', gradient2: '#A855F7', border: '#7C3AED', text: '#FFFFFF' },
+
+    // ... (semua color schemes lainnya sama seperti sebelumnya)
     'like': { primary: '#EF4444', secondary: '#DC2626', light: '#FEE2E2', dark: '#B91C1C', gradient1: '#EF4444', gradient2: '#F87171', border: '#DC2626', text: '#FFFFFF' },
     'unlike': { primary: '#6B7280', secondary: '#4B5563', light: '#F9FAFB', dark: '#374151', gradient1: '#6B7280', gradient2: '#9CA3AF', border: '#4B5563', text: '#FFFFFF' },
     'favorite': { primary: '#F59E0B', secondary: '#D97706', light: '#FFFBEB', dark: '#B45309', gradient1: '#F59E0B', gradient2: '#FBBF24', border: '#D97706', text: '#FFFFFF' },
@@ -225,8 +230,12 @@ const getActionColors = (action: ActionType) => {
     'copy': { primary: '#6B7280', secondary: '#4B5563', light: '#F9FAFB', dark: '#374151', gradient1: '#6B7280', gradient2: '#9CA3AF', border: '#4B5563', text: '#FFFFFF' },
     'comment': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
     'reply': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
+    'quote': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
+    'repost': { primary: '#10B981', secondary: '#059669', light: '#F0FDF4', dark: '#047857', gradient1: '#10B981', gradient2: '#34D399', border: '#059669', text: '#FFFFFF' },
+    'rate': { primary: '#F59E0B', secondary: '#D97706', light: '#FFFBEB', dark: '#B45309', gradient1: '#F59E0B', gradient2: '#FBBF24', border: '#D97706', text: '#FFFFFF' },
+    'review': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
     
-    // Media Actions - Cyan/Blue family
+    // Media Actions
     'play': { primary: '#10B981', secondary: '#059669', light: '#F0FDF4', dark: '#047857', gradient1: '#10B981', gradient2: '#34D399', border: '#059669', text: '#FFFFFF' },
     'pause': { primary: '#F59E0B', secondary: '#D97706', light: '#FFFBEB', dark: '#B45309', gradient1: '#F59E0B', gradient2: '#FBBF24', border: '#D97706', text: '#FFFFFF' },
     'stop': { primary: '#EF4444', secondary: '#DC2626', light: '#FEE2E2', dark: '#B91C1C', gradient1: '#EF4444', gradient2: '#DC2626', border: '#B91C1C', text: '#FFFFFF' },
@@ -246,8 +255,8 @@ const getActionColors = (action: ActionType) => {
     'camera': { primary: '#6B7280', secondary: '#4B5563', light: '#F9FAFB', dark: '#374151', gradient1: '#6B7280', gradient2: '#9CA3AF', border: '#4B5563', text: '#FFFFFF' },
     'video': { primary: '#EF4444', secondary: '#DC2626', light: '#FEE2E2', dark: '#B91C1C', gradient1: '#EF4444', gradient2: '#F87171', border: '#DC2626', text: '#FFFFFF' },
     'audio': { primary: '#10B981', secondary: '#059669', light: '#F0FDF4', dark: '#047857', gradient1: '#10B981', gradient2: '#34D399', border: '#059669', text: '#FFFFFF' },
-    
-    // Commerce Actions - Green/Blue family
+
+    // Commerce Actions
     'buy': { primary: '#10B981', secondary: '#059669', light: '#F0FDF4', dark: '#047857', gradient1: '#10B981', gradient2: '#34D399', border: '#059669', text: '#FFFFFF' },
     'sell': { primary: '#F59E0B', secondary: '#D97706', light: '#FFFBEB', dark: '#B45309', gradient1: '#F59E0B', gradient2: '#FBBF24', border: '#D97706', text: '#FFFFFF' },
     'cart': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
@@ -261,8 +270,8 @@ const getActionColors = (action: ActionType) => {
     'exchange': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
     'wishlist': { primary: '#EF4444', secondary: '#DC2626', light: '#FEE2E2', dark: '#B91C1C', gradient1: '#EF4444', gradient2: '#F87171', border: '#DC2626', text: '#FFFFFF' },
     'compare': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
-    
-    // Navigation Actions - Gray/Blue family
+
+    // Navigation Actions
     'home': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
     'back': { primary: '#6B7280', secondary: '#4B5563', light: '#F9FAFB', dark: '#374151', gradient1: '#6B7280', gradient2: '#9CA3AF', border: '#4B5563', text: '#FFFFFF' },
     'forward': { primary: '#6B7280', secondary: '#4B5563', light: '#F9FAFB', dark: '#374151', gradient1: '#6B7280', gradient2: '#9CA3AF', border: '#4B5563', text: '#FFFFFF' },
@@ -274,7 +283,7 @@ const getActionColors = (action: ActionType) => {
     'unlink': { primary: '#6B7280', secondary: '#4B5563', light: '#F9FAFB', dark: '#374151', gradient1: '#6B7280', gradient2: '#9CA3AF', border: '#4B5563', text: '#FFFFFF' },
     'external': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
     
-    // Data Actions - Various colors
+    // Data Actions
     'export': { primary: '#06B6D4', secondary: '#0891B2', light: '#F0F9FF', dark: '#0E7490', gradient1: '#06B6D4', gradient2: '#22D3EE', border: '#0891B2', text: '#FFFFFF' },
     'import': { primary: '#10B981', secondary: '#059669', light: '#F0FDF4', dark: '#047857', gradient1: '#10B981', gradient2: '#34D399', border: '#059669', text: '#FFFFFF' },
     'backup': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
@@ -286,7 +295,7 @@ const getActionColors = (action: ActionType) => {
     'merge': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
     'split': { primary: '#F59E0B', secondary: '#D97706', light: '#FFFBEB', dark: '#B45309', gradient1: '#F59E0B', gradient2: '#FBBF24', border: '#D97706', text: '#FFFFFF' },
     
-    // Communication Actions - Blue/Purple family
+    // Communication Actions
     'call': { primary: '#10B981', secondary: '#059669', light: '#F0FDF4', dark: '#047857', gradient1: '#10B981', gradient2: '#34D399', border: '#059669', text: '#FFFFFF' },
     'message': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
     'email': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
@@ -298,7 +307,7 @@ const getActionColors = (action: ActionType) => {
     'unsubscribe': { primary: '#6B7280', secondary: '#4B5563', light: '#F9FAFB', dark: '#374151', gradient1: '#6B7280', gradient2: '#9CA3AF', border: '#4B5563', text: '#FFFFFF' },
     'broadcast': { primary: '#8B5CF6', secondary: '#7C3AED', light: '#F3E8FF', dark: '#6D28D9', gradient1: '#8B5CF6', gradient2: '#A855F7', border: '#7C3AED', text: '#FFFFFF' },
     
-    // System Actions - Gray/Blue family
+    // System Actions
     'install': { primary: '#10B981', secondary: '#059669', light: '#F0FDF4', dark: '#047857', gradient1: '#10B981', gradient2: '#34D399', border: '#059669', text: '#FFFFFF' },
     'uninstall': { primary: '#EF4444', secondary: '#DC2626', light: '#FEE2E2', dark: '#B91C1C', gradient1: '#EF4444', gradient2: '#DC2626', border: '#B91C1C', text: '#FFFFFF' },
     'restart': { primary: '#F59E0B', secondary: '#D97706', light: '#FFFBEB', dark: '#B45309', gradient1: '#F59E0B', gradient2: '#FBBF24', border: '#D97706', text: '#FFFFFF' },
@@ -316,13 +325,6 @@ const getActionColors = (action: ActionType) => {
     'block': { primary: '#EF4444', secondary: '#DC2626', light: '#FEE2E2', dark: '#B91C1C', gradient1: '#EF4444', gradient2: '#DC2626', border: '#B91C1C', text: '#FFFFFF' },
     'unblock': { primary: '#10B981', secondary: '#059669', light: '#F0FDF4', dark: '#047857', gradient1: '#10B981', gradient2: '#34D399', border: '#059669', text: '#FFFFFF' },
     'report': { primary: '#EF4444', secondary: '#DC2626', light: '#FEE2E2', dark: '#B91C1C', gradient1: '#EF4444', gradient2: '#DC2626', border: '#B91C1C', text: '#FFFFFF' },
-    'quote': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
-    'repost': { primary: '#10B981', secondary: '#059669', light: '#F0FDF4', dark: '#047857', gradient1: '#10B981', gradient2: '#34D399', border: '#059669', text: '#FFFFFF' },
-    'rate': { primary: '#F59E0B', secondary: '#D97706', light: '#FFFBEB', dark: '#B45309', gradient1: '#F59E0B', gradient2: '#FBBF24', border: '#D97706', text: '#FFFFFF' },
-    'review': { primary: '#3B82F6', secondary: '#2563EB', light: '#EFF6FF', dark: '#1E40AF', gradient1: '#3B82F6', gradient2: '#60A5FA', border: '#2563EB', text: '#FFFFFF' },
-    
-    // Custom - Default purple
-    'custom': { primary: '#8B5CF6', secondary: '#7C3AED', light: '#F3E8FF', dark: '#6D28D9', gradient1: '#8B5CF6', gradient2: '#A855F7', border: '#7C3AED', text: '#FFFFFF' },
   };
 
   return colorSchemes[action] || colorSchemes.custom;
@@ -545,36 +547,65 @@ const getActionText = (action: ActionType, customText?: string) => {
   return textMap[action] || 'Action';
 };
 
-// IMPROVED Size configurations dengan minimum width untuk mencegah text wrapping
-const getSizeClasses = (size: 'sm' | 'md' | 'lg') => {
+// Size configurations dengan support untuk icon-only mode
+const getSizeClasses = (size: 'sm' | 'md' | 'lg', showText: boolean = true) => {
+  if (!showText) {
+    // Icon-only mode
+    const iconOnlySizeMap = {
+      'sm': { 
+        padding: 'tw-p-2', 
+        text: 'tw-text-sm', 
+        icon: 'tw-w-4 tw-h-4',
+        width: 'tw-w-8 tw-h-8',
+        gap: ''
+      },
+      'md': { 
+        padding: 'tw-p-2.5', 
+        text: 'tw-text-base', 
+        icon: 'tw-w-4 tw-h-4',
+        width: 'tw-w-10 tw-h-10',
+        gap: ''
+      },
+      'lg': { 
+        padding: 'tw-p-3', 
+        text: 'tw-text-lg', 
+        icon: 'tw-w-5 tw-h-5',
+        width: 'tw-w-12 tw-h-12',
+        gap: ''
+      },
+    };
+    return iconOnlySizeMap[size];
+  }
+
+  // Normal mode with text
   const sizeMap = {
     'sm': { 
       padding: 'tw-px-3 tw-py-2', 
       text: 'tw-text-sm', 
       icon: 'tw-w-4 tw-h-4',
-      minWidth: 'tw-min-w-[100px]', // Minimum width untuk mencegah wrapping
+      width: 'tw-min-w-[100px]',
       gap: 'tw-gap-2'
     },
     'md': { 
       padding: 'tw-px-4 tw-py-3', 
       text: 'tw-text-base', 
       icon: 'tw-w-4 tw-h-4',
-      minWidth: 'tw-min-w-[120px]', // Minimum width untuk mencegah wrapping
+      width: 'tw-min-w-[120px]',
       gap: 'tw-gap-2'
     },
     'lg': { 
       padding: 'tw-px-6 tw-py-4', 
       text: 'tw-text-lg', 
       icon: 'tw-w-5 tw-h-5',
-      minWidth: 'tw-min-w-[140px]', // Minimum width untuk mencegah wrapping
+      width: 'tw-min-w-[140px]',
       gap: 'tw-gap-3'
     },
   };
   return sizeMap[size];
 };
 
-// Button Template 1 - ButtonGradient (IMPROVED dengan better layout)
-export const ButtonGradient: React.FC<ButtonTemplateProps> = ({ 
+// Button Template 1 - ButtonGradient dengan ForwardRef
+export const ButtonGradient = forwardRef<HTMLButtonElement, ButtonTemplateProps>(({ 
   action, 
   onClick, 
   disabled, 
@@ -583,19 +614,22 @@ export const ButtonGradient: React.FC<ButtonTemplateProps> = ({
   customIcon, 
   customColors, 
   size = 'md',
-  className = ''
-}) => {
+  className = '',
+  showText = true,
+  children
+}, ref) => {
   const colors = customColors || getActionColors(action);
   const icon = customIcon || getActionIcon(action);
   const text = getActionText(action, customText);
-  const sizeClasses = getSizeClasses(size);
+  const sizeClasses = getSizeClasses(size, showText);
   
   return (
     <button
+      ref={ref}
       className={`
         tw-group 
         ${sizeClasses.padding} 
-        ${sizeClasses.minWidth}
+        ${showText ? sizeClasses.width : `${sizeClasses.width} tw-flex-shrink-0`}
         tw-font-bold 
         tw-rounded-xl 
         tw-shadow-lg 
@@ -611,28 +645,60 @@ export const ButtonGradient: React.FC<ButtonTemplateProps> = ({
         tw-flex
         tw-items-center
         tw-justify-center
-        ${sizeClasses.gap}
-        tw-whitespace-nowrap
+        ${showText ? sizeClasses.gap : ''}
+        ${showText ? 'tw-whitespace-nowrap' : ''}
+        focus:tw-outline-none
+        focus:tw-ring-2
+        focus:tw-ring-offset-2
+        tw-focus:tw-ring-opacity-50
         ${className}
       `}
-      onClick={() => onClick?.(action)}
+      onClick={(e) => {
+        console.log('ButtonGradient onClick - event:', e);
+        console.log('ButtonGradient onClick - currentTarget:', e.currentTarget);
+        onClick?.(e);
+      }}
       disabled={disabled || loading}
       style={{
         background: `linear-gradient(to bottom right, ${colors.gradient1}, ${colors.gradient2})`,
         color: colors.text,
+        focusRingColor: colors.primary + '50',
       }}
+      aria-label={text}
     >
       <div className="tw-absolute tw-inset-0 tw-bg-gradient-to-r tw-from-white tw-to-transparent tw-opacity-0 group-hover:tw-opacity-20 tw-transition tw-duration-300"></div>
-      <div style={{ display: 'flex', alignItems: 'center', animation: loading ? 'bounce 2s infinite' : 'none' }}>
-        {React.cloneElement(icon as React.ReactElement, { className: `${sizeClasses.icon} tw-flex-shrink-0` })}
-      </div>
-      <span className="tw-relative tw-z-10 tw-flex-shrink-0">{loading ? 'Loading...' : text}</span>
+      
+      {children ? (
+        <div className="tw-relative tw-z-10 tw-flex tw-items-center tw-justify-center">
+          {children}
+        </div>
+      ) : (
+        <>
+          <div 
+            className="tw-relative tw-z-10 tw-flex tw-items-center tw-justify-center"
+            style={{ 
+              animation: loading ? 'bounce 2s infinite' : 'none' 
+            }}
+          >
+            {React.cloneElement(icon as React.ReactElement, { 
+              className: `${sizeClasses.icon} tw-flex-shrink-0` 
+            })}
+          </div>
+          {showText && (
+            <span className="tw-relative tw-z-10 tw-flex-shrink-0">
+              {loading ? 'Loading...' : text}
+            </span>
+          )}
+        </>
+      )}
     </button>
   );
-};
+});
 
-// Button Template 2 - ButtonPlay (IMPROVED dengan better layout)
-export const ButtonPlay: React.FC<ButtonTemplateProps> = ({ 
+ButtonGradient.displayName = 'ButtonGradient';
+
+// Button Template 2 - ButtonPlay dengan ForwardRef
+export const ButtonPlay = forwardRef<HTMLButtonElement, ButtonTemplateProps>(({ 
   action, 
   onClick, 
   disabled, 
@@ -641,18 +707,21 @@ export const ButtonPlay: React.FC<ButtonTemplateProps> = ({
   customIcon, 
   customColors, 
   size = 'md',
-  className = ''
-}) => {
+  className = '',
+  showText = true,
+  children
+}, ref) => {
   const colors = customColors || getActionColors(action);
   const icon = customIcon || getActionIcon(action);
   const text = getActionText(action, customText);
-  const sizeClasses = getSizeClasses(size);
+  const sizeClasses = getSizeClasses(size, showText);
   
   return (
     <button
+      ref={ref}
       className={`
         ${sizeClasses.padding} 
-        ${sizeClasses.minWidth}
+        ${showText ? sizeClasses.width : `${sizeClasses.width} tw-flex-shrink-0`}
         tw-font-bold 
         tw-rounded-xl 
         tw-shadow-2xl 
@@ -666,17 +735,26 @@ export const ButtonPlay: React.FC<ButtonTemplateProps> = ({
         tw-flex
         tw-items-center
         tw-justify-center
-        ${sizeClasses.gap}
-        tw-whitespace-nowrap
+        ${showText ? sizeClasses.gap : ''}
+        ${showText ? 'tw-whitespace-nowrap' : ''}
+        focus:tw-outline-none
+        focus:tw-ring-2
+        focus:tw-ring-offset-2
+        tw-focus:tw-ring-opacity-50
         ${className}
       `}
-      onClick={() => onClick?.(action)}
+      onClick={(e) => {
+        console.log('ButtonPlay onClick - event:', e);
+        console.log('ButtonPlay onClick - currentTarget:', e.currentTarget);
+        onClick?.(e);
+      }}
       disabled={disabled || loading}
       style={{
         background: `linear-gradient(to bottom right, ${colors.gradient1}, ${colors.gradient2})`,
         color: colors.text,
         boxShadow: `0 25px 50px -12px ${colors.primary}50`,
-        animation: loading ? 'bounce 1s infinite' : 'none'
+        animation: loading ? 'bounce 1s infinite' : 'none',
+        focusRingColor: colors.primary + '50',
       }}
       onMouseEnter={(e) => {
         if (!disabled && !loading) {
@@ -688,17 +766,34 @@ export const ButtonPlay: React.FC<ButtonTemplateProps> = ({
           e.currentTarget.style.boxShadow = `0 25px 50px -12px ${colors.primary}50`;
         }
       }}
+      aria-label={text}
     >
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        {React.cloneElement(icon as React.ReactElement, { className: `${sizeClasses.icon} tw-flex-shrink-0` })}
-      </div>
-      <span className="tw-flex-shrink-0">{loading ? 'Loading...' : text}</span>
+      {children ? (
+        <div className="tw-flex tw-items-center tw-justify-center">
+          {children}
+        </div>
+      ) : (
+        <>
+          <div className="tw-flex tw-items-center tw-justify-center">
+            {React.cloneElement(icon as React.ReactElement, { 
+              className: `${sizeClasses.icon} tw-flex-shrink-0` 
+            })}
+          </div>
+          {showText && (
+            <span className="tw-flex-shrink-0">
+              {loading ? 'Loading...' : text}
+            </span>
+          )}
+        </>
+      )}
     </button>
   );
-};
+});
 
-// Button Template 3 - ButtonProfessional (IMPROVED dengan better layout)
-export const ButtonProfessional: React.FC<ButtonTemplateProps> = ({ 
+ButtonPlay.displayName = 'ButtonPlay';
+
+// Button Template 3 - ButtonProfessional dengan ForwardRef
+export const ButtonProfessional = forwardRef<HTMLButtonElement, ButtonTemplateProps>(({ 
   action, 
   onClick, 
   disabled, 
@@ -707,18 +802,21 @@ export const ButtonProfessional: React.FC<ButtonTemplateProps> = ({
   customIcon, 
   customColors, 
   size = 'md',
-  className = ''
-}) => {
+  className = '',
+  showText = true,
+  children
+}, ref) => {
   const colors = customColors || getActionColors(action);
   const icon = customIcon || getActionIcon(action);
   const text = getActionText(action, customText);
-  const sizeClasses = getSizeClasses(size);
+  const sizeClasses = getSizeClasses(size, showText);
   
   return (
     <button
+      ref={ref}
       className={`
         ${sizeClasses.padding} 
-        ${sizeClasses.minWidth}
+        ${showText ? sizeClasses.width : `${sizeClasses.width} tw-flex-shrink-0`}
         tw-font-bold 
         tw-rounded-2xl 
         tw-shadow-xl 
@@ -734,25 +832,51 @@ export const ButtonProfessional: React.FC<ButtonTemplateProps> = ({
         tw-flex
         tw-items-center
         tw-justify-center
-        ${sizeClasses.gap}
-        tw-whitespace-nowrap
+        ${showText ? sizeClasses.gap : ''}
+        ${showText ? 'tw-whitespace-nowrap' : ''}
+        focus:tw-outline-none
+        focus:tw-ring-2
+        focus:tw-ring-offset-2
+        tw-focus:tw-ring-opacity-50
         ${className}
       `}
-      onClick={() => onClick?.(action)}
+      onClick={(e) => {
+        console.log('ButtonProfessional onClick - event:', e);
+        console.log('ButtonProfessional onClick - currentTarget:', e.currentTarget);
+        onClick?.(e);
+      }}
       disabled={disabled || loading}
       style={{
         background: `linear-gradient(to right, ${colors.gradient1}, ${colors.gradient2})`,
         color: colors.text,
         borderBottomColor: colors.border,
+        focusRingColor: colors.primary + '50',
       }}
+      aria-label={text}
     >
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        {React.cloneElement(icon as React.ReactElement, { className: `${sizeClasses.icon} tw-flex-shrink-0` })}
-      </div>
-      <span className="tw-flex-shrink-0">{loading ? 'Processing...' : text}</span>
+      {children ? (
+        <div className="tw-flex tw-items-center tw-justify-center">
+          {children}
+        </div>
+      ) : (
+        <>
+          <div className="tw-flex tw-items-center tw-justify-center">
+            {React.cloneElement(icon as React.ReactElement, { 
+              className: `${sizeClasses.icon} tw-flex-shrink-0` 
+            })}
+          </div>
+          {showText && (
+            <span className="tw-flex-shrink-0">
+              {loading ? 'Processing...' : text}
+            </span>
+          )}
+        </>
+      )}
     </button>
   );
-};
+});
+
+ButtonProfessional.displayName = 'ButtonProfessional';
 
 // Default export untuk kemudahan import
 export default {
@@ -766,125 +890,3 @@ export type { ActionType, ButtonTemplateProps };
 
 // Helper functions untuk digunakan di luar komponen
 export { getActionColors, getActionIcon, getActionText };
-
-// Contoh usage dan dokumentasi
-export const ButtonExamples = {
-  // Basic usage
-  basic: {
-    save: '<ButtonGradient action="save" onClick={handleSave} />',
-    delete: '<ButtonPlay action="delete" onClick={handleDelete} />',
-    settings: '<ButtonProfessional action="settings" onClick={handleSettings} />'
-  },
-  
-  // With custom text
-  customText: {
-    example: '<ButtonGradient action="save" customText="Simpan Data" onClick={handleSave} />'
-  },
-  
-  // With custom colors
-  customColors: {
-    example: `<ButtonPlay 
-      action="custom" 
-      customText="Custom Action"
-      customColors={{
-        primary: '#FF6B6B',
-        secondary: '#FF5252',
-        gradient1: '#FF6B6B',
-        gradient2: '#FF5252',
-        text: '#FFFFFF'
-      }}
-      onClick={handleCustom} 
-    />`
-  },
-  
-  // With states
-  states: {
-    loading: '<ButtonGradient action="save" loading={true} onClick={handleSave} />',
-    disabled: '<ButtonPlay action="delete" disabled={true} onClick={handleDelete} />',
-  },
-  
-  // Different sizes - Now with better minimum widths
-  sizes: {
-    small: '<ButtonProfessional action="edit" size="sm" onClick={handleEdit} /> // min-width: 100px',
-    medium: '<ButtonGradient action="save" size="md" onClick={handleSave} /> // min-width: 120px',
-    large: '<ButtonPlay action="start" size="lg" onClick={handleStart} /> // min-width: 140px'
-  },
-  
-  // Filter button specific example
-  filterButton: {
-    example: `<ButtonGradient 
-      action="filter" 
-      size="sm" 
-      customText="Filter (5)" 
-      onClick={handleFilter}
-      className="tw-min-w-[120px]" // Extra safety untuk filter button
-    />`
-  }
-};
-
-// Action categories untuk memudahkan development
-export const ActionCategories = {
-  basic: ['save', 'cancel', 'apply', 'finish', 'clear', 'done', 'start', 'continue', 'submit', 'delete', 'edit', 'view'],
-  
-  user: ['login', 'logout', 'register', 'profile', 'account', 'settings', 'preferences', 'invite', 'follow', 'unfollow'],
-  
-  content: ['like', 'unlike', 'favorite', 'unfavorite', 'bookmark', 'unbookmark', 'comment', 'reply', 'share'],
-  
-  media: ['play', 'pause', 'stop', 'next', 'previous', 'record', 'mute', 'unmute', 'fullscreen', 'capture'],
-  
-  commerce: ['buy', 'sell', 'cart', 'checkout', 'payment', 'order', 'refund', 'return', 'wishlist'],
-  
-  data: ['export', 'import', 'backup', 'restore', 'sync', 'connect', 'disconnect', 'archive', 'sort'],
-  
-  communication: ['call', 'message', 'email', 'chat', 'notify', 'alert', 'subscribe', 'broadcast'],
-  
-  navigation: ['menu', 'home', 'back', 'forward', 'link', 'external', 'redirect'],
-  
-  system: ['install', 'uninstall', 'update', 'configure', 'reset', 'enable', 'disable', 'lock', 'unlock']
-} as const;
-
-// Size recommendations untuk different use cases
-export const SizeRecommendations = {
-  // Untuk button di toolbar/filter area
-  toolbar: {
-    size: 'sm' as const,
-    minWidth: 'tw-min-w-[100px]',
-    description: 'Cocok untuk button filter, toolbar, dan kontrol kecil'
-  },
-  
-  // Untuk button di form
-  form: {
-    size: 'md' as const,
-    minWidth: 'tw-min-w-[120px]',
-    description: 'Standar untuk button di form, modal, dan aksi utama'
-  },
-  
-  // Untuk CTA dan button penting
-  cta: {
-    size: 'lg' as const,
-    minWidth: 'tw-min-w-[140px]',
-    description: 'Untuk Call-to-Action dan button yang perlu menarik perhatian'
-  }
-} as const;
-
-// CSS Classes yang bisa digunakan untuk override jika diperlukan
-export const ButtonCSSClasses = {
-  // Untuk mencegah text wrapping
-  noWrap: 'tw-whitespace-nowrap tw-overflow-hidden tw-text-ellipsis',
-  
-  // Custom minimum widths
-  minWidths: {
-    xs: 'tw-min-w-[80px]',
-    sm: 'tw-min-w-[100px]',
-    md: 'tw-min-w-[120px]',
-    lg: 'tw-min-w-[140px]',
-    xl: 'tw-min-w-[160px]',
-    '2xl': 'tw-min-w-[180px]'
-  },
-  
-  // Responsive behavior
-  responsive: {
-    stackOnMobile: 'tw-w-full sm:tw-w-auto',
-    hideTextOnMobile: 'tw-px-2 sm:tw-px-4 [&>span]:tw-hidden sm:[&>span]:tw-inline'
-  }
-} as const;

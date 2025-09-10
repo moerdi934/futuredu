@@ -1,4 +1,4 @@
-// components/report/ReportTable.tsx
+// components/report/ReportTable.tsx - Updated with Conditional Action Logic
 
 import React, { useMemo } from 'react';
 import { Table, Spinner } from 'react-bootstrap';
@@ -6,6 +6,7 @@ import { FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import { ColumnConfig, SortConfig, ColGroup, ActionColumnButton } from '../../types/report';
 import { ButtonGradient, ActionType } from '../button/ButtonTemplate';
 import { buildColGroups, getDefaultFormatter } from '../../utils/reportUtils';
+import { useAuth } from '../../context/AuthContext';
 
 interface ReportTableProps {
   data: any[];
@@ -19,7 +20,7 @@ interface ReportTableProps {
   showIcon?: boolean;
   showRowNumber?: boolean;
   rowHeight?: number;
-  maxHeight?: string; // New prop for custom max height
+  maxHeight?: string;
   actionColumn?: {
     enabled: boolean;
     label?: string;
@@ -40,9 +41,11 @@ const ReportTable: React.FC<ReportTableProps> = ({
   loading = false,
   showIcon = false,
   showRowNumber = true,
-  maxHeight = 'calc(100vh - 200px)', // Default to viewport minus header/footer space
+  maxHeight = 'calc(100vh - 200px)',
   actionColumn
 }) => {
+  const { id: currentUserId } = useAuth();
+  
   const effectiveColGroups = useMemo(() => {
     return colGroups || buildColGroups(columns);
   }, [columns, colGroups]);
@@ -78,6 +81,45 @@ const ReportTable: React.FC<ReportTableProps> = ({
     );
   };
 
+  // Helper function to check if user can start class
+  const canStartClass = (row: any) => {
+    return currentUserId && (
+      (row.teacher_id && (parseInt(row.teacher_id) === currentUserId || row.teacher_id === currentUserId.toString())) ||
+      (row.starter_user_id && (parseInt(row.starter_user_id) === currentUserId || row.starter_user_id === currentUserId.toString()))
+    );
+  };
+
+  // Function to filter action buttons based on row state and user permissions
+  const getFilteredActionButtons = (row: any, buttons: ActionColumnButton[]) => {
+    return buttons.filter(button => {
+      const label = button.label.toLowerCase();
+      
+      // Always show Detail button
+      if (label.includes('detail') || label.includes('lihat')) {
+        return true;
+      }
+      
+      // Show Start button only if user can start class and class is not deleted
+      if (label.includes('mulai') || label.includes('start')) {
+        return canStartClass(row) && !row.is_deleted;
+      }
+      
+      // Show Edit and Delete buttons only if class is not deleted
+      if (label.includes('edit') || label.includes('ubah') || 
+          label.includes('delete') || label.includes('hapus')) {
+        return !row.is_deleted;
+      }
+      
+      // Show Restore button only if class is deleted
+      if (label.includes('restore') || label.includes('pulihkan')) {
+        return row.is_deleted === true;
+      }
+      
+      // For any other buttons, show them by default unless class is deleted
+      return !row.is_deleted;
+    });
+  };
+
   // Map variant ke action type dan custom colors untuk ButtonGradient
   const getActionTypeAndColors = (variant: ActionColumnButton['variant'], label: string) => {
     const labelLower = label.toLowerCase();
@@ -90,6 +132,8 @@ const ReportTable: React.FC<ReportTableProps> = ({
     else if (labelLower.includes('copy') || labelLower.includes('salin')) actionType = 'copy';
     else if (labelLower.includes('download') || labelLower.includes('unduh')) actionType = 'download';
     else if (labelLower.includes('print') || labelLower.includes('cetak')) actionType = 'export';
+    else if (labelLower.includes('mulai') || labelLower.includes('start')) actionType = 'custom';
+    else if (labelLower.includes('restore') || labelLower.includes('pulihkan')) actionType = 'custom';
 
     // Custom colors berdasarkan variant
     const colorMap = {
@@ -116,9 +160,20 @@ const ReportTable: React.FC<ReportTableProps> = ({
   const renderActionButtons = (row: any, rowIndex: number) => {
     if (!actionColumn?.enabled || !actionColumn.buttons?.length) return null;
 
+    // Filter buttons based on row state and permissions
+    const filteredButtons = getFilteredActionButtons(row, actionColumn.buttons);
+
+    if (filteredButtons.length === 0) {
+      return (
+        <div className="tw-flex tw-justify-center tw-items-center tw-px-2 tw-text-gray-400 tw-text-xs">
+          Tidak ada aksi
+        </div>
+      );
+    }
+
     return (
       <div className="tw-flex tw-gap-1 tw-justify-center tw-items-center tw-px-2 tw-flex-wrap">
-        {actionColumn.buttons.map((button, buttonIndex) => {
+        {filteredButtons.map((button, buttonIndex) => {
           const { actionType, customColors } = getActionTypeAndColors(button.variant, button.label);
           
           return (
@@ -131,7 +186,7 @@ const ReportTable: React.FC<ReportTableProps> = ({
                 onClick={() => button.onClick(row, rowIndex)}
                 disabled={loading}
                 size="sm"
-                className={`tw-min-w-[80px] tw-text-xs ${button.className || ''}`}
+                className={`tw-min-w-[70px] tw-text-xs ${button.className || ''}`}
               />
             </div>
           );
@@ -204,7 +259,7 @@ const ReportTable: React.FC<ReportTableProps> = ({
         className="tw-overflow-x-auto tw-overflow-y-auto" 
         style={{ 
           maxHeight: maxHeight,
-          minHeight: '500px' // Minimum height to ensure table is tall enough
+          minHeight: '500px'
         }}
       >
         <Table className="tw-mb-0 tw-h-full" style={{ minWidth: '100%' }}>
@@ -307,14 +362,16 @@ const ReportTable: React.FC<ReportTableProps> = ({
               data.map((row, rowIndex) => (
                 <tr
                   key={rowIndex}
-                  className="tw-border-b tw-border-gray-100 hover:tw-bg-gray-50 tw-transition-colors"
-                  style={{ height: '70px' }} // Increased height to accommodate ButtonGradient
+                  className={`tw-border-b tw-border-gray-100 hover:tw-bg-gray-50 tw-transition-colors ${
+                    row.is_deleted ? 'tw-bg-red-50 tw-opacity-75' : ''
+                  }`}
+                  style={{ height: '70px' }}
                 >
                   {showIcon && (
                     <td
                       className={`tw-text-center tw-align-middle ${
                         freezeIndex >= 0 ? 'tw-sticky tw-left-0 tw-bg-white tw-z-10 hover:tw-bg-gray-50' : ''
-                      }`}
+                      } ${row.is_deleted ? 'tw-bg-red-50' : ''}`}
                       style={{ width: '50px', minWidth: '50px' }}
                     >
                       <i className="fas fa-file-alt tw-text-gray-400"></i>
@@ -325,7 +382,7 @@ const ReportTable: React.FC<ReportTableProps> = ({
                     <td
                       className={`tw-text-center tw-align-middle tw-font-medium tw-text-gray-600 ${
                         freezeIndex >= 1 || (freezeIndex >= 0 && !showIcon) ? 'tw-sticky tw-bg-white tw-z-10 hover:tw-bg-gray-50' : ''
-                      }`}
+                      } ${row.is_deleted ? 'tw-bg-red-50' : ''}`}
                       style={{ 
                         width: '70px', 
                         minWidth: '70px',
@@ -352,7 +409,7 @@ const ReportTable: React.FC<ReportTableProps> = ({
                         key={column.key}
                         className={`tw-align-middle ${
                           isFreezed ? 'tw-sticky tw-bg-white tw-z-10 hover:tw-bg-gray-50' : ''
-                        }`}
+                        } ${row.is_deleted ? 'tw-bg-red-50' : ''}`}
                         style={{
                           width: column.width || 150,
                           minWidth: column.minWidth || column.width || 150,
@@ -368,7 +425,7 @@ const ReportTable: React.FC<ReportTableProps> = ({
                     <td
                       className={`tw-text-center tw-align-middle tw-px-2 tw-py-2 ${
                         actionColumn.sticky ? 'tw-sticky tw-right-0 tw-bg-white tw-z-10 hover:tw-bg-gray-50 tw-shadow-lg' : ''
-                      }`}
+                      } ${row.is_deleted ? 'tw-bg-red-50' : ''}`}
                       style={{
                         width: actionColumn.width || 200,
                         minWidth: actionColumn.width || 200,

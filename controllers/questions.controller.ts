@@ -9,7 +9,6 @@ import { AuthenticatedRequest } from '../lib/middleware/auth';
 
 // Types
 interface QuestionData {
-  exam_type_id?: number;
   question_topic_type?: number;
   question_type: string;
   question_text: string;
@@ -18,7 +17,7 @@ interface QuestionData {
   statements?: string[];
   passage_id?: number;
   question_code?: string;
-  pembahasan?: string;
+  explanation?: string;
   level?: number;
 }
 
@@ -46,8 +45,9 @@ const initializeQueue = async () => {
     try {
       const PQueue = (await import('p-queue')).default;
       questionQueue = new PQueue({ concurrency: 1 });
+      console.log('[Queue] Initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize queue:', error);
+      console.error('[Queue] Failed to initialize:', error);
     }
   }
 };
@@ -64,6 +64,76 @@ const encryptData = (data: any): string => {
   encrypted += cipher.final('base64');
   
   return iv.toString('hex') + ':' + encrypted;
+};
+
+// Validation helper
+const validateQuestionData = (questionData: QuestionData, index?: number): string[] => {
+  const errors: string[] = [];
+  const prefix = index !== undefined ? `Question ${index + 1}: ` : '';
+  
+  // Validate question_topic_type
+  if (!questionData.question_topic_type) {
+    errors.push(`${prefix}Sub Topik harus dipilih (question_topic_type is required)`);
+  } else if (typeof questionData.question_topic_type !== 'number' || isNaN(questionData.question_topic_type)) {
+    errors.push(`${prefix}Sub Topik tidak valid (question_topic_type must be a valid number)`);
+  }
+  
+  // Validate question_text
+  if (!questionData.question_text || !questionData.question_text.trim()) {
+    errors.push(`${prefix}Teks soal harus diisi (question_text is required)`);
+  }
+  
+  // Validate question_type
+  if (!questionData.question_type) {
+    errors.push(`${prefix}Tipe soal harus dipilih (question_type is required)`);
+  } else if (!['single-choice', 'multiple-choice', 'true-false', 'number', 'text'].includes(questionData.question_type)) {
+    errors.push(`${prefix}Tipe soal tidak valid (invalid question_type)`);
+  }
+  
+  // Validate level
+  if (!questionData.level) {
+    errors.push(`${prefix}Level soal harus dipilih (level is required)`);
+  } else if (typeof questionData.level !== 'number' || questionData.level < 1 || questionData.level > 5) {
+    errors.push(`${prefix}Level soal tidak valid (level must be between 1-5)`);
+  }
+
+  // Validate options for choice questions
+  if ((questionData.question_type === 'single-choice' || questionData.question_type === 'multiple-choice')) {
+    if (!questionData.options || !Array.isArray(questionData.options) || questionData.options.length < 2) {
+      errors.push(`${prefix}Minimal 2 opsi jawaban diperlukan untuk soal pilihan`);
+    }
+    if (!questionData.correct_answer || !Array.isArray(questionData.correct_answer) || questionData.correct_answer.length === 0) {
+      errors.push(`${prefix}Jawaban benar harus dipilih untuk soal pilihan`);
+    }
+  }
+
+  // Validate statements for true-false questions
+  if (questionData.question_type === 'true-false') {
+    if (!questionData.statements || !Array.isArray(questionData.statements) || questionData.statements.length === 0) {
+      errors.push(`${prefix}Minimal 1 pernyataan diperlukan untuk soal true-false`);
+    }
+  }
+
+  // Validate answer for text/number questions
+  if ((questionData.question_type === 'text' || questionData.question_type === 'number')) {
+    if (!questionData.correct_answer || !Array.isArray(questionData.correct_answer) || questionData.correct_answer.length === 0 || !questionData.correct_answer[0]) {
+      errors.push(`${prefix}Jawaban benar harus diisi untuk soal ${questionData.question_type}`);
+    }
+  }
+  
+  return errors;
+};
+
+// Sanitize question data
+const sanitizeQuestionData = (questionData: QuestionData): QuestionData => {
+  return {
+    ...questionData,
+    question_text: questionData.question_text?.trim(),
+    explanation: questionData.explanation?.trim() || null,
+    passage_id: questionData.passage_id || null,
+    options: questionData.options?.filter(opt => opt && opt.trim()) || [],
+    statements: questionData.statements?.filter(stmt => stmt && stmt.trim()) || [],
+  };
 };
 
 // Controller Functions
@@ -97,6 +167,7 @@ export const searchQuestions = async (req: NextApiRequest, res: NextApiResponse)
       data: results,
     });
   } catch (error: any) {
+    console.error('[searchQuestions] Error:', error);
     return res.status(500).json({ error: error.message });
   }
 };
@@ -106,7 +177,7 @@ export const getAllQuestions = async (req: NextApiRequest, res: NextApiResponse)
     const questions = await questionModel.getAllQuestions();
     res.status(200).json(questions);
   } catch (error) {
-    console.error('Error fetching questions:', error);
+    console.error('[getAllQuestions] Error:', error);
     res.status(500).json({ error: 'Failed to fetch questions' });
   }
 };
@@ -132,7 +203,7 @@ export const getPagedQuestions = async (req: NextApiRequest, res: NextApiRespons
     const result = await questionModel.getPagedQuestions(filters);
     res.status(200).json(result);
   } catch (error) {
-    console.error('Error in getQuestions controller:', error);
+    console.error('[getPagedQuestions] Error:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -142,12 +213,10 @@ export const getQuestionsByExamString = async (req: NextApiRequest, res: NextApi
 
   try {
     const questions = await questionModel.getQuestionsByExamString(examString);
-    
     const encryptedQuestions = encryptData(questions);
-    
     res.status(200).json({ encryptedData: encryptedQuestions });
   } catch (error) {
-    console.error('Error fetching questions by exam_string:', error);
+    console.error('[getQuestionsByExamString] Error:', error);
     res.status(500).json({ error: 'Failed to fetch questions' });
   }
 };
@@ -156,11 +225,9 @@ export const getDiagnosticQuestionsByExamString = async (req: NextApiRequest, re
   const examString = req.query.exam_string as string;
   try {
     const payload = await questionModel.getDiagnosticQuestionsByExamString(examString);
-
-    console.log(payload);
     res.status(200).json({ encryptedData: encryptData(payload) });
-  } catch (err) {
-    console.error('Error fetching diagnostic questions:', err);
+  } catch (error) {
+    console.error('[getDiagnosticQuestionsByExamString] Error:', error);
     res.status(500).json({ error: 'Failed to fetch diagnostic questions' });
   }
 };
@@ -172,7 +239,7 @@ export const getQuestionsByExamId = async (req: NextApiRequest, res: NextApiResp
     const questions = await questionModel.getQuestionsByExamId(examId);
     res.status(200).json(questions);
   } catch (error) {
-    console.error('Error fetching questions by exam_string:', error);
+    console.error('[getQuestionsByExamId] Error:', error);
     res.status(500).json({ error: 'Failed to fetch questions' });
   }
 };
@@ -186,7 +253,7 @@ export const getQuestionById = async (req: NextApiRequest, res: NextApiResponse)
     }
     res.status(200).json(question);
   } catch (error) {
-    console.error('Error fetching question:', error);
+    console.error('[getQuestionById] Error:', error);
     res.status(500).json({ error: 'Failed to fetch question' });
   }
 };
@@ -200,7 +267,7 @@ export const getQuestionByUId = async (req: NextApiRequest, res: NextApiResponse
     }
     res.status(200).json(question);
   } catch (error) {
-    console.error('Error fetching question:', error);
+    console.error('[getQuestionByUId] Error:', error);
     res.status(500).json({ error: 'Failed to fetch question' });
   }
 };
@@ -219,14 +286,24 @@ export const createQuestion = async (req: AuthenticatedRequest, res: NextApiResp
     return res.status(400).json({ error: 'create_user_id is required' });
   }
 
+  // Sanitize and validate question data
+  const sanitizedData = sanitizeQuestionData(questionData);
+  const errors = validateQuestionData(sanitizedData);
+  if (errors.length > 0) {
+    return res.status(400).json({ 
+      error: 'Validation failed', 
+      details: errors 
+    });
+  }
+
   try {
     const result = await questionQueue.add(() =>
-      handleSingleQuestion({ questionData, create_user_id })
+      handleSingleQuestion({ questionData: sanitizedData, create_user_id })
     );
 
     res.status(201).json(result);
   } catch (error: any) {
-    console.error('Error in question queue:', error);
+    console.error('[createQuestion] Error in queue:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -236,75 +313,62 @@ export const handleSingleQuestion = async (
 ) => {
   const client = await pool.connect();
   const startTime = Date.now();
-  console.log('[handleSingleQuestion] START', { questionData, create_user_id });
+  console.log('[handleSingleQuestion] START', { 
+    subtopicId: questionData.question_topic_type, 
+    create_user_id,
+    questionType: questionData.question_type 
+  });
 
   try {
-    // --- Begin transaction --------------------------------------------------
     await client.query('BEGIN');
     console.log('[handleSingleQuestion] BEGIN transaction');
 
-    // --- Resolve sub‑topic metadata ----------------------------------------
-    const subtopicId = questionData.exam_type_id;
-    console.log('[handleSingleQuestion] subtopicId:', subtopicId);
+    // Validate subtopic ID
+    const subtopicId = questionData.question_topic_type;
+    if (!subtopicId || typeof subtopicId !== 'number' || isNaN(subtopicId)) {
+      throw new Error(`Invalid question_topic_type: ${subtopicId}. Must be a valid number.`);
+    }
 
-    const subtopicsInfo = await examTypesModel.getSubtopicsInfo([subtopicId!]);
-    console.log('[handleSingleQuestion] subtopicsInfo:', subtopicsInfo);
-
+    // Get subtopic metadata
+    const subtopicsInfo = await examTypesModel.getSubtopicsInfo([subtopicId]);
     if (!subtopicsInfo.length) {
-      console.error('[handleSingleQuestion] Subtopic not found', { subtopicId });
       throw new Error(`Subtopik dengan ID ${subtopicId} tidak ditemukan`);
     }
 
     const { bid_code, top_code, sub_code, last_sequence } = subtopicsInfo[0];
-    console.log('[handleSingleQuestion] subtopicInfo:', {
-      bid_code,
-      top_code,
-      sub_code,
-      last_sequence
+    console.log('[handleSingleQuestion] Subtopic info:', {
+      bid_code, top_code, sub_code, last_sequence
     });
 
-    // --- Generate next question code ---------------------------------------
+    // Generate question code
     const nextSequence = last_sequence ? parseInt(last_sequence) + 1 : 1;
     const sequence = nextSequence.toString().padStart(4, '0');
     const question_code = `${bid_code}${top_code}${sub_code}${sequence}`;
-    console.log('[handleSingleQuestion] Generated question_code:', question_code);
 
-    // --- Prepare payload ----------------------------------------------------
+    // Prepare question data with code
     const questionWithCode = {
       ...questionData,
-      code:question_code,
-      passage_id: questionData.passage_id || null
+      code: question_code,
+      question_code: question_code
     };
-    console.log('[handleSingleQuestion] questionWithCode:', questionWithCode);
 
-    // --- Persist question ---------------------------------------------------
-    const savedQuestion = await questionModel.createQuestion(
-      questionWithCode,
-      create_user_id
-    );
-    console.log('[handleSingleQuestion] savedQuestion:', savedQuestion);
+    console.log('[handleSingleQuestion] Creating question with code:', question_code);
 
-    // --- Commit transaction -------------------------------------------------
+    // Save question
+    const savedQuestion = await questionModel.createQuestion(questionWithCode, create_user_id);
+    
     await client.query('COMMIT');
-    console.log(
-      '[handleSingleQuestion] COMMIT transaction (elapsed %dms)',
-      Date.now() - startTime
-    );
+    console.log('[handleSingleQuestion] SUCCESS - elapsed:', Date.now() - startTime, 'ms');
 
     return savedQuestion;
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('[handleSingleQuestion] ROLLBACK transaction due to error', error);
+    console.error('[handleSingleQuestion] ROLLBACK due to error:', error);
     throw error;
   } finally {
     client.release();
-    console.log(
-      '[handleSingleQuestion] client released (total %dms)',
-      Date.now() - startTime
-    );
   }
 };
-
 
 export const createBulkQuestions = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   await initializeQueue();
@@ -324,44 +388,95 @@ export const createBulkQuestions = async (req: AuthenticatedRequest, res: NextAp
     return res.status(400).json({ error: 'create_user_id is required' });
   }
 
+  console.log('[createBulkQuestions] Processing', questions.length, 'questions');
+
+  // Sanitize and validate all questions
+  const sanitizedQuestions = questions.map(q => sanitizeQuestionData(q));
+  const validationErrors: string[] = [];
+  
+  sanitizedQuestions.forEach((q, index) => {
+    const errors = validateQuestionData(q, index);
+    validationErrors.push(...errors);
+  });
+
+  if (validationErrors.length > 0) {
+    return res.status(400).json({ 
+      error: 'Validation failed', 
+      details: validationErrors 
+    });
+  }
+
   try {
     const result = await questionQueue.add(() =>
-      handleBulkQuestions({ questions, create_user_id })
+      handleBulkQuestions({ questions: sanitizedQuestions, create_user_id })
     );
 
     res.status(201).json(result);
   } catch (error: any) {
-    console.error('Error in bulk queue:', error);
+    console.error('[createBulkQuestions] Error in bulk queue:', error);
     res.status(500).json({ error: error.message });
   }
 };
 
 const handleBulkQuestions = async ({ questions, create_user_id }: { questions: QuestionData[]; create_user_id: string }) => {
   const client = await pool.connect();
+  const startTime = Date.now();
+  console.log('[handleBulkQuestions] START', { 
+    questionsCount: questions.length, 
+    create_user_id 
+  });
 
   try {
     await client.query('BEGIN');
 
+    // Group questions by subtopic and validate IDs
     const subtopicMap = new Map<number, QuestionData[]>();
+    const invalidQuestions: string[] = [];
     
-    questions.forEach(q => {
-      const subtopicId = q.exam_type_id!;
+    questions.forEach((q, index) => {
+      const subtopicId = q.question_topic_type;
+      
+      if (!subtopicId || typeof subtopicId !== 'number' || isNaN(subtopicId)) {
+        invalidQuestions.push(`Question ${index + 1}: Invalid question_topic_type (${subtopicId})`);
+        return;
+      }
+      
       if (!subtopicMap.has(subtopicId)) {
         subtopicMap.set(subtopicId, []);
       }
       subtopicMap.get(subtopicId)!.push(q);
     });
 
-    const subtopicIds = [...subtopicMap.keys()];
-    const subtopicsInfo = await examTypesModel.getSubtopicsInfo(subtopicIds);
+    if (invalidQuestions.length > 0) {
+      throw new Error(`Invalid subtopic IDs: ${invalidQuestions.join('; ')}`);
+    }
 
+    if (subtopicMap.size === 0) {
+      throw new Error('No valid questions to process');
+    }
+
+    const subtopicIds = [...subtopicMap.keys()];
+    console.log('[handleBulkQuestions] Processing subtopic IDs:', subtopicIds);
+
+    // Get subtopic information
+    const subtopicsInfo = await examTypesModel.getSubtopicsInfo(subtopicIds);
+    
+    if (subtopicsInfo.length !== subtopicIds.length) {
+      const foundIds = subtopicsInfo.map(info => info.id);
+      const missingIds = subtopicIds.filter(id => !foundIds.includes(id));
+      throw new Error(`Subtopik tidak ditemukan untuk ID: ${missingIds.join(', ')}`);
+    }
+
+    // Generate codes and prepare questions
     const questionsWithCodes: any[] = [];
     const codeCounters = new Map<number, number>();
 
-    for (const { id, last_sequence } of subtopicsInfo) {
+    // Initialize counters
+    subtopicsInfo.forEach(({ id, last_sequence }) => {
       codeCounters.set(id, last_sequence ? parseInt(last_sequence) + 1 : 1);
-    }
+    });
 
+    // Generate codes for each question
     for (const [subtopicId, questionGroup] of subtopicMap) {
       const subtopicInfo = subtopicsInfo.find(info => info.id === subtopicId);
       if (!subtopicInfo) {
@@ -377,9 +492,8 @@ const handleBulkQuestions = async ({ questions, create_user_id }: { questions: Q
         
         questionsWithCodes.push({
           ...question,
-          question_code,
-          passage_id: question.passage_id || null,
-          create_user_id
+          code: question_code,
+          question_code: question_code
         });
 
         counter++;
@@ -388,16 +502,27 @@ const handleBulkQuestions = async ({ questions, create_user_id }: { questions: Q
       codeCounters.set(subtopicId, counter);
     }
 
+    console.log('[handleBulkQuestions] Generated codes for', questionsWithCodes.length, 'questions');
+
+    // Create all questions
     const savedQuestions = [];
     for (const q of questionsWithCodes) {
-      const savedQuestion = await questionModel.createQuestion(q, create_user_id);
-      savedQuestions.push(savedQuestion);
+      try {
+        const savedQuestion = await questionModel.createQuestion(q, create_user_id);
+        savedQuestions.push(savedQuestion);
+      } catch (error) {
+        console.error('[handleBulkQuestions] Error creating question:', error);
+        throw new Error(`Failed to create question: ${error.message}`);
+      }
     }
 
     await client.query('COMMIT');
+    console.log('[handleBulkQuestions] SUCCESS - created', savedQuestions.length, 'questions in', Date.now() - startTime, 'ms');
+
     return savedQuestions;
   } catch (error) {
     await client.query('ROLLBACK');
+    console.error('[handleBulkQuestions] ROLLBACK due to error:', error);
     throw error;
   } finally {
     client.release();
@@ -413,14 +538,24 @@ export const updateQuestion = async (req: AuthenticatedRequest, res: NextApiResp
     return res.status(400).json({ error: 'edit_user_id is required' });
   }
 
+  // Sanitize and validate
+  const sanitizedData = sanitizeQuestionData(questionData);
+  const errors = validateQuestionData(sanitizedData);
+  if (errors.length > 0) {
+    return res.status(400).json({ 
+      error: 'Validation failed', 
+      details: errors 
+    });
+  }
+
   try {
-    const updatedQuestion = await questionModel.updateQuestion(questionId, questionData, edit_user_id);
+    const updatedQuestion = await questionModel.updateQuestion(questionId, sanitizedData, edit_user_id);
     if (!updatedQuestion) {
       return res.status(404).json({ error: 'Question not found' });
     }
     res.json(updatedQuestion);
   } catch (error) {
-    console.error('Error updating question:', error);
+    console.error('[updateQuestion] Error:', error);
     res.status(500).json({ error: 'Failed to update question' });
   }
 };
@@ -442,11 +577,27 @@ export const updateBulkQuestions = async (req: AuthenticatedRequest, res: NextAp
     return res.status(400).json({ error: 'All questions must have an ID for bulk update' });
   }
 
+  // Validate all questions
+  const sanitizedQuestions = questions.map(q => sanitizeQuestionData(q));
+  const validationErrors: string[] = [];
+  
+  sanitizedQuestions.forEach((q, index) => {
+    const errors = validateQuestionData(q, index);
+    validationErrors.push(...errors);
+  });
+
+  if (validationErrors.length > 0) {
+    return res.status(400).json({ 
+      error: 'Validation failed', 
+      details: validationErrors 
+    });
+  }
+
   try {
-    const updatedQuestions = await questionModel.updateBulkQuestions(questions, edit_user_id);
+    const updatedQuestions = await questionModel.updateBulkQuestions(sanitizedQuestions, edit_user_id);
     res.status(200).json(updatedQuestions);
   } catch (error) {
-    console.error('Error updating bulk questions:', error);
+    console.error('[updateBulkQuestions] Error:', error);
     res.status(500).json({ error: 'Failed to update questions in bulk' });
   }
 };
@@ -465,6 +616,7 @@ export const appendExamId = async (req: NextApiRequest, res: NextApiResponse) =>
       data: result,
     });
   } catch (error: any) {
+    console.error('[appendExamId] Error:', error);
     return res.status(500).json({ error: error.message });
   }
 };
@@ -479,7 +631,7 @@ export const deleteQuestion = async (req: NextApiRequest, res: NextApiResponse) 
     }
     res.json({ message: 'Question deleted successfully', question: deletedQuestion });
   } catch (error) {
-    console.error('Error deleting question:', error);
+    console.error('[deleteQuestion] Error:', error);
     res.status(500).json({ error: 'Failed to delete question' });
   }
 };
@@ -491,6 +643,7 @@ export const searchPassages = async (req: NextApiRequest, res: NextApiResponse) 
     const results = await questionModel.searchPassages(search as string);
     res.status(200).json(results);
   } catch (error: any) {
+    console.error('[searchPassages] Error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -504,6 +657,7 @@ export const getPassageById = async (req: NextApiRequest, res: NextApiResponse) 
     }
     res.status(200).json(passage);
   } catch (error: any) {
+    console.error('[getPassageById] Error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -524,6 +678,7 @@ export const createPassage = async (req: AuthenticatedRequest, res: NextApiRespo
     const newPassage = await questionModel.createPassage({ title, passage }, create_user_id);
     res.status(201).json(newPassage);
   } catch (error: any) {
+    console.error('[createPassage] Error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -548,6 +703,7 @@ export const updatePassage = async (req: AuthenticatedRequest, res: NextApiRespo
     }
     res.status(200).json(updatedPassage);
   } catch (error: any) {
+    console.error('[updatePassage] Error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -611,7 +767,7 @@ export const verifyCsv = async (req: NextApiRequest, res: NextApiResponse) => {
     }
 
   } catch (error: any) {
-    console.error('Error verifying CSV:', error);
+    console.error('[verifyCsv] Error:', error);
     res.status(500).json({ 
       error: 'Gagal melakukan verifikasi CSV',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined

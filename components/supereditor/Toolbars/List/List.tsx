@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect, RefObject } from 'react';
-import { List, ListOrdered, Network } from 'lucide-react';
+import { List, ListOrdered, Network, ChevronDown } from 'lucide-react';
+import { ButtonGradient } from '../../../button/ButtonTemplate';
 
 interface BulletStyle {
   name: string;
@@ -518,156 +519,47 @@ const applyMultilevelList = (style: MultilevelStyle, editorRef: RefObject<HTMLEl
   if (handleChange) handleChange();
 };
 
-// Dropdown components
-const BulletListDropdown: React.FC<DropdownProps> = ({ isOpen, onClose, onSelect, buttonRef }) => {
+// Bullet List Button with Template
+export const BulletListButton = React.forwardRef<any, ListButtonProps>(({ editorRef, handleChange, dropdownStates, setDropdownStates }, ref) => {
+  const [currentBulletStyle, setCurrentBulletStyle] = useState('disc');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const savedSelectionRef = useRef<Selection | null>(null);
   
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
-          buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
-        onClose();
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownStates(prev => ({ ...prev, bulletList: false }));
       }
-    };
-    
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [isOpen, onClose, buttonRef]);
-  
-  if (!isOpen) return null;
-  
-  return (
-    <div 
-      ref={dropdownRef}
-      className="tw-absolute tw-top-full tw-left-0 tw-mt-1 tw-bg-white tw-border tw-border-purple-300 tw-rounded tw-shadow-lg tw-z-50 tw-min-w-[200px]"
-    >
-      <div className="tw-p-2">
-        <div className="tw-text-xs tw-font-semibold tw-text-purple-700 tw-mb-2">Bullet Styles</div>
-        {bulletStyles.map((style, index) => (
-          <button
-            key={index}
-            className="tw-w-full tw-text-left tw-px-3 tw-py-2 tw-text-sm tw-hover:tw-bg-purple-50 tw-rounded tw-flex tw-items-center tw-gap-2"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onSelect(style);
-              onClose();
-            }}
-          >
-            <span className="tw-text-purple-600 tw-font-mono">{style.symbol}</span>
-            <span>{style.name}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const NumberedListDropdown: React.FC<DropdownProps> = ({ isOpen, onClose, onSelect, buttonRef }) => {
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
-          buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
-        onClose();
+    
+    if (dropdownStates.bulletList) {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        savedSelectionRef.current = selection;
       }
-    };
-    
-    if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [isOpen, onClose, buttonRef]);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownStates.bulletList, setDropdownStates]);
   
-  if (!isOpen) return null;
-  
-  return (
-    <div 
-      ref={dropdownRef}
-      className="tw-absolute tw-top-full tw-left-0 tw-mt-1 tw-bg-white tw-border tw-border-purple-300 tw-rounded tw-shadow-lg tw-z-50 tw-min-w-[200px]"
-    >
-      <div className="tw-p-2">
-        <div className="tw-text-xs tw-font-semibold tw-text-purple-700 tw-mb-2">Number Styles</div>
-        {numberedStyles.map((style, index) => (
-          <button
-            key={index}
-            className="tw-w-full tw-text-left tw-px-3 tw-py-2 tw-text-sm tw-hover:tw-bg-purple-50 tw-rounded tw-flex tw-items-center tw-gap-2"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onSelect(style);
-              onClose();
-            }}
-          >
-            <span className="tw-text-purple-600 tw-font-mono tw-min-w-[30px]">{style.sample}</span>
-            <span>{style.name}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const MultilevelListDropdown: React.FC<DropdownProps> = ({ isOpen, onClose, onSelect, buttonRef }) => {
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
-          buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
-        onClose();
+  const handleBulletSelect = (style: BulletStyle) => {
+    if (savedSelectionRef.current) {
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        savedSelectionRef.current = null;
       }
-    };
-    
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [isOpen, onClose, buttonRef]);
+    
+    applyBulletList(style, editorRef, handleChange);
+    setCurrentBulletStyle(style.value);
+    setDropdownStates(prev => ({ ...prev, bulletList: false }));
+  };
   
-  if (!isOpen) return null;
-  
-  return (
-    <div 
-      ref={dropdownRef}
-      className="tw-absolute tw-top-full tw-left-0 tw-mt-1 tw-bg-white tw-border tw-border-purple-300 tw-rounded tw-shadow-lg tw-z-50 tw-min-w-[250px]"
-    >
-      <div className="tw-p-2">
-        <div className="tw-text-xs tw-font-semibold tw-text-purple-700 tw-mb-2">Multilevel Styles</div>
-        {multilevelStyles.map((style, index) => (
-          <button
-            key={index}
-            className="tw-w-full tw-text-left tw-px-3 tw-py-3 tw-text-sm tw-hover:tw-bg-purple-50 tw-rounded tw-border-b tw-border-purple-100 last:tw-border-b-0"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onSelect(style);
-              onClose();
-            }}
-          >
-            <div className="tw-font-medium tw-text-purple-700 tw-mb-1">{style.name}</div>
-            <div className="tw-text-xs tw-text-gray-600">
-              {style.levels.map((level, i) => (
-                <span key={i} className="tw-mr-2">{level.symbol}</span>
-              ))}
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Main button components
-export const BulletListButton: React.FC<ListButtonProps> = ({ editorRef, handleChange, dropdownStates, setDropdownStates }) => {
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleToggle = () => {
     setDropdownStates(prev => ({
       ...prev,
       bulletList: !prev.bulletList,
@@ -677,35 +569,96 @@ export const BulletListButton: React.FC<ListButtonProps> = ({ editorRef, handleC
   };
   
   return (
-    <div className="tw-relative">
-      <button 
-        ref={buttonRef}
-        className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-text-sm tw-hover:tw-bg-purple-50 tw-transition-colors tw-flex tw-items-center tw-gap-1"
-        onClick={handleClick}
-        title="Bullet List (Ctrl+Shift+Q)"
+    <div className="tw-relative" ref={dropdownRef}>
+      <ButtonGradient
+        action="settings"
+        onClick={handleToggle}
+        size="md"
+        showText={false}
+        tooltip={`Bullet List: ${currentBulletStyle} (Ctrl+Shift+Q)`}
+        className="tw-w-8 tw-h-8"
       >
-        <List size={16} />
-        <svg className="tw-w-3 tw-h-3" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-        </svg>
-      </button>
+        <div className="tw-flex tw-items-center tw-gap-1">
+          <List className="tw-w-4 tw-h-4" />
+          {/* <ChevronDown className="tw-w-3 tw-h-3" /> */}
+        </div>
+      </ButtonGradient>
       
-      <BulletListDropdown
-        isOpen={dropdownStates.bulletList}
-        onClose={() => setDropdownStates(prev => ({ ...prev, bulletList: false }))}
-        onSelect={(style) => applyBulletList(style, editorRef, handleChange)}
-        buttonRef={buttonRef}
-      />
+      {dropdownStates.bulletList && (
+        <div className="tw-absolute tw-z-50 tw-mt-1 tw-bg-white tw-border-2 tw-border-purple-300 tw-rounded-xl tw-shadow-2xl tw-min-w-[200px]">
+          <div className="tw-p-2">
+            <div className="tw-text-xs tw-font-semibold tw-text-purple-700 tw-mb-2 tw-px-2">Bullet Styles</div>
+            <div className="tw-space-y-1">
+              {bulletStyles.map((style, index) => (
+                <button
+                  key={index}
+                  className={`tw-w-full tw-px-3 tw-py-2 tw-text-left tw-rounded-lg tw-transition-all tw-duration-200 tw-flex tw-items-center tw-justify-between ${
+                    currentBulletStyle === style.value 
+                      ? 'tw-bg-purple-100 tw-text-purple-700 tw-font-semibold' 
+                      : 'hover:tw-bg-purple-50 tw-text-gray-700'
+                  }`}
+                  onClick={() => handleBulletSelect(style)}
+                >
+                  <div className="tw-flex tw-items-center tw-gap-2">
+                    <span className="tw-text-purple-600 tw-font-mono">{style.symbol}</span>
+                    <span>{style.name}</span>
+                  </div>
+                  {currentBulletStyle === style.value && (
+                    <div className="tw-w-2 tw-h-2 tw-bg-purple-600 tw-rounded-full"></div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+});
 
-export const NumberedListButton: React.FC<ListButtonProps> = ({ editorRef, handleChange, dropdownStates, setDropdownStates }) => {
-  const buttonRef = useRef<HTMLButtonElement>(null);
+BulletListButton.displayName = 'BulletListButton';
+
+// Numbered List Button with Template
+export const NumberedListButton = React.forwardRef<any, ListButtonProps>(({ editorRef, handleChange, dropdownStates, setDropdownStates }, ref) => {
+  const [currentNumberedStyle, setCurrentNumberedStyle] = useState('decimal');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const savedSelectionRef = useRef<Selection | null>(null);
   
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownStates(prev => ({ ...prev, numberedList: false }));
+      }
+    }
+    
+    if (dropdownStates.numberedList) {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        savedSelectionRef.current = selection;
+      }
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownStates.numberedList, setDropdownStates]);
+  
+  const handleNumberedSelect = (style: NumberedStyle) => {
+    if (savedSelectionRef.current) {
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        savedSelectionRef.current = null;
+      }
+    }
+    
+    applyNumberedList(style, editorRef, handleChange);
+    setCurrentNumberedStyle(style.value);
+    setDropdownStates(prev => ({ ...prev, numberedList: false }));
+  };
+  
+  const handleToggle = () => {
     setDropdownStates(prev => ({
       ...prev,
       numberedList: !prev.numberedList,
@@ -714,36 +667,102 @@ export const NumberedListButton: React.FC<ListButtonProps> = ({ editorRef, handl
     }));
   };
   
+  const getCurrentSample = () => {
+    const style = numberedStyles.find(s => s.value === currentNumberedStyle);
+    return style ? style.sample : '1.';
+  };
+  
   return (
-    <div className="tw-relative">
-      <button 
-        ref={buttonRef}
-        className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-text-sm tw-hover:tw-bg-purple-50 tw-transition-colors tw-flex tw-items-center tw-gap-1"
-        onClick={handleClick}
-        title="Numbered List (Ctrl+Shift+E)"
+    <div className="tw-relative" ref={dropdownRef}>
+      <ButtonGradient
+        action="settings"
+        onClick={handleToggle}
+        size="md"
+        showText={false}
+        tooltip={`Numbered List: ${getCurrentSample()} (Ctrl+Shift+E)`}
+        className="tw-w-8 tw-h-8"
       >
-        <ListOrdered size={16} />
-        <svg className="tw-w-3 tw-h-3" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-        </svg>
-      </button>
+        <div className="tw-flex tw-items-center tw-gap-1">
+          <ListOrdered className="tw-w-4 tw-h-4" />
+          {/* <ChevronDown className="tw-w-3 tw-h-3" /> */}
+        </div>
+      </ButtonGradient>
       
-      <NumberedListDropdown
-        isOpen={dropdownStates.numberedList}
-        onClose={() => setDropdownStates(prev => ({ ...prev, numberedList: false }))}
-        onSelect={(style) => applyNumberedList(style, editorRef, handleChange)}
-        buttonRef={buttonRef}
-      />
+      {dropdownStates.numberedList && (
+        <div className="tw-absolute tw-z-50 tw-mt-1 tw-bg-white tw-border-2 tw-border-purple-300 tw-rounded-xl tw-shadow-2xl tw-min-w-[200px]">
+          <div className="tw-p-2">
+            <div className="tw-text-xs tw-font-semibold tw-text-purple-700 tw-mb-2 tw-px-2">Number Styles</div>
+            <div className="tw-space-y-1">
+              {numberedStyles.map((style, index) => (
+                <button
+                  key={index}
+                  className={`tw-w-full tw-px-3 tw-py-2 tw-text-left tw-rounded-lg tw-transition-all tw-duration-200 tw-flex tw-items-center tw-justify-between ${
+                    currentNumberedStyle === style.value 
+                      ? 'tw-bg-purple-100 tw-text-purple-700 tw-font-semibold' 
+                      : 'hover:tw-bg-purple-50 tw-text-gray-700'
+                  }`}
+                  onClick={() => handleNumberedSelect(style)}
+                >
+                  <div className="tw-flex tw-items-center tw-gap-2">
+                    <span className="tw-text-purple-600 tw-font-mono tw-min-w-[30px]">{style.sample}</span>
+                    <span>{style.name}</span>
+                  </div>
+                  {currentNumberedStyle === style.value && (
+                    <div className="tw-w-2 tw-h-2 tw-bg-purple-600 tw-rounded-full"></div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+});
 
-export const MultilevelListButton: React.FC<ListButtonProps> = ({ editorRef, handleChange, dropdownStates, setDropdownStates }) => {
-  const buttonRef = useRef<HTMLButtonElement>(null);
+NumberedListButton.displayName = 'NumberedListButton';
+
+// Multilevel List Button with Template
+export const MultilevelListButton = React.forwardRef<any, ListButtonProps>(({ editorRef, handleChange, dropdownStates, setDropdownStates }, ref) => {
+  const [currentMultilevelStyle, setCurrentMultilevelStyle] = useState('Standard');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const savedSelectionRef = useRef<Selection | null>(null);
   
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownStates(prev => ({ ...prev, multilevelList: false }));
+      }
+    }
+    
+    if (dropdownStates.multilevelList) {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        savedSelectionRef.current = selection;
+      }
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownStates.multilevelList, setDropdownStates]);
+  
+  const handleMultilevelSelect = (style: MultilevelStyle) => {
+    if (savedSelectionRef.current) {
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        savedSelectionRef.current = null;
+      }
+    }
+    
+    applyMultilevelList(style, editorRef, handleChange);
+    setCurrentMultilevelStyle(style.name);
+    setDropdownStates(prev => ({ ...prev, multilevelList: false }));
+  };
+  
+  const handleToggle = () => {
     setDropdownStates(prev => ({
       ...prev,
       multilevelList: !prev.multilevelList,
@@ -753,24 +772,92 @@ export const MultilevelListButton: React.FC<ListButtonProps> = ({ editorRef, han
   };
   
   return (
-    <div className="tw-relative">
-      <button 
-        ref={buttonRef}
-        className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-text-sm tw-hover:tw-bg-purple-50 tw-transition-colors tw-flex tw-items-center tw-gap-1"
-        onClick={handleClick}
-        title="Multilevel List (Ctrl+Shift+M)"
+    <div className="tw-relative" ref={dropdownRef}>
+      <ButtonGradient
+        action="settings"
+        onClick={handleToggle}
+        size="md"
+        showText={false}
+        tooltip={`Multilevel List: ${currentMultilevelStyle} (Ctrl+Shift+M)`}
+        className="tw-w-8 tw-h-8"
       >
-        <Network size={16} />
-        <svg className="tw-w-3 tw-h-3" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-        </svg>
-      </button>
+        <div className="tw-flex tw-items-center tw-gap-1">
+          <Network className="tw-w-4 tw-h-4" />
+          {/* <ChevronDown className="tw-w-3 tw-h-3" /> */}
+        </div>
+      </ButtonGradient>
       
-      <MultilevelListDropdown
-        isOpen={dropdownStates.multilevelList}
-        onClose={() => setDropdownStates(prev => ({ ...prev, multilevelList: false }))}
-        onSelect={(style) => applyMultilevelList(style, editorRef, handleChange)}
-        buttonRef={buttonRef}
+      {dropdownStates.multilevelList && (
+        <div className="tw-absolute tw-z-50 tw-mt-1 tw-bg-white tw-border-2 tw-border-purple-300 tw-rounded-xl tw-shadow-2xl tw-min-w-[250px]">
+          <div className="tw-p-2">
+            <div className="tw-text-xs tw-font-semibold tw-text-purple-700 tw-mb-2 tw-px-2">Multilevel Styles</div>
+            <div className="tw-space-y-1">
+              {multilevelStyles.map((style, index) => (
+                <button
+                  key={index}
+                  className={`tw-w-full tw-px-3 tw-py-3 tw-text-left tw-rounded-lg tw-transition-all tw-duration-200 tw-border-b tw-border-purple-100 last:tw-border-b-0 ${
+                    currentMultilevelStyle === style.name 
+                      ? 'tw-bg-purple-100 tw-text-purple-700 tw-font-semibold' 
+                      : 'hover:tw-bg-purple-50 tw-text-gray-700'
+                  }`}
+                  onClick={() => handleMultilevelSelect(style)}
+                >
+                  <div className="tw-flex tw-items-center tw-justify-between">
+                    <div>
+                      <div className="tw-font-medium tw-text-purple-700 tw-mb-1">{style.name}</div>
+                      <div className="tw-text-xs tw-text-gray-600">
+                        {style.levels.map((level, i) => (
+                          <span key={i} className="tw-mr-2">{level.symbol}</span>
+                        ))}
+                      </div>
+                    </div>
+                    {currentMultilevelStyle === style.name && (
+                      <div className="tw-w-2 tw-h-2 tw-bg-purple-600 tw-rounded-full"></div>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+MultilevelListButton.displayName = 'MultilevelListButton';
+
+// Main List Buttons component using ButtonGradient template
+export const ListButtons = ({ 
+  editorRef, 
+  handleChange, 
+  dropdownStates, 
+  setDropdownStates 
+}: {
+  editorRef: RefObject<HTMLElement>;
+  handleChange: () => void;
+  dropdownStates: any;
+  setDropdownStates: React.Dispatch<React.SetStateAction<any>>;
+}) => {
+  return (
+    <div className="tw-flex tw-gap-1 tw-items-center tw-bg-yellow-50 tw-rounded-lg tw-p-1">
+      <BulletListButton 
+        editorRef={editorRef}
+        handleChange={handleChange}
+        dropdownStates={dropdownStates}
+        setDropdownStates={setDropdownStates}
+      />
+      <NumberedListButton 
+        editorRef={editorRef}
+        handleChange={handleChange}
+        dropdownStates={dropdownStates}
+        setDropdownStates={setDropdownStates}
+      />
+      <MultilevelListButton 
+        editorRef={editorRef}
+        handleChange={handleChange}
+        dropdownStates={dropdownStates}
+        setDropdownStates={setDropdownStates}
       />
     </div>
   );
@@ -781,6 +868,7 @@ const ListComponent = {
   BulletListButton,
   NumberedListButton,
   MultilevelListButton,
+  ListButtons,
   getListStyles
 };
 

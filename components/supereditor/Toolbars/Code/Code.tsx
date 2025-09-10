@@ -1,14 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useRef, RefObject } from 'react';
-import { Code as CodeIcon, ChevronDown, Search } from 'lucide-react';
+import { Code as CodeIcon, ChevronDown, Search, BookOpen } from 'lucide-react';
+import { LearningModal } from '../../../modal/ModalTemplate';
+import { ButtonGradient } from '../../../button/ButtonTemplate';
+import { ShortFormField, SelectCustomField, WideFormField } from '../../../form/FormComponentLayout';
 import CodeLanguage from './CodeLanguage';
 
 // Type definitions
 interface CodeData {
   code: string;
   language: string;
-}
+} 
 
 interface EditingCode {
   element: HTMLElement;
@@ -61,199 +64,222 @@ const CodeModal: React.FC<CodeModalProps> = ({
 }) => {
   const [code, setCode] = useState<string>(initialCode);
   const [language, setLanguage] = useState<string>(initialLanguage);
-  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [loading, setLoading] = useState<boolean>(false);
 
   // Set initial values when props change
   useEffect(() => {
     if (isOpen) {
       setCode(initialCode);
       setLanguage(initialLanguage || 'javascript');
+      setSearchQuery('');
     }
   }, [isOpen, initialCode, initialLanguage]);
 
+  // Convert languages to SelectOption format
+  const languageOptions = languages.map(lang => ({
+    label: lang.label,
+    value: lang.value
+  }));
+
   // Filter languages based on search query
-  const filteredLanguages: Language[] = languages.filter((lang: Language) => 
+  const filteredLanguageOptions = languageOptions.filter(lang => 
     lang.label.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  // Focus search input when dropdown opens
-  useEffect(() => {
-    if (dropdownOpen && searchInputRef.current) {
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 10);
-    }
-  }, [dropdownOpen]);
-
-  // Reset search when dropdown closes
-  useEffect(() => {
-    if (!dropdownOpen) {
-      setSearchQuery('');
-    }
-  }, [dropdownOpen]);
-
-  if (!isOpen) return null;
-
-  const handleInsert = (e?: React.MouseEvent): void => {
-    if (e) e.preventDefault();
+  const handleInsert = async (): Promise<void> => {
     if (code.trim()) {
-      onInsert({ code, language });
-      if (!isEditing) {
-        setCode('');
-        setLanguage('javascript');
+      setLoading(true);
+      try {
+        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing
+        onInsert({ code, language });
+        if (!isEditing) {
+          setCode('');
+          setLanguage('javascript');
+        }
+        onClose();
+      } catch (error) {
+        console.error('Error inserting code:', error);
+      } finally {
+        setLoading(false);
       }
     }
   };
 
-  const handleClose = (e?: React.MouseEvent): void => {
-    if (e) e.preventDefault();
-    onClose();
+  const handleClear = (): void => {
+    setCode('');
+    setLanguage('javascript');
+    setSearchQuery('');
   };
 
-  const handleDropdownToggle = (e: React.MouseEvent): void => {
-    e.preventDefault();
-    setDropdownOpen(!dropdownOpen);
+  const handleLanguageChange = (selectedOption: any): void => {
+    if (selectedOption) {
+      setLanguage(selectedOption.value);
+    }
   };
 
-  const handleLanguageSelect = (e: React.MouseEvent, langValue: string): void => {
-    e.preventDefault();
-    setLanguage(langValue);
-    setDropdownOpen(false);
-  };
+  const selectedLanguageOption = languageOptions.find(lang => lang.value === language) || null;
 
-  const handleSearchInputClick = (e: React.MouseEvent): void => {
-    e.stopPropagation();
-  };
+  const modalButtons = [
+    {
+      action: 'cancel' as const,
+      text: 'Cancel',
+      onClick: onClose,
+      disabled: loading
+    },
+    {
+      action: 'save' as const,
+      text: isEditing ? 'Update Code' : 'Insert Code',
+      onClick: handleInsert,
+      disabled: !code.trim() || loading,
+      loading: loading
+    }
+  ];
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    setSearchQuery(e.target.value);
-  };
-
-  const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
-    setCode(e.target.value);
-  };
+  const topButtons = [
+    {
+      action: 'clear' as const,
+      text: 'Clear All',
+      onClick: handleClear,
+      disabled: loading
+    }
+  ];
 
   return (
-    <div className="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-flex tw-items-center tw-justify-center tw-z-50">
-      <div className="tw-bg-white tw-rounded-lg tw-p-4 tw-w-full tw-max-w-2xl tw-max-h-[90vh] tw-overflow-auto">
-        <h2 className="tw-text-purple-700 tw-text-xl tw-font-bold tw-mb-4">
-          {isEditing ? 'Edit Code' : 'Insert Code'}
-        </h2>
-        
-        <form onSubmit={(e) => e.preventDefault()}>
-          <div className="tw-mb-4 tw-relative" ref={dropdownRef}>
-            <div className="tw-mb-2 tw-font-medium tw-text-purple-700">Language</div>
-            <div 
-              className="tw-border tw-border-purple-300 tw-rounded tw-p-2 tw-flex tw-justify-between tw-items-center tw-cursor-pointer tw-bg-white"
-              onClick={handleDropdownToggle}
-            >
-              <span>{getLanguageLabel(language)}</span>
-              <ChevronDown size={16} className="tw-text-purple-700" />
+    <LearningModal
+      show={isOpen}
+      onHide={onClose}
+      title={isEditing ? 'Edit Code Block' : 'Insert Code Block'}
+      subtitle="Add syntax-highlighted code to your content"
+      icon={<BookOpen className="tw-w-5 tw-h-5" />}
+      size="xl"
+      width="90vw"
+      height="85vh"
+      topButtons={topButtons}
+      bottomButtons={modalButtons}
+      showCloseButton={true}
+      preventCloseOnOutsideClick={loading}
+    >
+      <div className="tw-space-y-6">
+        {/* Language Selection */}
+        <div className="tw-bg-white tw-rounded-xl tw-p-6 tw-shadow-sm tw-border tw-border-purple-100">
+          <h3 className="tw-text-lg tw-font-semibold tw-text-purple-700 tw-mb-4 tw-flex tw-items-center tw-gap-2">
+            <CodeIcon className="tw-w-5 tw-h-5" />
+            Programming Language
+          </h3>
+          
+          <SelectCustomField
+            label="Select Language"
+            value={selectedLanguageOption}
+            options={filteredLanguageOptions}
+            onChange={handleLanguageChange}
+            placeholder="Choose a programming language..."
+            loading={loading}
+          />
+          
+          <div className="tw-mt-3 tw-text-sm tw-text-purple-600">
+            <span className="tw-font-medium">Selected:</span> {getLanguageLabel(language)}
+          </div>
+        </div>
+
+        {/* Code Input */}
+        <div className="tw-bg-white tw-rounded-xl tw-p-6 tw-shadow-sm tw-border tw-border-purple-100">
+          <h3 className="tw-text-lg tw-font-semibold tw-text-purple-700 tw-mb-4">
+            Code Content
+          </h3>
+          
+          <div className="tw-space-y-4">
+            <div className="tw-relative">
+              <textarea
+                className="tw-w-full tw-h-80 tw-border-2 tw-border-purple-200 tw-rounded-xl tw-p-4 tw-font-mono tw-text-sm tw-bg-gray-50 focus:tw-bg-white focus:tw-border-purple-400 tw-transition-all tw-duration-200 tw-resize-none"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder={`Enter your ${getLanguageLabel(language)} code here...
+
+Example:
+function hello() {
+    console.log("Hello, World!");
+}
+
+hello();`}
+                disabled={loading}
+                style={{
+                  fontFamily: "'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
+                  fontSize: '14px',
+                  lineHeight: '1.5',
+                  tabSize: 2
+                }}
+              />
+              
+              {/* Character count */}
+              <div className="tw-absolute tw-bottom-2 tw-right-2 tw-bg-white tw-px-2 tw-py-1 tw-rounded tw-text-xs tw-text-gray-500 tw-border">
+                {code.length} characters
+              </div>
             </div>
-            
-            {dropdownOpen && (
-              <div className="tw-absolute tw-z-10 tw-w-full tw-mt-1 tw-bg-white tw-border tw-border-purple-300 tw-rounded tw-shadow-lg tw-max-h-60 tw-overflow-auto">
-                {/* Search input */}
-                <div className="tw-sticky tw-top-0 tw-bg-white tw-p-2 tw-border-b tw-border-purple-100">
-                  <div className="tw-relative">
-                    <div className="tw-absolute tw-inset-y-0 tw-left-0 tw-pl-2 tw-flex tw-items-center tw-pointer-events-none">
-                      <Search size={16} className="tw-text-purple-400" />
-                    </div>
-                    <input
-                      ref={searchInputRef}
-                      type="text"
-                      className="tw-pl-8 tw-pr-2 tw-py-1 tw-w-full tw-border tw-border-purple-200 tw-rounded tw-text-sm"
-                      placeholder="Search languages..."
-                      value={searchQuery}
-                      onChange={handleSearchChange}
-                      onClick={handleSearchInputClick}
-                    />
-                  </div>
+
+            {/* Code preview */}
+            {code.trim() && (
+              <div className="tw-border-2 tw-border-purple-200 tw-rounded-xl tw-overflow-hidden">
+                <div className="tw-bg-purple-100 tw-px-4 tw-py-2 tw-text-sm tw-font-medium tw-text-purple-700 tw-border-b tw-border-purple-200">
+                  Preview - {getLanguageLabel(language)}
                 </div>
-                
-                {/* Language options */}
-                <div className="tw-max-h-40 tw-overflow-y-auto">
-                  {filteredLanguages.length > 0 ? (
-                    filteredLanguages.map((lang) => (
-                      <div 
-                        key={lang.value}
-                        className="tw-p-2 tw-cursor-pointer hover:tw-bg-purple-100"
-                        onClick={(e) => handleLanguageSelect(e, lang.value)}
-                      >
-                        {lang.label}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="tw-p-2 tw-text-gray-500 tw-text-center">No languages found</div>
-                  )}
+                <div className="tw-bg-gray-50 tw-p-4 tw-max-h-40 tw-overflow-auto">
+                  <pre className="tw-text-sm tw-font-mono tw-text-gray-800 tw-whitespace-pre-wrap tw-break-words">
+                    {code}
+                  </pre>
                 </div>
               </div>
             )}
           </div>
-          
-          <div className="tw-mb-4">
-            <div className="tw-mb-2 tw-font-medium tw-text-purple-700">Code</div>
-            <textarea
-              className="tw-w-full tw-border tw-border-purple-300 tw-rounded tw-p-2 tw-font-mono tw-h-60"
-              value={code}
-              onChange={handleCodeChange}
-              placeholder="Paste your code here..."
-            />
-          </div>
-          
-          <div className="tw-flex tw-justify-end tw-gap-2">
-            <button
-              type="button"
-              className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-px-4 tw-py-2"
-              onClick={handleClose}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="tw-bg-purple-600 tw-text-white tw-rounded tw-px-4 tw-py-2"
-              onClick={handleInsert}
-            >
-              {isEditing ? 'Update' : 'Insert'}
-            </button>
-          </div>
-        </form>
+        </div>
+
+        {/* Help Section */}
+        <div className="tw-bg-gradient-to-r tw-from-blue-50 tw-to-purple-50 tw-rounded-xl tw-p-6 tw-border tw-border-blue-200">
+          <h3 className="tw-text-lg tw-font-semibold tw-text-blue-700 tw-mb-3">
+            💡 Tips for Better Code Blocks
+          </h3>
+          <ul className="tw-space-y-2 tw-text-sm tw-text-blue-600">
+            <li className="tw-flex tw-items-start tw-gap-2">
+              <span className="tw-text-blue-500 tw-font-bold">•</span>
+              Choose the correct language for proper syntax highlighting
+            </li>
+            <li className="tw-flex tw-items-start tw-gap-2">
+              <span className="tw-text-blue-500 tw-font-bold">•</span>
+              Include comments to explain complex logic
+            </li>
+            <li className="tw-flex tw-items-start tw-gap-2">
+              <span className="tw-text-blue-500 tw-font-bold">•</span>
+              Double-click any code block to edit it later
+            </li>
+            <li className="tw-flex tw-items-start tw-gap-2">
+              <span className="tw-text-blue-500 tw-font-bold">•</span>
+              Use meaningful variable names for better readability
+            </li>
+          </ul>
+        </div>
       </div>
-    </div>
+    </LearningModal>
   );
 };
 
 const CodeButton: React.FC<CodeButtonProps> = ({ onClick }) => {
-  const handleClick = (e: React.MouseEvent): void => {
-    e.preventDefault();
-    onClick();
-  };
-
   return (
-    <button
-      type="button"
-      className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-text-sm tw-hover:tw-bg-purple-50 tw-transition-colors"
-      onClick={handleClick}
-      title="Insert Code"
-    >
-      <CodeIcon size={16} />
-    </button>
+    <ButtonGradient
+      action="custom"
+      // customText="Code"
+      showText={false}
+      customIcon={<CodeIcon className="tw-w-4 tw-h-4" />}
+      onClick={() => onClick()}
+      size="sm"
+      customColors={{
+        primary: '#8B5CF6',
+        secondary: '#7C3AED',
+        gradient1: '#8B5CF6',
+        gradient2: '#A855F7',
+        text: '#FFFFFF'
+      }}
+      className="tw-flex tw-items-center tw-gap-2"
+    />
   );
 };
 
@@ -295,6 +321,26 @@ const toggleCodeBlock = (wrapper: HTMLElement, button: HTMLButtonElement): void 
         codeContent.style.overflow = '';
       }
     }, 300);
+  } else {
+    // Collapse animation
+    wrapper.setAttribute('data-collapsed', 'true');
+    
+    // Set initial state
+    codeContent.style.height = contentHeight + 'px';
+    codeContent.style.opacity = '1';
+    codeContent.style.overflow = 'hidden';
+    
+    // Force reflow
+    codeContent.offsetHeight;
+    
+    // Animate to collapsed state
+    codeContent.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    codeContent.style.height = '0px';
+    codeContent.style.opacity = '0';
+    
+    // Update button icon and title
+    button.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>';
+    button.title = 'Collapse code';
   }
 };
 
@@ -644,8 +690,9 @@ const getCodeStyles = (): string => `
   }
 `;
 
-export const Button = CodeButton;   // ⬅️ tambahkan
-export const Modal  = CodeModal;    // ⬅️ tambahkan
+export const Button = CodeButton;
+export const Modal = CodeModal;
+
 // Export sebagai default object dengan semua utilities
 const Code = {
   Button: CodeButton,
@@ -666,4 +713,4 @@ export {
   updateCodeBlock, 
   refreshAllCodeBlockHighlighting, 
   getCodeStyles 
-}
+};

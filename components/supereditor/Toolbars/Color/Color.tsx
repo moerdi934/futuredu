@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef } from 'react';
+import { Palette, Eye } from 'lucide-react';
+import { ButtonGradient } from '../../../button/ButtonTemplate';
 
 // Convert RGB to Hex
 const rgbToHex = (r, g, b) => {
@@ -323,9 +325,11 @@ const ColorPicker = ({ onColorSelect, onClose, initialColor = '#000000', title =
   };
 
   // Handle applying the selected color
-  const handleApplyColor = (e) => {
-    e?.preventDefault();
-    e?.stopPropagation();
+  const handleApplyColor = (e = null) => {
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     
     onColorSelect(selectedColor);
     onClose();
@@ -398,170 +402,225 @@ const ColorPicker = ({ onColorSelect, onClose, initialColor = '#000000', title =
 
   return (
     <div 
-      className="tw-absolute tw-z-50 tw-bg-white tw-border tw-border-purple-300 tw-rounded tw-shadow-lg tw-p-4 tw-min-w-[300px]"
+      className="tw-absolute tw-z-50 tw-bg-white tw-border-2 tw-border-purple-300 tw-rounded-xl tw-shadow-2xl tw-p-6 tw-min-w-[350px] tw-backdrop-blur-sm"
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
+      style={{ 
+        background: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)',
+        boxShadow: '0 20px 25px -5px rgba(139, 92, 246, 0.3), 0 10px 10px -5px rgba(139, 92, 246, 0.1)'
+      }}
     >
-      {/* Color picker title */}
-      <div className="tw-text-center tw-font-medium tw-text-purple-700 tw-mb-3">
-        {title}
+      {/* Color picker header */}
+      <div className="tw-flex tw-items-center tw-gap-3 tw-mb-4">
+        <div className="tw-bg-gradient-to-br tw-from-purple-500 tw-to-pink-500 tw-p-2 tw-rounded-lg tw-shadow-md">
+          <Palette className="tw-w-5 tw-h-5 tw-text-white" />
+        </div>
+        <div>
+          <h3 className="tw-text-lg tw-font-bold tw-text-purple-700">{title}</h3>
+          <p className="tw-text-sm tw-text-purple-600">Choose your perfect color</p>
+        </div>
       </div>
       
-      {/* Color preview */}
-      <div 
-        className="tw-w-full tw-h-16 tw-rounded tw-mb-4 tw-border tw-border-gray-300" 
-        style={{ backgroundColor: selectedColor }}
-      />
+      {/* Color preview with enhanced styling */}
+      <div className="tw-relative tw-mb-4">
+        <div 
+          className="tw-w-full tw-h-20 tw-rounded-xl tw-border-2 tw-border-purple-200 tw-shadow-inner tw-relative tw-overflow-hidden" 
+          style={{ backgroundColor: selectedColor }}
+        >
+          {/* Shine effect */}
+          <div className="tw-absolute tw-inset-0 tw-bg-gradient-to-br tw-from-white/20 tw-via-transparent tw-to-transparent tw-pointer-events-none" />
+          
+          {/* Color value display */}
+          <div className="tw-absolute tw-bottom-2 tw-right-2 tw-bg-white/90 tw-backdrop-blur-sm tw-px-2 tw-py-1 tw-rounded tw-text-xs tw-font-mono tw-text-gray-700">
+            {selectedColor}
+          </div>
+        </div>
+      </div>
       
-      {/* Picker mode tabs */}
-      <div className="tw-flex tw-mb-4 tw-border-b tw-border-gray-300">
-        <button 
-          className={`tw-px-3 tw-py-1 tw-mr-2 ${pickerMode === 'preset' ? 'tw-bg-purple-100 tw-border-b-2 tw-border-purple-500' : ''}`}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setPickerMode('preset');
+      {/* Picker mode tabs with ButtonGradient */}
+      <div className="tw-flex tw-gap-2 tw-mb-4">
+        <ButtonGradient
+          action="custom"
+          customText="Preset Colors"
+          onClick={() => setPickerMode('preset')}
+          size="sm"
+          customColors={pickerMode === 'preset' ? {
+            gradient1: '#8B5CF6',
+            gradient2: '#A855F7',
+            text: '#FFFFFF'
+          } : {
+            gradient1: '#F3F4F6',
+            gradient2: '#E5E7EB',
+            text: '#6B7280'
           }}
-        >
-          Preset Colors
-        </button>
-        <button 
-          className={`tw-px-3 tw-py-1 ${pickerMode === 'advanced' ? 'tw-bg-purple-100 tw-border-b-2 tw-border-purple-500' : ''}`}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setPickerMode('advanced');
+          className="tw-flex-1"
+        />
+        <ButtonGradient
+          action="custom"
+          customText="Advanced"
+          onClick={() => setPickerMode('advanced')}
+          size="sm"
+          customColors={pickerMode === 'advanced' ? {
+            gradient1: '#8B5CF6',
+            gradient2: '#A855F7',
+            text: '#FFFFFF'
+          } : {
+            gradient1: '#F3F4F6',
+            gradient2: '#E5E7EB',
+            text: '#6B7280'
           }}
-        >
-          Advanced
-        </button>
+          className="tw-flex-1"
+        />
       </div>
       
       {/* Color picker content based on mode */}
       {pickerMode === 'preset' && (
         <div className="tw-mb-4">
-          <div ref={presetGridRef} className="tw-grid tw-grid-cols-8 tw-gap-1">
+          <div ref={presetGridRef} className="tw-grid tw-grid-cols-8 tw-gap-2 tw-p-3 tw-bg-white tw-rounded-xl tw-border tw-border-purple-100">
             {colorPalette.map((color, index) => (
               <div
                 key={color}
                 onClick={(e) => handlePresetPick(e, color, index)}
                 onMouseDown={(e) => e.preventDefault()}
-                className={`tw-w-6 tw-h-6 tw-cursor-pointer tw-border tw-border-gray-300 tw-rounded ${
+                className={`tw-w-8 tw-h-8 tw-cursor-pointer tw-border-2 tw-rounded-lg tw-transition-all tw-duration-200 tw-hover:tw-scale-110 tw-hover:tw-shadow-lg ${
                   selectedPresetIndex === index 
-                    ? 'tw-ring-2 tw-ring-purple-500 tw-ring-offset-1' 
+                    ? 'tw-ring-2 tw-ring-purple-500 tw-ring-offset-2 tw-scale-110 tw-shadow-lg' 
                     : selectedColor === color 
-                      ? 'tw-ring-2 tw-ring-purple-300' 
-                      : ''
+                      ? 'tw-ring-2 tw-ring-purple-300 tw-ring-offset-1' 
+                      : 'tw-border-gray-300'
                 }`}
                 style={{ backgroundColor: color }}
                 title={color}
               />
             ))}
           </div>
-          <div className="tw-mt-2 tw-text-xs tw-text-gray-500 tw-text-center">
+          <div className="tw-mt-3 tw-text-xs tw-text-purple-600 tw-text-center tw-bg-purple-50 tw-rounded-lg tw-p-2">
             Use arrow keys to navigate, Enter to select
           </div>
         </div>
       )}
       
       {pickerMode === 'advanced' && (
-        <div className="tw-mb-4">
+        <div className="tw-mb-4 tw-space-y-4">
           {/* Color box (saturation/value) */}
-          <div 
-            ref={colorBoxRef}
-            className="tw-w-full tw-h-40 tw-cursor-crosshair tw-mb-2 tw-relative tw-border tw-border-gray-300 tw-rounded"
-            style={{ 
-              backgroundColor: `hsl(${hsv.h}, 100%, 50%)`,
-              backgroundImage: `
-                linear-gradient(to top, #000, transparent),
-                linear-gradient(to right, #fff, transparent)
-              `
-            }}
-            onMouseDown={handleMouseDown(handleColorBoxPick)}
-          >
-            {/* Selection point */}
+          <div className="tw-bg-white tw-rounded-xl tw-p-3 tw-border tw-border-purple-100">
             <div 
-              className="tw-absolute tw-w-4 tw-h-4 tw-border-2 tw-border-white tw-rounded-full tw-transform tw--translate-x-1/2 tw--translate-y-1/2 tw-pointer-events-none tw-shadow-md"
+              ref={colorBoxRef}
+              className="tw-w-full tw-h-40 tw-cursor-crosshair tw-relative tw-border-2 tw-border-purple-200 tw-rounded-lg tw-overflow-hidden"
               style={{ 
-                left: `${hsv.s}%`, 
-                top: `${100 - hsv.v}%`,
-                backgroundColor: selectedColor
+                backgroundColor: `hsl(${hsv.h}, 100%, 50%)`,
+                backgroundImage: `
+                  linear-gradient(to top, #000, transparent),
+                  linear-gradient(to right, #fff, transparent)
+                `
               }}
-            />
+              onMouseDown={handleMouseDown(handleColorBoxPick)}
+            >
+              {/* Selection point */}
+              <div 
+                className="tw-absolute tw-w-4 tw-h-4 tw-border-2 tw-border-white tw-rounded-full tw-transform tw--translate-x-1/2 tw--translate-y-1/2 tw-pointer-events-none tw-shadow-lg"
+                style={{ 
+                  left: `${hsv.s}%`, 
+                  top: `${100 - hsv.v}%`,
+                  backgroundColor: selectedColor
+                }}
+              />
+            </div>
           </div>
           
           {/* Hue slider */}
-          <div 
-            ref={hueSliderRef}
-            className="tw-w-full tw-h-6 tw-cursor-crosshair tw-mb-4 tw-relative tw-border tw-border-gray-300 tw-rounded"
-            style={{ 
-              background: 'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)'
-            }}
-            onMouseDown={handleMouseDown(handleHueSliderPick)}
-          >
-            {/* Hue slider marker */}
+          <div className="tw-bg-white tw-rounded-xl tw-p-3 tw-border tw-border-purple-100">
             <div 
-              className="tw-absolute tw-h-full tw-w-1 tw-border tw-border-white tw-pointer-events-none tw-transform tw--translate-x-1/2"
-              style={{ left: `${hsv.h / 360 * 100}%` }}
-            />
+              ref={hueSliderRef}
+              className="tw-w-full tw-h-6 tw-cursor-crosshair tw-relative tw-border-2 tw-border-purple-200 tw-rounded-lg tw-overflow-hidden"
+              style={{ 
+                background: 'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)'
+              }}
+              onMouseDown={handleMouseDown(handleHueSliderPick)}
+            >
+              {/* Hue slider marker */}
+              <div 
+                className="tw-absolute tw-h-full tw-w-1 tw-bg-white tw-border tw-border-gray-300 tw-pointer-events-none tw-transform tw--translate-x-1/2 tw-shadow-md"
+                style={{ left: `${hsv.h / 360 * 100}%` }}
+              />
+            </div>
           </div>
         </div>
       )}
       
-      {/* Color format tabs */}
-      <div className="tw-flex tw-mb-2 tw-border-b tw-border-gray-300">
-        <button 
-          className={`tw-px-3 tw-py-1 tw-mr-2 ${displayMode === 'hex' ? 'tw-bg-purple-100 tw-border-b-2 tw-border-purple-500' : ''}`}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setDisplayMode('hex');
+      {/* Color format tabs with ButtonGradient */}
+      <div className="tw-flex tw-gap-1 tw-mb-3">
+        <ButtonGradient
+          action="custom"
+          customText="HEX"
+          onClick={() => setDisplayMode('hex')}
+          size="sm"
+          customColors={displayMode === 'hex' ? {
+            gradient1: '#8B5CF6',
+            gradient2: '#A855F7',
+            text: '#FFFFFF'
+          } : {
+            gradient1: '#F9FAFB',
+            gradient2: '#F3F4F6',
+            text: '#6B7280'
           }}
-        >
-          HEX
-        </button>
-        <button 
-          className={`tw-px-3 tw-py-1 tw-mr-2 ${displayMode === 'rgb' ? 'tw-bg-purple-100 tw-border-b-2 tw-border-purple-500' : ''}`}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setDisplayMode('rgb');
+          className="tw-flex-1"
+        />
+        <ButtonGradient
+          action="custom"
+          customText="RGB"
+          onClick={() => setDisplayMode('rgb')}
+          size="sm"
+          customColors={displayMode === 'rgb' ? {
+            gradient1: '#8B5CF6',
+            gradient2: '#A855F7',
+            text: '#FFFFFF'
+          } : {
+            gradient1: '#F9FAFB',
+            gradient2: '#F3F4F6',
+            text: '#6B7280'
           }}
-        >
-          RGB
-        </button>
-        <button 
-          className={`tw-px-3 tw-py-1 ${displayMode === 'cmyk' ? 'tw-bg-purple-100 tw-border-b-2 tw-border-purple-500' : ''}`}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setDisplayMode('cmyk');
+          className="tw-flex-1"
+        />
+        <ButtonGradient
+          action="custom"
+          customText="CMYK"
+          onClick={() => setDisplayMode('cmyk')}
+          size="sm"
+          customColors={displayMode === 'cmyk' ? {
+            gradient1: '#8B5CF6',
+            gradient2: '#A855F7',
+            text: '#FFFFFF'
+          } : {
+            gradient1: '#F9FAFB',
+            gradient2: '#F3F4F6',
+            text: '#6B7280'
           }}
-        >
-          CMYK
-        </button>
+          className="tw-flex-1"
+        />
       </div>
       
       {/* Color input fields based on mode */}
-      <div className="tw-mb-4">
+      <div className="tw-mb-4 tw-bg-white tw-rounded-xl tw-p-4 tw-border tw-border-purple-100">
         {displayMode === 'hex' && (
-          <div className="tw-flex tw-items-center">
-            <label className="tw-w-10">Hex:</label>
+          <div className="tw-flex tw-items-center tw-gap-3">
+            <label className="tw-font-medium tw-text-purple-700 tw-w-12">Hex:</label>
             <input 
               type="text"
               value={hex}
               onChange={(e) => handleHexChange(e.target.value)}
               onKeyDown={(e) => handleInputKeyDown(e, handleHexChange, e.target.value)}
               onClick={(e) => e.stopPropagation()}
-              className="tw-flex-1 tw-p-1 tw-border tw-border-gray-300 tw-rounded"
+              className="tw-flex-1 tw-p-2 tw-border-2 tw-border-purple-200 tw-rounded-lg tw-font-mono tw-text-center focus:tw-border-purple-400 focus:tw-outline-none tw-transition-colors"
+              placeholder="#000000"
             />
           </div>
         )}
         
         {displayMode === 'rgb' && (
-          <div className="tw-space-y-2">
-            <div className="tw-flex tw-items-center">
-              <label className="tw-w-10">R:</label>
+          <div className="tw-space-y-3">
+            <div className="tw-flex tw-items-center tw-gap-3">
+              <label className="tw-font-medium tw-text-red-600 tw-w-12">R:</label>
               <input 
                 type="number"
                 min="0"
@@ -570,11 +629,11 @@ const ColorPicker = ({ onColorSelect, onClose, initialColor = '#000000', title =
                 onChange={(e) => handleRgbChange('r', e.target.value)}
                 onKeyDown={(e) => handleInputKeyDown(e, () => handleRgbChange('r', e.target.value), e.target.value)}
                 onClick={(e) => e.stopPropagation()}
-                className="tw-flex-1 tw-p-1 tw-border tw-border-gray-300 tw-rounded"
+                className="tw-flex-1 tw-p-2 tw-border-2 tw-border-red-200 tw-rounded-lg tw-text-center focus:tw-border-red-400 focus:tw-outline-none tw-transition-colors"
               />
             </div>
-            <div className="tw-flex tw-items-center">
-              <label className="tw-w-10">G:</label>
+            <div className="tw-flex tw-items-center tw-gap-3">
+              <label className="tw-font-medium tw-text-green-600 tw-w-12">G:</label>
               <input 
                 type="number"
                 min="0"
@@ -583,11 +642,11 @@ const ColorPicker = ({ onColorSelect, onClose, initialColor = '#000000', title =
                 onChange={(e) => handleRgbChange('g', e.target.value)}
                 onKeyDown={(e) => handleInputKeyDown(e, () => handleRgbChange('g', e.target.value), e.target.value)}
                 onClick={(e) => e.stopPropagation()}
-                className="tw-flex-1 tw-p-1 tw-border tw-border-gray-300 tw-rounded"
+                className="tw-flex-1 tw-p-2 tw-border-2 tw-border-green-200 tw-rounded-lg tw-text-center focus:tw-border-green-400 focus:tw-outline-none tw-transition-colors"
               />
             </div>
-            <div className="tw-flex tw-items-center">
-              <label className="tw-w-10">B:</label>
+            <div className="tw-flex tw-items-center tw-gap-3">
+              <label className="tw-font-medium tw-text-blue-600 tw-w-12">B:</label>
               <input 
                 type="number"
                 min="0"
@@ -596,16 +655,16 @@ const ColorPicker = ({ onColorSelect, onClose, initialColor = '#000000', title =
                 onChange={(e) => handleRgbChange('b', e.target.value)}
                 onKeyDown={(e) => handleInputKeyDown(e, () => handleRgbChange('b', e.target.value), e.target.value)}
                 onClick={(e) => e.stopPropagation()}
-                className="tw-flex-1 tw-p-1 tw-border tw-border-gray-300 tw-rounded"
+                className="tw-flex-1 tw-p-2 tw-border-2 tw-border-blue-200 tw-rounded-lg tw-text-center focus:tw-border-blue-400 focus:tw-outline-none tw-transition-colors"
               />
             </div>
           </div>
         )}
         
         {displayMode === 'cmyk' && (
-          <div className="tw-space-y-2">
-            <div className="tw-flex tw-items-center">
-              <label className="tw-w-10">C:</label>
+          <div className="tw-space-y-3">
+            <div className="tw-flex tw-items-center tw-gap-3">
+              <label className="tw-font-medium tw-text-cyan-600 tw-w-12">C:</label>
               <input 
                 type="number"
                 min="0"
@@ -614,12 +673,12 @@ const ColorPicker = ({ onColorSelect, onClose, initialColor = '#000000', title =
                 onChange={(e) => handleCmykChange('c', e.target.value)}
                 onKeyDown={(e) => handleInputKeyDown(e, () => handleCmykChange('c', e.target.value), e.target.value)}
                 onClick={(e) => e.stopPropagation()}
-                className="tw-flex-1 tw-p-1 tw-border tw-border-gray-300 tw-rounded"
+                className="tw-flex-1 tw-p-2 tw-border-2 tw-border-cyan-200 tw-rounded-lg tw-text-center focus:tw-border-cyan-400 focus:tw-outline-none tw-transition-colors"
               />
-              <span className="tw-ml-1">%</span>
+              <span className="tw-text-cyan-600 tw-font-medium">%</span>
             </div>
-            <div className="tw-flex tw-items-center">
-              <label className="tw-w-10">M:</label>
+            <div className="tw-flex tw-items-center tw-gap-3">
+              <label className="tw-font-medium tw-text-pink-600 tw-w-12">M:</label>
               <input 
                 type="number"
                 min="0"
@@ -628,12 +687,12 @@ const ColorPicker = ({ onColorSelect, onClose, initialColor = '#000000', title =
                 onChange={(e) => handleCmykChange('m', e.target.value)}
                 onKeyDown={(e) => handleInputKeyDown(e, () => handleCmykChange('m', e.target.value), e.target.value)}
                 onClick={(e) => e.stopPropagation()}
-                className="tw-flex-1 tw-p-1 tw-border tw-border-gray-300 tw-rounded"
+                className="tw-flex-1 tw-p-2 tw-border-2 tw-border-pink-200 tw-rounded-lg tw-text-center focus:tw-border-pink-400 focus:tw-outline-none tw-transition-colors"
               />
-              <span className="tw-ml-1">%</span>
+              <span className="tw-text-pink-600 tw-font-medium">%</span>
             </div>
-            <div className="tw-flex tw-items-center">
-              <label className="tw-w-10">Y:</label>
+            <div className="tw-flex tw-items-center tw-gap-3">
+              <label className="tw-font-medium tw-text-yellow-600 tw-w-12">Y:</label>
               <input 
                 type="number"
                 min="0"
@@ -642,12 +701,12 @@ const ColorPicker = ({ onColorSelect, onClose, initialColor = '#000000', title =
                 onChange={(e) => handleCmykChange('y', e.target.value)}
                 onKeyDown={(e) => handleInputKeyDown(e, () => handleCmykChange('y', e.target.value), e.target.value)}
                 onClick={(e) => e.stopPropagation()}
-                className="tw-flex-1 tw-p-1 tw-border tw-border-gray-300 tw-rounded"
+                className="tw-flex-1 tw-p-2 tw-border-2 tw-border-yellow-200 tw-rounded-lg tw-text-center focus:tw-border-yellow-400 focus:tw-outline-none tw-transition-colors"
               />
-              <span className="tw-ml-1">%</span>
+              <span className="tw-text-yellow-600 tw-font-medium">%</span>
             </div>
-            <div className="tw-flex tw-items-center">
-              <label className="tw-w-10">K:</label>
+            <div className="tw-flex tw-items-center tw-gap-3">
+              <label className="tw-font-medium tw-text-gray-600 tw-w-12">K:</label>
               <input 
                 type="number"
                 min="0"
@@ -656,96 +715,123 @@ const ColorPicker = ({ onColorSelect, onClose, initialColor = '#000000', title =
                 onChange={(e) => handleCmykChange('k', e.target.value)}
                 onKeyDown={(e) => handleInputKeyDown(e, () => handleCmykChange('k', e.target.value), e.target.value)}
                 onClick={(e) => e.stopPropagation()}
-                className="tw-flex-1 tw-p-1 tw-border tw-border-gray-300 tw-rounded"
+                className="tw-flex-1 tw-p-2 tw-border-2 tw-border-gray-300 tw-rounded-lg tw-text-center focus:tw-border-gray-400 focus:tw-outline-none tw-transition-colors"
               />
-              <span className="tw-ml-1">%</span>
+              <span className="tw-text-gray-600 tw-font-medium">%</span>
             </div>
           </div>
         )}
       </div>
       
-      {/* Action buttons */}
-      <div className="tw-flex tw-justify-end tw-gap-2">
-        <button 
-          className="tw-px-3 tw-py-1 tw-bg-gray-200 tw-text-gray-700 tw-rounded"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onClose();
+      {/* Action buttons with ButtonGradient */}
+      <div className="tw-flex tw-justify-end tw-gap-3 tw-mb-4">
+        <ButtonGradient
+          action="cancel"
+          customText="Cancel"
+          onClick={onClose}
+          size="md"
+          customColors={{
+            gradient1: '#F3F4F6',
+            gradient2: '#E5E7EB',
+            text: '#6B7280',
+            border: '#D1D5DB'
           }}
-        >
-          Cancel
-        </button>
-        <button 
-          className="tw-px-3 tw-py-1 tw-bg-purple-600 tw-text-white tw-rounded"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleApplyColor(e);
+        />
+        <ButtonGradient
+          action="apply"
+          customText="Apply Color"
+          onClick={handleApplyColor}
+          size="md"
+          customColors={{
+            gradient1: '#8B5CF6',
+            gradient2: '#7C3AED',
+            text: '#FFFFFF'
           }}
-        >
-          Apply
-        </button>
+        />
       </div>
       
       {/* Help text */}
-      <div className="tw-mt-2 tw-text-xs tw-text-gray-500 tw-text-center">
-        Press Enter to apply, ESC to close, or click outside this panel
+      <div className="tw-bg-gradient-to-r tw-from-purple-50 tw-to-pink-50 tw-rounded-lg tw-p-3 tw-border tw-border-purple-100">
+        <div className="tw-text-xs tw-text-purple-600 tw-text-center tw-space-y-1">
+          <div className="tw-font-medium">Quick Actions:</div>
+          <div>Press <kbd className="tw-bg-purple-200 tw-px-1 tw-rounded tw-text-purple-800">Enter</kbd> to apply • <kbd className="tw-bg-purple-200 tw-px-1 tw-rounded tw-text-purple-800">ESC</kbd> to close</div>
+          <div>Click outside this panel to cancel</div>
+        </div>
       </div>
     </div>
   );
 };
 
-// Text Color Button Component
-export const TextColorButton = ({ onClick, currentColor = '#000000', className = '' }) => {
+// Text Color Button Component dengan ForwardRef
+export const TextColorButton = forwardRef<HTMLButtonElement, any>(({ 
+  onClick, 
+  currentColor = '#000000', 
+  className = '' 
+}, ref) => {
   return (
-    <button 
-      className={`tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-flex tw-items-center tw-gap-1 ${className}`}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onClick?.();
-      }}
-      onMouseDown={(e) => e.preventDefault()}
-      title="Text Color (Ctrl+Shift+F)"
-    >
-      <div className="tw-relative">
-        <div className="tw-text-xs tw-font-bold">A</div>
-        <div 
-          className="tw-absolute tw-bottom-0 tw-left-0 tw-right-0 tw-h-1 tw-rounded-sm" 
-          style={{ backgroundColor: currentColor }}
-        />
-      </div>
-    </button>
-  );
-};
-
-// Background Color Button Component
-export const BackgroundColorButton = ({ onClick, currentColor = '#ffffff', className = '' }) => {
-  return (
-    <button 
-      className={`tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-p-1 tw-flex tw-items-center tw-gap-1 ${className}`}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onClick?.();
-      }}
-      onMouseDown={(e) => e.preventDefault()}
-      title="Background Color (Ctrl+Shift+H)"
-    >
-      <div className="tw-relative">
-        <div 
-          className="tw-w-4 tw-h-4 tw-border tw-border-gray-400 tw-rounded-sm tw-flex tw-items-center tw-justify-center tw-text-xs tw-font-bold" 
-          style={{ backgroundColor: currentColor }}
-        >
-          <span className="tw-text-gray-700" style={{ textShadow: '0 0 2px rgba(255,255,255,0.8)' }}>
-            H
-          </span>
+    <ButtonGradient
+      ref={ref}
+      action="custom"
+      customIcon={
+        <div className="tw-relative tw-flex tw-items-center tw-justify-center">
+          <div className="tw-text-sm tw-font-bold tw-relative">A</div>
+          <div 
+            className="tw-absolute tw-bottom-0 tw-left-0 tw-right-0 tw-h-1 tw-rounded-sm" 
+            style={{ backgroundColor: currentColor }}
+          />
         </div>
-      </div>
-    </button>
+      }
+      showText={false}
+      onClick={onClick}
+      size="sm"
+      customColors={{
+        gradient1: '#8B5CF6',
+        gradient2: '#A855F7',
+        text: '#FFFFFF'
+      }}
+      className={`tw-flex tw-items-center tw-gap-2 ${className}`}
+    />
   );
-};
+});
+
+TextColorButton.displayName = 'TextColorButton';
+
+// Background Color Button Component dengan ForwardRef  
+export const BackgroundColorButton = forwardRef<HTMLButtonElement, any>(({ 
+  onClick, 
+  currentColor = '#ffffff', 
+  className = '' 
+}, ref) => {
+  return (
+    <ButtonGradient
+      ref={ref}
+      action="custom"
+      customIcon={
+        <div className="tw-relative tw-flex tw-items-center tw-justify-center">
+          <div 
+            className="tw-w-4 tw-h-4 tw-border tw-border-gray-400 tw-rounded-sm tw-flex tw-items-center tw-justify-center tw-text-xs tw-font-bold" 
+            style={{ backgroundColor: currentColor }}
+          >
+            <span className="tw-text-gray-700" style={{ textShadow: '0 0 2px rgba(255,255,255,0.8)' }}>
+              <Eye className="tw-w-3 tw-h-3" />
+            </span>
+          </div>
+        </div>
+      }
+      showText={false}
+      onClick={onClick}
+      size="sm"
+      customColors={{
+        gradient1: '#06B6D4',
+        gradient2: '#0891B2',
+        text: '#FFFFFF'
+      }}
+      className={`tw-flex tw-items-center tw-gap-2 ${className}`}
+    />
+  );
+});
+
+BackgroundColorButton.displayName = 'BackgroundColorButton';
 
 // Helper function to handle text color application
 export const applyTextColor = (color, editorRef, handleChange) => {

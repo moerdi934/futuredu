@@ -18,6 +18,7 @@ export interface ClassQueryParams {
   studentId?: string;
   startDate?: string;
   endDate?: string;
+  includeDeleted?: string;
 }
 
 export interface ProcessedClass {
@@ -45,6 +46,8 @@ export interface ProcessedClass {
   edit_user_id: string;
   edit_date: string;
   status: string;
+  is_deleted: boolean;
+  delete_reason?: string;
 }
 
 export interface CreateClassRequest {
@@ -69,6 +72,10 @@ export interface UpdateClassRequest {
   event_id: string;
 }
 
+export interface DeleteClassRequest {
+  delete_reason?: string;
+}
+
 // Fungsi untuk mendapatkan semua kelas
 export const getAllClasses = async (req: NextApiRequest, res: NextApiResponse) => {
   try {
@@ -85,10 +92,11 @@ export const getAllClasses = async (req: NextApiRequest, res: NextApiResponse) =
       teacherId: query.teacherId || '',
       studentId: query.studentId || '',
       startDate: query.startDate || '',
-      endDate: query.endDate || ''
+      endDate: query.endDate || '',
+      includeDeleted: query.includeDeleted || 'false'
     };
     
-    console.log('test:', params.studentId);
+    console.log('Classes query params:', params);
     const { classes, total } = await ClassModel.getClasses(params);
     
     const processedClasses: ProcessedClass[] = classes.map((cls) => ({
@@ -129,7 +137,9 @@ export const getAllClasses = async (req: NextApiRequest, res: NextApiResponse) =
       create_date: cls.create_date,
       edit_user_id: cls.edit_user_id,
       edit_date: cls.edit_date,
-      status: cls.status
+      status: cls.status,
+      is_deleted: cls.is_deleted,
+      delete_reason: cls.delete_reason
     }));
 
     res.json({
@@ -154,10 +164,20 @@ export const getClassById = async (req: NextApiRequest, res: NextApiResponse) =>
       return res.status(404).json({ message: 'Kelas tidak ditemukan' });
     }
 
+    // Check if class is soft deleted
+    if (cls.is_deleted) {
+      return res.status(410).json({ 
+        message: 'Kelas telah dihapus',
+        delete_reason: cls.delete_reason 
+      });
+    }
+
     const processedClass = {
       id: cls.id,
       name: cls.name,
       course_name: cls.course_name,
+      course_id: cls.course_id,
+      teacher_id: cls.teacher_id,
       description: cls.description,
       teacher_name: cls.teacher_name,
       student_list_ids: cls.student_list,
@@ -180,11 +200,19 @@ export const getClassById = async (req: NextApiRequest, res: NextApiResponse) =>
         hour: '2-digit',
         minute: '2-digit',
       }),
+      real_start_datetime: cls.start_date,
+      real_end_datetime: cls.end_date,
       creator: cls.creator_name,
       create_user_id: cls.create_user_id,
       create_date: cls.create_date,
       edit_user_id: cls.edit_user_id,
       edit_date: cls.edit_date,
+      event_id: cls.event_id,
+      starter_user_id: cls.starter_user_id,
+      is_started: cls.is_started,
+      status: cls.status,
+      is_deleted: cls.is_deleted,
+      delete_reason: cls.delete_reason
     };
 
     res.json(processedClass);
@@ -195,12 +223,19 @@ export const getClassById = async (req: NextApiRequest, res: NextApiResponse) =>
 };
  
 // Fungsi untuk membuat kelas baru
-export const createClass = async (req: NextApiRequest, res: NextApiResponse) => {
+export const createClass = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   try { 
-    const { name, description, start_date, end_date, create_user_id, teacher_id, student_list }: CreateClassRequest = req.body;
+    const { name, description, start_date, end_date, teacher_id, student_list }: CreateClassRequest = req.body;
+    
+    // Set create_user_id from authenticated user
+    const classData = {
+      ...req.body,
+      create_user_id: req.user.user_id
+    };
+
     const assign = [teacher_id, ...student_list];
 
-    const newClass = await ClassModel.createClass(req.body);
+    const newClass = await ClassModel.createClass(classData);
 
     const classId = newClass.id;
     const newEvent = await eventModel.createEvent({
@@ -208,7 +243,7 @@ export const createClass = async (req: NextApiRequest, res: NextApiResponse) => 
       notes: description,
       start_time: start_date,
       end_time: end_date,
-      create_user_id: create_user_id,
+      create_user_id: req.user.user_id,
       assigned_to: assign,
       starter_user_id: teacher_id,
       role: ["teacher", "student"],
@@ -224,27 +259,50 @@ export const createClass = async (req: NextApiRequest, res: NextApiResponse) => 
     
     return res.status(201).json(responseObj);
   } catch (err: any) {
+    console.error('Create Class Error:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
 // Fungsi untuk mengupdate kelas
-export const updateClass = async (req: NextApiRequest, res: NextApiResponse) => {
+export const updateClass = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   const { event_id }: UpdateClassRequest = req.body;
   const { id } = req.query;
 
   try {
-    const updatedClass = await ClassModel.updateClass(id as string, req.body);
-    const updatedEvent = await eventModel.updateEvent(event_id, req.body);
+    // Check if class exists and is not deleted
+    const existingClass = await ClassModel.getClassesById(id as string);
+    if (!existingClass) {
+      return res.status(404).json({ message: 'Kelas tidak ditemukan' });
+    }
+
+    if (existingClass.is_deleted) {
+      return res.status(410).json({ 
+        message: 'Kelas telah dihapus dan tidak dapat diubah',
+        delete_reason: existingClass.delete_reason 
+      });
+    }
+
+    // Add edit_user_id from authenticated user
+    const updateData = {
+      ...req.body,
+      edit_user_id: req.user.user_id
+    };
+
+    const updatedClass = await ClassModel.updateClass(id as string, updateData);
+    const updatedEvent = await eventModel.updateEvent(event_id, updateData);
+    
     res.status(200).json(updatedClass);
   } catch (err: any) {
+    console.error('Update Class Error:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
-// Fungsi untuk menghapus kelas
-export const deleteClass = async (req: NextApiRequest, res: NextApiResponse) => {
+// Fungsi untuk soft delete kelas
+export const deleteClass = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   const { id } = req.query;
+  const { delete_reason }: DeleteClassRequest = req.body;
 
   try {
     // Cek keberadaan kelas
@@ -253,13 +311,34 @@ export const deleteClass = async (req: NextApiRequest, res: NextApiResponse) => 
       return res.status(404).json({ message: 'Kelas tidak ditemukan' });
     }
 
-    // Cek hak akses
-    // if (req.user.role !== 'admin' && existingClass.teacher_id !== req.user.user_id) {
-    //   return res.status(403).json({ message: 'Akses ditolak: Anda tidak memiliki hak untuk menghapus kelas ini' });
-    // }
+    // Check if already deleted
+    if (existingClass.is_deleted) {
+      return res.status(410).json({ 
+        message: 'Kelas sudah dihapus sebelumnya',
+        delete_reason: existingClass.delete_reason 
+      });
+    }
 
-    const deletedClass = await ClassModel.deleteClass(id as string);
-    res.status(200).json(deletedClass);
+    // Cek hak akses - only admin, creator, or teacher can delete
+    if (req.user.role !== 'admin' && 
+        existingClass.create_user_id !== req.user.user_id && 
+        existingClass.teacher_id !== req.user.user_id) {
+      return res.status(403).json({ 
+        message: 'Akses ditolak: Anda tidak memiliki hak untuk menghapus kelas ini' 
+      });
+    }
+
+    // Perform soft delete
+    const deletedClass = await ClassModel.softDeleteClass(
+      id as string, 
+      req.user.user_id, 
+      delete_reason || 'Dihapus oleh pengguna'
+    );
+
+    res.status(200).json({
+      message: 'Kelas berhasil dihapus',
+      data: deletedClass
+    });
   } catch (error) {
     console.error('Delete Class Error:', error);
     res.status(500).json({ message: 'Server Error' });

@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useRef, useState, useEffect, RefObject } from 'react';
+import { LearningModal, ModalButton } from '../../../modal/ModalTemplate';
+import { Upload, Link, Image as ImageIcon, X } from 'lucide-react';
 
 // Types
 interface ImageModalProps {
@@ -26,7 +28,7 @@ interface ImageInsertionData {
   uploadedImage?: File;
 }
 
-// Main ImageModal Component
+// Main ImageModal Component using LearningModal
 const ImageModal: React.FC<ImageModalProps> = ({ 
   isOpen, 
   onClose, 
@@ -94,9 +96,7 @@ const ImageModal: React.FC<ImageModalProps> = ({
     fileInputRef.current?.click();
   };
 
-  const handleImageInsert = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleImageInsert = () => {
     if (imageUrl || uploadedImage) {
       onInsert({ imageUrl, uploadedImage });
       // Reset the state after insertion
@@ -104,6 +104,7 @@ const ImageModal: React.FC<ImageModalProps> = ({
       setUploadedImage(null);
       setPreviewUrl('');
       setImageLoadError(false);
+      onClose();
     }
   };
 
@@ -136,145 +137,159 @@ const ImageModal: React.FC<ImageModalProps> = ({
     }
   };
 
-  const handleModalClose = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleModalClose = () => {
+    // Reset state when closing
+    setImageUrl('');
+    setUploadedImage(null);
+    setPreviewUrl('');
+    setImageLoadError(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     onClose();
   };
 
-  if (!isOpen) return null;
+  // Define modal buttons
+  const bottomButtons: ModalButton[] = [
+    {
+      action: 'cancel',
+      text: 'Cancel',
+      onClick: handleModalClose,
+      variant: 'secondary'
+    },
+    {
+      action: 'submit',
+      text: 'Insert Image',
+      icon: <ImageIcon className="tw-w-4 tw-h-4" />,
+      onClick: handleImageInsert,
+      disabled: (!imageUrl && !uploadedImage) || imageLoadError,
+      variant: 'primary'
+    }
+  ];
 
   return (
-    <div className="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-flex tw-items-center tw-justify-center tw-z-50">
-      <div className="tw-bg-white tw-rounded-lg tw-shadow-xl tw-max-w-2xl tw-w-full tw-max-h-screen tw-overflow-y-auto tw-m-4">
-        <div className="tw-flex tw-justify-between tw-items-center tw-p-6 tw-border-b">
-          <h3 className="tw-text-xl tw-font-semibold tw-text-purple-700">Insert Image</h3>
-          <button 
-            className="tw-text-gray-400 hover:tw-text-gray-600 tw-text-2xl tw-leading-none"
-            onClick={handleModalClose}
-            title="Close"
-          >
-            ✕
-          </button>
-        </div>
-        
-        <div className="tw-p-6">
-          {/* URL Input Section */}
-          <div className="tw-mb-6">
-            <label className="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+    <LearningModal
+      show={isOpen}
+      onHide={handleModalClose}
+      title="Insert Image"
+      subtitle="Add an image from URL or upload from your device"
+      icon={<ImageIcon className="tw-w-5 tw-h-5" />}
+      size="lg"
+      bottomButtons={bottomButtons}
+      showCloseButton={true}
+    >
+      <div className="tw-space-y-6">
+        {/* URL Input Section */}
+        <div className="tw-space-y-3">
+          <div className="tw-flex tw-items-center tw-gap-2 tw-mb-3">
+            <Link className="tw-w-5 tw-h-5 tw-text-purple-600" />
+            <label className="tw-text-sm tw-font-semibold tw-text-gray-700">
               Image URL
             </label>
-            <input
-              type="url"
-              className="tw-border tw-border-gray-300 tw-rounded-lg tw-p-3 tw-w-full focus:tw-ring-2 focus:tw-ring-purple-500 focus:tw-border-purple-500 tw-transition-colors"
-              placeholder="https://example.com/image.jpg"
-              value={imageUrl}
-              onChange={handleUrlChange}
-            />
           </div>
-          
-          {/* Divider */}
-          <div className="tw-flex tw-items-center tw-my-6">
-            <div className="tw-flex-1 tw-border-t tw-border-gray-300"></div>
-            <span className="tw-px-4 tw-text-gray-500 tw-text-sm tw-font-medium">OR</span>
-            <div className="tw-flex-1 tw-border-t tw-border-gray-300"></div>
-          </div>
-          
-          {/* File Upload Section */}
-          <div className="tw-mb-6">
-            <label className="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+          <input
+            type="url"
+            className="tw-w-full tw-px-4 tw-py-3 tw-border-2 tw-border-purple-200 focus:tw-border-purple-500 tw-rounded-lg tw-transition-colors tw-text-sm"
+            placeholder="https://example.com/image.jpg"
+            value={imageUrl}
+            onChange={handleUrlChange}
+          />
+        </div>
+        
+        {/* Divider */}
+        <div className="tw-flex tw-items-center tw-my-6">
+          <div className="tw-flex-1 tw-border-t tw-border-purple-200"></div>
+          <span className="tw-px-4 tw-text-purple-600 tw-text-sm tw-font-medium tw-bg-purple-50 tw-rounded-full">
+            OR
+          </span>
+          <div className="tw-flex-1 tw-border-t tw-border-purple-200"></div>
+        </div>
+        
+        {/* File Upload Section */}
+        <div className="tw-space-y-3">
+          <div className="tw-flex tw-items-center tw-gap-2 tw-mb-3">
+            <Upload className="tw-w-5 tw-h-5 tw-text-purple-600" />
+            <label className="tw-text-sm tw-font-semibold tw-text-gray-700">
               Upload Image
             </label>
-            <div className="tw-flex tw-items-center tw-gap-3">
-              <button 
-                className="tw-bg-white tw-text-purple-700 tw-border-2 tw-border-purple-300 hover:tw-border-purple-500 tw-rounded-lg tw-px-4 tw-py-2 tw-transition-colors tw-font-medium"
-                onClick={triggerFileInput}
-              >
-                Choose File
-              </button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                style={{ display: 'none' }}
-                accept="image/*"
-              />
-              {uploadedImage && (
-                <span className="tw-text-sm tw-text-gray-600 tw-flex-1">
-                  Selected: {uploadedImage.name}
-                </span>
-              )}
-            </div>
-            <p className="tw-text-xs tw-text-gray-500 tw-mt-1">
-              Supported formats: JPG, PNG, GIF, WebP (max 5MB)
-            </p>
           </div>
+          <div className="tw-flex tw-items-center tw-gap-3">
+            <button 
+              className="tw-bg-purple-50 hover:tw-bg-purple-100 tw-text-purple-700 tw-border-2 tw-border-purple-300 hover:tw-border-purple-500 tw-rounded-lg tw-px-4 tw-py-2 tw-transition-all tw-font-medium tw-flex tw-items-center tw-gap-2"
+              onClick={triggerFileInput}
+            >
+              <Upload className="tw-w-4 tw-h-4" />
+              Choose File
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+              accept="image/*"
+            />
+            {uploadedImage && (
+              <span className="tw-text-sm tw-text-gray-600 tw-flex-1 tw-font-medium">
+                Selected: {uploadedImage.name}
+              </span>
+            )}
+          </div>
+          <p className="tw-text-xs tw-text-gray-500">
+            Supported formats: JPG, PNG, GIF, WebP (max 5MB)
+          </p>
+        </div>
 
-          {/* Preview Section */}
-          {previewUrl && (
-            <div className="tw-mb-6">
-              <label className="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+        {/* Preview Section */}
+        {previewUrl && (
+          <div className="tw-space-y-3">
+            <div className="tw-flex tw-items-center tw-gap-2">
+              <ImageIcon className="tw-w-5 tw-h-5 tw-text-purple-600" />
+              <label className="tw-text-sm tw-font-semibold tw-text-gray-700">
                 Preview
               </label>
-              <div className="tw-border tw-border-gray-200 tw-rounded-lg tw-p-4 tw-bg-gray-50">
-                {imageLoadError ? (
-                  <div className="tw-flex tw-items-center tw-justify-center tw-h-48 tw-bg-red-50 tw-border tw-border-red-200 tw-rounded-lg">
-                    <div className="tw-text-center">
-                      <div className="tw-text-red-400 tw-text-4xl tw-mb-2">⚠️</div>
-                      <p className="tw-text-red-600 tw-text-sm tw-font-medium">Failed to load image</p>
-                      <p className="tw-text-red-500 tw-text-xs tw-mt-1">Please check the URL or try a different image</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="tw-flex tw-justify-center">
-                    <img
-                      src={previewUrl}
-                      alt="Preview"
-                      className="tw-max-w-full tw-max-h-64 tw-object-contain tw-rounded-lg tw-shadow-sm"
-                      onError={handleImageLoadError}
-                      onLoad={() => setImageLoadError(false)}
-                    />
-                  </div>
-                )}
-              </div>
             </div>
-          )}
-
-          {/* Clear Button */}
-          {(imageUrl || uploadedImage) && (
-            <div className="tw-mb-6">
-              <button
-                className="tw-text-sm tw-text-gray-500 hover:tw-text-gray-700 tw-underline"
-                onClick={clearAll}
-              >
-                Clear all
-              </button>
+            <div className="tw-border-2 tw-border-purple-200 tw-rounded-lg tw-p-4 tw-bg-gradient-to-br tw-from-purple-50 tw-to-violet-50">
+              {imageLoadError ? (
+                <div className="tw-flex tw-items-center tw-justify-center tw-h-48 tw-bg-red-50 tw-border-2 tw-border-red-200 tw-rounded-lg">
+                  <div className="tw-text-center">
+                    <div className="tw-text-red-400 tw-text-4xl tw-mb-2">⚠️</div>
+                    <p className="tw-text-red-600 tw-text-sm tw-font-medium">Failed to load image</p>
+                    <p className="tw-text-red-500 tw-text-xs tw-mt-1">Please check the URL or try a different image</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="tw-flex tw-justify-center">
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="tw-max-w-full tw-max-h-64 tw-object-contain tw-rounded-lg tw-shadow-lg"
+                    onError={handleImageLoadError}
+                    onLoad={() => setImageLoadError(false)}
+                  />
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Action Buttons */}
-        <div className="tw-flex tw-justify-end tw-gap-3 tw-p-6 tw-border-t tw-bg-gray-50">
-          <button 
-            className="tw-bg-gray-200 hover:tw-bg-gray-300 tw-text-gray-800 tw-rounded-lg tw-px-6 tw-py-2 tw-font-medium tw-transition-colors"
-            onClick={handleModalClose}
-          >
-            Cancel
-          </button>
-          <button 
-            className="tw-bg-purple-600 hover:tw-bg-purple-700 disabled:tw-bg-gray-300 disabled:tw-text-gray-500 tw-text-white tw-rounded-lg tw-px-6 tw-py-2 tw-font-medium tw-transition-colors"
-            onClick={handleImageInsert}
-            disabled={(!imageUrl && !uploadedImage) || imageLoadError}
-          >
-            Insert Image
-          </button>
-        </div>
+        {/* Clear Button */}
+        {(imageUrl || uploadedImage) && (
+          <div className="tw-flex tw-justify-center">
+            <button
+              className="tw-text-sm tw-text-purple-600 hover:tw-text-purple-800 tw-underline tw-flex tw-items-center tw-gap-1 tw-font-medium"
+              onClick={clearAll}
+            >
+              <X className="tw-w-4 tw-h-4" />
+              Clear all
+            </button>
+          </div>
+        )}
       </div>
-    </div>
+    </LearningModal>
   );
 };
 
-// Alignment Floater Component
+// Alignment Floater Component (unchanged)
 const ImageAlignmentFloater: React.FC<ImageAlignmentFloaterProps> = ({ 
   wrapper, 
   img, 
@@ -465,7 +480,7 @@ const ImageAlignmentFloater: React.FC<ImageAlignmentFloaterProps> = ({
   );
 };
 
-// Helper functions for image operations
+// Helper functions for image operations (unchanged)
 export const setupImageResizeHandlers = (
   editorRef: RefObject<HTMLElement>, 
   handleChange: () => void

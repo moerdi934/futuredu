@@ -300,8 +300,8 @@ export const LearningModal: React.FC<BaseModalProps> = ({
     if (width) {
       if (width.includes('vw')) {
         const vwValue = parseInt(width);
-        styles.width = `${Math.min(vwValue, 95)}vw`;
-        styles.maxWidth = `${Math.min(vwValue, 95)}vw`;
+        styles.width = `${Math.min(vwValue, 120)}vw`;
+        styles.maxWidth = `${Math.min(vwValue, 150)}vw`;
       } else {
         styles.width = width;
         styles.maxWidth = width;
@@ -311,8 +311,8 @@ export const LearningModal: React.FC<BaseModalProps> = ({
     if (height) {
       if (height.includes('vh')) {
         const vhValue = parseInt(height);
-        styles.height = `${Math.min(vhValue, 90)}vh`;
-        styles.maxHeight = `${Math.min(vhValue, 90)}vh`;
+        styles.height = `${Math.min(vhValue, 120)}vh`;
+        styles.maxHeight = `${Math.min(vhValue, 150)}vh`;
       } else {
         styles.height = height;
         styles.maxHeight = height;
@@ -345,8 +345,8 @@ export const LearningModal: React.FC<BaseModalProps> = ({
         
         .custom-centered-modal .modal-content {
           margin: 0 !important;
-          width: auto !important;
-          height: auto !important;
+          width: 110vw !important;
+          height: 120vh !important;
         }
         
         .modal.show .modal-dialog.custom-centered-modal {
@@ -503,27 +503,27 @@ export const MagicModal: React.FC<BaseModalProps> = ({
     
     const styles: React.CSSProperties = {};
     
-    if (width) {
-      if (width.includes('vw')) {
-        const vwValue = parseInt(width);
-        styles.width = `${Math.min(vwValue, 95)}vw`;
-        styles.maxWidth = `${Math.min(vwValue, 95)}vw`;
-      } else {
-        styles.width = width;
-        styles.maxWidth = width;
+      if (width) {
+        if (width.includes('vw')) {
+          const vwValue = parseInt(width);
+          styles.width = `${Math.min(vwValue, 95)}vw`;
+          styles.maxWidth = `${Math.min(vwValue, 95)}vw`;
+        } else {
+          styles.width = width;
+          styles.maxWidth = width;
+        }
       }
-    }
-    
-    if (height) {
-      if (height.includes('vh')) {
-        const vhValue = parseInt(height);
-        styles.height = `${Math.min(vhValue, 90)}vh`;
-        styles.maxHeight = `${Math.min(vhValue, 90)}vh`;
-      } else {
-        styles.height = height;
-        styles.maxHeight = height;
+      
+      if (height) {
+        if (height.includes('vh')) {
+          const vhValue = parseInt(height);
+          styles.height = `${Math.min(vhValue, 90)}vh`;
+          styles.maxHeight = `${Math.min(vhValue, 90)}vh`;
+        } else {
+          styles.height = height;
+          styles.maxHeight = height;
+        }
       }
-    }
     
     return styles;
   }, [width, height]);

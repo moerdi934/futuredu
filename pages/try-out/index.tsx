@@ -10,7 +10,7 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? '';
 export const getServerSideProps: GetServerSideProps = async () => {
   let initialSchedules: unknown[] = [];
   try {
-    const res = await fetch(`${apiUrl}/exam-schedules/type/SNBT`, {
+    const res = await fetch(`${apiUrl}/exam-schedules/type/${encodeURIComponent("SNBT Exam")}`, {
       // disable cache di sisi Next.js
       headers: { 'cache-control': 'no-store' },
     });
