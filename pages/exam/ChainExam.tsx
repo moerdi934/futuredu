@@ -27,6 +27,11 @@ interface Question {
   question: string;
   options?: string[];
   statements?: string[];
+  passage?: {
+    id: number;
+    title: string;
+    content: string;
+  };
 }
 
 interface Answers {
@@ -929,8 +934,8 @@ const ChainExam: React.FC = () => {
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <div className="tw-text-center">
           <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
-          <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">Loading Exam...</h2>
-          <p className="tw-text-violet-600 tw-mt-2">Please wait while we prepare your questions</p>
+          <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">Memuat Ujian...</h2>
+          <p className="tw-text-violet-600 tw-mt-2">Mohon tunggu sementara kami menyiapkan soal Anda</p>
         </div>
       </div>
     );
@@ -941,17 +946,17 @@ const ChainExam: React.FC = () => {
       <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
         <div className="tw-text-center">
           <Clock className="tw-h-12 tw-w-12 tw-text-violet-600 tw-mx-auto tw-mb-4" />
-          <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">Exam Not Available Yet</h2>
-          <p className="tw-text-violet-600 tw-mt-2">Please wait until the scheduled start time</p>
+          <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">Ujian Belum Tersedia</h2>
+          <p className="tw-text-violet-600 tw-mt-2">Mohon tunggu hingga waktu ujian yang dijadwalkan</p>
           
           {examStartTime && (
             <div className="tw-mt-4">
-              <p className="tw-text-violet-600">Available in:</p>
+              <p className="tw-text-violet-600">Tersedia dalam:</p>
               <div className="tw-text-3xl tw-font-mono tw-font-bold tw-text-violet-700 tw-mt-2">
                 {countdown}
               </div>
               <p className="tw-text-sm tw-text-violet-500 tw-mt-2">
-                Scheduled at: {new Date(examStartTime).toLocaleString()}
+                Dijadwalkan pada: {new Date(examStartTime).toLocaleString('id-ID')}
               </p>
             </div>
           )}
@@ -961,7 +966,7 @@ const ChainExam: React.FC = () => {
             className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
             onClick={handleRetryAccess}
           >
-            Check Again
+            Periksa Lagi
           </Button>
         </div>
       </div>
@@ -979,7 +984,7 @@ const ChainExam: React.FC = () => {
               </h1>
               {examSession && (
                 <p className="tw-text-sm tw-text-violet-200">
-                  End time: {new Date(examSession.end_time).toLocaleTimeString()}
+                  Berakhir pada: {new Date(examSession.end_time).toLocaleTimeString('id-ID')}
                 </p>
               )}
             </div>
@@ -987,11 +992,11 @@ const ChainExam: React.FC = () => {
               <Clock size={28} className="tw-text-violet-200" />
               <div className="tw-flex tw-flex-col tw-items-start">
                 <div className="tw-flex tw-items-center tw-gap-2">
-                  <span className="tw-text-violet-200 tw-text-sm">Time Remaining</span>
+                  <span className="tw-text-violet-200 tw-text-sm">Waktu Tersisa</span>
                   {lastServerSync && Date.now() - lastServerSync < 10 * 60 * 1000 && (
                     <div className="tw-flex tw-items-center tw-text-xs tw-text-violet-300">
                       <div className="tw-w-2 tw-h-2 tw-bg-green-400 tw-rounded-full tw-mr-1 tw-animate-pulse"></div>
-                      Synced
+                      Tersinkron
                     </div>
                   )}
                 </div>
@@ -1015,10 +1020,10 @@ const ChainExam: React.FC = () => {
         >
           <Toast.Header className="tw-bg-violet-200 tw-text-violet-800">
             <Check className="tw-mr-2 tw-text-violet-600" size={16} />
-            <strong className="tw-mr-auto">Checkpoint Saved</strong>
+            <strong className="tw-mr-auto">Tersimpan Otomatis</strong>
           </Toast.Header>
           <Toast.Body className="tw-text-violet-700">
-            Your answers have been saved to the server.
+            Jawaban Anda telah disimpan ke server.
           </Toast.Body>
         </Toast>
       </div>
@@ -1042,15 +1047,34 @@ const ChainExam: React.FC = () => {
                   <>
                     <div className="tw-flex tw-justify-between tw-items-center tw-mb-6">
                       <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">
-                        Question {currentQuestion + 1} of {questions.length}
+                        Soal {currentQuestion + 1} dari {questions.length}
                       </h2>
                       {autoSaving && (
                         <div className="tw-flex tw-items-center tw-text-violet-600">
                           <Loader2 className="tw-h-4 tw-w-4 tw-animate-spin tw-mr-2" />
-                          <span className="tw-text-sm">Saving...</span>
+                          <span className="tw-text-sm">Menyimpan...</span>
                         </div>
                       )}
                     </div>
+                    
+                    {/* Display passage if it exists for the current question */}
+                    {questions[currentQuestion].passage && (
+                      <Card className="tw-mb-6 tw-bg-blue-50 tw-border-blue-200">
+                        <Card.Header className="tw-bg-blue-100 tw-border-blue-200">
+                          <h4 className="tw-text-blue-800 tw-font-semibold tw-mb-0">
+                            Bacaan: {questions[currentQuestion].passage.title}
+                          </h4>
+                        </Card.Header>
+                        <Card.Body className="tw-p-4">
+                          <div 
+                            className="tw-text-blue-900 tw-leading-relaxed [&_p]:tw-mb-3 [&_p]:tw-text-justify"
+                            dangerouslySetInnerHTML={{ 
+                              __html: questions[currentQuestion].passage.content 
+                            }}
+                          />
+                        </Card.Body>
+                      </Card>
+                    )}
                     
                     <div className="tw-mb-6">
                       {renderQuestion(questions[currentQuestion])}
@@ -1063,14 +1087,14 @@ const ChainExam: React.FC = () => {
                         disabled={currentQuestion === 0}
                         onClick={() => handleNavigation(currentQuestion - 1)}
                       >
-                        Previous
+                        Sebelumnya
                       </Button>
                       <Button
                         className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700"
                         disabled={currentQuestion === questions.length - 1}
                         onClick={() => handleNavigation(currentQuestion + 1)}
                       >
-                        Next
+                        Selanjutnya
                       </Button>
                     </div>
                   </>
@@ -1082,7 +1106,7 @@ const ChainExam: React.FC = () => {
           <Col lg={4} className="tw-hidden md:tw-block">
             <Card className="tw-shadow-md tw-border-0 tw-rounded-xl tw-sticky tw-top-4">
               <Card.Body className="tw-p-4">
-                <h3 className="tw-text-lg tw-font-semibold tw-text-violet-800 tw-mb-4">Question Navigator</h3>
+                <h3 className="tw-text-lg tw-font-semibold tw-text-violet-800 tw-mb-4">Navigasi Soal</h3>
                 <div className="tw-grid tw-grid-cols-5 tw-gap-2 tw-mb-6">
                   {questions.map((q, index) => (
                     <Button
@@ -1103,7 +1127,7 @@ const ChainExam: React.FC = () => {
                 <div className="tw-mb-4">
                   <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
                     <span>Progress</span>
-                    <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
+                    <span>{getFilledAnswersCount()}/{questions.length} Soal</span>
                   </div>
                   <ProgressBar 
                     now={(getFilledAnswersCount() / questions.length) * 100} 
@@ -1122,7 +1146,7 @@ const ChainExam: React.FC = () => {
                     className="tw-w-full tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
                     onClick={handleSubmit}
                   >
-                    {isLastExam ? 'Selesaikan Ujian' : 'Submit Exam'}
+                    {isLastExam ? 'Selesaikan Ujian' : 'Kirim Ujian'}
                   </Button>
                 )}
               </Card.Body>
@@ -1136,7 +1160,7 @@ const ChainExam: React.FC = () => {
           <div className="tw-mb-3">
             <div className="tw-flex tw-justify-between tw-text-sm tw-text-gray-600 tw-mb-2">
               <span>Progress</span>
-              <span>{getFilledAnswersCount()}/{questions.length} Questions</span>
+              <span>{getFilledAnswersCount()}/{questions.length} Soal</span>
             </div>
             <ProgressBar 
               now={(getFilledAnswersCount() / questions.length) * 100} 
@@ -1174,7 +1198,7 @@ const ChainExam: React.FC = () => {
               className="tw-w-full tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-mt-4"
               onClick={handleSubmit}
             >
-              {isLastExam ? 'Selesaikan Ujian' : 'Submit Exam'}
+              {isLastExam ? 'Selesaikan Ujian' : 'Kirim Ujian'}
             </Button>
           )}
         </div>
@@ -1190,26 +1214,26 @@ const ChainExam: React.FC = () => {
         <Modal.Header className="tw-bg-violet-50">
           <Modal.Title className="tw-text-violet-800 tw-flex tw-items-center">
             <AlertCircle className="tw-mr-2 tw-text-violet-600" size={20} />
-            Confirm Submission
+            Konfirmasi Pengiriman
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <div className="tw-p-2">
             <p className="tw-text-lg tw-font-medium tw-mb-3 tw-text-violet-900">
-              {isLastExam ? 'Apakah Anda yakin ingin menyelesaikan seluruh ujian?' : 'Are you sure you want to end this exam?'}
+              {isLastExam ? 'Apakah Anda yakin ingin menyelesaikan seluruh ujian?' : 'Apakah Anda yakin ingin mengakhiri ujian ini?'}
             </p>
             
             <div className="tw-bg-violet-50 tw-p-4 tw-rounded-lg tw-mb-4">
               <div className="tw-flex tw-items-center tw-mb-2">
                 <FileCheck className="tw-text-violet-600 tw-mr-2" size={18} />
-                <span className="tw-font-medium tw-text-violet-800">Exam Summary</span>
+                <span className="tw-font-medium tw-text-violet-800">Ringkasan Ujian</span>
               </div>
               <p className="tw-text-violet-700 tw-mb-2">
-                <span className="tw-font-medium">Completed:</span> {getFilledAnswersCount()} of {questions.length} questions
+                <span className="tw-font-medium">Selesai:</span> {getFilledAnswersCount()} dari {questions.length} soal
               </p>
               {getFilledAnswersCount() < questions.length && (
                 <div className="tw-bg-amber-50 tw-p-2 tw-rounded tw-border tw-border-amber-200 tw-text-amber-800 tw-text-sm">
-                  Warning: You have {questions.length - getFilledAnswersCount()} unanswered questions.
+                  Peringatan: Anda memiliki {questions.length - getFilledAnswersCount()} soal yang belum dijawab.
                 </div>
               )}
             </div>
@@ -1217,7 +1241,7 @@ const ChainExam: React.FC = () => {
             <p className="tw-text-gray-600 tw-text-sm">
               {isLastExam 
                 ? 'Setelah diselesaikan, Anda tidak dapat mengubah jawaban lagi.'
-                : 'Once submitted, you won\'t be able to change your answers for this section.'
+                : 'Setelah dikirim, Anda tidak dapat mengubah jawaban untuk bagian ini.'
               }
             </p>
           </div>
@@ -1228,7 +1252,7 @@ const ChainExam: React.FC = () => {
             onClick={() => setShowConfirmationModal(false)}
             className="tw-border-2 tw-border-violet-200 tw-text-violet-700 hover:tw-bg-violet-50"
           >
-            {isLastExam ? 'Lanjut Ujian' : 'Continue Exam'}
+            {isLastExam ? 'Lanjut Ujian' : 'Lanjutkan Ujian'}
           </Button>
           <Button 
             variant="primary" 
@@ -1236,7 +1260,7 @@ const ChainExam: React.FC = () => {
             className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center"
           >
             <ArrowRight className="tw-mr-1" size={16} /> 
-            {isLastExam ? 'Selesaikan' : 'End Exam'}
+            {isLastExam ? 'Selesaikan' : 'Akhiri Ujian'}
           </Button>
         </Modal.Footer>
       </Modal>
@@ -1367,7 +1391,7 @@ const ChainExam: React.FC = () => {
                     variant="secondary" 
                     onClick={handleClose}
                   >
-                    Kembali ke Home
+                    Kembali ke Beranda
                   </Button>
                   {!isLastExam && nextExam && !isTimeExpired && (
                     <Button 

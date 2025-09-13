@@ -401,17 +401,30 @@ export const getDiagnosticQuestionsByExamString = async (exam_string: string) =>
     if (!examRes.rowCount) throw new Error('Exam not found');
     const exam = examRes.rows[0];
 
+    // Modified query to include passage data
     const qRes = await client.query(
-      `SELECT *
-       FROM   questions
-       WHERE  id = ANY($1::int[])`,
+      `SELECT q.*, 
+              p.id as passage_id, 
+              p.title as passage_title, 
+              p.passage as passage_content
+       FROM   questions q
+       LEFT JOIN question_passages p ON q.passage_id = p.id
+       WHERE  q.id = ANY($1::int[])`,
       [exam.question_id_list]
     );
 
     const grouped: { [key: number]: any[] } = {};
     for (const q of qRes.rows) {
       const lvl = q.level;
-      (grouped[lvl] ??= []).push(q);
+      const questionWithPassage = {
+        ...q,
+        passage: q.passage_id ? {
+          id: q.passage_id,
+          title: q.passage_title,
+          content: q.passage_content
+        } : null
+      };
+      (grouped[lvl] ??= []).push(questionWithPassage);
     }
 
     const spec = [
@@ -442,6 +455,7 @@ export const getDiagnosticQuestionsByExamString = async (exam_string: string) =>
         options: q.options,
         correct: q.correct_answer,
         statements: q.statements,
+        passage: q.passage
       })),
     };
   } finally {
@@ -459,9 +473,14 @@ export const getQuestionsByExamString = async (exam_string: string) => {
 
     const examId = examResult.rows[0].id;
 
+    // Modified query to include passage data
     const query = `
-      SELECT q.*
+      SELECT q.*, 
+             p.id as passage_id, 
+             p.title as passage_title, 
+             p.passage as passage_content
       FROM questions q
+      LEFT JOIN question_passages p ON q.passage_id = p.id
       WHERE q.id = ANY (
         SELECT unnest(question_id_list)
         FROM exams
@@ -480,7 +499,12 @@ export const getQuestionsByExamString = async (exam_string: string) => {
         question: q.question_text,
         options: q.options,
         correct: q.correct_answer,
-        statements: q.statements
+        statements: q.statements,
+        passage: q.passage_id ? {
+          id: q.passage_id,
+          title: q.passage_title,
+          content: q.passage_content
+        } : null
       }))
     };
   } catch (error) {
@@ -491,9 +515,14 @@ export const getQuestionsByExamString = async (exam_string: string) => {
 
 export const getQuestionsByExamId = async (examId: number) => {
   try {
+    // Modified query to include passage data
     const query = `
-      SELECT q.*
+      SELECT q.*, 
+             p.id as passage_id, 
+             p.title as passage_title, 
+             p.passage as passage_content
       FROM questions q
+      LEFT JOIN question_passages p ON q.passage_id = p.id
       WHERE q.id = ANY (
         SELECT unnest(question_id_list)
         FROM exams
@@ -511,7 +540,12 @@ export const getQuestionsByExamId = async (examId: number) => {
         question: q.question_text,
         options: q.options,
         correct: q.correct_answer,
-        statements: q.statements
+        statements: q.statements,
+        passage: q.passage_id ? {
+          id: q.passage_id,
+          title: q.passage_title,
+          content: q.passage_content
+        } : null
       }))
     };
   } catch (error) {

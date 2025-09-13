@@ -36,6 +36,11 @@ interface Question {
   question: string;
   options?: string[];
   statements?: string[];
+  passage?: {
+    id: number;
+    title: string;
+    content: string;
+  };
 }
 
 interface DiagnosticTestProps {
@@ -148,7 +153,7 @@ const DiagnosticTest: React.FC<DiagnosticTestProps> = ({
         const parsed = JSON.parse(decrypted);
         if (!ignore) {
           setQuestions(parsed.questions || []);
-          setExamName(parsed.name || "Diagnostic Reasoning");
+          setExamName(parsed.name || "Tes Diagnostik");
         }
       })
       .catch((err) => setFetchError(err.message || "Terjadi error"))
@@ -359,53 +364,82 @@ const DiagnosticTest: React.FC<DiagnosticTestProps> = ({
   // Render helpers
   function renderQuestion(q: Question): React.ReactNode {
     if (!q || answer === null) return null;
-    switch (q.type) {
-      case "single-choice":
-        return (
-          <SingleChoice
-            question={<Latex>{q.question}</Latex>}
-            options={q.options || []}
-            onChange={handleChange}
-            selectedAnswers={answer}
-          />
-        );
-      case "multiple-choice":
-        return (
-          <MultipleChoice
-            question={<Latex>{q.question}</Latex>}
-            options={q.options || []}
-            selectedAnswers={answer}
-            onChange={handleChange}
-          />
-        );
-      case "number":
-        return (
-          <NumberInput
-            question={q.question}
-            onChange={handleChange}
-            value={answer}
-          />
-        );
-      case "text":
-        return (
-          <TextInput
-            question={q.question}
-            onChange={handleChange}
-            value={answer}
-          />
-        );
-      case "true-false":
-        return (
-          <TrueFalse
-            question={q.question}
-            statements={q.statements || []}
-            selectedAnswers={answer}
-            onChange={handleTrueFalseChange}
-          />
-        );
-      default:
-        return null;
-    }
+    
+    return (
+      <div>
+        {/* Display passage if it exists */}
+        {q.passage && (
+          <Card className="tw-mb-6 tw-bg-blue-50 tw-border-blue-200">
+            <Card.Header className="tw-bg-blue-100 tw-border-blue-200">
+              <h4 className="tw-text-blue-800 tw-font-semibold tw-mb-0">
+                Bacaan: {q.passage.title}
+              </h4>
+            </Card.Header>
+            <Card.Body className="tw-p-4">
+              <div 
+                className="tw-text-blue-900 tw-leading-relaxed [&_p]:tw-mb-3 [&_p]:tw-text-justify"
+                dangerouslySetInnerHTML={{ 
+                  __html: q.passage.content 
+                }}
+              />
+            </Card.Body>
+          </Card>
+        )}
+
+        {/* Question content */}
+        <div>
+          {(() => {
+            switch (q.type) {
+              case "single-choice":
+                return (
+                  <SingleChoice
+                    question={<Latex>{q.question}</Latex>}
+                    options={q.options || []}
+                    onChange={handleChange}
+                    selectedAnswers={answer}
+                  />
+                );
+              case "multiple-choice":
+                return (
+                  <MultipleChoice
+                    question={<Latex>{q.question}</Latex>}
+                    options={q.options || []}
+                    selectedAnswers={answer}
+                    onChange={handleChange}
+                  />
+                );
+              case "number":
+                return (
+                  <NumberInput
+                    question={q.question}
+                    onChange={handleChange}
+                    value={answer}
+                  />
+                );
+              case "text":
+                return (
+                  <TextInput
+                    question={q.question}
+                    onChange={handleChange}
+                    value={answer}
+                  />
+                );
+              case "true-false":
+                return (
+                  <TrueFalse
+                    question={q.question}
+                    statements={q.statements || []}
+                    selectedAnswers={answer}
+                    onChange={handleTrueFalseChange}
+                  />
+                );
+              default:
+                return null;
+            }
+          })()}
+        </div>
+      </div>
+    );
   }
 
   // UI Loading/Error
@@ -413,13 +447,13 @@ const DiagnosticTest: React.FC<DiagnosticTestProps> = ({
     return (
       <>
         <Head>
-          <title>Memuat Tes Diagnostic - Platform Pembelajaran</title>
+          <title>Memuat Tes Diagnostik - Platform Pembelajaran</title>
         </Head>
         <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
           <div className="tw-text-center">
             <Loader2 className="tw-h-12 tw-w-12 tw-animate-spin tw-text-violet-600 tw-mx-auto tw-mb-4" />
             <h2 className="tw-text-xl tw-font-semibold tw-text-violet-800">
-              Memuat Tes Diagnostic...
+              Memuat Tes Diagnostik...
             </h2>
             <p className="tw-text-violet-600 tw-mt-2">
               Tunggu sebentar, soal sedang disiapkan
@@ -434,7 +468,7 @@ const DiagnosticTest: React.FC<DiagnosticTestProps> = ({
     return (
       <>
         <Head>
-          <title>Error - Tes Diagnostic</title>
+          <title>Error - Tes Diagnostik</title>
         </Head>
         <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
           <Container>
@@ -469,7 +503,7 @@ const DiagnosticTest: React.FC<DiagnosticTestProps> = ({
     return (
       <>
         <Head>
-          <title>Tes Selesai - Diagnostic Test</title>
+          <title>Tes Selesai - Tes Diagnostik</title>
         </Head>
         <div className="tw-min-h-screen tw-bg-violet-50 tw-flex tw-items-center tw-justify-center">
           <Container>
@@ -484,7 +518,7 @@ const DiagnosticTest: React.FC<DiagnosticTestProps> = ({
                     <p className="tw-text-green-600 tw-mb-6">
                       Jawaban & skor berhasil disimpan.
                       <br />
-                      Terima kasih telah mengerjakan diagnostic test ini.
+                      Terima kasih telah mengerjakan tes diagnostik ini.
                     </p>
                     <Button
                       className="tw-bg-violet-600 tw-border-0 hover:tw-bg-violet-700 tw-flex tw-items-center tw-mx-auto"
@@ -507,7 +541,7 @@ const DiagnosticTest: React.FC<DiagnosticTestProps> = ({
   return (
     <>
       <Head>
-        <title>{examName} - Diagnostic Test</title>
+        <title>{examName} - Tes Diagnostik</title>
         <meta name="description" content="Tes diagnostik untuk mengukur kemampuan kognitif" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
@@ -579,7 +613,17 @@ const DiagnosticTest: React.FC<DiagnosticTestProps> = ({
         <Container className="tw-mb-8">
           <Row className="tw-justify-center">
             <Col lg={8}>
-              <Card className="tw-shadow-md tw-border-0 tw-rounded-xl">
+              <Card className="tw-shadow-md tw-border-0 tw-rounded-xl
+                [&_p_img]:tw-max-w-full 
+                [&_p_img]:tw-h-auto 
+                [&_p_img]:tw-block 
+                [&_p_img]:tw-mx-auto 
+                [&_p_img]:tw-my-4
+                [&_img]:tw-max-w-full 
+                [&_img]:tw-h-auto 
+                [&_img]:tw-block 
+                [&_img]:tw-mx-auto 
+                [&_img]:tw-my-4">
                 <Card.Body className="tw-p-6">
                   {questions.length > 0 && renderQuestion(questions[currentIdx])}
 
@@ -602,7 +646,7 @@ const DiagnosticTest: React.FC<DiagnosticTestProps> = ({
                         <>
                           {currentIdx === questions.length - 1
                             ? "Akhiri Tes"
-                            : "Next"}
+                            : "Selanjutnya"}
                         </>
                       )}
                     </Button>
