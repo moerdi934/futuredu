@@ -32,16 +32,7 @@ import {
   Zap,
   Target,
   Award,
-  Menu,
-  Edit3,
-  Type,
-  Info,
-  Layers,
-  Image,
-  Code,
-  Hash,
-  List,
-  Palette
+  Menu
 } from 'lucide-react';
 import axios from 'axios';
 import debounce from 'lodash/debounce';
@@ -51,7 +42,6 @@ import {
   SearchSingleField,
   SelectCustomField,
   ShortFormField,
-  WideFormField,
   YesNoField,
   SelectOption
 } from '../../../../../components/form/FormComponentLayout';
@@ -108,11 +98,6 @@ interface QuestionData {
   bidangSearchTerm: string;
   topikSearchTerm: string;
   subTopikSearchTerm: string;
-  // New fields for advanced editor
-  useAdvancedQuestionEditor: boolean;
-  useAdvancedOptionsEditor: boolean;
-  useAdvancedPassageEditor: boolean;
-  useAdvancedExplanationEditor: boolean;
 }
 
 const initialQuestionData: QuestionData = {
@@ -146,11 +131,6 @@ const initialQuestionData: QuestionData = {
   bidangSearchTerm: '',
   topikSearchTerm: '',
   subTopikSearchTerm: '',
-  // New fields defaults
-  useAdvancedQuestionEditor: false,
-  useAdvancedOptionsEditor: false,
-  useAdvancedPassageEditor: false,
-  useAdvancedExplanationEditor: false,
 };
 
 // Custom Accordion Item Component
@@ -177,7 +157,7 @@ const CustomAccordionItem: React.FC<{
         {header}
       </div>
       
-      {/* Body */}
+      {/* Body - Custom implementation without Accordion.Body */}
       <div 
         className={`tw-transition-all tw-duration-300 tw-ease-in-out ${
           isOpen 
@@ -185,8 +165,10 @@ const CustomAccordionItem: React.FC<{
             : 'tw-max-h-0 tw-opacity-0 tw-overflow-hidden'
         }`}
         style={{
+          // Ensure high z-index for dropdowns
           position: 'relative',
           zIndex: isOpen ? 10 : 1,
+          // NO overflow hidden here - this was the main issue
           overflow: isOpen ? 'visible' : 'hidden'
         }}
       >
@@ -194,6 +176,7 @@ const CustomAccordionItem: React.FC<{
           <div 
             className="tw-bg-gray-50 tw-p-2 sm:tw-p-4 tw-rounded-b-lg"
             style={{
+              // Create stacking context but allow overflow
               position: 'relative',
               zIndex: 10,
               overflow: 'visible'
@@ -202,122 +185,6 @@ const CustomAccordionItem: React.FC<{
             {children}
           </div>
         )}
-      </div>
-    </div>
-  );
-};
-
-// Advanced Editor Toggle Component
-const AdvancedEditorToggle: React.FC<{
-  label: string;
-  isAdvanced: boolean;
-  onToggle: (advanced: boolean) => void;
-  icon?: React.ReactNode;
-}> = ({ label, isAdvanced, onToggle, icon }) => {
-  return (
-    <div className="tw-mb-4 tw-bg-gradient-to-r tw-from-blue-50 tw-to-indigo-50 tw-border-2 tw-border-blue-200 tw-rounded-xl tw-p-4">
-      <div className="tw-flex tw-flex-col lg:tw-flex-row tw-justify-between tw-items-start lg:tw-items-center tw-gap-3">
-        <div className="tw-flex tw-items-center tw-gap-3">
-          {icon && (
-            <div className="tw-bg-blue-100 tw-p-2 tw-rounded-lg">
-              {React.cloneElement(icon as React.ReactElement, { 
-                size: 18, 
-                className: "tw-text-blue-600" 
-              })}
-            </div>
-          )}
-          <div>
-            <h4 className="tw-text-blue-800 tw-font-semibold tw-text-sm sm:tw-text-base tw-mb-1">
-              Editor Mode - {label}
-            </h4>
-            <p className="tw-text-blue-600 tw-text-xs sm:tw-text-sm tw-mb-2">
-              {isAdvanced ? 'Advanced Editor' : 'Simple Text Editor'}
-            </p>
-          </div>
-        </div>
-        
-        <div className="tw-flex tw-gap-2 tw-w-full lg:tw-w-auto">
-          <ButtonGradient
-            action={!isAdvanced ? 'apply' : 'custom'}
-            customText="Simple"
-            customIcon={<Type className="tw-w-4 tw-h-4" />}
-            size="sm"
-            onClick={() => onToggle(false)}
-            customColors={!isAdvanced ? {
-              primary: '#10B981',
-              secondary: '#059669',
-              gradient1: '#10B981',
-              gradient2: '#34D399',
-              text: '#FFFFFF'
-            } : {
-              primary: '#9CA3AF',
-              secondary: '#6B7280',
-              gradient1: '#9CA3AF',
-              gradient2: '#D1D5DB',
-              text: '#374151'
-            }}
-            className="tw-flex-1 lg:tw-flex-none"
-          />
-          <ButtonGradient
-            action={isAdvanced ? 'apply' : 'custom'}
-            customText="Advanced"
-            customIcon={<Edit3 className="tw-w-4 tw-h-4" />}
-            size="sm"
-            onClick={() => onToggle(true)}
-            customColors={isAdvanced ? {
-              primary: '#8B5CF6',
-              secondary: '#7C3AED',
-              gradient1: '#8B5CF6',
-              gradient2: '#A855F7',
-              text: '#FFFFFF'
-            } : {
-              primary: '#9CA3AF',
-              secondary: '#6B7280',
-              gradient1: '#9CA3AF',
-              gradient2: '#D1D5DB',
-              text: '#374151'
-            }}
-            className="tw-flex-1 lg:tw-flex-none"
-          />
-        </div>
-      </div>
-      
-      {/* Advanced Editor Info */}
-      <div className="tw-mt-3 tw-bg-white tw-rounded-lg tw-p-3 tw-border tw-border-blue-200">
-        <div className="tw-flex tw-items-start tw-gap-2">
-          <Info className="tw-w-4 tw-h-4 tw-text-blue-500 tw-mt-0.5 tw-flex-shrink-0" />
-          <div>
-            <p className="tw-text-blue-700 tw-font-medium tw-text-xs sm:tw-text-sm tw-mb-2">
-              Advanced Editor diperlukan untuk:
-            </p>
-            <div className="tw-grid tw-grid-cols-2 sm:tw-grid-cols-3 tw-gap-2 tw-text-xs tw-text-blue-600">
-              <div className="tw-flex tw-items-center tw-gap-1">
-                <List className="tw-w-3 tw-h-3" />
-                <span>Lists</span>
-              </div>
-              <div className="tw-flex tw-items-center tw-gap-1">
-                <Palette className="tw-w-3 tw-h-3" />
-                <span>Coloring</span>
-              </div>
-              <div className="tw-flex tw-items-center tw-gap-1">
-                <Hash className="tw-w-3 tw-h-3" />
-                <span>Equations</span>
-              </div>
-              <div className="tw-flex tw-items-center tw-gap-1">
-                <Layers className="tw-w-3 tw-h-3" />
-                <span>Tables</span>
-              </div>
-              <div className="tw-flex tw-items-center tw-gap-1">
-                <Image className="tw-w-3 tw-h-3" />
-                <span>Images</span>
-              </div>
-              <div className="tw-flex tw-items-center tw-gap-1">
-                <Code className="tw-w-3 tw-h-3" />
-                <span>Code</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -371,7 +238,6 @@ const BulkQuestionItem: React.FC<{
     [index, onChange]
   );
 
-  // API calls (same as before)
   useEffect(() => {
     const fetchBidang = async (searchTerm: string = '') => {
       const curr = dataRef.current;
@@ -649,12 +515,13 @@ const BulkQuestionItem: React.FC<{
         <div 
           className="tw-space-y-4"
           style={{
+            // Ensure this container can show dropdowns
             position: 'relative',
             zIndex: 100,
             overflow: 'visible'
           }}
         >
-          {/* Basic Question Info Grid */}
+          {/* Fully responsive grid with proper spacing */}
           <div className="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 lg:tw-grid-cols-3 tw-gap-3 sm:tw-gap-4 tw-mb-4 sm:tw-mb-6">
             <div 
               className="tw-w-full tw-min-w-0"
@@ -761,7 +628,7 @@ const BulkQuestionItem: React.FC<{
             />
           </div>
 
-          {/* Passage Section */}
+          {/* Fixed YesNoField for mobile */}
           <div 
             className="tw-mb-4 sm:tw-mb-6 tw-w-full tw-overflow-visible"
             style={{ position: 'relative', zIndex: 100 }}
@@ -794,8 +661,9 @@ const BulkQuestionItem: React.FC<{
               <div 
                 className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-3 sm:tw-p-4 tw-shadow-sm tw-mt-2 tw-w-full"
                 style={{
+                  // This is the critical container for the passage dropdown
                   position: 'relative',
-                  zIndex: 1000,
+                  zIndex: 1000, // Very high z-index
                   overflow: 'visible'
                 }}
               >
@@ -834,6 +702,7 @@ const BulkQuestionItem: React.FC<{
                   <div 
                     className="tw-space-y-3 tw-w-full tw-min-w-0"
                     style={{
+                      // Container for SearchSingleField - SUPER HIGH z-index
                       position: 'relative',
                       zIndex: 9999,
                       overflow: 'visible'
@@ -878,7 +747,6 @@ const BulkQuestionItem: React.FC<{
             )}
           </div>
 
-          {/* Question Type Selection */}
           <div className="tw-mb-4 sm:tw-mb-6 tw-w-full tw-min-w-0">
             <SelectCustomField
               label="Tipe Soal"
@@ -902,18 +770,7 @@ const BulkQuestionItem: React.FC<{
             />
           </div>
 
-          {/* Question Text Section with Advanced Editor Toggle */}
           <div className="tw-mb-4 sm:tw-mb-6 tw-w-full tw-min-w-0">
-            <AdvancedEditorToggle
-              label="Teks Soal"
-              isAdvanced={data.useAdvancedQuestionEditor}
-              onToggle={(advanced) => {
-                const updated = { ...data, useAdvancedQuestionEditor: advanced };
-                onChange(index, updated);
-              }}
-              icon={<BookOpen className="tw-w-4 tw-h-4" />}
-            />
-
             <Form.Group>
               <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-3 tw-flex tw-items-center tw-space-x-2 tw-text-sm sm:tw-text-base">
                 <BookOpen className="tw-w-4 tw-h-4" />
@@ -922,41 +779,21 @@ const BulkQuestionItem: React.FC<{
                 </span>
               </Form.Label>
               <div className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-shadow-sm tw-w-full tw-overflow-hidden">
-                {data.useAdvancedQuestionEditor ? (
-                  <SuperEditor
-                    onChange={(html) => {
-                      const updated = { ...data, questionText: html };
-                      onChange(index, updated);
-                    }}
-                    initialValue="<p>Mulai mengetik soal di sini...</p>"
-                  />
-                ) : (
-                  <WideFormField
-                    label=""
-                    value={data.questionText}
-                    onChange={(e) => {
-                      const updated = { ...data, questionText: e.target.value };
-                      onChange(index, updated);
-                    }}
-                  />
-                )}
+                <SuperEditor
+                  onChange={(html) => {
+                    const updated = { ...data, questionText: html };
+                    onChange(index, updated);
+                  }}
+                  initialValue="<p>Mulai mengetik soal di sini...</p>"
+                  height="120px"
+                />
               </div>
             </Form.Group>
           </div>
 
-          {/* Question Options/Statements/Answer based on type */}
-          {(data.questionType === 'single-choice' || data.questionType === 'multiple-choice') && (
+          {(data.questionType === 'single-choice' ||
+            data.questionType === 'multiple-choice') && (
             <div className="tw-mb-4 sm:tw-mb-6 tw-w-full tw-overflow-hidden">
-              <AdvancedEditorToggle
-                label="Opsi Jawaban"
-                isAdvanced={data.useAdvancedOptionsEditor}
-                onToggle={(advanced) => {
-                  const updated = { ...data, useAdvancedOptionsEditor: advanced };
-                  onChange(index, updated);
-                }}
-                icon={<Check className="tw-w-4 tw-h-4" />}
-              />
-
               <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-4 tw-flex tw-items-center tw-space-x-2 tw-text-sm sm:tw-text-base">
                 <div className="tw-bg-purple-100 tw-p-1 tw-rounded">
                   <Check className="tw-w-4 tw-h-4 tw-text-purple-600" />
@@ -1030,31 +867,16 @@ const BulkQuestionItem: React.FC<{
                           </div>
                         </div>
                         <div className="tw-bg-gray-50 tw-rounded-lg tw-border tw-border-gray-200 tw-w-full tw-overflow-hidden">
-                          {data.useAdvancedOptionsEditor ? (
-                            <SuperEditor
-                              onChange={(html) => {
-                                const newOptions = [...data.options];
-                                newOptions[idx] = html;
-                                const updated = { ...data, options: newOptions };
-                                onChange(index, updated);
-                              }}
-                              initialValue="<p>Masukkan teks opsi...</p>"
-                              height="80px"
-                            />
-                          ) : (
-                            <div className="tw-p-2">
-                              <WideFormField
-                                label=""
-                                value={option}
-                                onChange={(e) => {
-                                  const newOptions = [...data.options];
-                                  newOptions[idx] = e.target.value;
-                                  const updated = { ...data, options: newOptions };
-                                  onChange(index, updated);
-                                }}
-                              />
-                            </div>
-                          )}
+                          <SuperEditor
+                            onChange={(html) => {
+                              const newOptions = [...data.options];
+                              newOptions[idx] = html;
+                              const updated = { ...data, options: newOptions };
+                              onChange(index, updated);
+                            }}
+                            initialValue="<p>Masukkan teks opsi...</p>"
+                            height="80px"
+                          />
                         </div>
                       </Card.Body>
                     </Card>
@@ -1076,7 +898,6 @@ const BulkQuestionItem: React.FC<{
             </div>
           )}
 
-          {/* True/False Statements */}
           {data.questionType === 'true-false' && (
             <div className="tw-mb-4 sm:tw-mb-6 tw-w-full tw-overflow-hidden">
               <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-4 tw-flex tw-items-center tw-space-x-2 tw-text-sm sm:tw-text-base">
@@ -1186,7 +1007,6 @@ const BulkQuestionItem: React.FC<{
             </div>
           )}
 
-          {/* Number/Text Answer */}
           {(data.questionType === 'number' || data.questionType === 'text') && (
             <div className="tw-mb-4 sm:tw-mb-6 tw-w-full tw-min-w-0">
               <ShortFormField
@@ -1201,7 +1021,7 @@ const BulkQuestionItem: React.FC<{
             </div>
           )}
 
-          {/* Explanation Section */}
+          {/* Fixed YesNoField for explanation */}
           <div className="tw-mb-4 sm:tw-mb-6 tw-w-full tw-overflow-hidden">
             <div className="tw-w-full tw-min-w-0">
               <YesNoField
@@ -1223,39 +1043,19 @@ const BulkQuestionItem: React.FC<{
             
             {data.hasExplanation && (
               <div className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-3 sm:tw-p-4 tw-shadow-sm tw-mt-2 tw-w-full tw-overflow-hidden">
-                <AdvancedEditorToggle
-                  label="Pembahasan"
-                  isAdvanced={data.useAdvancedExplanationEditor}
-                  onToggle={(advanced) => {
-                    const updated = { ...data, useAdvancedExplanationEditor: advanced };
-                    onChange(index, updated);
-                  }}
-                  icon={<FileText className="tw-w-4 tw-h-4" />}
-                />
-
                 <Form.Group>
                   <Form.Label className="tw-text-purple-700 tw-font-medium tw-text-sm sm:tw-text-base">
                     Isi Pembahasan <span className="tw-text-red-500">*</span>
                   </Form.Label>
                   <div className="tw-bg-gray-50 tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-w-full tw-overflow-hidden">
-                    {data.useAdvancedExplanationEditor ? (
-                      <SuperEditor
-                        onChange={(html) => {
-                          const updated = { ...data, explanationContent: html };
-                          onChange(index, updated);
-                        }}
-                        initialValue="<p>Mulai mengetik pembahasan di sini...</p>"
-                      />
-                    ) : (
-                      <WideFormField
-                        label=""
-                        value={data.explanationContent}
-                        onChange={(e) => {
-                          const updated = { ...data, explanationContent: e.target.value };
-                          onChange(index, updated);
-                        }}
-                      />
-                    )}
+                    <SuperEditor
+                      onChange={(html) => {
+                        const updated = { ...data, explanationContent: html };
+                        onChange(index, updated);
+                      }}
+                      initialValue="<p>Mulai mengetik pembahasan di sini...</p>"
+                      height="100px"
+                    />
                   </div>
                 </Form.Group>
               </div>
@@ -1264,7 +1064,7 @@ const BulkQuestionItem: React.FC<{
         </div>
       </CustomAccordionItem>
 
-      {/* Passage Creation Modal */}
+      {/* Mobile-optimized Modal */}
       <LearningModal
         show={data.showPassageModal}
         onHide={() => {
@@ -1301,41 +1101,19 @@ const BulkQuestionItem: React.FC<{
             />
           </div>
           
-          {/* Advanced Editor Toggle for Passage */}
-          <AdvancedEditorToggle
-            label="Isi Bacaan"
-            isAdvanced={data.useAdvancedPassageEditor}
-            onToggle={(advanced) => {
-              const updated = { ...data, useAdvancedPassageEditor: advanced };
-              onChange(index, updated);
-            }}
-            icon={<BookOpen className="tw-w-4 tw-h-4" />}
-          />
-          
           <Form.Group className="tw-w-full tw-min-w-0">
             <Form.Label className="tw-text-purple-700 tw-font-medium tw-text-sm sm:tw-text-base">
               Isi Bacaan <span className="tw-text-red-500">*</span>
             </Form.Label>
             <div className="tw-bg-gray-50 tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-shadow-sm tw-w-full tw-overflow-hidden">
-              {data.useAdvancedPassageEditor ? (
-                <SuperEditor
-                  onChange={(html) => {
-                    const updated = { ...data, newPassageContent: html };
-                    onChange(index, updated);
-                  }}
-                  initialValue="<p>Mulai mengetik bacaan di sini...</p>"
-                  height="300px"
-                />
-              ) : (
-                <WideFormField
-                  label=""
-                  value={data.newPassageContent}
-                  onChange={(e) => {
-                    const updated = { ...data, newPassageContent: e.target.value };
-                    onChange(index, updated);
-                  }}
-                />
-              )}
+              <SuperEditor
+                onChange={(html) => {
+                  const updated = { ...data, newPassageContent: html };
+                  onChange(index, updated);
+                }}
+                initialValue="<p>Mulai mengetik bacaan di sini...</p>"
+                height="300px"
+              />
             </div>
           </Form.Group>
         </div>
@@ -1351,12 +1129,12 @@ const CreateQuestionBulk: React.FC = () => {
   const [successData, setSuccessData] = useState<any[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [autoExport, setAutoExport] = useState(false);
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [openIndex, setOpenIndex] = useState<number | null>(0); // Track which accordion is open
 
   const addQuestion = () => {
     const newIndex = questions.length;
     setQuestions((prev) => [...prev, { ...initialQuestionData }]);
-    setOpenIndex(newIndex);
+    setOpenIndex(newIndex); // Open the new question
   };
 
   const updateQuestion = (idx: number, data: QuestionData) => {
@@ -1368,6 +1146,7 @@ const CreateQuestionBulk: React.FC = () => {
   const removeQuestion = (idx: number) => {
     const updated = questions.filter((_, i) => i !== idx);
     setQuestions(updated);
+    // Adjust open index if needed
     if (openIndex === idx) {
       setOpenIndex(updated.length > 0 ? 0 : null);
     } else if (openIndex !== null && openIndex > idx) {
@@ -1397,6 +1176,7 @@ const CreateQuestionBulk: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  // Fixed validation and payload preparation
   const handleSubmit = async () => {
     // Validate questions before submitting
     const invalidQuestions = questions.filter((q, idx) => {
@@ -1437,6 +1217,7 @@ const CreateQuestionBulk: React.FC = () => {
       }
 
       return {
+        // Use question_topic_type instead of exam_type_id
         question_topic_type: q.subTopik?.value || null,
         question_text: q.questionText,
         question_type: q.questionType,
@@ -1489,10 +1270,11 @@ const CreateQuestionBulk: React.FC = () => {
 
   return (
     <MainLayout>
+      {/* Fixed container with proper overflow handling */}
       <div className="tw-min-h-screen tw-w-full tw-overflow-x-hidden">
         <div className="tw-p-3 sm:tw-p-6 tw-bg-gradient-to-br tw-from-purple-50 tw-via-white tw-to-indigo-50">
           <div className="tw-max-w-full tw-mx-auto tw-overflow-hidden">
-            {/* Header Card */}
+            {/* Mobile-optimized Header Card */}
             <Card className="tw-bg-gradient-to-r tw-from-purple-600 tw-to-indigo-600 tw-text-white tw-rounded-xl sm:tw-rounded-2xl tw-shadow-xl sm:tw-shadow-2xl tw-border-0 tw-mb-4 sm:tw-mb-6 tw-w-full tw-overflow-hidden">
               <Card.Body className="tw-p-4 sm:tw-p-6">
                 <div className="tw-flex tw-flex-col sm:tw-flex-row tw-justify-between tw-items-start sm:tw-items-center tw-gap-3 sm:tw-gap-4">
@@ -1503,7 +1285,7 @@ const CreateQuestionBulk: React.FC = () => {
                     <div className="tw-min-w-0 tw-flex-1">
                       <h1 className="tw-text-xl sm:tw-text-2xl tw-font-bold tw-mb-1 tw-break-words">Buat Banyak Soal</h1>
                       <p className="tw-text-purple-100 tw-text-xs sm:tw-text-sm tw-break-words">
-                        Buat beberapa soal sekaligus dengan Advanced Editor yang mendukung formatting lengkap
+                        Buat beberapa soal sekaligus dengan mudah dan efisien
                       </p>
                     </div>
                   </div>
@@ -1527,7 +1309,7 @@ const CreateQuestionBulk: React.FC = () => {
               </Card.Body>
             </Card>
 
-            {/* Stats & Controls Card */}
+            {/* Mobile-optimized Stats & Controls Card */}
             <Card className="tw-bg-white tw-rounded-lg sm:tw-rounded-xl tw-shadow-lg tw-border-2 tw-border-purple-200 tw-mb-4 sm:tw-mb-6 tw-w-full tw-overflow-hidden">
               <Card.Body className="tw-p-4 sm:tw-p-6">
                 <div className="tw-flex tw-flex-col lg:tw-flex-row tw-justify-between tw-items-start lg:tw-items-center tw-gap-4">
@@ -1538,6 +1320,7 @@ const CreateQuestionBulk: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Fixed auto-export section for mobile */}
                   <div className="tw-w-full lg:tw-w-auto lg:tw-flex-1 lg:tw-justify-end lg:tw-flex">
                     <div className="tw-bg-gradient-to-r tw-from-blue-50 tw-to-indigo-50 tw-border-2 tw-border-blue-200 tw-rounded-lg sm:tw-rounded-xl tw-p-3 sm:tw-p-4 tw-w-full lg:tw-min-w-[300px] lg:tw-max-w-[350px] tw-overflow-hidden">
                       <div className="tw-w-full tw-min-w-0">
@@ -1560,7 +1343,7 @@ const CreateQuestionBulk: React.FC = () => {
               </Card.Body>
             </Card>
 
-            {/* Questions Container */}
+            {/* Mobile-optimized Questions Container */}
             <Card className="tw-bg-white tw-rounded-lg sm:tw-rounded-xl tw-shadow-lg tw-border-2 tw-border-purple-200 tw-w-full tw-overflow-visible">
               <Card.Body className="tw-p-3 sm:tw-p-6">
                 <div className="tw-flex tw-flex-col sm:tw-flex-row tw-justify-between tw-items-start sm:tw-items-center tw-mb-4 sm:tw-mb-6 tw-gap-3 sm:tw-gap-0">
@@ -1599,9 +1382,11 @@ const CreateQuestionBulk: React.FC = () => {
                   </div>
                 </div>
                 
+                {/* Custom Accordion Implementation with proper overflow */}
                 <div 
                   className="tw-space-y-3 sm:tw-space-y-4 tw-w-full"
                   style={{
+                    // Container must allow overflow for dropdowns
                     overflow: 'visible',
                     position: 'relative',
                     zIndex: 1
@@ -1643,7 +1428,7 @@ const CreateQuestionBulk: React.FC = () => {
               </Card.Body>
             </Card>
 
-            {/* Submit Section */}
+            {/* Mobile-optimized Submit Section */}
             {questions.length > 0 && (
               <Card className="tw-bg-gradient-to-r tw-from-green-50 tw-to-emerald-50 tw-border-2 tw-border-green-200 tw-rounded-lg sm:tw-rounded-xl tw-shadow-lg tw-mt-4 sm:tw-mt-6 tw-w-full tw-overflow-hidden">
                 <Card.Body className="tw-p-4 sm:tw-p-6">
