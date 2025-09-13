@@ -87,6 +87,7 @@ const ImageGradientButton: React.FC<{ onClick: () => void }> = ({ onClick }) => 
         text: '#FFFFFF'
       }}
       className="tw-flex tw-items-center tw-gap-2"
+      tabIndex={-1} // Remove from tab sequence
     />
   );
 };
@@ -107,6 +108,7 @@ const EquationGradientButton: React.FC<{ onClick: () => void }> = ({ onClick }) 
         text: '#FFFFFF'
       }}
       className="tw-flex tw-items-center tw-gap-2"
+      tabIndex={-1} // Remove from tab sequence
     />
   );
 };
@@ -115,12 +117,14 @@ interface SuperEditorProps {
   onChange?: (content: string) => void;
   initialValue?: string;
   editorId?: string | null;
+  height?: string; // Add height prop
 }
 
 const SuperEditor: React.FC<SuperEditorProps> = ({ 
   onChange, 
   initialValue = '', 
-  editorId = null 
+  editorId = null,
+  height = '200px' // Default height
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -369,6 +373,37 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
       setSavedSelection(sel.getRangeAt(0));
     }
   }, []);
+
+  // SKIP TO EDITOR functionality
+  const skipToEditor = useCallback(() => {
+    if (editorRef.current) {
+      editorRef.current.focus();
+      // Place cursor at the end of content
+      const range = document.createRange();
+      const selection = window.getSelection();
+      range.selectNodeContents(editorRef.current);
+      range.collapse(false);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+  }, []);
+
+  // Handle keyboard shortcut for skipping to editor
+  const handleToolbarKeyDown = useCallback((event: React.KeyboardEvent) => {
+    // Alt + E to skip to editor
+    if (event.altKey && event.key.toLowerCase() === 'e') {
+      event.preventDefault();
+      skipToEditor();
+    }
+    // Tab key from last toolbar element should go to editor
+    else if (event.key === 'Tab' && !event.shiftKey) {
+      const target = event.target as HTMLElement;
+      if (target.closest('.toolbar-group:last-child')) {
+        event.preventDefault();
+        skipToEditor();
+      }
+    }
+  }, [skipToEditor]);
 
   // Element detection functions
   const findTextColorButton = useCallback((): HTMLElement | null => {
@@ -642,8 +677,9 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
     'ctrl+shift+e': () => !dropdownStates.numberedList && (saveSelection(), setDropdownStates(prev => ({ ...prev, numberedList: true, bulletList: false, multilevelList: false }))),
     'ctrl+shift+m': () => !dropdownStates.multilevelList && (saveSelection(), setDropdownStates(prev => ({ ...prev, multilevelList: true, bulletList: false, numberedList: false }))),
     'ctrl+shift+k': () => handleKeyConceptShortcut(),
+    'alt+e': () => skipToEditor(), // Add skip to editor shortcut
     'escape': () => handleEscapeKey()
-  }), [showHelpModal, dropdownStates, showColorPicker, showBackgroundColorPicker, showTableModal, saveSelection, execCommand, handleHyperlinkShortcut, handleKeyConceptShortcut, handleEscapeKey]);
+  }), [showHelpModal, dropdownStates, showColorPicker, showBackgroundColorPicker, showTableModal, saveSelection, execCommand, handleHyperlinkShortcut, handleKeyConceptShortcut, handleEscapeKey, skipToEditor]);
 
   const updateToolbarPosition = useCallback(() => {
     if (!containerRef.current || !toolbarRef.current || !editorRef.current || typeof window === 'undefined') return;
@@ -1347,6 +1383,32 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
         }
       }
 
+      /* Skip to Editor Link */
+      .skip-to-editor {
+        position: absolute;
+        top: -40px;
+        left: 8px;
+        background: #7c3aed;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 500;
+        z-index: 1001;
+        transition: top 0.3s ease;
+      }
+
+      .skip-to-editor:focus {
+        top: 8px;
+      }
+
+      .skip-to-editor:hover {
+        background: #6d28d9;
+        color: white;
+        text-decoration: none;
+      }
+
       /* Editor container responsive styles */
       .editor-container {
         width: 100%;
@@ -1360,7 +1422,7 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
 
       .editor-content {
         padding: 12px;
-        min-height: 200px;
+        min-height: ${height};
         background: white;
         outline: none;
         overflow-wrap: break-word;
@@ -1371,7 +1433,6 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
       @media (max-width: 767px) {
         .editor-content {
           padding: 8px;
-          min-height: 150px;
           font-size: 16px;
         }
       }
@@ -1505,7 +1566,7 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
     }
 
     return baseStyles + additionalStyles;
-  }, [uniqueEditorId, componentsLoaded]);
+  }, [uniqueEditorId, componentsLoaded, height]);
 
   // Check if main components are loaded
   const allComponentsLoaded = Object.values(componentsLoaded).every(Boolean);
@@ -1524,10 +1585,29 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
       className="editor-container"
       data-editor-id={uniqueEditorId}
     >
+      {/* Skip to Editor Link */}
+      <a 
+        href="#editor-content" 
+        className="skip-to-editor"
+        onClick={(e) => {
+          e.preventDefault();
+          skipToEditor();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            skipToEditor();
+          }
+        }}
+      >
+        Skip to Editor (Alt+E)
+      </a>
+
       <div 
         ref={toolbarRef}
         className="toolbar-container tw-transition-all tw-duration-200"
         style={toolbarStyle}
+        onKeyDown={handleToolbarKeyDown}
       >
         {/* Text Formatting Group */}
         <div className="toolbar-group">
@@ -1536,29 +1616,46 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
             onClick={() => execCommand('bold')} 
             editorRef={editorRef}
             handleChange={handleChange}
+            tabIndex={-1}
           />
           <ItalicButton 
             onClick={() => execCommand('italic')} 
             editorRef={editorRef}
             handleChange={handleChange}
+            tabIndex={-1}
           />
-          <UnderlineButton onClick={() => execCommand('underline')} />
-          <StrikethroughButton onClick={() => execCommand('strikeThrough')} />
-          <SubscriptButton onClick={() => execCommand('subscript')} />
-          <SuperscriptButton onClick={() => execCommand('superscript')} />
-          <HyperlinkButton onClick={() => {
-            const selection = window.getSelection();
-            const selectedText = selection?.toString();
-            
-            if (selectedText) {
-              const url = prompt('Enter URL:', 'https://');
-              if (url) {
-                execCommand('createLink', url);
+          <UnderlineButton 
+            onClick={() => execCommand('underline')} 
+            tabIndex={-1}
+          />
+          <StrikethroughButton 
+            onClick={() => execCommand('strikeThrough')} 
+            tabIndex={-1}
+          />
+          <SubscriptButton 
+            onClick={() => execCommand('subscript')} 
+            tabIndex={-1}
+          />
+          <SuperscriptButton 
+            onClick={() => execCommand('superscript')} 
+            tabIndex={-1}
+          />
+          <HyperlinkButton 
+            onClick={() => {
+              const selection = window.getSelection();
+              const selectedText = selection?.toString();
+              
+              if (selectedText) {
+                const url = prompt('Enter URL:', 'https://');
+                if (url) {
+                  execCommand('createLink', url);
+                }
+              } else {
+                alert('Please select text first to create a hyperlink.');
               }
-            } else {
-              alert('Please select text first to create a hyperlink.');
-            }
-          }} />
+            }} 
+            tabIndex={-1}
+          />
         </div>
 
         {/* Font & Typography Group */}
@@ -1569,17 +1666,20 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
             execCommand={execCommand}
             isOpen={dropdownStates?.fontSize || false}
             onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, fontSize: isOpen }))}
+            tabIndex={-1}
           />
           <FontNameButton 
             execCommand={execCommand}
             isOpen={dropdownStates?.fontName || false}
             onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, fontName: isOpen }))}
+            tabIndex={-1}
           />
           <HeadingButton 
             ref={headingButtonRef}
             execCommand={execCommand}
             isOpen={dropdownStates?.heading || false}
             onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, heading: isOpen }))}
+            tabIndex={-1}
           />
         </div>
 
@@ -1591,6 +1691,7 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
               ref={textColorButtonRef}
               onClick={handleTextColorClick}
               currentColor={currentTextColor}
+              tabIndex={-1}
             />
           </div>
           
@@ -1599,6 +1700,7 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
               ref={backgroundColorButtonRef}
               onClick={handleBackgroundColorClick}
               currentColor={currentBackgroundColor}
+              tabIndex={-1}
             />
           </div>
         </div>
@@ -1611,6 +1713,7 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
             execCommand={execCommand}
             isOpen={dropdownStates?.alignment || false}
             onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, alignment: isOpen }))}
+            tabIndex={-1}
           />
         </div>
 
@@ -1622,18 +1725,21 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
             handleChange={handleChange}
             dropdownStates={dropdownStates}
             setDropdownStates={setDropdownStates}
+            tabIndex={-1}
           />
           <NumberedListButton 
             editorRef={editorRef}
             handleChange={handleChange}
             dropdownStates={dropdownStates}
             setDropdownStates={setDropdownStates}
+            tabIndex={-1}
           />
           <MultilevelListButton 
             editorRef={editorRef}
             handleChange={handleChange}
             dropdownStates={dropdownStates}
             setDropdownStates={setDropdownStates}
+            tabIndex={-1}
           />
         </div>
 
@@ -1641,14 +1747,14 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
         <div className="toolbar-group">
           <div className="toolbar-group-label">Insert</div>
           
-          {/* Image Button - using gradient style */}
+          {/* Image Button - using gradient style with tabIndex */}
           <ImageGradientButton 
             onClick={() => {
               setShowImageModal(true);
             }}
           />
           
-          {/* Equation Button - using gradient style */}
+          {/* Equation Button - using gradient style with tabIndex */}
           <EquationGradientButton 
             onClick={() => {
               saveSelection();
@@ -1662,6 +1768,7 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
               saveSelection();
               setShowCodeModal(true);
             }}
+            tabIndex={-1}
           />
           
           <TableButton 
@@ -1669,10 +1776,12 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
               saveSelection();
               setShowTableModal(true);
             }}
+            tabIndex={-1}
           />
           
           <KeyConceptButton 
             onClick={handleKeyConceptInsert}
+            tabIndex={-1}
           />
         </div>
 
@@ -1681,12 +1790,14 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
           <div className="toolbar-group-label">Tools</div>
           <HelpButton 
             onClick={() => setShowHelpModal(true)}
+            tabIndex={-1}
           />
         </div>
       </div>
       
       {/* Editor */}
       <div
+        id="editor-content"
         ref={editorRef}
         contentEditable
         className="editor-content tw-outline-none tw-overflow-auto tw-focus:tw-ring-2 tw-focus:tw-ring-purple-300 tw-focus:tw-ring-inset"
@@ -1694,7 +1805,16 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
         onBlur={handleEditorBlur}
         onPaste={handlePaste}
         onFocus={handleEditorFocus}
+        tabIndex={0} // Make sure editor is focusable and first in tab order after toolbar
+        role="textbox"
+        aria-label="Text editor"
+        aria-describedby="editor-help"
       />
+      
+      {/* Hidden helper text for screen readers */}
+      <div id="editor-help" className="tw-sr-only">
+        Rich text editor. Use toolbar above for formatting options. Press Alt+E to focus editor directly.
+      </div>
       
       {/* Dynamic Styles */}
       <style jsx>{dynamicStyles}</style>
