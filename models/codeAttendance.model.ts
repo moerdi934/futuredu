@@ -14,6 +14,7 @@ export interface CodeAttendance {
   status: string;
   create_date: Date;
   qr_image?: Buffer | string;
+  meeting_url?: string; // New field
 }
 
 export interface CodeAttendanceFilters {
@@ -30,6 +31,7 @@ export interface CreateCodeAttendanceData {
   expiration_time: Date;
   status: string;
   qr_image: Buffer;
+  meeting_url?: string | null; // New field
 }
 
 export interface UpdateCodeAttendanceData {
@@ -40,6 +42,7 @@ export interface UpdateCodeAttendanceData {
   token: string;
   expiration_time: Date;
   status: string;
+  meeting_url?: string | null; // New field
 }
 
 export const getCodeAttendances = async (filters: CodeAttendanceFilters = {}): Promise<CodeAttendance[]> => {
@@ -54,7 +57,8 @@ export const getCodeAttendances = async (filters: CodeAttendanceFilters = {}): P
             dca.token,
             dca.expiration_time,
             dca.status,
-            dca.create_date
+            dca.create_date,
+            dca.meeting_url
         FROM dimCodeAttendance dca
         LEFT JOIN Users u ON dca.create_user_id = u.id
         WHERE 1=1
@@ -91,7 +95,8 @@ export const getCodeAttendanceById = async (id: number): Promise<CodeAttendance 
             dca.token,
             dca.expiration_time,
             dca.status,
-            dca.create_date
+            dca.create_date,
+            dca.meeting_url
         FROM dimCodeAttendance dca
         LEFT JOIN Users u ON dca.create_user_id = u.id
         WHERE dca.id = $1
@@ -113,7 +118,8 @@ export const getValidCodeAttendances = async (session_id: number): Promise<CodeA
             dca.expiration_time,
             dca.status,
             dca.create_date,
-            dca.qr_image
+            dca.qr_image,
+            dca.meeting_url
         FROM dimCodeAttendance dca
         LEFT JOIN Users u ON dca.create_user_id = u.id
         WHERE dca.session_id = $1 
@@ -147,9 +153,9 @@ export const getCodeAttendanceByToken = async (token: string): Promise<CodeAtten
 export const createCodeAttendance = async (data: CreateCodeAttendanceData): Promise<CodeAttendance> => {
     const query = `
         INSERT INTO dimCodeAttendance 
-            (session_id, event_id, create_user_id, qr_data, token, expiration_time, status, create_date, qr_image)
+            (session_id, event_id, create_user_id, qr_data, token, expiration_time, status, create_date, qr_image, meeting_url)
         VALUES 
-            ($1, $2, $3, $4, $5, $6, $7, NOW(), $8)
+            ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, $9)
         RETURNING *;
     `; 
     const values = [
@@ -160,7 +166,8 @@ export const createCodeAttendance = async (data: CreateCodeAttendanceData): Prom
         data.token,
         data.expiration_time,
         data.status,
-        data.qr_image
+        data.qr_image,
+        data.meeting_url || null // New field
     ];
     const result = await pool.query(query, values);
     return result.rows[0];
@@ -177,8 +184,9 @@ export const updateCodeAttendance = async (id: number, data: UpdateCodeAttendanc
             token = $5,
             expiration_time = $6,
             status = $7,
-            create_date = NOW()
-        WHERE id = $8
+            create_date = NOW(),
+            meeting_url = $8
+        WHERE id = $9
         RETURNING *;
     `;
     const values = [
@@ -189,6 +197,7 @@ export const updateCodeAttendance = async (id: number, data: UpdateCodeAttendanc
         data.token,
         data.expiration_time,
         data.status,
+        data.meeting_url || null, // New field
         id,
     ];
     const result = await pool.query(query, values);

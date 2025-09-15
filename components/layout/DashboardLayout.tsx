@@ -106,7 +106,7 @@ const menuData: MenuItem[] = [
     roles: ['admin', 'teacher', 'student'],
     subItems: [
       { icon: School, text: 'Classes', path: '/panel/courses/dashboard', roles: ['admin', 'teacher'] },
-      { icon: GraduationCap, text: 'Edit Classes', path: '/panel/courses/classes-page', roles: ['admin'] },
+      { icon: GraduationCap, text: 'Edit Classes', path: '/panel/courses/classes-page', roles: ['admin','teacher','student'] },
       { icon: BookOpen, text: 'Courses', path: '/panel/courses/list', roles: ['admin', 'teacher', 'student'] },
       { icon: Edit, text: 'Edit Courses', path: '/panel/courses/edit', roles: ['admin', 'teacher'] },
       { icon: FileText, text: 'Request Courses', path: '/panel/courses/requests', roles: ['admin', 'teacher', 'student'] },

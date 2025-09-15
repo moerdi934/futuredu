@@ -1,25 +1,29 @@
 // pages/panel/courses/classes-page/index.tsx
 
 import React, { useState } from 'react';
-import { FaPlus, FaEye, FaEdit, FaTrash, FaCalendar, FaClock, FaUsers, FaPlay, FaStop, FaCheckCircle, FaUndo, FaInfo } from 'react-icons/fa';
-import { BookOpen, GraduationCap } from 'lucide-react';
+import { FaPlus, FaEye, FaEdit, FaTrash, FaCalendar, FaClock, FaUsers, FaPlay, FaStop, FaCheckCircle, FaUndo, FaInfo, FaCheck, FaTimes, FaVideo, FaMapMarkerAlt, FaQrcode } from 'react-icons/fa';
+import { BookOpen, GraduationCap, Video, MapPin, UserCheck, Clock } from 'lucide-react';
 import MainLayout from '../../../../components/layout/DashboardLayout';
 import ReportLayout from '../../../../components/report/ReportLayout';
-import { ReportConfig, ColumnConfig } from '../../../../types/report';
+import { ReportConfig, ColumnConfig, ActionColumnButton } from '../../../../types/report';
 import { useAuth } from '../../../../context/AuthContext';
 import AddClassModal from './AddClassModal';
 import EditClassModal from './EditClassModal';
 import DetailClassModal from './DetailClassModal';
 import StartFinishClassModal from './StartFinishClassModal';
+import ApprovalModal from './ApprovalModal';
+import StudentAttendanceModal from './StudentAttendanceModal';
 
 const ClassesPage: React.FC = () => {
-  const { id: currentUserId } = useAuth();
+  const { id: currentUserId, role: userRole } = useAuth();
   
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showStartFinishModal, setShowStartFinishModal] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [editingClass, setEditingClass] = useState(null);
   const [selectedClass, setSelectedClass] = useState(null);
 
@@ -96,6 +100,16 @@ const ClassesPage: React.FC = () => {
         color: 'tw-bg-red-100 tw-text-red-800', 
         icon: <FaTrash size={12} />,
         label: 'Telah Dihapus'
+      },
+      'Need Approve': { 
+        color: 'tw-bg-yellow-100 tw-text-yellow-800', 
+        icon: <Clock size={12} />,
+        label: 'Menunggu Persetujuan'
+      },
+      'Rejected': { 
+        color: 'tw-bg-red-100 tw-text-red-800', 
+        icon: <FaTimes size={12} />,
+        label: 'Ditolak'
       }
     };
 
@@ -107,6 +121,68 @@ const ClassesPage: React.FC = () => {
           {config.icon}
           {config.label}
         </span>
+      </div>
+    );
+  };
+
+  const formatClassMode = (value: string) => {
+    const modeConfig = {
+      'online': { 
+        color: 'tw-bg-blue-100 tw-text-blue-800', 
+        icon: <Video size={12} />,
+        label: 'Online'
+      },
+      'offline': { 
+        color: 'tw-bg-green-100 tw-text-green-800', 
+        icon: <MapPin size={12} />,
+        label: 'Offline'
+      }
+    };
+
+    const config = modeConfig[value] || modeConfig['offline'];
+    
+    return (
+      <div className="tw-text-center">
+        <span className={`tw-px-3 tw-py-2 tw-rounded-full tw-text-xs tw-font-medium tw-flex tw-items-center tw-justify-center tw-gap-2 ${config.color}`}>
+          {config.icon}
+          {config.label}
+        </span>
+      </div>
+    );
+  };
+
+  const formatApprovalStatus = (value: string, row: any) => {
+    const statusConfig = {
+      'approved': { 
+        color: 'tw-bg-green-100 tw-text-green-800', 
+        icon: <FaCheck size={12} />,
+        label: 'Disetujui'
+      },
+      'need_approve': { 
+        color: 'tw-bg-yellow-100 tw-text-yellow-800', 
+        icon: <Clock size={12} />,
+        label: 'Menunggu Persetujuan'
+      },
+      'rejected': { 
+        color: 'tw-bg-red-100 tw-text-red-800', 
+        icon: <FaTimes size={12} />,
+        label: 'Ditolak'
+      }
+    };
+
+    const config = statusConfig[value] || statusConfig['approved'];
+    
+    return (
+      <div className="tw-text-center">
+        <span className={`tw-px-3 tw-py-2 tw-rounded-full tw-text-xs tw-font-medium tw-flex tw-items-center tw-justify-center tw-gap-2 ${config.color}`}>
+          {config.icon}
+          {config.label}
+        </span>
+        {row.approver_name && value !== 'need_approve' && (
+          <div className="tw-text-xs tw-text-gray-500 tw-mt-1">
+            oleh {row.approver_name}
+          </div>
+        )}
       </div>
     );
   };
@@ -153,12 +229,26 @@ const ClassesPage: React.FC = () => {
     );
   };
 
-  // Check if current user is the teacher of the class or starter
-  const canStartClass = (row: any) => {
+  // Check if current user can start/manage the class
+  const canUserManageClass = (row: any) => {
     return currentUserId && (
+      userRole === 'admin' ||
       (row.teacher_id && (parseInt(row.teacher_id) === currentUserId || row.teacher_id === currentUserId.toString())) ||
-      (row.starter_user_id && (parseInt(row.starter_user_id) === currentUserId || row.starter_user_id === currentUserId.toString()))
+      (row.starter_user_id && (parseInt(row.starter_user_id) === currentUserId || row.starter_user_id === currentUserId.toString())) ||
+      (row.create_user_id && (parseInt(row.create_user_id) === currentUserId || row.create_user_id === currentUserId.toString()))
     );
+  };
+
+  // Check if current user can approve class
+  const canApproveClass = (row: any) => {
+    if (userRole === 'admin') return true;
+    if (userRole === 'teacher' && (!row.teacher_id || row.teacher_id === '' || row.teacher_id === null)) return true;
+    return false;
+  };
+
+  // Check if user is student in this class
+  const isStudentInClass = (row: any) => {
+    return row.student_list_ids?.includes(currentUserId) || false;
   };
 
   // Handler functions
@@ -173,6 +263,12 @@ const ClassesPage: React.FC = () => {
     window.location.reload();
   };
 
+  const handleApprovalSave = () => {
+    setShowApprovalModal(false);
+    setSelectedClass(null);
+    window.location.reload();
+  };
+
   const handleDetail = (row: any) => {
     setSelectedClass(row);
     setShowDetailModal(true);
@@ -181,6 +277,11 @@ const ClassesPage: React.FC = () => {
   const handleEdit = (row: any) => {
     setEditingClass(row);
     setShowEditModal(true);
+  };
+
+  const handleApprove = (row: any) => {
+    setSelectedClass(row);
+    setShowApprovalModal(true);
   };
 
   const handleStartFinish = (row: any) => {
@@ -198,10 +299,18 @@ const ClassesPage: React.FC = () => {
       start_time: row.start_time,
       end_time: row.end_time,
       status: row.status,
+      approval_status: row.approval_status,
+      class_mode: row.class_mode,
+      meeting_url: row.meeting_url
     };
     
     setSelectedClass(transformedData);
     setShowStartFinishModal(true);
+  };
+
+  const handleAttendance = (row: any) => {
+    setSelectedClass(row);
+    setShowAttendanceModal(true);
   };
 
   const handleDelete = async (row: any) => {
@@ -213,6 +322,7 @@ const ClassesPage: React.FC = () => {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
           },
           body: JSON.stringify({
             delete_reason: reason || 'Dihapus oleh pengguna'
@@ -240,6 +350,7 @@ const ClassesPage: React.FC = () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
           }
         });
 
@@ -260,6 +371,95 @@ const ClassesPage: React.FC = () => {
   const handleStatusChange = () => {
     // Refresh data after status change
     window.location.reload();
+  };
+
+  // Dynamic action buttons based on user role and class status
+  const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
+    const buttons: ActionColumnButton[] = [];
+
+    // Detail button - always available
+    buttons.push({
+      label: 'Detail',
+      icon: React.createElement(FaEye),
+      variant: 'outline-info',
+      size: 'sm',
+      onClick: () => handleDetail(row)
+    });
+
+    // Student attendance button - for students in the class
+    if (userRole === 'student' && isStudentInClass(row) && row.status === 'Started') {
+      buttons.push({
+        label: 'Presensi',
+        icon: React.createElement(FaQrcode),
+        variant: 'outline-primary',
+        size: 'sm',
+        onClick: () => handleAttendance(row)
+      });
+    }
+
+    // Approval button - for admin and teachers who can approve
+    if ((row.approval_status === 'need_approve') && canApproveClass(row)) {
+      buttons.push({
+        label: 'Setujui',
+        icon: React.createElement(FaCheck),
+        variant: 'outline-success',
+        size: 'sm',
+        onClick: () => handleApprove(row)
+      });
+    }
+
+    // Start/Manage button - for users who can manage the class
+    if (canUserManageClass(row) && !row.is_deleted && row.approval_status === 'approved') {
+      buttons.push({
+        label: row.status === 'Started' ? 'Kelola' : 'Mulai',
+        icon: React.createElement(row.status === 'Started' ? FaStop : FaPlay),
+        variant: row.status === 'Started' ? 'outline-warning' : 'outline-success',
+        size: 'sm',
+        onClick: () => handleStartFinish(row)
+      });
+    }
+
+    // Edit button - for users who can modify the class
+    if (canUserManageClass(row) && !row.is_deleted) {
+      // Students can only edit classes they created that are not approved
+      const canEdit = userRole === 'admin' || 
+                     userRole === 'teacher' || 
+                     (userRole === 'student' && row.create_user_id === currentUserId && row.approval_status === 'need_approve');
+      
+      if (canEdit) {
+        buttons.push({
+          label: 'Edit',
+          icon: React.createElement(FaEdit),
+          variant: 'outline-warning',
+          size: 'sm',
+          onClick: () => handleEdit(row)
+        });
+      }
+    }
+
+    // Delete button - for users who can modify the class
+    if (canUserManageClass(row) && !row.is_deleted) {
+      buttons.push({
+        label: 'Delete',
+        icon: React.createElement(FaTrash),
+        variant: 'outline-danger',
+        size: 'sm',
+        onClick: () => handleDelete(row)
+      });
+    }
+
+    // Restore button - for deleted classes that user can manage
+    if (canUserManageClass(row) && row.is_deleted) {
+      buttons.push({
+        label: 'Restore',
+        icon: React.createElement(FaUndo),
+        variant: 'outline-success',
+        size: 'sm',
+        onClick: () => handleRestore(row)
+      });
+    }
+
+    return buttons;
   };
 
   // Definisi kolom-kolom lengkap berdasarkan response API
@@ -385,6 +585,46 @@ const ClassesPage: React.FC = () => {
       width: 150,
       colGroup: 'status',
       formatter: formatStatus
+    },
+    {
+      key: 'approval_status',
+      label: 'Status Persetujuan',
+      type: 'string',
+      width: 170,
+      colGroup: 'status',
+      formatter: formatApprovalStatus
+    },
+    {
+      key: 'class_mode',
+      label: 'Mode Kelas',
+      type: 'string',
+      width: 120,
+      colGroup: 'status',
+      formatter: formatClassMode
+    },
+    {
+      key: 'meeting_url',
+      label: 'URL Meeting',
+      type: 'string',
+      width: 200,
+      colGroup: 'status',
+      formatter: (value, row) => {
+        if (!value || row.class_mode !== 'online') return '-';
+        return (
+          <div className="tw-text-center">
+            <a 
+              href={value} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="tw-text-blue-600 tw-text-xs hover:tw-underline"
+              title={value}
+            >
+              <Video className="tw-inline tw-mr-1" size={12} />
+              Link Meeting
+            </a>
+          </div>
+        );
+      }
     },
     {
       key: 'is_started',
@@ -515,12 +755,112 @@ const ClassesPage: React.FC = () => {
       }
     },
     {
+      key: 'approver_name',
+      label: 'Penyetuju',
+      type: 'string',
+      width: 180,
+      colGroup: 'approval',
+      formatter: (value) => value ? formatCreator(value) : '-'
+    },
+    {
+      key: 'approve_date',
+      label: 'Tanggal Persetujuan',
+      type: 'datetime',
+      width: 150,
+      colGroup: 'approval',
+      formatter: (value) => {
+        if (!value) return '-';
+        const date = new Date(value);
+        return date.toLocaleDateString('id-ID');
+      }
+    },
+    {
       key: 'delete_reason',
       label: 'Alasan Dihapus',
       type: 'string',
       width: 200,
       colGroup: 'delete_info',
       formatter: formatDeleteInfo
+    }
+  ];
+
+  // Updated filters with new options
+  const filters = [
+    {
+      key: 'name',
+      type: 'text',
+      label: 'Nama Kelas'
+    },
+    {
+      key: 'courseId',
+      type: 'select',
+      label: 'Mata Pelajaran',
+      apiEndpoint: '/courses/options',
+      debounceMs: 300
+    },
+    {
+      key: 'teacherId',
+      type: 'select',
+      label: 'Guru/Pengajar',
+      apiEndpoint: '/users/teachers',
+      debounceMs: 300
+    },
+    {
+      key: 'studentId',
+      type: 'select',
+      label: 'Siswa',
+      apiEndpoint: '/users/students',
+      debounceMs: 300
+    },
+    {
+      key: 'status',
+      type: 'select',
+      label: 'Status Kelas',
+      options: [
+        { value: 'All', label: 'Semua Status' },
+        { value: 'Not Start', label: 'Belum Dimulai' },
+        { value: 'Started', label: 'Sedang Berlangsung' },
+        { value: 'Finished', label: 'Selesai' },
+        { value: 'Need Approve', label: 'Menunggu Persetujuan' },
+        { value: 'Rejected', label: 'Ditolak' },
+        { value: 'Deleted', label: 'Telah Dihapus' }
+      ]
+    },
+    {
+      key: 'approvalStatus',
+      type: 'select',
+      label: 'Status Persetujuan',
+      options: [
+        { value: 'all', label: 'Semua' },
+        { value: 'approved', label: 'Disetujui' },
+        { value: 'need_approve', label: 'Menunggu Persetujuan' },
+        { value: 'rejected', label: 'Ditolak' }
+      ]
+    },
+    {
+      key: 'includeDeleted',
+      type: 'select',
+      label: 'Tampilkan Data',
+      options: [
+        { value: 'false', label: 'Hanya Data Aktif' },
+        { value: 'true', label: 'Termasuk Yang Dihapus' },
+        { value: 'only_deleted', label: 'Hanya Yang Dihapus' }
+      ]
+    },
+    {
+      key: 'startDate',
+      type: 'date',
+      label: 'Tanggal Mulai (Dari)'
+    },
+    {
+      key: 'endDate',
+      type: 'date',
+      label: 'Tanggal Selesai (Sampai)'
+    },
+    {
+      key: 'searchDate',
+      type: 'date',
+      label: 'Tanggal Spesifik'
     }
   ];
 
@@ -542,7 +882,7 @@ const ClassesPage: React.FC = () => {
       {
         key: 'status',
         label: 'Status',
-        columns: ['status', 'is_started', 'is_deleted']
+        columns: ['status', 'approval_status', 'class_mode', 'meeting_url', 'is_started', 'is_deleted']
       },
       {
         key: 'schedule',
@@ -560,76 +900,17 @@ const ClassesPage: React.FC = () => {
         columns: ['creator', 'create_user_id', 'create_date', 'edit_user_id', 'edit_date']
       },
       {
+        key: 'approval',
+        label: 'Informasi Persetujuan',
+        columns: ['approver_name', 'approve_date']
+      },
+      {
         key: 'delete_info',
         label: 'Informasi Penghapusan',
         columns: ['delete_reason']
       }
     ],
-    filters: [
-      {
-        key: 'name',
-        type: 'text',
-        label: 'Nama Kelas'
-      },
-      {
-        key: 'courseId',
-        type: 'select',
-        label: 'Mata Pelajaran',
-        apiEndpoint: '/courses/options',
-        debounceMs: 300
-      },
-      {
-        key: 'teacherId',
-        type: 'select',
-        label: 'Guru/Pengajar',
-        apiEndpoint: '/users/teachers',
-        debounceMs: 300
-      },
-      {
-        key: 'studentId',
-        type: 'select',
-        label: 'Siswa',
-        apiEndpoint: '/users/students',
-        debounceMs: 300
-      },
-      {
-        key: 'status',
-        type: 'select',
-        label: 'Status Kelas',
-        options: [
-          { value: 'All', label: 'Semua Status' },
-          { value: 'Not Start', label: 'Belum Dimulai' },
-          { value: 'Started', label: 'Sedang Berlangsung' },
-          { value: 'Finished', label: 'Selesai' },
-          { value: 'Deleted', label: 'Telah Dihapus' }
-        ]
-      },
-      {
-        key: 'includeDeleted',
-        type: 'select',
-        label: 'Tampilkan Data',
-        options: [
-          { value: 'false', label: 'Hanya Data Aktif' },
-          { value: 'true', label: 'Termasuk Yang Dihapus' },
-          { value: 'only_deleted', label: 'Hanya Yang Dihapus' }
-        ]
-      },
-      {
-        key: 'startDate',
-        type: 'date',
-        label: 'Tanggal Mulai (Dari)'
-      },
-      {
-        key: 'endDate',
-        type: 'date',
-        label: 'Tanggal Selesai (Sampai)'
-      },
-      {
-        key: 'searchDate',
-        type: 'date',
-        label: 'Tanggal Spesifik'
-      }
-    ],
+    filters: filters,
     defaultSort: [
       { key: 'id', direction: 'desc' }
     ],
@@ -640,6 +921,8 @@ const ClassesPage: React.FC = () => {
       'teacher_name', 
       'students_display',
       'status',
+      'approval_status',
+      'class_mode',
       'date',
       'start_time',
       'end_time',
@@ -658,73 +941,9 @@ const ClassesPage: React.FC = () => {
     actionColumn: {
       enabled: true,
       label: 'Actions',
-      width: 350,
+      width: 400,
       sticky: false,
-      buttons: [
-        {
-          label: 'Detail',
-          icon: React.createElement(FaEye),
-          variant: 'outline-info',
-          size: 'sm',
-          onClick: (row, index) => {
-            handleDetail(row);
-          }
-        },
-        {
-          label: 'Mulai',
-          icon: React.createElement(FaPlay),
-          variant: 'outline-success',
-          size: 'sm',
-          onClick: (row, index) => {
-            if (canStartClass(row) && !row.is_deleted) {
-              handleStartFinish(row);
-            } else if (row.is_deleted) {
-              alert('Tidak dapat memulai kelas yang telah dihapus');
-            } else {
-              alert('Hanya guru pengajar atau starter yang dapat memulai kelas ini');
-            }
-          }
-        },
-        {
-          label: 'Edit',
-          icon: React.createElement(FaEdit),
-          variant: 'outline-warning',
-          size: 'sm',
-          onClick: (row, index) => {
-            if (!row.is_deleted) {
-              handleEdit(row);
-            } else {
-              alert('Tidak dapat mengedit kelas yang telah dihapus. Pulihkan kelas terlebih dahulu.');
-            }
-          }
-        },
-        {
-          label: 'Delete',
-          icon: React.createElement(FaTrash),
-          variant: 'outline-danger',
-          size: 'sm',
-          onClick: (row, index) => {
-            if (!row.is_deleted) {
-              handleDelete(row);
-            } else {
-              alert('Kelas ini sudah dihapus sebelumnya.');
-            }
-          }
-        },
-        {
-          label: 'Restore',
-          icon: React.createElement(FaUndo),
-          variant: 'outline-success',
-          size: 'sm',
-          onClick: (row, index) => {
-            if (row.is_deleted) {
-              handleRestore(row);
-            } else {
-              alert('Kelas ini tidak dalam status terhapus.');
-            }
-          }
-        }
-      ]
+      buttons: getActionButtons // Dynamic buttons function
     },
     actionButtons: [
       {
@@ -797,6 +1016,31 @@ const ClassesPage: React.FC = () => {
           }}
           classData={selectedClass}
           onStatusChange={handleStatusChange}
+        />
+      )}
+
+      {/* Modal Approval Kelas */}
+      {selectedClass && (
+        <ApprovalModal
+          show={showApprovalModal}
+          onClose={() => {
+            setShowApprovalModal(false);
+            setSelectedClass(null);
+          }}
+          classData={selectedClass}
+          onSave={handleApprovalSave}
+        />
+      )}
+
+      {/* Modal Student Attendance */}
+      {selectedClass && (
+        <StudentAttendanceModal
+          show={showAttendanceModal}
+          onClose={() => {
+            setShowAttendanceModal(false);
+            setSelectedClass(null);
+          }}
+          classData={selectedClass}
         />
       )}
     </MainLayout>

@@ -4,6 +4,7 @@ import * as SessionModel from '../models/session.model';
 import * as AttendanceModel from '../models/attendance.model';
 import * as EventModel from '../models/event.model';
 import * as CodeAttendanceModel from '../models/codeAttendance.model';
+import * as ClassModel from '../models/classes.model';
 import { generateUniqueToken } from '../utils/attendanceTokenGenerator';
 import QRCode from 'qrcode';
 import { AuthenticatedRequest } from '../lib/middleware/auth';
@@ -14,6 +15,8 @@ export interface CreateSessionRequest {
   latitude: number;
   longitude: number;
   notes: string;
+  class_mode?: 'online' | 'offline';
+  meeting_url?: string;
 }
 
 export interface UpdateSessionRequest {
@@ -32,6 +35,8 @@ export interface QRResponse {
   qrImage: string;
   token: string;
   expiration_time: Date;
+  meeting_url?: string;
+  class_mode: string;
 }
 
 // Mendapatkan semua sesi
@@ -78,15 +83,36 @@ export const getSessionByEventId = async (req: AuthenticatedRequest, res: NextAp
   }
 };
  
-// Membuat sesi baru
+// Updated createSession with class mode and meeting URL support
 export const createSession = async (req: AuthenticatedRequest, res: NextApiResponse) => {
-  const { eventid, latitude, longitude, notes }: CreateSessionRequest = req.body;
+  const { eventid, latitude, longitude, notes, class_mode, meeting_url }: CreateSessionRequest = req.body;
   const create_user_id = req.user!.id;
   
-  // Tambahkan log untuk memeriksa nilai create_user_id
   console.log('Creating session for user ID:', create_user_id);
 
   try {
+    // Get class information to determine mode
+    const classInfo = await ClassModel.getClassesByEventId(eventid, false, req.user.role, create_user_id);
+    if (!classInfo) {
+      return res.status(404).json({ message: 'Class not found' });
+    }
+
+    // Validate meeting URL for online classes
+    const finalClassMode = class_mode || classInfo.class_mode || 'offline';
+    if (finalClassMode === 'online' && !meeting_url) {
+      return res.status(400).json({ message: 'URL meeting diperlukan untuk kelas online' });
+    }
+
+    // Update class with meeting URL and mode if provided
+    if (finalClassMode === 'online' && meeting_url) {
+      await ClassModel.updateClass(classInfo.id.toString(), {
+        ...classInfo,
+        class_mode: finalClassMode,
+        meeting_url: meeting_url,
+        edit_user_id: create_user_id
+      });
+    }
+
     const newSession = await SessionModel.createSession({
       eventid,
       create_user_id,
@@ -109,11 +135,17 @@ export const createSession = async (req: AuthenticatedRequest, res: NextApiRespo
       const result = await AttendanceModel.createAttendance(attendanceData);
 
       const token = await generateUniqueToken();
-      const qr_data = JSON.stringify({ session_id, reff_userid: create_user_id, type_id: 1, token });
+      const qr_data = JSON.stringify({ 
+        session_id, 
+        reff_userid: create_user_id, 
+        type_id: 1, 
+        token,
+        meeting_url: finalClassMode === 'online' ? meeting_url : undefined
+      });
       const expiration_time = new Date(Date.now() + 15 * 60 * 1000); // 15 menit
-      const qrImageBuffer = await QRCode.toBuffer(qr_data); // Menghasilkan buffer QR Code dalam format bytea
+      const qrImageBuffer = await QRCode.toBuffer(qr_data);
 
-      // Insert code attendance
+      // Insert code attendance with meeting URL
       const codeData = {
         session_id,
         event_id: eventid,
@@ -122,7 +154,8 @@ export const createSession = async (req: AuthenticatedRequest, res: NextApiRespo
         token,
         expiration_time,
         status: 'active',
-        qr_image: qrImageBuffer
+        qr_image: qrImageBuffer,
+        meeting_url: finalClassMode === 'online' ? meeting_url : null
       };
 
       const newCode = await CodeAttendanceModel.createCodeAttendance(codeData);
@@ -130,7 +163,13 @@ export const createSession = async (req: AuthenticatedRequest, res: NextApiRespo
       // Generate QR Code image sebagai data URL
       const qrImage = await QRCode.toDataURL(qr_data);
 
-      res.status(201).json({ qrImage, token, expiration_time } as QRResponse);
+      res.status(201).json({ 
+        qrImage, 
+        token, 
+        expiration_time,
+        meeting_url: finalClassMode === 'online' ? meeting_url : null,
+        class_mode: finalClassMode
+      } as QRResponse);
 
     } catch (error) {
       console.error('Error marking attendance:', error);
@@ -158,11 +197,6 @@ export const updateSession = async (req: AuthenticatedRequest, res: NextApiRespo
       return res.status(404).json({ message: 'Session not found' });
     }
 
-    // // Validasi apakah user yang mengupdate adalah pembuat sesi
-    // if (existingSession.create_user_id !== create_user_id) {
-    //     return res.status(403).json({ message: 'Not authorized to update this session' });
-    // }
-
     const updatedSession = await SessionModel.updateSession(id as string, {
       eventid,
       create_user_id,
@@ -188,11 +222,11 @@ export const finishSession = async (req: AuthenticatedRequest, res: NextApiRespo
     }
     const session_id = existingSession.id;
     console.log(existingSession);
-    
-    // // Validasi apakah user yang mengupdate adalah pembuat sesi
-    // if (existingSession.create_user_id !== create_user_id) {
-    //     return res.status(403).json({ message: 'Not authorized to update this session' });
-    // }
+
+    // Get class information for meeting URL
+    const classInfo = await ClassModel.getClassesById(eventid as string, false, req.user.role, create_user_id);
+    const finalClassMode = classInfo?.class_mode || 'offline';
+    const meetingUrl = classInfo?.meeting_url;
 
     const updatedSession = await SessionModel.finishSession(session_id);
 
@@ -209,11 +243,17 @@ export const finishSession = async (req: AuthenticatedRequest, res: NextApiRespo
     const result = await AttendanceModel.createAttendance(attendanceData);
 
     const token = await generateUniqueToken();
-    const qr_data = JSON.stringify({ session_id, reff_userid: create_user_id, type_id: 2, token });
+    const qr_data = JSON.stringify({ 
+      session_id, 
+      reff_userid: create_user_id, 
+      type_id: 2, 
+      token,
+      meeting_url: finalClassMode === 'online' ? meetingUrl : undefined
+    });
     const expiration_time = new Date(Date.now() + 60 * 60 * 1000); // 60 menit
-    const qrImageBuffer = await QRCode.toBuffer(qr_data); // Menghasilkan buffer QR Code dalam format bytea
+    const qrImageBuffer = await QRCode.toBuffer(qr_data);
 
-    // Insert code attendance
+    // Insert code attendance with meeting URL
     const codeData = {
       session_id,
       event_id: eventid as string,
@@ -222,7 +262,8 @@ export const finishSession = async (req: AuthenticatedRequest, res: NextApiRespo
       token,
       expiration_time,
       status: 'active',
-      qr_image: qrImageBuffer
+      qr_image: qrImageBuffer,
+      meeting_url: finalClassMode === 'online' ? meetingUrl : null
     };
 
     const newCode = await CodeAttendanceModel.createCodeAttendance(codeData);
@@ -230,7 +271,13 @@ export const finishSession = async (req: AuthenticatedRequest, res: NextApiRespo
     // Generate QR Code image sebagai data URL
     const qrImage = await QRCode.toDataURL(qr_data);
 
-    res.status(201).json({ qrImage, token, expiration_time } as QRResponse);
+    res.status(201).json({ 
+      qrImage, 
+      token, 
+      expiration_time,
+      meeting_url: finalClassMode === 'online' ? meetingUrl : null,
+      class_mode: finalClassMode
+    } as QRResponse);
 
   } catch (error) {
     console.error('Update Session Error:', error);

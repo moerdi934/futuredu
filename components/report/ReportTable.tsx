@@ -1,4 +1,4 @@
-// components/report/ReportTable.tsx - Updated with Conditional Action Logic
+// components/report/ReportTable.tsx - Updated with Conditional Action Logic and Dynamic Buttons
 
 import React, { useMemo } from 'react';
 import { Table, Spinner } from 'react-bootstrap';
@@ -7,6 +7,15 @@ import { ColumnConfig, SortConfig, ColGroup, ActionColumnButton } from '../../ty
 import { ButtonGradient, ActionType } from '../button/ButtonTemplate';
 import { buildColGroups, getDefaultFormatter } from '../../utils/reportUtils';
 import { useAuth } from '../../context/AuthContext';
+
+// Extended type untuk mendukung dynamic buttons
+interface ActionColumn {
+  enabled: boolean;
+  label?: string;
+  width?: number;
+  buttons: ActionColumnButton[] | ((row: any, index: number) => ActionColumnButton[]);
+  sticky?: boolean;
+}
 
 interface ReportTableProps {
   data: any[];
@@ -21,13 +30,7 @@ interface ReportTableProps {
   showRowNumber?: boolean;
   rowHeight?: number;
   maxHeight?: string;
-  actionColumn?: {
-    enabled: boolean;
-    label?: string;
-    width?: number;
-    buttons: ActionColumnButton[];
-    sticky?: boolean;
-  };
+  actionColumn?: ActionColumn;
 }
 
 const ReportTable: React.FC<ReportTableProps> = ({
@@ -81,43 +84,23 @@ const ReportTable: React.FC<ReportTableProps> = ({
     );
   };
 
-  // Helper function to check if user can start class
-  const canStartClass = (row: any) => {
-    return currentUserId && (
-      (row.teacher_id && (parseInt(row.teacher_id) === currentUserId || row.teacher_id === currentUserId.toString())) ||
-      (row.starter_user_id && (parseInt(row.starter_user_id) === currentUserId || row.starter_user_id === currentUserId.toString()))
-    );
-  };
-
-  // Function to filter action buttons based on row state and user permissions
-  const getFilteredActionButtons = (row: any, buttons: ActionColumnButton[]) => {
-    return buttons.filter(button => {
-      const label = button.label.toLowerCase();
-      
-      // Always show Detail button
-      if (label.includes('detail') || label.includes('lihat')) {
-        return true;
+  // Helper function to get buttons for a row - handles both static and dynamic buttons
+  const getButtonsForRow = (row: any, rowIndex: number): ActionColumnButton[] => {
+    if (!actionColumn?.buttons) return [];
+    
+    // Check if buttons is a function (dynamic buttons)
+    if (typeof actionColumn.buttons === 'function') {
+      try {
+        const dynamicButtons = actionColumn.buttons(row, rowIndex);
+        return Array.isArray(dynamicButtons) ? dynamicButtons : [];
+      } catch (error) {
+        console.error('Error calling dynamic buttons function:', error);
+        return [];
       }
-      
-      // Show Start button only if user can start class and class is not deleted
-      if (label.includes('mulai') || label.includes('start')) {
-        return canStartClass(row) && !row.is_deleted;
-      }
-      
-      // Show Edit and Delete buttons only if class is not deleted
-      if (label.includes('edit') || label.includes('ubah') || 
-          label.includes('delete') || label.includes('hapus')) {
-        return !row.is_deleted;
-      }
-      
-      // Show Restore button only if class is deleted
-      if (label.includes('restore') || label.includes('pulihkan')) {
-        return row.is_deleted === true;
-      }
-      
-      // For any other buttons, show them by default unless class is deleted
-      return !row.is_deleted;
-    });
+    }
+    
+    // Static buttons (array)
+    return Array.isArray(actionColumn.buttons) ? actionColumn.buttons : [];
   };
 
   // Map variant ke action type dan custom colors untuk ButtonGradient
@@ -132,8 +115,11 @@ const ReportTable: React.FC<ReportTableProps> = ({
     else if (labelLower.includes('copy') || labelLower.includes('salin')) actionType = 'copy';
     else if (labelLower.includes('download') || labelLower.includes('unduh')) actionType = 'download';
     else if (labelLower.includes('print') || labelLower.includes('cetak')) actionType = 'export';
-    else if (labelLower.includes('mulai') || labelLower.includes('start')) actionType = 'custom';
-    else if (labelLower.includes('restore') || labelLower.includes('pulihkan')) actionType = 'custom';
+    else if (labelLower.includes('mulai') || labelLower.includes('start')) actionType = 'start';
+    else if (labelLower.includes('setujui') || labelLower.includes('approve')) actionType = 'apply';
+    else if (labelLower.includes('kelola') || labelLower.includes('manage')) actionType = 'settings';
+    else if (labelLower.includes('presensi') || labelLower.includes('attendance')) actionType = 'check';
+    else if (labelLower.includes('restore') || labelLower.includes('pulihkan')) actionType = 'refresh';
 
     // Custom colors berdasarkan variant
     const colorMap = {
@@ -158,12 +144,12 @@ const ReportTable: React.FC<ReportTableProps> = ({
   };
 
   const renderActionButtons = (row: any, rowIndex: number) => {
-    if (!actionColumn?.enabled || !actionColumn.buttons?.length) return null;
+    if (!actionColumn?.enabled) return null;
 
-    // Filter buttons based on row state and permissions
-    const filteredButtons = getFilteredActionButtons(row, actionColumn.buttons);
+    // Get buttons for this specific row (handles both static and dynamic)
+    const buttons = getButtonsForRow(row, rowIndex);
 
-    if (filteredButtons.length === 0) {
+    if (!buttons || buttons.length === 0) {
       return (
         <div className="tw-flex tw-justify-center tw-items-center tw-px-2 tw-text-gray-400 tw-text-xs">
           Tidak ada aksi
@@ -173,7 +159,7 @@ const ReportTable: React.FC<ReportTableProps> = ({
 
     return (
       <div className="tw-flex tw-gap-1 tw-justify-center tw-items-center tw-px-2 tw-flex-wrap">
-        {filteredButtons.map((button, buttonIndex) => {
+        {buttons.map((button, buttonIndex) => {
           const { actionType, customColors } = getActionTypeAndColors(button.variant, button.label);
           
           return (
@@ -183,7 +169,13 @@ const ReportTable: React.FC<ReportTableProps> = ({
                 customText={button.label}
                 customIcon={button.icon || undefined}
                 customColors={customColors}
-                onClick={() => button.onClick(row, rowIndex)}
+                onClick={() => {
+                  try {
+                    button.onClick(row, rowIndex);
+                  } catch (error) {
+                    console.error('Error executing button onClick:', error);
+                  }
+                }}
                 disabled={loading}
                 size="sm"
                 className={`tw-min-w-[70px] tw-text-xs ${button.className || ''}`}
