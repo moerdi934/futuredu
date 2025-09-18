@@ -1,4 +1,4 @@
-// components/button/ButtonTemplate.tsx
+// components/button/ButtonTemplate.tsx - Fixed version with proper null checks
 import React, { useState, useRef, useEffect, forwardRef } from 'react';
 import { 
   Save, 
@@ -219,7 +219,7 @@ const getActionColors = (action: ActionType) => {
     // Custom - Default purple
     'custom': { primary: '#8B5CF6', secondary: '#7C3AED', light: '#F3E8FF', dark: '#6D28D9', gradient1: '#8B5CF6', gradient2: '#A855F7', border: '#7C3AED', text: '#FFFFFF' },
 
-    // ... (semua color schemes lainnya sama seperti sebelumnya)
+    // Content Actions
     'like': { primary: '#EF4444', secondary: '#DC2626', light: '#FEE2E2', dark: '#B91C1C', gradient1: '#EF4444', gradient2: '#F87171', border: '#DC2626', text: '#FFFFFF' },
     'unlike': { primary: '#6B7280', secondary: '#4B5563', light: '#F9FAFB', dark: '#374151', gradient1: '#6B7280', gradient2: '#9CA3AF', border: '#4B5563', text: '#FFFFFF' },
     'favorite': { primary: '#F59E0B', secondary: '#D97706', light: '#FFFBEB', dark: '#B45309', gradient1: '#F59E0B', gradient2: '#FBBF24', border: '#D97706', text: '#FFFFFF' },
@@ -330,159 +330,172 @@ const getActionColors = (action: ActionType) => {
   return colorSchemes[action] || colorSchemes.custom;
 };
 
-// Get appropriate icon for action
-const getActionIcon = (action: ActionType) => {
-  const iconMap: Record<ActionType, React.ReactNode> = {
-    // Basic Actions
-    'save': <Save className="tw-w-4 tw-h-4" />,
-    'cancel': <X className="tw-w-4 tw-h-4" />,
-    'apply': <Check className="tw-w-4 tw-h-4" />,
-    'finish': <CheckCircle className="tw-w-4 tw-h-4" />,
-    'clear': <XCircle className="tw-w-4 tw-h-4" />,
-    'done': <CheckCircle className="tw-w-4 tw-h-4" />,
-    'start': <Play className="tw-w-4 tw-h-4" />,
-    'continue': <Play className="tw-w-4 tw-h-4" />,
-    'submit': <Upload className="tw-w-4 tw-h-4" />,
-    'delete': <Trash2 className="tw-w-4 tw-h-4" />,
-    'edit': <Edit className="tw-w-4 tw-h-4" />,
-    'view': <Eye className="tw-w-4 tw-h-4" />,
-    'download': <Download className="tw-w-4 tw-h-4" />,
-    'upload': <Upload className="tw-w-4 tw-h-4" />,
-    'search': <Search className="tw-w-4 tw-h-4" />,
-    'filter': <Filter className="tw-w-4 tw-h-4" />,
-    'refresh': <RefreshCw className="tw-w-4 tw-h-4" />,
-    'copy': <Copy className="tw-w-4 tw-h-4" />,
-    'share': <Share className="tw-w-4 tw-h-4" />,
-    'back': <ArrowLeft className="tw-w-4 tw-h-4" />,
-    'forward': <ArrowRight className="tw-w-4 tw-h-4" />,
-    'home': <Home className="tw-w-4 tw-h-4" />,
-    'close': <X className="tw-w-4 tw-h-4" />,
-    'open': <ExternalLink className="tw-w-4 tw-h-4" />,
-    'create': <Plus className="tw-w-4 tw-h-4" />,
-    'add': <Plus className="tw-w-4 tw-h-4" />,
-    'remove': <Trash2 className="tw-w-4 tw-h-4" />,
-    
-    // User Actions
-    'login': <LogIn className="tw-w-4 tw-h-4" />,
-    'logout': <LogOut className="tw-w-4 tw-h-4" />,
-    'register': <UserPlus className="tw-w-4 tw-h-4" />,
-    'profile': <User className="tw-w-4 tw-h-4" />,
-    'account': <User className="tw-w-4 tw-h-4" />,
-    'settings': <Settings className="tw-w-4 tw-h-4" />,
-    'preferences': <Settings className="tw-w-4 tw-h-4" />,
-    'invite': <UserPlus className="tw-w-4 tw-h-4" />,
-    'follow': <UserPlus className="tw-w-4 tw-h-4" />,
-    'unfollow': <Users className="tw-w-4 tw-h-4" />,
-    'block': <X className="tw-w-4 tw-h-4" />,
-    'unblock': <Check className="tw-w-4 tw-h-4" />,
-    'report': <Flag className="tw-w-4 tw-h-4" />,
-    
-    // Content Actions
-    'like': <Heart className="tw-w-4 tw-h-4" />,
-    'unlike': <Heart className="tw-w-4 tw-h-4" />,
-    'favorite': <Star className="tw-w-4 tw-h-4" />,
-    'unfavorite': <Star className="tw-w-4 tw-h-4" />,
-    'bookmark': <Bookmark className="tw-w-4 tw-h-4" />,
-    'unbookmark': <Bookmark className="tw-w-4 tw-h-4" />,
-    'comment': <MessageCircle className="tw-w-4 tw-h-4" />,
-    'reply': <MessageCircle className="tw-w-4 tw-h-4" />,
-    'quote': <MessageCircle className="tw-w-4 tw-h-4" />,
-    'repost': <RefreshCw className="tw-w-4 tw-h-4" />,
-    'rate': <Star className="tw-w-4 tw-h-4" />,
-    'review': <Star className="tw-w-4 tw-h-4" />,
-    
-    // Media Actions
-    'play': <Play className="tw-w-4 tw-h-4" />,
-    'pause': <Pause className="tw-w-4 tw-h-4" />,
-    'stop': <Stop className="tw-w-4 tw-h-4" />,
-    'next': <SkipForward className="tw-w-4 tw-h-4" />,
-    'previous': <SkipBack className="tw-w-4 tw-h-4" />,
-    'record': <Mic className="tw-w-4 tw-h-4" />,
-    'mute': <VolumeX className="tw-w-4 tw-h-4" />,
-    'unmute': <Volume2 className="tw-w-4 tw-h-4" />,
-    'fullscreen': <Maximize className="tw-w-4 tw-h-4" />,
-    'minimize': <Minimize className="tw-w-4 tw-h-4" />,
-    'maximize': <Maximize className="tw-w-4 tw-h-4" />,
-    'zoom-in': <ZoomIn className="tw-w-4 tw-h-4" />,
-    'zoom-out': <ZoomOut className="tw-w-4 tw-h-4" />,
-    'rotate': <RotateCw className="tw-w-4 tw-h-4" />,
-    'capture': <Camera className="tw-w-4 tw-h-4" />,
-    'gallery': <Image className="tw-w-4 tw-h-4" />,
-    'camera': <Camera className="tw-w-4 tw-h-4" />,
-    'video': <Video className="tw-w-4 tw-h-4" />,
-    'audio': <Music className="tw-w-4 tw-h-4" />,
-    
-    // Commerce Actions
-    'buy': <ShoppingCart className="tw-w-4 tw-h-4" />,
-    'sell': <ShoppingCart className="tw-w-4 tw-h-4" />,
-    'cart': <ShoppingCart className="tw-w-4 tw-h-4" />,
-    'checkout': <CreditCard className="tw-w-4 tw-h-4" />,
-    'payment': <CreditCard className="tw-w-4 tw-h-4" />,
-    'order': <FileText className="tw-w-4 tw-h-4" />,
-    'invoice': <FileText className="tw-w-4 tw-h-4" />,
-    'receipt': <FileText className="tw-w-4 tw-h-4" />,
-    'refund': <RefreshCw className="tw-w-4 tw-h-4" />,
-    'return': <RefreshCw className="tw-w-4 tw-h-4" />,
-    'exchange': <RefreshCw className="tw-w-4 tw-h-4" />,
-    'wishlist': <Heart className="tw-w-4 tw-h-4" />,
-    'compare': <BarChart3 className="tw-w-4 tw-h-4" />,
-    
-    // Data Actions
-    'export': <Download className="tw-w-4 tw-h-4" />,
-    'import': <Upload className="tw-w-4 tw-h-4" />,
-    'backup': <Database className="tw-w-4 tw-h-4" />,
-    'restore': <RefreshCw className="tw-w-4 tw-h-4" />,
-    'sync': <RefreshCw className="tw-w-4 tw-h-4" />,
-    'connect': <Wifi className="tw-w-4 tw-h-4" />,
-    'disconnect': <WifiOff className="tw-w-4 tw-h-4" />,
-    'archive': <Archive className="tw-w-4 tw-h-4" />,
-    'unarchive': <Archive className="tw-w-4 tw-h-4" />,
-    'sort': <BarChart3 className="tw-w-4 tw-h-4" />,
-    'group': <Grid3X3 className="tw-w-4 tw-h-4" />,
-    'merge': <Layers className="tw-w-4 tw-h-4" />,
-    'split': <Layers className="tw-w-4 tw-h-4" />,
-    
-    // Communication
-    'call': <Phone className="tw-w-4 tw-h-4" />,
-    'message': <MessageCircle className="tw-w-4 tw-h-4" />,
-    'email': <Mail className="tw-w-4 tw-h-4" />,
-    'chat': <MessageCircle className="tw-w-4 tw-h-4" />,
-    'notify': <Bell className="tw-w-4 tw-h-4" />,
-    'alert': <AlertCircle className="tw-w-4 tw-h-4" />,
-    'announce': <Bell className="tw-w-4 tw-h-4" />,
-    'subscribe': <Bell className="tw-w-4 tw-h-4" />,
-    'unsubscribe': <Bell className="tw-w-4 tw-h-4" />,
-    'broadcast': <Bell className="tw-w-4 tw-h-4" />,
-    
-    // Navigation
-    'menu': <Menu className="tw-w-4 tw-h-4" />,
-    'sidebar': <Menu className="tw-w-4 tw-h-4" />,
-    'navigate': <MapPin className="tw-w-4 tw-h-4" />,
-    'redirect': <ExternalLink className="tw-w-4 tw-h-4" />,
-    'link': <Link className="tw-w-4 tw-h-4" />,
-    'unlink': <Unlink className="tw-w-4 tw-h-4" />,
-    'external': <ExternalLink className="tw-w-4 tw-h-4" />,
-    
-    // System Actions
-    'install': <Download className="tw-w-4 tw-h-4" />,
-    'uninstall': <Trash2 className="tw-w-4 tw-h-4" />,
-    'update': <RefreshCw className="tw-w-4 tw-h-4" />,
-    'upgrade': <TrendingUp className="tw-w-4 tw-h-4" />,
-    'configure': <Settings className="tw-w-4 tw-h-4" />,
-    'reset': <RefreshCw className="tw-w-4 tw-h-4" />,
-    'restart': <RefreshCw className="tw-w-4 tw-h-4" />,
-    'enable': <Check className="tw-w-4 tw-h-4" />,
-    'disable': <X className="tw-w-4 tw-h-4" />,
-    'activate': <Check className="tw-w-4 tw-h-4" />,
-    'deactivate': <X className="tw-w-4 tw-h-4" />,
-    'lock': <Lock className="tw-w-4 tw-h-4" />,
-    'unlock': <Unlock className="tw-w-4 tw-h-4" />,
-    
-    // Custom
-    'custom': <AlertCircle className="tw-w-4 tw-h-4" />,
-  };
+// Get appropriate icon for action with null checks
+// Get appropriate icon for action with null checks and better fallbacks
+const getActionIcon = (action: ActionType): React.ReactNode => {
+  try {
+    const iconMap: Record<ActionType, React.ReactNode> = {
+      // Basic Actions
+      'save': Save ? <Save className="tw-w-4 tw-h-4" /> : <CheckCircle className="tw-w-4 tw-h-4" />,
+      'cancel': X ? <X className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'apply': Check ? <Check className="tw-w-4 tw-h-4" /> : <CheckCircle className="tw-w-4 tw-h-4" />,
+      'finish': CheckCircle ? <CheckCircle className="tw-w-4 tw-h-4" /> : <Check className="tw-w-4 tw-h-4" />,
+      'clear': XCircle ? <XCircle className="tw-w-4 tw-h-4" /> : <X className="tw-w-4 tw-h-4" />,
+      'done': CheckCircle ? <CheckCircle className="tw-w-4 tw-h-4" /> : <Check className="tw-w-4 tw-h-4" />,
+      'start': Play ? <Play className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'continue': Play ? <Play className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'submit': Upload ? <Upload className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'delete': Trash2 ? <Trash2 className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'edit': Edit ? <Edit className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'view': Eye ? <Eye className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'download': Download ? <Download className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'upload': Upload ? <Upload className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'search': Search ? <Search className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'filter': Filter ? <Filter className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'refresh': RefreshCw ? <RefreshCw className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'copy': Copy ? <Copy className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'share': Share ? <Share className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'back': ArrowLeft ? <ArrowLeft className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'forward': ArrowRight ? <ArrowRight className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'home': Home ? <Home className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'close': X ? <X className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'open': ExternalLink ? <ExternalLink className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'create': Plus ? <Plus className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'add': Plus ? <Plus className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'remove': Trash2 ? <Trash2 className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      
+      // User Actions
+      'login': LogIn ? <LogIn className="tw-w-4 tw-h-4" /> : <User className="tw-w-4 tw-h-4" />,
+      'logout': LogOut ? <LogOut className="tw-w-4 tw-h-4" /> : <User className="tw-w-4 tw-h-4" />,
+      'register': UserPlus ? <UserPlus className="tw-w-4 tw-h-4" /> : <User className="tw-w-4 tw-h-4" />,
+      'profile': User ? <User className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'account': User ? <User className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'settings': Settings ? <Settings className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'preferences': Settings ? <Settings className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'invite': UserPlus ? <UserPlus className="tw-w-4 tw-h-4" /> : <User className="tw-w-4 tw-h-4" />,
+      'follow': UserPlus ? <UserPlus className="tw-w-4 tw-h-4" /> : <User className="tw-w-4 tw-h-4" />,
+      'unfollow': Users ? <Users className="tw-w-4 tw-h-4" /> : <User className="tw-w-4 tw-h-4" />,
+      'block': X ? <X className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'unblock': Check ? <Check className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'report': Flag ? <Flag className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      
+      // Content Actions
+      'like': Heart ? <Heart className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'unlike': Heart ? <Heart className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'favorite': Star ? <Star className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'unfavorite': Star ? <Star className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'bookmark': Bookmark ? <Bookmark className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'unbookmark': Bookmark ? <Bookmark className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'comment': MessageCircle ? <MessageCircle className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'reply': MessageCircle ? <MessageCircle className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'quote': MessageCircle ? <MessageCircle className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'repost': RefreshCw ? <RefreshCw className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'rate': Star ? <Star className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'review': Star ? <Star className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      
+      // Media Actions - WITH PROPER FALLBACKS
+      'play': Play ? <Play className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'pause': Pause ? <Pause className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'stop': (Stop || Square) ? (Stop ? <Stop className="tw-w-4 tw-h-4" /> : <Square className="tw-w-4 tw-h-4" />) : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'next': SkipForward ? <SkipForward className="tw-w-4 tw-h-4" /> : <ArrowRight className="tw-w-4 tw-h-4" />,
+      'previous': SkipBack ? <SkipBack className="tw-w-4 tw-h-4" /> : <ArrowLeft className="tw-w-4 tw-h-4" />,
+      'record': Mic ? <Mic className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'mute': (VolumeX || MicOff) ? (VolumeX ? <VolumeX className="tw-w-4 tw-h-4" /> : <MicOff className="tw-w-4 tw-h-4" />) : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'unmute': Volume2 ? <Volume2 className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'fullscreen': Maximize ? <Maximize className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'minimize': Minimize ? <Minimize className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'maximize': Maximize ? <Maximize className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'zoom-in': ZoomIn ? <ZoomIn className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'zoom-out': ZoomOut ? <ZoomOut className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'rotate': RotateCw ? <RotateCw className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'capture': Camera ? <Camera className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'gallery': Image ? <Image className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'camera': Camera ? <Camera className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'video': Video ? <Video className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'audio': Music ? <Music className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      
+      // Commerce Actions
+      'buy': ShoppingCart ? <ShoppingCart className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'sell': ShoppingCart ? <ShoppingCart className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'cart': ShoppingCart ? <ShoppingCart className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'checkout': CreditCard ? <CreditCard className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'payment': CreditCard ? <CreditCard className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'order': FileText ? <FileText className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'invoice': FileText ? <FileText className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'receipt': FileText ? <FileText className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'refund': RefreshCw ? <RefreshCw className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'return': RefreshCw ? <RefreshCw className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'exchange': RefreshCw ? <RefreshCw className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'wishlist': Heart ? <Heart className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'compare': BarChart3 ? <BarChart3 className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      
+      // Data Actions
+      'export': Download ? <Download className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'import': Upload ? <Upload className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'backup': Database ? <Database className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'restore': RefreshCw ? <RefreshCw className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'sync': RefreshCw ? <RefreshCw className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'connect': Wifi ? <Wifi className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'disconnect': WifiOff ? <WifiOff className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'archive': Archive ? <Archive className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'unarchive': Archive ? <Archive className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'sort': BarChart3 ? <BarChart3 className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'group': Grid3X3 ? <Grid3X3 className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'merge': Layers ? <Layers className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'split': Layers ? <Layers className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      
+      // Communication
+      'call': Phone ? <Phone className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'message': MessageCircle ? <MessageCircle className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'email': Mail ? <Mail className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'chat': MessageCircle ? <MessageCircle className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'notify': Bell ? <Bell className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'alert': AlertCircle ? <AlertCircle className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'announce': Bell ? <Bell className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'subscribe': Bell ? <Bell className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'unsubscribe': Bell ? <Bell className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'broadcast': Bell ? <Bell className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      
+      // Navigation
+      'menu': Menu ? <Menu className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'sidebar': Menu ? <Menu className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'navigate': MapPin ? <MapPin className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'redirect': ExternalLink ? <ExternalLink className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'link': Link ? <Link className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'unlink': Unlink ? <Unlink className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'external': ExternalLink ? <ExternalLink className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      
+      // System Actions
+      'install': Download ? <Download className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'uninstall': Trash2 ? <Trash2 className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'update': RefreshCw ? <RefreshCw className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'upgrade': TrendingUp ? <TrendingUp className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'configure': Settings ? <Settings className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'reset': RefreshCw ? <RefreshCw className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'restart': RefreshCw ? <RefreshCw className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'enable': Check ? <Check className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'disable': X ? <X className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'activate': Check ? <Check className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'deactivate': X ? <X className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'lock': Lock ? <Lock className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'unlock': Unlock ? <Unlock className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
+      
+      // Custom
+      'custom': <AlertCircle className="tw-w-4 tw-h-4" />,
+    };
 
-  return iconMap[action] || <AlertCircle className="tw-w-4 tw-h-4" />;
+    // Always return a valid React element, with fallback
+    const icon = iconMap[action];
+    if (!icon || !React.isValidElement(icon)) {
+      console.warn(`Icon for action "${action}" is undefined or invalid, using fallback`);
+      return <AlertCircle className="tw-w-4 tw-h-4" />;
+    }
+    
+    return icon;
+  } catch (error) {
+    console.error(`Error getting icon for action "${action}":`, error);
+    return <AlertCircle className="tw-w-4 tw-h-4" />;
+  }
 };
 
 // Get display text for action
@@ -604,7 +617,7 @@ const getSizeClasses = (size: 'sm' | 'md' | 'lg', showText: boolean = true) => {
   return sizeMap[size];
 };
 
-// Button Template 1 - ButtonGradient dengan ForwardRef
+// FIXED: Button Template 1 - ButtonGradient dengan Proper Error Handling
 export const ButtonGradient = forwardRef<HTMLButtonElement, ButtonTemplateProps>(({ 
   action, 
   onClick, 
@@ -622,6 +635,23 @@ export const ButtonGradient = forwardRef<HTMLButtonElement, ButtonTemplateProps>
   const icon = customIcon || getActionIcon(action);
   const text = getActionText(action, customText);
   const sizeClasses = getSizeClasses(size, showText);
+  
+  // FIXED: Safe icon rendering with proper null checks
+  const renderIcon = () => {
+    if (!icon) {
+      return <AlertCircle className={`${sizeClasses.icon} tw-flex-shrink-0`} />;
+    }
+
+    // Check if icon is a valid React element
+    if (React.isValidElement(icon)) {
+      return React.cloneElement(icon as React.ReactElement, { 
+        className: `${sizeClasses.icon} tw-flex-shrink-0` 
+      });
+    }
+
+    // Fallback for invalid icons
+    return <AlertCircle className={`${sizeClasses.icon} tw-flex-shrink-0`} />;
+  };
   
   return (
     <button
@@ -680,9 +710,7 @@ export const ButtonGradient = forwardRef<HTMLButtonElement, ButtonTemplateProps>
               animation: loading ? 'bounce 2s infinite' : 'none' 
             }}
           >
-            {React.cloneElement(icon as React.ReactElement, { 
-              className: `${sizeClasses.icon} tw-flex-shrink-0` 
-            })}
+            {renderIcon()}
           </div>
           {showText && (
             <span className="tw-relative tw-z-10 tw-flex-shrink-0">
@@ -697,7 +725,7 @@ export const ButtonGradient = forwardRef<HTMLButtonElement, ButtonTemplateProps>
 
 ButtonGradient.displayName = 'ButtonGradient';
 
-// Button Template 2 - ButtonPlay dengan ForwardRef
+// FIXED: Button Template 2 - ButtonPlay dengan Proper Error Handling
 export const ButtonPlay = forwardRef<HTMLButtonElement, ButtonTemplateProps>(({ 
   action, 
   onClick, 
@@ -715,6 +743,21 @@ export const ButtonPlay = forwardRef<HTMLButtonElement, ButtonTemplateProps>(({
   const icon = customIcon || getActionIcon(action);
   const text = getActionText(action, customText);
   const sizeClasses = getSizeClasses(size, showText);
+  
+  // FIXED: Safe icon rendering with proper null checks
+  const renderIcon = () => {
+    if (!icon) {
+      return <AlertCircle className={`${sizeClasses.icon} tw-flex-shrink-0`} />;
+    }
+
+    if (React.isValidElement(icon)) {
+      return React.cloneElement(icon as React.ReactElement, { 
+        className: `${sizeClasses.icon} tw-flex-shrink-0` 
+      });
+    }
+
+    return <AlertCircle className={`${sizeClasses.icon} tw-flex-shrink-0`} />;
+  };
   
   return (
     <button
@@ -775,9 +818,7 @@ export const ButtonPlay = forwardRef<HTMLButtonElement, ButtonTemplateProps>(({
       ) : (
         <>
           <div className="tw-flex tw-items-center tw-justify-center">
-            {React.cloneElement(icon as React.ReactElement, { 
-              className: `${sizeClasses.icon} tw-flex-shrink-0` 
-            })}
+            {renderIcon()}
           </div>
           {showText && (
             <span className="tw-flex-shrink-0">
@@ -792,7 +833,7 @@ export const ButtonPlay = forwardRef<HTMLButtonElement, ButtonTemplateProps>(({
 
 ButtonPlay.displayName = 'ButtonPlay';
 
-// Button Template 3 - ButtonProfessional dengan ForwardRef
+// FIXED: Button Template 3 - ButtonProfessional dengan Proper Error Handling
 export const ButtonProfessional = forwardRef<HTMLButtonElement, ButtonTemplateProps>(({ 
   action, 
   onClick, 
@@ -810,6 +851,21 @@ export const ButtonProfessional = forwardRef<HTMLButtonElement, ButtonTemplatePr
   const icon = customIcon || getActionIcon(action);
   const text = getActionText(action, customText);
   const sizeClasses = getSizeClasses(size, showText);
+  
+  // FIXED: Safe icon rendering with proper null checks
+  const renderIcon = () => {
+    if (!icon) {
+      return <AlertCircle className={`${sizeClasses.icon} tw-flex-shrink-0`} />;
+    }
+
+    if (React.isValidElement(icon)) {
+      return React.cloneElement(icon as React.ReactElement, { 
+        className: `${sizeClasses.icon} tw-flex-shrink-0` 
+      });
+    }
+
+    return <AlertCircle className={`${sizeClasses.icon} tw-flex-shrink-0`} />;
+  };
   
   return (
     <button
@@ -861,9 +917,7 @@ export const ButtonProfessional = forwardRef<HTMLButtonElement, ButtonTemplatePr
       ) : (
         <>
           <div className="tw-flex tw-items-center tw-justify-center">
-            {React.cloneElement(icon as React.ReactElement, { 
-              className: `${sizeClasses.icon} tw-flex-shrink-0` 
-            })}
+            {renderIcon()}
           </div>
           {showText && (
             <span className="tw-flex-shrink-0">

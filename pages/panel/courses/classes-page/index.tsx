@@ -1,4 +1,4 @@
-// pages/panel/courses/classes-page/index.tsx
+// pages/panel/courses/classes-page/index.tsx - Fixed Version Without Page Reload
 
 import React, { useState } from 'react';
 import { FaPlus, FaEye, FaEdit, FaTrash, FaCalendar, FaClock, FaUsers, FaPlay, FaStop, FaCheckCircle, FaUndo, FaInfo, FaCheck, FaTimes, FaVideo, FaMapMarkerAlt, FaQrcode } from 'react-icons/fa';
@@ -26,6 +26,9 @@ const ClassesPage: React.FC = () => {
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [editingClass, setEditingClass] = useState(null);
   const [selectedClass, setSelectedClass] = useState(null);
+  
+  // IMPORTANT: State untuk menyimpan refresh function dari useReport
+  const [refreshFunction, setRefreshFunction] = useState<(() => void) | null>(null);
 
   // Custom formatters untuk kolom-kolom tertentu
   const formatStudentsDisplay = (value: string, row: any) => {
@@ -233,9 +236,9 @@ const ClassesPage: React.FC = () => {
   const canUserManageClass = (row: any) => {
     return currentUserId && (
       userRole === 'admin' ||
-      (row.teacher_id && (parseInt(row.teacher_id) === currentUserId || row.teacher_id === currentUserId.toString())) ||
-      (row.starter_user_id && (parseInt(row.starter_user_id) === currentUserId || row.starter_user_id === currentUserId.toString())) ||
-      (row.create_user_id && (parseInt(row.create_user_id) === currentUserId || row.create_user_id === currentUserId.toString()))
+      (row.teacher_id && (parseInt(row.teacher_id.toString()) === currentUserId || row.teacher_id.toString() === currentUserId.toString())) ||
+      (row.starter_user_id && (parseInt(row.starter_user_id.toString()) === currentUserId || row.starter_user_id.toString() === currentUserId.toString())) ||
+      (row.create_user_id && (parseInt(row.create_user_id.toString()) === currentUserId || row.create_user_id.toString() === currentUserId.toString()))
     );
   };
 
@@ -251,22 +254,25 @@ const ClassesPage: React.FC = () => {
     return row.student_list_ids?.includes(currentUserId) || false;
   };
 
-  // Handler functions
+  // FIXED: Handler functions - removed window.location.reload(), use refresh function instead
   const handleAddSave = (classData: any) => {
     console.log('Class saved:', classData);
-    window.location.reload();
+    // Call refresh function to update table data only
+    refreshFunction?.();
   };
 
   const handleEditSave = (classData: any) => {
     console.log('Class updated:', classData);
     setEditingClass(null);
-    window.location.reload();
+    // Call refresh function to update table data only
+    refreshFunction?.();
   };
 
   const handleApprovalSave = () => {
     setShowApprovalModal(false);
     setSelectedClass(null);
-    window.location.reload();
+    // Call refresh function to update table data only
+    refreshFunction?.();
   };
 
   const handleDetail = (row: any) => {
@@ -284,25 +290,33 @@ const ClassesPage: React.FC = () => {
     setShowApprovalModal(true);
   };
 
+  // Updated handleStartFinish with correct data transformation
   const handleStartFinish = (row: any) => {
-    // Transform data to match StartFinishClassModal interface
+    // Transform data to match StartFinishClassModal interface with correct types
     const transformedData = {
       id: row.id,
       event_id: row.event_id,
       starter_user_id: row.starter_user_id,
       name: row.name,
       course_name: row.course_name,
+      course_id: row.course_id,
+      teacher_id: row.teacher_id,
       description: row.description,
       teacher_name: row.teacher_name,
+      student_list_ids: row.student_list_ids || [],
       student_list_names: row.student_list_names || [],
       date: row.date,
       start_time: row.start_time,
       end_time: row.end_time,
+      real_start_datetime: row.real_start_datetime,
+      real_end_datetime: row.real_end_datetime,
       status: row.status,
       approval_status: row.approval_status,
       class_mode: row.class_mode,
       meeting_url: row.meeting_url
     };
+    
+    console.log('Transformed data for StartFinishClassModal:', transformedData);
     
     setSelectedClass(transformedData);
     setShowStartFinishModal(true);
@@ -313,6 +327,7 @@ const ClassesPage: React.FC = () => {
     setShowAttendanceModal(true);
   };
 
+  // FIXED: handleDelete - use refresh function instead of window.location.reload()
   const handleDelete = async (row: any) => {
     const reason = window.prompt(`Apakah Anda yakin ingin menghapus kelas "${row.name}"?\n\nMasukkan alasan penghapusan (opsional):`);
     
@@ -331,7 +346,8 @@ const ClassesPage: React.FC = () => {
 
         if (response.ok) {
           alert('Kelas berhasil dihapus');
-          window.location.reload();
+          // Call refresh function to update table data only
+          refreshFunction?.();
         } else {
           const error = await response.json();
           alert('Gagal menghapus kelas: ' + (error.message || 'Terjadi kesalahan'));
@@ -343,6 +359,7 @@ const ClassesPage: React.FC = () => {
     }
   };
 
+  // FIXED: handleRestore - use refresh function instead of window.location.reload()
   const handleRestore = async (row: any) => {
     if (window.confirm(`Apakah Anda yakin ingin mengembalikan kelas "${row.name}"?`)) {
       try {
@@ -356,7 +373,8 @@ const ClassesPage: React.FC = () => {
 
         if (response.ok) {
           alert('Kelas berhasil dikembalikan');
-          window.location.reload();
+          // Call refresh function to update table data only
+          refreshFunction?.();
         } else {
           const error = await response.json();
           alert('Gagal mengembalikan kelas: ' + (error.message || 'Terjadi kesalahan'));
@@ -368,99 +386,123 @@ const ClassesPage: React.FC = () => {
     }
   };
 
+  // FIXED: handleStatusChange - use refresh function instead of window.location.reload()
   const handleStatusChange = () => {
-    // Refresh data after status change
-    window.location.reload();
+    // Refresh data after status change - only refresh table data
+    refreshFunction?.();
   };
 
   // Dynamic action buttons based on user role and class status
-  const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
-    const buttons: ActionColumnButton[] = [];
+const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
+  const buttons: ActionColumnButton[] = [];
 
-    // Detail button - always available
+  // Detail button - always available
+  buttons.push({
+    label: 'Detail',
+    icon: React.createElement(FaEye),
+    variant: 'outline-info',
+    size: 'sm',
+    onClick: () => handleDetail(row)
+  });
+
+  // Student attendance button - show for Started and Finished classes
+  if (userRole === 'student' && isStudentInClass(row) && (row.status === 'Started' || row.status === 'Finished')) {
     buttons.push({
-      label: 'Detail',
-      icon: React.createElement(FaEye),
-      variant: 'outline-info',
+      label: row.status === 'Started' ? 'Presensi' : 'Riwayat Presensi',
+      icon: React.createElement(FaQrcode),
+      variant: row.status === 'Started' ? 'outline-primary' : 'outline-info',
       size: 'sm',
-      onClick: () => handleDetail(row)
+      onClick: () => handleAttendance(row)
     });
+  }
 
-    // Student attendance button - for students in the class
-    if (userRole === 'student' && isStudentInClass(row) && row.status === 'Started') {
+  // Approval button
+  if ((row.approval_status === 'need_approve') && canApproveClass(row)) {
+    buttons.push({
+      label: 'Setujui',
+      icon: React.createElement(FaCheck),
+      variant: 'outline-success',
+      size: 'sm',
+      onClick: () => handleApprove(row)
+    });
+  }
+
+  // Correct logic for start/manage/finish buttons based on real datetime
+  if (canUserManageClass(row) && !row.is_deleted && row.approval_status === 'approved') {
+    // Use the corrected status from database (based on real datetime fields)
+    const currentStatus = row.status;
+    
+    if (currentStatus === 'Finished') {
+      // Class is finished - only show review button
       buttons.push({
-        label: 'Presensi',
-        icon: React.createElement(FaQrcode),
-        variant: 'outline-primary',
+        label: 'Review',
+        icon: React.createElement(FaEye),
+        variant: 'outline-info',
         size: 'sm',
-        onClick: () => handleAttendance(row)
+        onClick: () => handleStartFinish(row)
       });
-    }
-
-    // Approval button - for admin and teachers who can approve
-    if ((row.approval_status === 'need_approve') && canApproveClass(row)) {
+    } else if (currentStatus === 'Started') {
+      // Class is started but not finished - show finish button
       buttons.push({
-        label: 'Setujui',
-        icon: React.createElement(FaCheck),
+        label: 'Selesaikan',
+        icon: React.createElement(FaStop),
+        variant: 'outline-warning',
+        size: 'sm',
+        onClick: () => handleStartFinish(row)
+      });
+    } else if (currentStatus === 'Not Start') {
+      // Class not started - show start button
+      buttons.push({
+        label: 'Mulai',
+        icon: React.createElement(FaPlay),
         variant: 'outline-success',
-        size: 'sm',
-        onClick: () => handleApprove(row)
-      });
-    }
-
-    // Start/Manage button - for users who can manage the class
-    if (canUserManageClass(row) && !row.is_deleted && row.approval_status === 'approved') {
-      buttons.push({
-        label: row.status === 'Started' ? 'Kelola' : 'Mulai',
-        icon: React.createElement(row.status === 'Started' ? FaStop : FaPlay),
-        variant: row.status === 'Started' ? 'outline-warning' : 'outline-success',
         size: 'sm',
         onClick: () => handleStartFinish(row)
       });
     }
+  }
 
-    // Edit button - for users who can modify the class
-    if (canUserManageClass(row) && !row.is_deleted) {
-      // Students can only edit classes they created that are not approved
-      const canEdit = userRole === 'admin' || 
-                     userRole === 'teacher' || 
-                     (userRole === 'student' && row.create_user_id === currentUserId && row.approval_status === 'need_approve');
-      
-      if (canEdit) {
-        buttons.push({
-          label: 'Edit',
-          icon: React.createElement(FaEdit),
-          variant: 'outline-warning',
-          size: 'sm',
-          onClick: () => handleEdit(row)
-        });
-      }
-    }
-
-    // Delete button - for users who can modify the class
-    if (canUserManageClass(row) && !row.is_deleted) {
+  // Edit button
+  if (canUserManageClass(row) && !row.is_deleted) {
+    const canEdit = userRole === 'admin' || 
+                   userRole === 'teacher' || 
+                   (userRole === 'student' && row.create_user_id === currentUserId && row.approval_status === 'need_approve');
+    
+    if (canEdit) {
       buttons.push({
-        label: 'Delete',
-        icon: React.createElement(FaTrash),
-        variant: 'outline-danger',
+        label: 'Edit',
+        icon: React.createElement(FaEdit),
+        variant: 'outline-warning',
         size: 'sm',
-        onClick: () => handleDelete(row)
+        onClick: () => handleEdit(row)
       });
     }
+  }
 
-    // Restore button - for deleted classes that user can manage
-    if (canUserManageClass(row) && row.is_deleted) {
-      buttons.push({
-        label: 'Restore',
-        icon: React.createElement(FaUndo),
-        variant: 'outline-success',
-        size: 'sm',
-        onClick: () => handleRestore(row)
-      });
-    }
+  // Delete button
+  if (canUserManageClass(row) && !row.is_deleted) {
+    buttons.push({
+      label: 'Delete',
+      icon: React.createElement(FaTrash),
+      variant: 'outline-danger',
+      size: 'sm',
+      onClick: () => handleDelete(row)
+    });
+  }
 
-    return buttons;
-  };
+  // Restore button
+  if (canUserManageClass(row) && row.is_deleted) {
+    buttons.push({
+      label: 'Restore',
+      icon: React.createElement(FaUndo),
+      variant: 'outline-success',
+      size: 'sm',
+      onClick: () => handleRestore(row)
+    });
+  }
+
+  return buttons;
+};
 
   // Definisi kolom-kolom lengkap berdasarkan response API
   const columns: ColumnConfig[] = [
@@ -967,15 +1009,23 @@ const ClassesPage: React.FC = () => {
     ]
   };
 
+  // NEW: Custom ReportLayout with refresh function extraction
+  const ReportLayoutWithRefresh: React.FC = () => {
+    return (
+      <ReportLayout
+        config={reportConfig}
+        apiEndpoint="/classes"
+        fetchOnMount={true}
+        searchMode="server"
+        onRefreshFunctionReady={setRefreshFunction} // Pass callback to get refresh function
+      />
+    );
+  };
+
   return (
     <MainLayout>
       <div className="tw-min-h-screen tw-bg-gradient-to-br tw-from-blue-50 tw-via-white tw-to-blue-50">
-        <ReportLayout
-          config={reportConfig}
-          apiEndpoint="/classes"
-          fetchOnMount={true}
-          searchMode="server"
-        />
+        <ReportLayoutWithRefresh />
       </div>
 
       {/* Modal Buat Kelas */}

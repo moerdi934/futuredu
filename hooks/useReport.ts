@@ -1,4 +1,4 @@
-// hooks/useReport.ts - Complete Race Condition Fix
+// hooks/useReport.ts - Updated with Stable Refresh Function
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import axios from 'axios';
@@ -25,7 +25,7 @@ interface UseReportReturn extends ReportState {
   updateFreezeColumn: (column: string | null) => void;
   resetFilters: () => void;
   applyFilters: (filters: Record<string, any>, globalSearch: string) => void;
-  refresh: () => void;
+  refresh: () => void; // STABLE: Refresh function that doesn't change on every render
 }
 
 // Debug helper function
@@ -130,6 +130,19 @@ export const useReport = ({
   const [shouldFetch, setShouldFetch] = useState(false);
   const [isDebounced, setIsDebounced] = useState(false);
 
+  // IMPORTANT: Stable references untuk dependencies
+  const stableApiEndpoint = useRef(apiEndpoint);
+  const stableSearchMode = useRef(searchMode);
+  
+  // Update stable references when props change
+  useEffect(() => {
+    stableApiEndpoint.current = apiEndpoint;
+  }, [apiEndpoint]);
+  
+  useEffect(() => {
+    stableSearchMode.current = searchMode;
+  }, [searchMode]);
+
   // Client-side global search function
   const performClientSearch = useCallback((data: any[], searchTerm: string): any[] => {
     if (!searchTerm.trim()) return data;
@@ -153,7 +166,7 @@ export const useReport = ({
 
   // Process data (filter, search, sort, paginate) - only for client-side mode
   const processedData = useMemo(() => {
-    if (searchMode === 'server') {
+    if (stableSearchMode.current === 'server') {
       debugLog('Server-side mode: using raw data', {
         rawDataLength: rawData.length,
         currentPage: state.currentPage,
@@ -199,20 +212,26 @@ export const useReport = ({
       totalPages: paginated.totalPages,
       totalRecords: paginated.totalRecords
     };
-  }, [rawData, state.filterValues, globalSearch, state.sortConfig, state.currentPage, state.pageSize, state.totalPages, state.totalRecords, performClientSearch, searchMode]);
+  }, [rawData, state.filterValues, globalSearch, state.sortConfig, state.currentPage, state.pageSize, state.totalPages, state.totalRecords, performClientSearch]);
 
-  // Central fetch function - HANYA INI YANG FETCH DATA
-  const fetchData = useCallback(async () => {
-    if (searchMode !== 'server') return;
+  // IMPROVED: Central fetch function with stable parameters
+  const fetchDataInternal = useCallback(async (
+    currentGlobalSearch: string,
+    currentFilterValues: Record<string, any>,
+    currentSortConfig: SortConfig[],
+    currentPage: number,
+    currentPageSize: number
+  ) => {
+    if (stableSearchMode.current !== 'server') return;
 
     // Generate unique request ID
     const currentRequestId = ++requestIdRef.current;
     debugLog(`[${currentRequestId}] Fetch data started`, { 
-      globalSearch,
-      filterValues: state.filterValues,
-      sortConfig: state.sortConfig,
-      currentPage: state.currentPage,
-      pageSize: state.pageSize
+      globalSearch: currentGlobalSearch,
+      filterValues: currentFilterValues,
+      sortConfig: currentSortConfig,
+      currentPage,
+      pageSize: currentPageSize
     });
 
     // Cancel previous request
@@ -229,13 +248,13 @@ export const useReport = ({
     try {
       let serverParams: Record<string, any> = {};
       
-      // Add global search parameter - GUNAKAN STATE SAAT INI
-      if (globalSearch.trim()) {
-        serverParams.search = globalSearch.trim();
+      // Add global search parameter
+      if (currentGlobalSearch.trim()) {
+        serverParams.search = currentGlobalSearch.trim();
       }
       
-      // Add filter parameters - GUNAKAN STATE SAAT INI
-      Object.entries(state.filterValues).forEach(([key, value]) => {
+      // Add filter parameters
+      Object.entries(currentFilterValues).forEach(([key, value]) => {
         if (value !== null && value !== undefined && value !== '') {
           if (typeof value === 'boolean') {
             serverParams[key] = value;
@@ -249,19 +268,19 @@ export const useReport = ({
         }
       });
       
-      // Add sort parameters - GUNAKAN STATE SAAT INI
-      if (state.sortConfig.length > 0) {
-        const sortParam = state.sortConfig.map(sort => 
+      // Add sort parameters
+      if (currentSortConfig.length > 0) {
+        const sortParam = currentSortConfig.map(sort => 
           `${sort.key}:${sort.direction}`
         ).join(',');
         serverParams.sort = sortParam;
       }
       
-      // Add pagination parameters - GUNAKAN STATE SAAT INI
-      serverParams.page = state.currentPage;
-      serverParams.limit = state.pageSize;
+      // Add pagination parameters
+      serverParams.page = currentPage;
+      serverParams.limit = currentPageSize;
 
-      const apiUrl = buildApiUrl(apiEndpoint, serverParams);
+      const apiUrl = buildApiUrl(stableApiEndpoint.current, serverParams);
       debugLog(`[${currentRequestId}] API Request:`, { url: apiUrl, params: serverParams });
 
       const startTime = Date.now();
@@ -298,19 +317,19 @@ export const useReport = ({
       if (Array.isArray(response.data)) {
         data = response.data;
         totalRecords = data.length;
-        totalPages = Math.ceil(totalRecords / state.pageSize);
+        totalPages = Math.ceil(totalRecords / currentPageSize);
       } else if (response.data.data && Array.isArray(response.data.data)) {
         data = response.data.data;
         totalRecords = response.data.total || response.data.totalRecords || data.length;
-        totalPages = response.data.totalPages || Math.ceil(totalRecords / state.pageSize);
+        totalPages = response.data.totalPages || Math.ceil(totalRecords / currentPageSize);
       } else if (response.data.items && Array.isArray(response.data.items)) {
         data = response.data.items;
         totalRecords = response.data.total || response.data.totalRecords || data.length;
-        totalPages = response.data.totalPages || Math.ceil(totalRecords / state.pageSize);
+        totalPages = response.data.totalPages || Math.ceil(totalRecords / currentPageSize);
       } else if (response.data.results && Array.isArray(response.data.results)) {
         data = response.data.results;
         totalRecords = response.data.total || response.data.totalRecords || data.length;
-        totalPages = response.data.totalPages || Math.ceil(totalRecords / state.pageSize);
+        totalPages = response.data.totalPages || Math.ceil(totalRecords / currentPageSize);
       } else {
         debugLog(`[${currentRequestId}] Unexpected response format:`, response.data);
         data = [];
@@ -386,7 +405,18 @@ export const useReport = ({
         setRawData([]);
       }
     }
-  }, [apiEndpoint, searchMode, globalSearch, state.filterValues, state.sortConfig, state.currentPage, state.pageSize]);
+  }, []); // Empty dependency array - function uses stable refs
+
+  // Wrapper for current state values
+  const fetchData = useCallback(() => {
+    fetchDataInternal(
+      globalSearch,
+      state.filterValues,
+      state.sortConfig,
+      state.currentPage,
+      state.pageSize
+    );
+  }, [fetchDataInternal, globalSearch, state.filterValues, state.sortConfig, state.currentPage, state.pageSize]);
 
   // Debounced version hanya untuk global search
   const debouncedFetch = useMemo(
@@ -400,7 +430,7 @@ export const useReport = ({
 
   // Trigger fetch function
   const triggerFetch = useCallback((immediate: boolean = false) => {
-    if (searchMode !== 'server') return;
+    if (stableSearchMode.current !== 'server') return;
     
     debugLog('Trigger fetch:', { immediate, globalSearch: globalSearch.trim(), hasFilters: Object.keys(state.filterValues).length > 0 });
     
@@ -431,17 +461,32 @@ export const useReport = ({
         setIsDebounced(false);
       }
     }
-  }, [searchMode, globalSearch, state.filterValues, state.sortConfig, state.currentPage, state.pageSize, config.pageSize, debouncedFetch]);
+  }, [globalSearch, state.filterValues, state.sortConfig, state.currentPage, state.pageSize, config.pageSize, debouncedFetch]);
 
   // SINGLE EFFECT untuk melakukan fetch
   useEffect(() => {
-    if (shouldFetch && searchMode === 'server') {
+    if (shouldFetch && stableSearchMode.current === 'server') {
       debugLog('Executing fetch due to shouldFetch=true', { isDebounced });
       setShouldFetch(false);
       setIsDebounced(false);
       fetchData();
     }
-  }, [shouldFetch, fetchData, searchMode]);
+  }, [shouldFetch, fetchData]);
+
+  // STABLE: Refresh function that doesn't change on every render
+  const refresh = useCallback(() => {
+    debugLog('Manual refresh triggered');
+    debouncedFetch.cancel();
+    
+    // Force refresh with current state
+    if (stableSearchMode.current === 'server') {
+      // For server mode, trigger immediate fetch
+      triggerFetch(true);
+    } else {
+      // For client mode, just re-process the data
+      setState(prev => ({ ...prev, loading: false }));
+    }
+  }, [debouncedFetch, triggerFetch]);
 
   // Update functions
   const updateSort = useCallback((key: string) => {
@@ -543,12 +588,6 @@ export const useReport = ({
     triggerFetch(true); // Immediate fetch untuk reset
   }, [debouncedFetch, triggerFetch]);
 
-  const refresh = useCallback(() => {
-    debugLog('Manual refresh triggered');
-    debouncedFetch.cancel();
-    triggerFetch(true); // Immediate fetch untuk refresh
-  }, [debouncedFetch, triggerFetch]);
-
   // Initial data fetch
   useEffect(() => {
     if (fetchOnMount) {
@@ -559,7 +598,7 @@ export const useReport = ({
 
   // Update state dengan processed data (client-side only)
   useEffect(() => {
-    if (searchMode === 'client') {
+    if (stableSearchMode.current === 'client') {
       debugLog('Updating state with processed data (client-side)', {
         processedDataLength: processedData.data.length,
         totalPages: processedData.totalPages,
@@ -573,7 +612,7 @@ export const useReport = ({
         totalRecords: processedData.totalRecords
       }));
     }
-  }, [processedData, searchMode]);
+  }, [processedData]);
 
   // Cleanup
   useEffect(() => {
@@ -588,7 +627,7 @@ export const useReport = ({
   return {
     ...state,
     globalSearch,
-    searchMode,
+    searchMode: stableSearchMode.current,
     updateSort,
     updateFilter,
     updateGlobalSearch,
@@ -598,6 +637,6 @@ export const useReport = ({
     updateFreezeColumn,
     resetFilters,
     applyFilters,
-    refresh
+    refresh // STABLE: This function reference won't change on every render
   };
 };

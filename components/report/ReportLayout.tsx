@@ -1,6 +1,6 @@
-// components/report/ReportLayout.tsx
+// components/report/ReportLayout.tsx - Updated with Refresh Function Callback
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ReportConfig } from '../../types/report';
 import { useReport } from '../../hooks/useReport';
 import ReportHeader from './ReportHeader';
@@ -13,13 +13,15 @@ interface ReportLayoutProps {
   apiEndpoint: string;
   fetchOnMount?: boolean;
   searchMode?: 'client' | 'server';
+  onRefreshFunctionReady?: (refreshFunction: () => void) => void; // NEW: Callback to pass refresh function
 }
 
 const ReportLayout: React.FC<ReportLayoutProps> = ({
   config,
   apiEndpoint,
   fetchOnMount = true,
-  searchMode = 'client'
+  searchMode = 'client',
+  onRefreshFunctionReady // NEW: Callback prop
 }) => {
   const {
     data,
@@ -43,8 +45,15 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
     updateFreezeColumn,
     resetFilters,
     applyFilters,
-    refresh
+    refresh // GET: refresh function from useReport
   } = useReport({ config, apiEndpoint, fetchOnMount, searchMode });
+
+  // NEW: Pass refresh function to parent component when available
+  useEffect(() => {
+    if (onRefreshFunctionReady && refresh) {
+      onRefreshFunctionReady(refresh);
+    }
+  }, [onRefreshFunctionReady, refresh]);
 
   if (error) {
     return (
@@ -74,8 +83,6 @@ const ReportLayout: React.FC<ReportLayoutProps> = ({
 
   return (
     <div className="tw-py-4">
-      {/* Debug info in development */}
-
       {/* Header with Title and Action Buttons */}
       <ReportHeader
         title={config.title}

@@ -96,7 +96,7 @@ export const getSessionById = async (id: string): Promise<Session | null> => {
   return result.rows[0] || null;
 };
 
-export const getSessionByEventId = async (id: string): Promise<Session | null> => {
+export const getSessionByEventId = async (id: number): Promise<Session | null> => {
   const query = `
     SELECT 
       fs.id,
@@ -116,6 +116,9 @@ export const getSessionByEventId = async (id: string): Promise<Session | null> =
     LIMIT 1
   `;
   const result = await pool.query(query, [id]);
+  console.log(id)
+  console.log(query)
+  console.log(result)
   return result.rows[0] || null;
 };
 

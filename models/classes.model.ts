@@ -26,13 +26,14 @@ export interface ClassData {
   name: string;
   course_id: string;
   description: string;
-  teacher_id?: string; // Optional for student-created classes
+  teacher_id?: string;
   student_list: number[];
   start_date: string;
   end_date: string;
   create_user_id: string;
   approval_status?: string;
   class_mode?: string;
+  // CORRECTED: Real datetime fields TIDAK di-set saat create
 }
 
 export interface ClassUpdateData {
@@ -46,6 +47,9 @@ export interface ClassUpdateData {
   edit_user_id: string;
   class_mode?: string;
   meeting_url?: string;
+  // NEW: Real datetime fields
+  real_start_datetime?: string;
+  real_end_datetime?: string;
 }
 
 export interface ClassRow {
@@ -82,6 +86,8 @@ export interface ClassRow {
   meeting_url?: string;
   rejection_reason?: string;
   total?: number;
+  real_start_datetime?: string | null;
+  real_end_datetime?: string | null;
 }
 
 export interface ClassesResult {
@@ -137,7 +143,7 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
   } = options;
 
   const offset = (page - 1) * limit;
-  let query = ` 
+let query = ` 
   WITH filtered_classes AS (
     SELECT 
       c.id,
@@ -151,6 +157,8 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
       COALESCE(ARRAY_AGG(s.user_code || '-' ||ua3.nama_lengkap) FILTER (WHERE ua3.nama_lengkap IS NOT NULL), '{}') AS student_list_names,
       c.start_date,
       c.end_date,
+      c.real_start_datetime,
+      c.real_end_datetime,
       cu.user_code || '-' ||ua2.nama_lengkap AS creator_name,
       c.create_user_id,
       c.create_date,
@@ -163,7 +171,6 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
       c.delete_reason,
       c.delete_user_id,
       c.delete_date,
-      -- New fields
       COALESCE(c.approval_status, 'approved') as approval_status,
       c.approve_user_id,
       c.approve_date,
@@ -171,13 +178,17 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
       COALESCE(c.class_mode, 'offline') as class_mode,
       c.meeting_url,
       c.rejection_reason,
+      -- CORRECTED: Status HANYA berdasarkan real datetime fields
       case
         when c.is_deleted = true then 'Deleted'
         when COALESCE(c.approval_status, 'approved') = 'need_approve' then 'Need Approve'
         when COALESCE(c.approval_status, 'approved') = 'rejected' then 'Rejected'
-        when fs.start_time<now() and fs.end_time is null then 'Started'
-        when fs.end_time is not null then 'Finished'
-        when fs.start_time is null then 'Not Start'
+        -- FINISHED: Ada real_start_datetime DAN real_end_datetime
+        when c.real_start_datetime IS NOT NULL AND c.real_end_datetime IS NOT NULL then 'Finished'
+        -- STARTED: Ada real_start_datetime tapi TIDAK ada real_end_datetime
+        when c.real_start_datetime IS NOT NULL AND c.real_end_datetime IS NULL then 'Started'
+        -- NOT START: Tidak ada real_start_datetime (bisa dimulai kapan saja jika approved)
+        when c.real_start_datetime IS NULL then 'Not Start'
         else 'Not Start'
       end status
     FROM classes c
@@ -190,16 +201,7 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
     LEFT JOIN user_account ua4 ON ua4.user_id = au.user_id
     LEFT JOIN users s ON s.id = ANY(c.student_list)
     LEFT JOIN user_account ua3 ON ua3.user_id = s.user_id
-    LEFT JOIN events e ON e.master_id = c.id
-    LEFT JOIN (
-        SELECT f.*
-        FROM fsession f
-        WHERE f.create_date = (
-            SELECT MAX(f2.create_date)
-            FROM fsession f2
-            WHERE f2.eventid = f.eventid
-        )
-    ) fs ON fs.eventid = e.id AND e.event_type = 1 
+    LEFT JOIN events e ON e.master_id = c.id AND e.event_type = 1
     WHERE 1=1
   `;
 
@@ -216,13 +218,10 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
 
   // Handle delete filter logic
   if (includeDeleted === 'false') {
-    // Show only active records (default behavior)
     conditions.push('AND (c.is_deleted IS NULL OR c.is_deleted = false)');
   } else if (includeDeleted === 'only_deleted') {
-    // Show only deleted records
     conditions.push('AND c.is_deleted = true');
   }
-  // If includeDeleted === 'true', show all records (no additional condition)
 
   // Filter by approval status
   if (approvalStatus && approvalStatus !== 'all') {
@@ -238,33 +237,30 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
         when c.is_deleted = true then 'Deleted'
         when COALESCE(c.approval_status, 'approved') = 'need_approve' then 'Need Approve'
         when COALESCE(c.approval_status, 'approved') = 'rejected' then 'Rejected'
-        when fs.start_time<now() and fs.end_time is null then 'Started'
-        when fs.end_time is not null then 'Finished'
-        when fs.start_time is null then 'Not Start'
+        when c.real_start_datetime IS NOT NULL AND c.real_end_datetime IS NOT NULL then 'Finished'
+        when c.real_start_datetime IS NOT NULL AND c.real_end_datetime IS NULL then 'Started'
+        when c.real_start_datetime IS NULL then 'Not Start'
         else 'Not Start'
       end) = $${values.length}
     `);
   }
   
-  // Filter by course ID (ignore if "All")
+  // Add other filters (courseId, teacherId, etc.) - same as before
   if (courseId && courseId !== 'All') {
     values.push(courseId);
     conditions.push(`AND c.course_id = $${values.length}`);
   }
   
-  // Filter by teacher ID (ignore if "All")
   if (teacherId && teacherId !== 'All') {
     values.push(teacherId);
     conditions.push(`AND c.teacher_id = $${values.length}`);
   }
   
-  // Filter by student ID (ignore if "All")
   if (studentId && studentId !== 'All') {
     values.push(studentId);
     conditions.push(`AND $${values.length}::int = ANY(c.student_list)`);
   }
   
-  // Filter by date range (ignore if "All")
   if (startDate && startDate !== 'All' && endDate && endDate !== 'All') {
     values.push(new Date(startDate), new Date(endDate));
     conditions.push(`AND c.start_date >= $${values.length - 1} AND c.start_date <= $${values.length}`);
@@ -276,13 +272,11 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
     conditions.push(`AND c.start_date <= $${values.length}`);
   }
   
-  // Filter by specific date (ignore if "All")
   if (searchDate && searchDate !== 'All') {
     values.push(new Date(searchDate));
     conditions.push(`AND DATE(c.start_date) = DATE($${values.length})`);
   }
   
-  // Filter by search term
   if (search) {  
     values.push(`%${search}%`);
     values.push(`%${search}%`);
@@ -307,6 +301,8 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
       c.student_list,
       c.start_date,
       c.end_date,
+      c.real_start_datetime,
+      c.real_end_datetime,
       ua2.nama_lengkap,
       u.user_code,
       cu.user_code,
@@ -328,20 +324,12 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
       c.rejection_reason,
       e.id, 
       e.starter_user_id,
-      e.is_started,
-      case
-        when c.is_deleted = true then 'Deleted'
-        when COALESCE(c.approval_status, 'approved') = 'need_approve' then 'Need Approve'
-        when COALESCE(c.approval_status, 'approved') = 'rejected' then 'Rejected'
-        when fs.start_time<now() and fs.end_time is null then 'Started'
-        when fs.end_time is not null then 'Finished'
-        when fs.start_time is null then 'Not Start'
-        else 'Not Start'
-      end)
-          SELECT 
-      *, 
-      COUNT(*) OVER() AS total 
-    FROM filtered_classes
+      e.is_started
+  )
+  SELECT 
+    *, 
+    COUNT(*) OVER() AS total 
+  FROM filtered_classes
   `;
 
   // Sorting
@@ -353,8 +341,7 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
   }
 
   query += ` LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
-  // console.log("final class query:")
-  // console.log(query)
+  console.log(query)
   const result = await pool.query(query, [...values, limit, offset]);
   return {
     classes: result.rows,
@@ -404,7 +391,9 @@ export const getClassesById = async (id: number, includeDeleted: boolean = false
       when fs.end_time is not null then 'Finished'
       when fs.start_time is null then 'Not Start'
       else 'Not Start'
-    end status
+    end status,
+    c.real_start_datetime,
+    c.real_end_datetime
   FROM classes c
   LEFT JOIN courses co ON c.course_id = co.id
   LEFT JOIN users u ON c.teacher_id = u.id
@@ -485,10 +474,12 @@ export const getClassesById = async (id: number, includeDeleted: boolean = false
       when fs.end_time is not null then 'Finished'
       when fs.start_time is null then 'Not Start'
       else 'Not Start'
-    end
+    end,
+    c.real_start_datetime,
+    c.real_end_datetime
   `;
-  // console.log("get class by id query")
-  // console.log(query)
+  console.log("get class by id query")
+  console.log(query)
   const result = await pool.query(query, values);
   return result.rows[0] || null;
 };
@@ -618,8 +609,8 @@ export const getClassesByEventId = async (id: number, includeDeleted: boolean = 
       else 'Not Start'
     end
   `;
-  console.log("get class by eventid query")
-  console.log(query)
+  // console.log("get class by eventid query")
+  // console.log(query)
   const result = await pool.query(query, values);
   return result.rows[0] || null;
 };
@@ -627,28 +618,30 @@ export const getClassesByEventId = async (id: number, includeDeleted: boolean = 
 export const createClass = async (data: ClassData): Promise<ClassRow> => {
   const query = `
     INSERT INTO classes 
-      (name, course_id, description, teacher_id, student_list, start_date, end_date, create_user_id, create_date, is_deleted, approval_status, class_mode)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), false, $9, $10)
+      (name, course_id, description, teacher_id, student_list, start_date, end_date, 
+       create_user_id, create_date, is_deleted, approval_status, class_mode,
+       real_start_datetime, real_end_datetime)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), false, $9, $10, NULL, NULL)
     RETURNING *;
   `;
   const values = [
     data.name,
     data.course_id,
     data.description,
-    data.teacher_id || null, // Allow null for student-created classes
+    data.teacher_id || null,
     data.student_list,
     data.start_date,
     data.end_date,
     data.create_user_id,
     data.approval_status || 'need_approve',
     data.class_mode || 'offline'
+    // CORRECTED: NULL values untuk real_start_datetime dan real_end_datetime
   ];
   const result = await pool.query(query, values);
   return result.rows[0];
 };
 
 export const updateClass = async (id: string, data: ClassUpdateData): Promise<ClassRow> => {
-  // console.log("data model", data);
   const query = `
     UPDATE classes 
     SET 
@@ -662,8 +655,10 @@ export const updateClass = async (id: string, data: ClassUpdateData): Promise<Cl
       edit_user_id = $8,
       edit_date = NOW(),
       class_mode = $9,
-      meeting_url = $10
-    WHERE id = $11 AND (is_deleted IS NULL OR is_deleted = false)
+      meeting_url = $10,
+      real_start_datetime = COALESCE($11, real_start_datetime),
+      real_end_datetime = COALESCE($12, real_end_datetime)
+    WHERE id = $13 AND (is_deleted IS NULL OR is_deleted = false)
     RETURNING *;
   `;
   const values = [
@@ -677,8 +672,73 @@ export const updateClass = async (id: string, data: ClassUpdateData): Promise<Cl
     data.edit_user_id,
     data.class_mode || 'offline',
     data.meeting_url || null,
+    data.real_start_datetime || null,
+    data.real_end_datetime || null,
     id,
   ];
+  const result = await pool.query(query, values);
+  return result.rows[0];
+};
+export const updateClassRealStartTime = async (id: string, real_start_datetime: string, edit_user_id: string): Promise<ClassRow> => {
+  const query = `
+    UPDATE classes 
+    SET 
+      real_start_datetime = $1,
+      edit_user_id = $2,
+      edit_date = NOW()
+    WHERE id = $3 AND (is_deleted IS NULL OR is_deleted = false)
+    RETURNING *;
+  `;
+  const values = [real_start_datetime, edit_user_id, id];
+  const result = await pool.query(query, values);
+  return result.rows[0];
+};
+export const updateClassRealEndTime = async (id: string, real_end_datetime: string, edit_user_id: string): Promise<ClassRow> => {
+  const query = `
+    UPDATE classes 
+    SET 
+      real_end_datetime = $1,
+      edit_user_id = $2,
+      edit_date = NOW()
+    WHERE id = $3 AND (is_deleted IS NULL OR is_deleted = false)
+    RETURNING *;
+  `;
+  const values = [real_end_datetime, edit_user_id, id];
+  const result = await pool.query(query, values);
+  return result.rows[0];
+};
+export const setClassRealStartTime = async (id: string, edit_user_id: string): Promise<ClassRow> => {
+  const query = `
+    UPDATE classes 
+    SET 
+      real_start_datetime = NOW(),
+      edit_user_id = $1,
+      edit_date = NOW()
+    WHERE id = $2 
+      AND (is_deleted IS NULL OR is_deleted = false)
+      AND real_start_datetime IS NULL  -- Hanya jika belum dimulai
+    RETURNING *;
+  `;
+  const values = [edit_user_id, id];
+  const result = await pool.query(query, values);
+  return result.rows[0];
+};
+
+// CORRECTED: Function untuk set real end time HANYA saat diakhiri
+export const setClassRealEndTime = async (id: string, edit_user_id: string): Promise<ClassRow> => {
+  const query = `
+    UPDATE classes 
+    SET 
+      real_end_datetime = NOW(),
+      edit_user_id = $1,
+      edit_date = NOW()
+    WHERE id = $2 
+      AND (is_deleted IS NULL OR is_deleted = false)
+      AND real_start_datetime IS NOT NULL  -- Hanya jika sudah dimulai
+      AND real_end_datetime IS NULL        -- Tapi belum diakhiri
+    RETURNING *;
+  `;
+  const values = [edit_user_id, id];
   const result = await pool.query(query, values);
   return result.rows[0];
 };

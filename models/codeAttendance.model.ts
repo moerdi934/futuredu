@@ -1,7 +1,7 @@
-// models/codeAttendance.model.ts
+// models/codeAttendance.model.ts - Updated with new functions
 import pool from '../lib/db';
 
-// Types
+// Types remain the same
 export interface CodeAttendance {
   id: number;
   session_id: number;
@@ -14,7 +14,7 @@ export interface CodeAttendance {
   status: string;
   create_date: Date;
   qr_image?: Buffer | string;
-  meeting_url?: string; // New field
+  meeting_url?: string;
 }
 
 export interface CodeAttendanceFilters {
@@ -31,7 +31,7 @@ export interface CreateCodeAttendanceData {
   expiration_time: Date;
   status: string;
   qr_image: Buffer;
-  meeting_url?: string | null; // New field
+  meeting_url?: string | null;
 }
 
 export interface UpdateCodeAttendanceData {
@@ -42,9 +42,10 @@ export interface UpdateCodeAttendanceData {
   token: string;
   expiration_time: Date;
   status: string;
-  meeting_url?: string | null; // New field
+  meeting_url?: string | null;
 }
 
+// Existing functions remain the same
 export const getCodeAttendances = async (filters: CodeAttendanceFilters = {}): Promise<CodeAttendance[]> => {
     let query = `
         SELECT 
@@ -105,6 +106,41 @@ export const getCodeAttendanceById = async (id: number): Promise<CodeAttendance 
     return result.rows[0] || null;
 };
 
+// FIXED: Updated function to get all codes for a session (including expired ones)
+export const getCodeAttendancesBySessionId = async (session_id: number): Promise<CodeAttendance[]> => {
+    const query = `
+        SELECT 
+            dca.id,
+            dca.session_id,
+            dca.event_id,
+            dca.create_user_id,
+            u.username AS creator_name,
+            dca.qr_data,
+            dca.token,
+            dca.expiration_time,
+            dca.status,
+            dca.create_date,
+            dca.qr_image,
+            dca.meeting_url
+        FROM dimCodeAttendance dca
+        LEFT JOIN Users u ON dca.create_user_id = u.id
+        WHERE dca.session_id = $1 
+        ORDER BY dca.create_date DESC   -- Most recent first
+    `;
+    
+    const result = await pool.query(query, [session_id]);
+    const codes = result.rows.map(code => {
+        if (code && code.qr_image) {
+            // Convert Buffer to Base64 string
+            code.qr_image = `data:image/png;base64,${code.qr_image.toString('base64')}`;
+        }
+        return code;
+    });
+
+    return codes;
+};
+
+// FIXED: Keep the existing getValidCodeAttendances but rename to be more specific
 export const getValidCodeAttendances = async (session_id: number): Promise<CodeAttendance | null> => {
     const query = `
         SELECT 
@@ -123,22 +159,21 @@ export const getValidCodeAttendances = async (session_id: number): Promise<CodeA
         FROM dimCodeAttendance dca
         LEFT JOIN Users u ON dca.create_user_id = u.id
         WHERE dca.session_id = $1 
-            AND dca.expiration_time >= NOW() AT TIME ZONE 'Asia/Jakarta'  -- Pastikan waktu kedaluwarsa lebih besar atau sama dengan waktu sekarang dalam zona waktu Jakarta
-            AND dca.qr_image IS NOT NULL      -- Pastikan ada gambar QR Code
-        ORDER BY dca.expiration_time DESC   -- Urutkan berdasarkan waktu kedaluwarsa terbaru
-        LIMIT 1;                            -- Ambil satu hasil yang paling valid (terbaru)
+            AND dca.expiration_time >= NOW() AT TIME ZONE 'Asia/Jakarta'  -- Only valid (non-expired) codes
+            AND dca.qr_image IS NOT NULL      
+        ORDER BY dca.expiration_time DESC   
+        LIMIT 1;                            
     `;
     
     const result = await pool.query(query, [session_id]);
     const code = result.rows[0];
-    console.log(code);
 
     if (code && code.qr_image) {
-        // Konversi Buffer menjadi Base64 string
+        // Convert Buffer to Base64 string
         code.qr_image = `data:image/png;base64,${code.qr_image.toString('base64')}`;
     }
 
-    return code || null;  // Mengembalikan hasil dengan qr_image dalam format Base64
+    return code || null;
 };
 
 export const getCodeAttendanceByToken = async (token: string): Promise<CodeAttendance | null> => {
@@ -167,7 +202,7 @@ export const createCodeAttendance = async (data: CreateCodeAttendanceData): Prom
         data.expiration_time,
         data.status,
         data.qr_image,
-        data.meeting_url || null // New field
+        data.meeting_url || null
     ];
     const result = await pool.query(query, values);
     return result.rows[0];
@@ -197,7 +232,7 @@ export const updateCodeAttendance = async (id: number, data: UpdateCodeAttendanc
         data.token,
         data.expiration_time,
         data.status,
-        data.meeting_url || null, // New field
+        data.meeting_url || null,
         id,
     ];
     const result = await pool.query(query, values);

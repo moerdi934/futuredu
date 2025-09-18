@@ -87,14 +87,17 @@ export const getSessionByEventId = async (req: AuthenticatedRequest, res: NextAp
 export const createSession = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   const { eventid, latitude, longitude, notes, class_mode, meeting_url }: CreateSessionRequest = req.body;
   const create_user_id = req.user!.id;
-  
-  console.log('Creating session for user ID:', create_user_id);
 
   try {
-    // Get class information to determine mode
+    // Get class information
     const classInfo = await ClassModel.getClassesByEventId(eventid, false, req.user.role, create_user_id);
     if (!classInfo) {
       return res.status(404).json({ message: 'Class not found' });
+    }
+
+    // CORRECTED: Cek apakah kelas sudah dimulai
+    if (classInfo.real_start_datetime) {
+      return res.status(400).json({ message: 'Kelas sudah dimulai sebelumnya' });
     }
 
     // Validate meeting URL for online classes
@@ -103,88 +106,91 @@ export const createSession = async (req: AuthenticatedRequest, res: NextApiRespo
       return res.status(400).json({ message: 'URL meeting diperlukan untuk kelas online' });
     }
 
-    // Update class with meeting URL and mode if provided
+    // CORRECTED: Set real start time HANYA saat session benar-benar dibuat
+    await ClassModel.setClassRealStartTime(classInfo.id.toString(), create_user_id);
+
+    // Update class with meeting URL and mode if needed
     if (finalClassMode === 'online' && meeting_url) {
-      await ClassModel.updateClass(classInfo.id.toString(), {
-        ...classInfo,
+      const updateData: ClassModel.ClassUpdateData = {
+        name: classInfo.name,
+        course_id: classInfo.course_id,
+        description: classInfo.description,
+        teacher_id: classInfo.teacher_id,
+        student_list_ids: classInfo.student_list,
+        start_time: classInfo.start_date,
+        end_time: classInfo.end_date,
+        edit_user_id: create_user_id,
         class_mode: finalClassMode,
-        meeting_url: meeting_url,
-        edit_user_id: create_user_id
-      });
+        meeting_url: meeting_url
+      };
+      
+      await ClassModel.updateClass(classInfo.id.toString(), updateData);
     }
 
+    // Create session
     const newSession = await SessionModel.createSession({
       eventid,
       create_user_id,
       end_time: null,
     });
-    const session_id = newSession.id;
-    const updatedEvent = await EventModel.startEvent(eventid);
+
+    // Update event
+    await EventModel.startEvent(eventid);
     
-    try {
-      const attendanceData = {
-        userid: create_user_id,
-        reff_userid: null,
-        type_id: 1,
-        notes,
-        latitude,
-        longitude,
-        session_id,
-      };
+    // Record attendance
+    const attendanceData = {
+      userid: create_user_id,
+      reff_userid: null,
+      type_id: 1,
+      notes,
+      latitude,
+      longitude,
+      session_id: newSession.id,
+    };
 
-      const result = await AttendanceModel.createAttendance(attendanceData);
+    await AttendanceModel.createAttendance(attendanceData);
 
-      const token = await generateUniqueToken();
-      const qr_data = JSON.stringify({ 
-        session_id, 
-        reff_userid: create_user_id, 
-        type_id: 1, 
-        token,
-        meeting_url: finalClassMode === 'online' ? meeting_url : undefined
-      });
-      const expiration_time = new Date(Date.now() + 15 * 60 * 1000); // 15 menit
-      const qrImageBuffer = await QRCode.toBuffer(qr_data);
+    // Generate QR code
+    const token = await generateUniqueToken();
+    const qr_data = JSON.stringify({ 
+      session_id: newSession.id, 
+      reff_userid: create_user_id, 
+      type_id: 1, 
+      token,
+      meeting_url: finalClassMode === 'online' ? meeting_url : undefined
+    });
+    const expiration_time = new Date(Date.now() + 15 * 60 * 1000);
+    const qrImageBuffer = await QRCode.toBuffer(qr_data);
 
-      // Insert code attendance with meeting URL
-      const codeData = {
-        session_id,
-        event_id: eventid,
-        create_user_id,
-        qr_data,
-        token,
-        expiration_time,
-        status: 'active',
-        qr_image: qrImageBuffer,
-        meeting_url: finalClassMode === 'online' ? meeting_url : null
-      };
+    const codeData = {
+      session_id: newSession.id,
+      event_id: eventid,
+      create_user_id,
+      qr_data,
+      token,
+      expiration_time,
+      status: 'active',
+      qr_image: qrImageBuffer,
+      meeting_url: finalClassMode === 'online' ? meeting_url : null
+    };
 
-      const newCode = await CodeAttendanceModel.createCodeAttendance(codeData);
+    await CodeAttendanceModel.createCodeAttendance(codeData);
 
-      // Generate QR Code image sebagai data URL
-      const qrImage = await QRCode.toDataURL(qr_data);
+    const qrImage = await QRCode.toDataURL(qr_data);
 
-      res.status(201).json({ 
-        qrImage, 
-        token, 
-        expiration_time,
-        meeting_url: finalClassMode === 'online' ? meeting_url : null,
-        class_mode: finalClassMode
-      } as QRResponse);
+    res.status(201).json({ 
+      qrImage, 
+      token, 
+      expiration_time,
+      meeting_url: finalClassMode === 'online' ? meeting_url : null,
+      class_mode: finalClassMode
+    } as QRResponse);
 
-    } catch (error) {
-      console.error('Error marking attendance:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'An error occurred while marking attendance.',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
   } catch (error) {
     console.error('Create Session Error:', error);
     res.status(500).json({ message: 'Server Error' });
   }
 };
- 
 // Mengupdate sesi
 export const updateSession = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   const { id } = req.query;
@@ -211,25 +217,39 @@ export const updateSession = async (req: AuthenticatedRequest, res: NextApiRespo
 };
  
 export const finishSession = async (req: AuthenticatedRequest, res: NextApiResponse) => {
-  const { eventid } = req.query;
+  const { id: eventid } = req.query;
   const { notes, longitude, latitude }: FinishSessionRequest = req.body;
   const create_user_id = req.user!.id;
- 
+
   try {
+    // Get session
     const existingSession = await SessionModel.getSessionByEventId(eventid as string);
     if (!existingSession) {
       return res.status(404).json({ message: 'Session not found' });
     }
-    const session_id = existingSession.id;
-    console.log(existingSession);
 
-    // Get class information for meeting URL
-    const classInfo = await ClassModel.getClassesById(eventid as string, false, req.user.role, create_user_id);
-    const finalClassMode = classInfo?.class_mode || 'offline';
-    const meetingUrl = classInfo?.meeting_url;
+    // Get class
+    const classInfo = await ClassModel.getClassesByEventId(parseInt(eventid as string), false, req.user.role, create_user_id);
+    if (!classInfo) {
+      return res.status(404).json({ message: 'Class not found' });
+    }
 
-    const updatedSession = await SessionModel.finishSession(session_id);
+    // CORRECTED: Cek apakah kelas sudah dimulai tapi belum selesai
+    if (!classInfo.real_start_datetime) {
+      return res.status(400).json({ message: 'Kelas belum dimulai' });
+    }
 
+    if (classInfo.real_end_datetime) {
+      return res.status(400).json({ message: 'Kelas sudah selesai sebelumnya' });
+    }
+
+    // CORRECTED: Set real end time HANYA saat session benar-benar diakhiri
+    await ClassModel.setClassRealEndTime(classInfo.id.toString(), create_user_id);
+
+    // Finish session
+    await SessionModel.finishSession(existingSession.id);
+
+    // Record attendance
     const attendanceData = {
       userid: create_user_id,
       reff_userid: null,
@@ -237,50 +257,17 @@ export const finishSession = async (req: AuthenticatedRequest, res: NextApiRespo
       notes,
       latitude,
       longitude, 
-      session_id: session_id,
+      session_id: existingSession.id,
     };
 
-    const result = await AttendanceModel.createAttendance(attendanceData);
+    await AttendanceModel.createAttendance(attendanceData);
 
-    const token = await generateUniqueToken();
-    const qr_data = JSON.stringify({ 
-      session_id, 
-      reff_userid: create_user_id, 
-      type_id: 2, 
-      token,
-      meeting_url: finalClassMode === 'online' ? meetingUrl : undefined
+    res.status(200).json({ 
+      message: 'Session finished successfully'
     });
-    const expiration_time = new Date(Date.now() + 60 * 60 * 1000); // 60 menit
-    const qrImageBuffer = await QRCode.toBuffer(qr_data);
-
-    // Insert code attendance with meeting URL
-    const codeData = {
-      session_id,
-      event_id: eventid as string,
-      create_user_id,
-      qr_data,
-      token,
-      expiration_time,
-      status: 'active',
-      qr_image: qrImageBuffer,
-      meeting_url: finalClassMode === 'online' ? meetingUrl : null
-    };
-
-    const newCode = await CodeAttendanceModel.createCodeAttendance(codeData);
-
-    // Generate QR Code image sebagai data URL
-    const qrImage = await QRCode.toDataURL(qr_data);
-
-    res.status(201).json({ 
-      qrImage, 
-      token, 
-      expiration_time,
-      meeting_url: finalClassMode === 'online' ? meetingUrl : null,
-      class_mode: finalClassMode
-    } as QRResponse);
 
   } catch (error) {
-    console.error('Update Session Error:', error);
+    console.error('Finish Session Error:', error);
     res.status(500).json({ message: 'Server Error' });
   }
 };

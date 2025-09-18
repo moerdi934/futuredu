@@ -1,9 +1,8 @@
-// pages/panel/courses/classes-page/StartFinishClassModal.tsx
+// pages/panel/courses/classes-page/StartFinishClassModal.tsx - Updated with atomic operations
 
 import React, { useState, useEffect } from 'react';
-import { Form, Alert, Card, ButtonGroup, Button } from 'react-bootstrap';
-import { FaPlay, FaStop, FaDownload, FaVideo, FaMapMarkerAlt, FaLink } from 'react-icons/fa';
-import { Play, Square, QrCode, Video, MapPin, Link as LinkIcon } from 'lucide-react';
+import { Form, Alert, Card, ButtonGroup, Button, Spinner } from 'react-bootstrap';
+import { Play, Square, QrCode, Video, MapPin, Link as LinkIcon, Download, Loader2, Lock, CheckCircle2, Eye, Clock } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../../../../context/AuthContext';
 import { LearningModal } from '../../../../components/modal/ModalTemplate';
@@ -15,12 +14,17 @@ interface ClassData {
   starter_user_id: number;
   name: string;
   course_name: string;
+  course_id: number;
+  teacher_id: number | null;
   description: string;
   teacher_name: string;
+  student_list_ids: number[];
   student_list_names: string[];
   date: string;
   start_time: string;
   end_time: string;
+  real_start_datetime?: string;
+  real_end_datetime?: string;
   status: string;
   class_mode?: string;
   meeting_url?: string;
@@ -42,6 +46,12 @@ interface QRResponse {
   class_mode: string;
 }
 
+interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data?: T;
+}
+
 const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
   show,
   handleClose,
@@ -50,8 +60,14 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
 }) => {
   const { id: currentUserId, role: userRole } = useAuth();
   const [notes, setNotes] = useState('');
+  
+  // Loading states
   const [loadingStart, setLoadingStart] = useState(false);
   const [loadingFinish, setLoadingFinish] = useState(false);
+  const [loadingFetch, setLoadingFetch] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  
+  // Error states
   const [errorStart, setErrorStart] = useState<string | null>(null);
   const [errorFinish, setErrorFinish] = useState<string | null>(null);
 
@@ -59,14 +75,13 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
   const [classMode, setClassMode] = useState<'online' | 'offline'>(classData.class_mode as 'online' | 'offline' || 'offline');
   const [meetingUrl, setMeetingUrl] = useState(classData.meeting_url || '');
 
-  // Data QR yang didapat dari response
-  const [qrDataStart, setQrDataStart] = useState<QRResponse | null>(null);
-  const [qrDataFinish, setQrDataFinish] = useState<QRResponse | null>(null);
-
-  // Apakah hendak menampilkan QR di UI?
+  // QR Data states
+  const [qrData, setQrData] = useState<QRResponse | null>(null);
   const [showQrCode, setShowQrCode] = useState(false);
 
-  // API URL dari environment variable
+  // Class status states
+  const [classStartedInSession, setClassStartedInSession] = useState(false);
+
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
   const {
@@ -74,28 +89,45 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
     event_id,
     name,
     course_name,
-    description,
+    course_id,
+    teacher_id,
     teacher_name,
+    student_list_ids,
     student_list_names,
+    description,
     date,
     start_time,
     end_time,
+    real_start_datetime,
+    real_end_datetime,
     status,
     approval_status,
   } = classData;
 
-  const [isStarted, setIsStarted] = useState(status === 'Started');
-  const [isFinished, setIsFinished] = useState(status === 'Finished');
-  const [isNotApproved, setIsNotApproved] = useState(approval_status === 'need_approve' || approval_status === 'rejected');
+  // Class status determination
+  const isStarted = status === 'Started';
+  const isFinished = status === 'Finished';
+  const isNotApproved = approval_status === 'need_approve' || approval_status === 'rejected';
+  const isActuallyFinished = isFinished || (real_end_datetime && new Date(real_end_datetime) < new Date());
+  const isFormLocked = isStarted || classStartedInSession || isActuallyFinished;
 
-  // Cek apakah kelas sudah dimulai atau selesai
+  // Check if user can start class
+  const canStartClass = () => {
+    return currentUserId && (
+      (classData.starter_user_id && (parseInt(classData.starter_user_id.toString()) === currentUserId || classData.starter_user_id.toString() === currentUserId.toString())) ||
+      userRole === 'admin' ||
+      (classData.teacher_id && (parseInt(classData.teacher_id.toString()) === currentUserId || classData.teacher_id.toString() === currentUserId.toString()))
+    );
+  };
+
+  // Initial data loading on modal open
   useEffect(() => {
-    if (status === 'Started') {
-      fetchQRCodeStart();
-    } else if (status === 'Finished') {
-      fetchQRCodeFinish();
+    if (show && (isStarted || isActuallyFinished)) {
+      fetchExistingQRCode();
+    } else {
+      setInitialLoading(false);
     }
-  }, [status]);
+  }, [show, isStarted, isActuallyFinished]);
 
   // Update class mode when classData changes
   useEffect(() => {
@@ -103,32 +135,60 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
     setMeetingUrl(classData.meeting_url || '');
   }, [classData]);
 
-  // Check if user can start class (same logic as before)
-  const canStartClass = () => {
-    return currentUserId && (
-      (classData.starter_user_id && (parseInt(classData.starter_user_id.toString()) === currentUserId || classData.starter_user_id.toString() === currentUserId.toString())) ||
-      userRole === 'admin' ||
-      (teacher_name && teacher_name.includes(currentUserId.toString()))
-    );
+  // UPDATED: Fetch existing QR Code using new endpoint
+  const fetchExistingQRCode = async () => {
+    if (!id) return;
+    
+    setLoadingFetch(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      const response = await axios.get<ApiResponse<QRResponse>>(
+        `${apiUrl}/classes/${id}/qr-code`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success && response.data.data) {
+        const qrResponseData = response.data.data;
+        
+        setQrData({
+          qrImage: qrResponseData.qrImage,
+          token: qrResponseData.token,
+          expiration_time: convertToLocalTime(qrResponseData.expiration_time),
+          meeting_url: qrResponseData.meeting_url,
+          class_mode: qrResponseData.class_mode
+        });
+      }
+      
+    } catch (err: any) {
+      console.error('Error fetching existing QR Code:', err);
+      if (err.response?.status !== 404) {
+        setErrorStart(err.response?.data?.message || 'Gagal mengambil data QR Code');
+      }
+    } finally {
+      setLoadingFetch(false);
+      setInitialLoading(false);
+    }
   };
 
-  // Handler untuk klik Start
+  // UPDATED: Handler for start class - single atomic operation
   const handleStartClass = async () => {
     setErrorStart(null);
     
-    // Check if class is approved
     if (isNotApproved) {
       setErrorStart('Kelas belum disetujui dan tidak dapat dimulai');
       return;
     }
 
-    // Validate meeting URL for online classes
     if (classMode === 'online' && !meetingUrl.trim()) {
       setErrorStart('URL meeting diperlukan untuk kelas online');
       return;
     }
 
-    // Validate meeting URL format
     if (classMode === 'online' && meetingUrl.trim()) {
       const urlPattern = /^https?:\/\/.+/;
       if (!urlPattern.test(meetingUrl.trim())) {
@@ -144,44 +204,26 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
 
     setLoadingStart(true);
 
-    // Ambil geolocation
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const latitude = position.coords.latitude;
         const longitude = position.coords.longitude;
 
         try {
-          // Buat payload untuk session
-          const sessionPayload = {
-            eventid: event_id,
-            latitude,
-            longitude,
-            notes,
-          };
-
-          // Ambil token dari localStorage
           const token = localStorage.getItem('authToken');
 
-          // Start session first
-          const sessionResponse = await axios.post(
-            `${apiUrl}/sessions`,
-            sessionPayload,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-
-          // Then generate QR code with class mode and meeting URL
-          const qrPayload = {
+          // UPDATED: Single API call for atomic start operation
+          const payload = {
             class_mode: classMode,
-            meeting_url: classMode === 'online' ? meetingUrl.trim() : undefined
+            meeting_url: classMode === 'online' ? meetingUrl.trim() : undefined,
+            notes: notes || `Memulai kelas ${name}`,
+            latitude,
+            longitude,
           };
 
-          const qrResponse = await axios.post(
-            `${apiUrl}/code-attendance/check-and-generate-from-event/${event_id}`,
-            qrPayload,
+          const response = await axios.post<ApiResponse<QRResponse>>(
+            `${apiUrl}/classes/${id}/start`,
+            payload,
             {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -189,29 +231,31 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
             }
           );
 
-          const qrData: QRResponse = qrResponse.data;
+          if (response.data.success && response.data.data) {
+            const qrResponseData = response.data.data;
 
-          // Update status kelas
-          setIsStarted(true);
-          setLoadingStart(false);
+            setClassStartedInSession(true);
+            setQrData({
+              qrImage: qrResponseData.qrImage,
+              token: qrResponseData.token,
+              expiration_time: convertToLocalTime(qrResponseData.expiration_time),
+              meeting_url: qrResponseData.meeting_url,
+              class_mode: qrResponseData.class_mode
+            });
 
-          // Set QR data
-          setQrDataStart({
-            qrImage: qrData.qrImage,
-            token: qrData.token,
-            expiration_time: convertToLocalTime(qrData.expiration_time),
-            meeting_url: qrData.meeting_url,
-            class_mode: qrData.class_mode
-          });
+            alert(response.data.message);
+            onStatusChange?.();
+          } else {
+            throw new Error(response.data.message || 'Gagal memulai kelas');
+          }
 
-          alert(`Kelas berhasil dimulai sebagai kelas ${classMode.toUpperCase()}!`);
-          onStatusChange?.(); // Notify parent component
         } catch (err: any) {
-          console.error(err);
+          console.error('Start class error:', err);
           setErrorStart(
             err.response?.data?.message ||
               'Terjadi kesalahan saat memulai sesi kelas.'
           );
+        } finally {
           setLoadingStart(false);
         }
       },
@@ -223,85 +267,7 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
     );
   };
 
-  // Fetch QR Code Data setelah kelas dimulai (updated)
-  const fetchQRCodeStart = async () => {
-    setLoadingStart(true);
-    try {
-      const token = localStorage.getItem('authToken');
-      
-      // Try to get existing QR code first
-      const response = await axios.post(
-        `${apiUrl}/code-attendance/check-and-generate-from-event/${event_id}`,
-        {
-          class_mode: classMode,
-          meeting_url: classMode === 'online' ? meetingUrl : undefined
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const qrData: QRResponse = response.data;
-      
-      setQrDataStart({
-        qrImage: qrData.qrImage,
-        token: qrData.token,
-        expiration_time: convertToLocalTime(qrData.expiration_time),
-        meeting_url: qrData.meeting_url,
-        class_mode: qrData.class_mode
-      });
-      setLoadingStart(false);
-    } catch (err: any) {
-      console.error('Error fetching QR Code:', err);
-      setErrorStart(
-        err.response?.data?.message || 'Gagal mengambil QR Code'
-      );
-      setLoadingStart(false);
-    }
-  };
-
-  // Fetch QR Code Data setelah kelas selesai (updated)
-  const fetchQRCodeFinish = async () => {
-    setLoadingFinish(true);
-    try {
-      const token = localStorage.getItem('authToken');
-      
-      const response = await axios.post(
-        `${apiUrl}/code-attendance/check-and-generate-from-event/${event_id}`,
-        {
-          class_mode: classMode,
-          meeting_url: classMode === 'online' ? meetingUrl : undefined
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const qrData: QRResponse = response.data;
-      
-      setQrDataFinish({
-        qrImage: qrData.qrImage,
-        token: qrData.token,
-        expiration_time: convertToLocalTime(qrData.expiration_time),
-        meeting_url: qrData.meeting_url,
-        class_mode: qrData.class_mode
-      });
-      setQrDataStart(null);
-      setLoadingFinish(false);
-    } catch (err: any) {
-      console.error('Error fetching QR Code:', err);
-      setErrorFinish(
-        err.response?.data?.message || 'Gagal mengambil QR Code'
-      );
-      setLoadingFinish(false);
-    }
-  };
-
-  // Handler untuk klik Finish (remains mostly the same)
+  // UPDATED: Handler for finish class - single atomic operation
   const handleFinishClass = async () => {
     setErrorFinish(null);
 
@@ -315,7 +281,6 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
 
     setLoadingFinish(true);
 
-    // Ambil geolocation untuk latitude dan longitude
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const latitude = position.coords.latitude;
@@ -323,13 +288,17 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
 
         try {
           const token = localStorage.getItem('authToken');
-          const response = await axios.put(
-            `${apiUrl}/sessions/event/${event_id}`,
-            {
-              notes: notesFinish || notes,
-              latitude,
-              longitude,
-            },
+          
+          // UPDATED: Single API call for atomic finish operation
+          const payload = {
+            notes: notesFinish || notes || `Menyelesaikan kelas ${name}`,
+            latitude,
+            longitude,
+          };
+
+          const response = await axios.post<ApiResponse<QRResponse>>(
+            `${apiUrl}/classes/${id}/finish`,
+            payload,
             {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -337,16 +306,32 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
             }
           );
 
-          setIsFinished(true);
-          setLoadingFinish(false);
-          alert('Kelas berhasil diselesaikan!');
-          fetchQRCodeFinish();
-          onStatusChange?.();
+          if (response.data.success) {
+            // UPDATED: Handle QR code data from finish operation
+            if (response.data.data) {
+              const qrResponseData = response.data.data;
+              
+              setQrData({
+                qrImage: qrResponseData.qrImage,
+                token: qrResponseData.token,
+                expiration_time: convertToLocalTime(qrResponseData.expiration_time),
+                meeting_url: qrResponseData.meeting_url,
+                class_mode: qrResponseData.class_mode
+              });
+            }
+
+            alert(`${response.data.message} QR Code presensi keluar tersedia untuk siswa.`);
+            onStatusChange?.();
+          } else {
+            throw new Error(response.data.message || 'Gagal menyelesaikan kelas');
+          }
+
         } catch (err: any) {
           console.error('Error finishing class:', err);
           setErrorFinish(
             err.response?.data?.message || 'Terjadi kesalahan saat menyelesaikan sesi kelas.'
           );
+        } finally {
           setLoadingFinish(false);
         }
       },
@@ -358,13 +343,11 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
     );
   };
 
-  // Konversi waktu UTC ke waktu lokal
   const convertToLocalTime = (utcTime: string) => {
     const localTime = new Date(utcTime);
     return localTime.toLocaleString();
   };
 
-  // Fungsi untuk mendownload QR code sebagai file gambar
   const downloadQRCode = (qrImage: string) => {
     const link = document.createElement('a');
     link.href = qrImage;
@@ -372,7 +355,6 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
     link.click();
   };
 
-  // Fungsi untuk copy meeting URL
   const copyMeetingUrl = (url: string) => {
     navigator.clipboard.writeText(url).then(() => {
       alert('URL meeting berhasil disalin!');
@@ -381,25 +363,30 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
     });
   };
 
-  // Reset state when modal closes
   const handleModalClose = () => {
     setNotes('');
     setErrorStart(null);
     setErrorFinish(null);
     setShowQrCode(false);
+    setClassStartedInSession(false);
     setClassMode(classData.class_mode as 'online' | 'offline' || 'offline');
     setMeetingUrl(classData.meeting_url || '');
+    setInitialLoading(true);
+    setQrData(null);
     handleClose();
   };
 
+  const isAnyLoading = loadingStart || loadingFinish || loadingFetch || initialLoading;
+
+  // Button configuration based on class status
   const topButtons = [];
 
-  // QR code toggle button
-  if (isStarted && qrDataStart || isFinished && qrDataFinish) {
+  if (qrData && !isAnyLoading) {
     topButtons.push({
       action: 'view' as const,
       text: showQrCode ? 'Sembunyikan QR' : 'Tampilkan QR',
       onClick: () => setShowQrCode(!showQrCode),
+      disabled: isAnyLoading,
       customColors: {
         primary: '#3B82F6',
         secondary: '#2563EB',
@@ -414,28 +401,29 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
     {
       action: 'close' as const,
       text: 'Tutup',
-      onClick: handleModalClose
+      onClick: handleModalClose,
+      disabled: isAnyLoading
     }
   ];
 
-  // Add start/finish buttons if user has permission
   if (canStartClass()) {
-    if (!isStarted && !loadingStart && !loadingFinish && !isNotApproved) {
+    if (!isStarted && !isNotApproved && !classStartedInSession && !isActuallyFinished) {
+      // Show start button
       bottomButtons.push({
         action: 'start' as const,
-        text: loadingStart ? 'Memulai...' : 'Mulai Kelas',
+        text: loadingStart ? 'Memulai Kelas...' : 'Mulai Kelas',
         onClick: handleStartClass,
-        disabled: loadingStart || loadingFinish,
+        disabled: isAnyLoading,
         loading: loadingStart
       });
-    }
-
-    if (isStarted && !isFinished && !loadingStart && !loadingFinish) {
+    } else if ((isStarted || classStartedInSession) && !isActuallyFinished) {
+      // Show finish button for started but not finished classes
       bottomButtons.push({
         action: 'stop' as const,
         text: loadingFinish ? 'Menyelesaikan...' : 'Selesaikan Kelas',
+        customIcon: <Square className="tw-w-4 tw-h-4" />,
         onClick: handleFinishClass,
-        disabled: loadingFinish || loadingStart,
+        disabled: isAnyLoading,
         loading: loadingFinish,
         customColors: {
           primary: '#F59E0B',
@@ -452,325 +440,359 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
     <LearningModal
       show={show}
       onHide={handleModalClose}
-      title="Mulai/Selesaikan Kelas"
+      title={isActuallyFinished ? "Review Kelas" : "Mulai/Selesaikan Kelas"}
       subtitle={`${name} - ${course_name}`}
-      icon={<Play className="tw-w-5 tw-h-5" />}
+      icon={isActuallyFinished ? <Eye className="tw-w-5 tw-h-5" /> : <Play className="tw-w-5 tw-h-5" />}
       size="lg"
       width="110vw"
       height="110vh"
       topButtons={topButtons}
       bottomButtons={bottomButtons}
-      preventCloseOnOutsideClick={false}
+      preventCloseOnOutsideClick={isAnyLoading}
     >
-      {/* Approval Status Warning */}
-      {isNotApproved && (
-        <Alert variant="warning" className="tw-mb-4">
-          <strong>Kelas Belum Disetujui!</strong> 
-          <div>Status: {approval_status === 'need_approve' ? 'Menunggu Persetujuan' : 'Ditolak'}</div>
-          {approval_status === 'need_approve' && <div>Kelas tidak dapat dimulai sampai mendapat persetujuan dari admin atau guru.</div>}
-        </Alert>
-      )}
-
-      {/* Info Kelas */}
-      <Card className="tw-mb-4 tw-border-0 tw-shadow-sm">
-        <Card.Header className="tw-bg-gray-50 tw-border-0">
-          <h6 className="tw-font-semibold tw-text-gray-800 tw-mb-0">Informasi Kelas</h6>
-        </Card.Header>
-        <Card.Body>
-          <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-3">
-            <div>
-              <strong className="tw-text-gray-700">Nama Kelas:</strong>
-              <div className="tw-text-gray-600">{name}</div>
-            </div>
-            <div>
-              <strong className="tw-text-gray-700">Mata Pelajaran:</strong>
-              <div className="tw-text-gray-600">{course_name}</div>
-            </div>
-            <div className="tw-col-span-full">
-              <strong className="tw-text-gray-700">Deskripsi:</strong>
-              <div className="tw-text-gray-600">{description}</div>
-            </div>
-            <div>
-              <strong className="tw-text-gray-700">Pengajar:</strong>
-              <div className="tw-text-gray-600">{teacher_name || 'Belum Ditentukan'}</div>
-            </div>
-            <div>
-              <strong className="tw-text-gray-700">Jadwal:</strong>
-              <div className="tw-text-gray-600">{date} ({start_time} - {end_time})</div>
-            </div>
-            <div>
-              <strong className="tw-text-gray-700">Mode Kelas:</strong>
-              <div className={`tw-flex tw-items-center tw-gap-2 tw-font-medium ${classData.class_mode === 'online' ? 'tw-text-blue-600' : 'tw-text-green-600'}`}>
-                {classData.class_mode === 'online' ? <Video size={16} /> : <MapPin size={16} />}
-                {classData.class_mode === 'online' ? 'Online' : 'Offline'}
-              </div>
-            </div>
+      {/* Initial loading screen */}
+      {initialLoading && (
+        <div className="tw-flex tw-items-center tw-justify-center tw-py-12">
+          <div className="tw-text-center">
+            <Spinner animation="border" size="lg" />
+            <div className="tw-mt-3 tw-text-lg tw-font-medium">Memuat data kelas...</div>
           </div>
-        </Card.Body>
-      </Card>
+        </div>
+      )}
 
-      {/* Class Mode Selection - Only for users who can start class and class not started */}
-      {canStartClass() && !isStarted && !isNotApproved && (
-        <Card className="tw-mb-4 tw-border-0 tw-shadow-sm">
-          <Card.Header className="tw-bg-blue-50 tw-border-0">
-            <h6 className="tw-font-semibold tw-text-blue-800 tw-mb-0">Pengaturan Kelas</h6>
-          </Card.Header>
-          <Card.Body>
-            <div className="tw-space-y-4">
+      {!initialLoading && (
+        <>
+          {/* Loading indicator for actions */}
+          {isAnyLoading && !initialLoading && (
+            <Alert variant="info" className="tw-mb-4 tw-flex tw-items-center tw-gap-3">
+              <Spinner animation="border" size="sm" />
               <div>
-                <label className="tw-font-semibold tw-text-gray-700 tw-mb-3 tw-block">Mode Kelas:</label>
-                <ButtonGroup className="tw-w-full">
-                  <Button
-                    variant={classMode === 'offline' ? 'primary' : 'outline-primary'}
-                    onClick={() => setClassMode('offline')}
-                    className="tw-flex tw-items-center tw-justify-center tw-gap-2"
-                  >
-                    <MapPin size={16} />
-                    Offline
-                  </Button>
-                  <Button
-                    variant={classMode === 'online' ? 'primary' : 'outline-primary'}
-                    onClick={() => setClassMode('online')}
-                    className="tw-flex tw-items-center tw-justify-center tw-gap-2"
-                  >
-                    <Video size={16} />
-                    Online
-                  </Button>
-                </ButtonGroup>
+                <strong>
+                  {loadingStart && 'Memulai kelas...'}
+                  {loadingFinish && 'Menyelesaikan kelas...'}
+                  {loadingFetch && 'Memuat data QR...'}
+                </strong>
+                <div className="tw-text-sm tw-mt-1">
+                  {loadingStart && 'Sistem sedang memproses permintaan start kelas secara atomic.'}
+                  {loadingFinish && 'Sistem sedang memproses permintaan finish kelas secara atomic.'}
+                  {loadingFetch && 'Mohon tunggu, jangan tutup jendela ini.'}
+                </div>
               </div>
+            </Alert>
+          )}
 
-              {/* Meeting URL Input - Only show for online classes */}
-              {classMode === 'online' && (
+          {/* Success message for atomic operations */}
+          {(loadingStart || loadingFinish) && (
+            <Alert variant="success" className="tw-mb-4">
+              <strong>Operasi Atomic:</strong> Semua perubahan akan dilakukan dalam satu transaksi. 
+              Jika ada error, semua perubahan akan di-rollback secara otomatis.
+            </Alert>
+          )}
+
+          {/* Approval Status Warning */}
+          {isNotApproved && (
+            <Alert variant="warning" className="tw-mb-4">
+              <strong>Kelas Belum Disetujui!</strong> 
+              <div>Status: {approval_status === 'need_approve' ? 'Menunggu Persetujuan' : 'Ditolak'}</div>
+              {approval_status === 'need_approve' && <div>Kelas tidak dapat dimulai sampai mendapat persetujuan dari admin atau guru.</div>}
+            </Alert>
+          )}
+
+          {/* Class status alerts */}
+          {(isStarted || classStartedInSession) && !isActuallyFinished && (
+            <Alert variant="success" className="tw-mb-4 tw-flex tw-items-center tw-gap-3">
+              <CheckCircle2 className="tw-w-5 tw-h-5" />
+              <div>
+                <strong>Kelas Sedang Berlangsung!</strong>
+                <div className="tw-text-sm tw-mt-1">
+                  Pengaturan kelas telah dikunci dan tidak dapat diubah.
+                </div>
+              </div>
+            </Alert>
+          )}
+
+          {isActuallyFinished && (
+            <Alert variant="info" className="tw-mb-4 tw-flex tw-items-center tw-gap-3">
+              <Clock className="tw-w-5 tw-h-5" />
+              <div>
+                <strong>Kelas Telah Selesai!</strong>
+                <div className="tw-text-sm tw-mt-1">
+                  Kelas ini sudah berakhir pada {real_end_datetime ? new Date(real_end_datetime).toLocaleString() : 'waktu tidak diketahui'}.
+                </div>
+              </div>
+            </Alert>
+          )}
+
+          {/* Class Information - Same as before */}
+          <Card className="tw-mb-4 tw-border-0 tw-shadow-sm">
+            <Card.Header className="tw-bg-gray-50 tw-border-0">
+              <h6 className="tw-font-semibold tw-text-gray-800 tw-mb-0">Informasi Kelas</h6>
+            </Card.Header>
+            <Card.Body>
+              <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-3">
                 <div>
-                  <label className="tw-font-semibold tw-text-gray-700 tw-flex tw-items-center tw-gap-2">
-                    <LinkIcon className="tw-w-4 tw-h-4" />
-                    URL Meeting *
-                  </label>
-                  <Form.Control
-                    type="url"
-                    value={meetingUrl}
-                    onChange={(e) => setMeetingUrl(e.target.value)}
-                    placeholder="https://zoom.us/j/... atau https://meet.google.com/..."
-                    disabled={loadingStart}
-                    required
-                    className="tw-mt-2"
+                  <strong className="tw-text-gray-700">Nama Kelas:</strong>
+                  <div className="tw-text-gray-600">{name}</div>
+                </div>
+                <div>
+                  <strong className="tw-text-gray-700">Mata Pelajaran:</strong>
+                  <div className="tw-text-gray-600">{course_name}</div>
+                </div>
+                <div className="tw-col-span-full">
+                  <strong className="tw-text-gray-700">Deskripsi:</strong>
+                  <div className="tw-text-gray-600">{description}</div>
+                </div>
+                <div>
+                  <strong className="tw-text-gray-700">Pengajar:</strong>
+                  <div className="tw-text-gray-600">{teacher_name || 'Belum Ditentukan'}</div>
+                </div>
+                <div>
+                  <strong className="tw-text-gray-700">Jadwal:</strong>
+                  <div className="tw-text-gray-600">{date} ({start_time} - {end_time})</div>
+                </div>
+                <div>
+                  <strong className="tw-text-gray-700">Mode Kelas:</strong>
+                  <div className={`tw-flex tw-items-center tw-gap-2 tw-font-medium ${classData.class_mode === 'online' ? 'tw-text-blue-600' : 'tw-text-green-600'}`}>
+                    {classData.class_mode === 'online' ? <Video size={16} /> : <MapPin size={16} />}
+                    {classData.class_mode === 'online' ? 'Online' : 'Offline'}
+                    {isFormLocked && <Lock size={14} className="tw-text-gray-400" />}
+                  </div>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+
+          {/* Class Mode Selection - Locked when started or finished */}
+          {canStartClass() && !isNotApproved && (
+            <Card className="tw-mb-4 tw-border-0 tw-shadow-sm">
+              <Card.Header className={`tw-border-0 ${isFormLocked ? 'tw-bg-gray-100' : 'tw-bg-blue-50'}`}>
+                <h6 className={`tw-font-semibold tw-mb-0 tw-flex tw-items-center tw-gap-2 ${isFormLocked ? 'tw-text-gray-600' : 'tw-text-blue-800'}`}>
+                  Pengaturan Kelas
+                  {isFormLocked && <Lock size={16} className="tw-text-gray-400" />}
+                </h6>
+              </Card.Header>
+              <Card.Body>
+                <div className="tw-space-y-4">
+                  <div>
+                    <label className={`tw-font-semibold tw-mb-3 tw-block tw-flex tw-items-center tw-gap-2 ${isFormLocked ? 'tw-text-gray-500' : 'tw-text-gray-700'}`}>
+                      Mode Kelas:
+                      {isFormLocked && <span className="tw-text-xs tw-bg-gray-200 tw-px-2 tw-py-1 tw-rounded">(Terkunci)</span>}
+                    </label>
+                    <ButtonGroup className="tw-w-full">
+                      <Button
+                        variant={classMode === 'offline' ? 'primary' : 'outline-primary'}
+                        onClick={() => !isFormLocked && setClassMode('offline')}
+                        disabled={isFormLocked || isAnyLoading}
+                        className={`tw-flex tw-items-center tw-justify-center tw-gap-2 ${isFormLocked ? 'tw-opacity-60' : ''}`}
+                      >
+                        <MapPin size={16} />
+                        Offline
+                      </Button>
+                      <Button
+                        variant={classMode === 'online' ? 'primary' : 'outline-primary'}
+                        onClick={() => !isFormLocked && setClassMode('online')}
+                        disabled={isFormLocked || isAnyLoading}
+                        className={`tw-flex tw-items-center tw-justify-center tw-gap-2 ${isFormLocked ? 'tw-opacity-60' : ''}`}
+                      >
+                        <Video size={16} />
+                        Online
+                      </Button>
+                    </ButtonGroup>
+                  </div>
+
+                  {classMode === 'online' && (
+                    <div>
+                      <label className={`tw-font-semibold tw-flex tw-items-center tw-gap-2 ${isFormLocked ? 'tw-text-gray-500' : 'tw-text-gray-700'}`}>
+                        <LinkIcon className="tw-w-4 tw-h-4" />
+                        URL Meeting *
+                        {isFormLocked && <span className="tw-text-xs tw-bg-gray-200 tw-px-2 tw-py-1 tw-rounded">(Terkunci)</span>}
+                      </label>
+                      <Form.Control
+                        type="url"
+                        value={meetingUrl}
+                        onChange={(e) => !isFormLocked && setMeetingUrl(e.target.value)}
+                        placeholder="https://zoom.us/j/... atau https://meet.google.com/..."
+                        disabled={isFormLocked || isAnyLoading}
+                        readOnly={isFormLocked}
+                        required
+                        className={`tw-mt-2 ${isFormLocked ? 'tw-bg-gray-100 tw-text-gray-600' : ''}`}
+                      />
+                      <small className={`tw-mt-1 ${isFormLocked ? 'tw-text-gray-400' : 'tw-text-gray-500'}`}>
+                        {isFormLocked ? 'URL meeting telah dikunci' : 'Masukkan URL meeting (Zoom, Google Meet, Microsoft Teams, dll.)'}
+                      </small>
+                    </div>
+                  )}
+                </div>
+              </Card.Body>
+            </Card>
+          )}
+
+          {/* Student List - Same as before */}
+          <Card className="tw-mb-4 tw-border-0 tw-shadow-sm">
+            <Card.Header className="tw-bg-green-50 tw-border-0">
+              <strong className="tw-text-green-800 tw-mb-0">Daftar Siswa</strong>
+            </Card.Header>
+            <Card.Body>
+              {student_list_names && student_list_names.length > 0 ? (
+                <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-1">
+                  {student_list_names.map((student, i) => (
+                    <div key={i} className="tw-text-green-700 tw-text-sm">• {student}</div>
+                  ))}
+                </div>
+              ) : (
+                <p className="tw-text-green-600 tw-italic tw-mb-0">Belum ada siswa yang terdaftar.</p>
+              )}
+            </Card.Body>
+          </Card>
+
+          {/* Notes Input */}
+          {canStartClass() && !isNotApproved && (
+            <Form.Group controlId="notesInput" className="tw-mb-4">
+              <Form.Label className={`tw-font-semibold tw-flex tw-items-center tw-gap-2 ${isFormLocked ? 'tw-text-gray-500' : 'tw-text-gray-700'}`}>
+                Catatan (opsional)
+                {isFormLocked && <span className="tw-text-xs tw-bg-gray-200 tw-px-2 tw-py-1 tw-rounded">(Terkunci)</span>}
+              </Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                value={notes}
+                onChange={(e) => !isFormLocked && setNotes(e.target.value)}
+                placeholder={isFormLocked ? "Catatan telah dikunci" : "Catatan sebelum memulai kelas..."}
+                disabled={isFormLocked || isAnyLoading}
+                readOnly={isFormLocked}
+                className={`tw-border-gray-300 tw-rounded-lg ${isFormLocked ? 'tw-bg-gray-100 tw-text-gray-600' : ''}`}
+              />
+            </Form.Group>
+          )}
+
+          {/* Error Messages */}
+          {errorStart && <Alert variant="danger" className="tw-mb-3">{errorStart}</Alert>}
+          {errorFinish && <Alert variant="danger" className="tw-mb-3">{errorFinish}</Alert>}
+
+          {/* QR Code Display - Same as before */}
+          {qrData && (
+            <Card className="tw-mb-4 tw-border-0 tw-shadow-sm">
+              <Card.Header className={`tw-border-0 ${isActuallyFinished ? 'tw-bg-blue-50' : 'tw-bg-green-50'}`}>
+                <Alert variant={isActuallyFinished ? "info" : "success"} className="tw-mb-0">
+                  <div className="tw-flex tw-items-center tw-gap-2">
+                    <strong>
+                      {isActuallyFinished ? 'Kelas telah selesai!' : 'Kelas sedang berlangsung!'}
+                    </strong>
+                    {qrData.class_mode === 'online' ? <Video size={16} /> : <MapPin size={16} />}
+                    <span>Mode: {qrData.class_mode === 'online' ? 'Online' : 'Offline'}</span>
+                  </div>
+                  <div>
+                    {isActuallyFinished ? 'Data QR Code tersimpan untuk review.' : 'QR Code presensi tersedia.'}
+                  </div>
+                </Alert>
+              </Card.Header>
+              {showQrCode && (
+                <Card.Body className="tw-text-center">
+                  <div className="tw-mb-3">
+                    <strong className="tw-text-gray-700">Token:</strong>
+                    <div className="tw-bg-gray-100 tw-px-3 tw-py-2 tw-rounded tw-font-mono tw-text-lg tw-mt-1">
+                      {qrData.token}
+                    </div>
+                  </div>
+                  <div className="tw-mb-3">
+                    <strong className="tw-text-gray-700">
+                      {isActuallyFinished ? 'Berlaku hingga (sudah expired):' : 'Berlaku hingga:'}
+                    </strong>
+                    <div className={`tw-font-medium ${isActuallyFinished ? 'tw-text-gray-500' : 'tw-text-red-600'}`}>
+                      {qrData.expiration_time}
+                    </div>
+                  </div>
+                  
+                  {qrData.meeting_url && (
+                    <div className="tw-mb-3 tw-p-3 tw-bg-blue-50 tw-rounded-lg">
+                      <strong className="tw-text-blue-800 tw-flex tw-items-center tw-justify-center tw-gap-2 tw-mb-2">
+                        <LinkIcon className="tw-w-4 tw-h-4" />
+                        URL Meeting {isActuallyFinished && '(Kelas telah selesai)'}
+                      </strong>
+                      <div className="tw-bg-white tw-p-2 tw-rounded tw-border tw-mb-2">
+                        {isActuallyFinished ? (
+                          <span className="tw-text-gray-600 tw-break-all">
+                            {qrData.meeting_url}
+                          </span>
+                        ) : (
+                          <a 
+                            href={qrData.meeting_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="tw-text-blue-600 tw-break-all hover:tw-underline"
+                          >
+                            {qrData.meeting_url}
+                          </a>
+                        )}
+                      </div>
+                      {!isActuallyFinished && (
+                        <div className="tw-flex tw-gap-2 tw-justify-center">
+                          <ButtonGradient
+                            action="custom"
+                            customText="Salin URL"
+                            size="sm"
+                            onClick={() => copyMeetingUrl(qrData.meeting_url!)}
+                            disabled={isAnyLoading}
+                            customColors={{
+                              primary: '#3B82F6',
+                              secondary: '#2563EB',
+                              gradient1: '#3B82F6',
+                              gradient2: '#60A5FA',
+                              text: '#FFFFFF'
+                            }}
+                          />
+                          <ButtonGradient
+                            action="custom"
+                            customText="Buka Meeting"
+                            size="sm"
+                            onClick={() => window.open(qrData.meeting_url!, '_blank')}
+                            disabled={isAnyLoading}
+                            customColors={{
+                              primary: '#059669',
+                              secondary: '#047857',
+                              gradient1: '#059669',
+                              gradient2: '#10B981',
+                              text: '#FFFFFF'
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="tw-mb-3">
+                    <img
+                      src={qrData.qrImage}
+                      alt="QR Code"
+                      className={`tw-max-w-xs tw-mx-auto tw-border tw-rounded-lg tw-shadow-md ${isActuallyFinished ? 'tw-opacity-75' : ''}`}
+                    />
+                  </div>
+                  <ButtonGradient
+                    action="download"
+                    customText="Download QR Code"
+                    onClick={() => downloadQRCode(qrData.qrImage)}
+                    disabled={isAnyLoading}
+                    customColors={{
+                      primary: '#10B981',
+                      secondary: '#059669',
+                      gradient1: '#10B981',
+                      gradient2: '#34D399',
+                      text: '#FFFFFF'
+                    }}
                   />
-                  <small className="tw-text-gray-500 tw-mt-1">
-                    Masukkan URL meeting (Zoom, Google Meet, Microsoft Teams, dll.)
-                  </small>
-                </div>
+                </Card.Body>
               )}
-            </div>
-          </Card.Body>
-        </Card>
-      )}
-
-      {/* Daftar Siswa */}
-      <Card className="tw-mb-4 tw-border-0 tw-shadow-sm">
-        <Card.Header className="tw-bg-green-50 tw-border-0">
-          <strong className="tw-text-green-800 tw-mb-0">Daftar Siswa</strong>
-        </Card.Header>
-        <Card.Body>
-          {student_list_names && student_list_names.length > 0 ? (
-            <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-1">
-              {student_list_names.map((student, i) => (
-                <div key={i} className="tw-text-green-700 tw-text-sm">• {student}</div>
-              ))}
-            </div>
-          ) : (
-            <p className="tw-text-green-600 tw-italic tw-mb-0">Belum ada siswa yang terdaftar.</p>
+            </Card>
           )}
-        </Card.Body>
-      </Card>
 
-      {/* Notes Input - Hanya tampil jika kelas belum dimulai dan user bisa start */}
-      {canStartClass() && !isStarted && !isNotApproved && (
-        <Form.Group controlId="notesInput" className="tw-mb-4">
-          <Form.Label className="tw-font-semibold tw-text-gray-700">Catatan (opsional)</Form.Label>
-          <Form.Control
-            as="textarea"
-            rows={3}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Catatan sebelum memulai kelas..."
-            className="tw-border-gray-300 tw-rounded-lg"
-          />
-        </Form.Group>
-      )}
-
-      {/* Error & Loading */}
-      {errorStart && <Alert variant="danger" className="tw-mb-3">{errorStart}</Alert>}
-      {errorFinish && <Alert variant="danger" className="tw-mb-3">{errorFinish}</Alert>}
-
-      {/* Tampilkan Info QR Code Setelah Started */}
-      {isStarted && qrDataStart && (
-        <Card className="tw-mb-4 tw-border-0 tw-shadow-sm">
-          <Card.Header className="tw-bg-green-50 tw-border-0">
-            <Alert variant="success" className="tw-mb-0">
-              <div className="tw-flex tw-items-center tw-gap-2">
-                <strong>Kelas telah dimulai!</strong>
-                {qrDataStart.class_mode === 'online' ? <Video size={16} /> : <MapPin size={16} />}
-                <span>Mode: {qrDataStart.class_mode === 'online' ? 'Online' : 'Offline'}</span>
-              </div>
-              <div>QR Code presensi tersedia.</div>
+          {/* Permission Warning */}
+          {!canStartClass() && !isStarted && !isActuallyFinished && (
+            <Alert variant="info" className="tw-mb-4">
+              <strong>Informasi:</strong> Anda tidak memiliki hak untuk memulai kelas ini. 
+              Hanya guru pengajar atau admin yang dapat memulai kelas.
             </Alert>
-          </Card.Header>
-          {showQrCode && (
-            <Card.Body className="tw-text-center">
-              <div className="tw-mb-3">
-                <strong className="tw-text-gray-700">Token:</strong>
-                <div className="tw-bg-gray-100 tw-px-3 tw-py-2 tw-rounded tw-font-mono tw-text-lg tw-mt-1">
-                  {qrDataStart.token}
-                </div>
-              </div>
-              <div className="tw-mb-3">
-                <strong className="tw-text-gray-700">Berlaku hingga:</strong>
-                <div className="tw-text-red-600 tw-font-medium">{qrDataStart.expiration_time}</div>
-              </div>
-              
-              {/* Meeting URL Display untuk Online Class */}
-              {qrDataStart.meeting_url && (
-                <div className="tw-mb-3 tw-p-3 tw-bg-blue-50 tw-rounded-lg">
-                  <strong className="tw-text-blue-800 tw-flex tw-items-center tw-justify-center tw-gap-2 tw-mb-2">
-                    <LinkIcon className="tw-w-4 tw-h-4" />
-                    URL Meeting
-                  </strong>
-                  <div className="tw-bg-white tw-p-2 tw-rounded tw-border tw-mb-2">
-                    <a 
-                      href={qrDataStart.meeting_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="tw-text-blue-600 tw-break-all hover:tw-underline"
-                    >
-                      {qrDataStart.meeting_url}
-                    </a>
-                  </div>
-                  <div className="tw-flex tw-gap-2 tw-justify-center">
-                    <ButtonGradient
-                      action="custom"
-                      customText="Salin URL"
-                      size="sm"
-                      onClick={() => copyMeetingUrl(qrDataStart.meeting_url!)}
-                      customColors={{
-                        primary: '#3B82F6',
-                        secondary: '#2563EB',
-                        gradient1: '#3B82F6',
-                        gradient2: '#60A5FA',
-                        text: '#FFFFFF'
-                      }}
-                    />
-                    <ButtonGradient
-                      action="custom"
-                      customText="Buka Meeting"
-                      size="sm"
-                      onClick={() => window.open(qrDataStart.meeting_url!, '_blank')}
-                      customColors={{
-                        primary: '#059669',
-                        secondary: '#047857',
-                        gradient1: '#059669',
-                        gradient2: '#10B981',
-                        text: '#FFFFFF'
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Tampilkan Gambar QR */}
-              <div className="tw-mb-3">
-                <img
-                  src={qrDataStart.qrImage}
-                  alt="QR Code"
-                  className="tw-max-w-xs tw-mx-auto tw-border tw-rounded-lg tw-shadow-md"
-                />
-              </div>
-              <ButtonGradient
-                action="download"
-                customText="Download QR Code"
-                onClick={() => downloadQRCode(qrDataStart.qrImage)}
-                customColors={{
-                  primary: '#10B981',
-                  secondary: '#059669',
-                  gradient1: '#10B981',
-                  gradient2: '#34D399',
-                  text: '#FFFFFF'
-                }}
-              />
-            </Card.Body>
           )}
-        </Card>
-      )}
-
-      {/* Tampilkan Info QR Code Setelah Finished */}
-      {isFinished && qrDataFinish && (
-        <Card className="tw-mb-4 tw-border-0 tw-shadow-sm">
-          <Card.Header className="tw-bg-blue-50 tw-border-0">
-            <Alert variant="info" className="tw-mb-0">
-              <div className="tw-flex tw-items-center tw-gap-2">
-                <strong>Kelas telah selesai!</strong>
-                {qrDataFinish.class_mode === 'online' ? <Video size={16} /> : <MapPin size={16} />}
-                <span>Mode: {qrDataFinish.class_mode === 'online' ? 'Online' : 'Offline'}</span>
-              </div>
-              <div>QR Code presensi akhir tersedia.</div>
-            </Alert>
-          </Card.Header>
-          {showQrCode && (
-            <Card.Body className="tw-text-center">
-              <div className="tw-mb-3">
-                <strong className="tw-text-gray-700">Token:</strong>
-                <div className="tw-bg-gray-100 tw-px-3 tw-py-2 tw-rounded tw-font-mono tw-text-lg tw-mt-1">
-                  {qrDataFinish.token}
-                </div>
-              </div>
-              <div className="tw-mb-3">
-                <strong className="tw-text-gray-700">Berlaku hingga:</strong>
-                <div className="tw-text-red-600 tw-font-medium">{qrDataFinish.expiration_time}</div>
-              </div>
-              {/* Meeting URL Display untuk Online Class */}
-              {qrDataFinish.meeting_url && (
-                <div className="tw-mb-3 tw-p-3 tw-bg-blue-50 tw-rounded-lg">
-                  <strong className="tw-text-blue-800 tw-flex tw-items-center tw-justify-center tw-gap-2 tw-mb-2">
-                    <LinkIcon className="tw-w-4 tw-h-4" />
-                    URL Meeting (Kelas telah selesai)
-                  </strong>
-                  <div className="tw-bg-white tw-p-2 tw-rounded tw-border">
-                    <span className="tw-text-gray-600 tw-break-all">
-                      {qrDataFinish.meeting_url}
-                    </span>
-                  </div>
-                </div>
-              )}
-              {/* Tampilkan Gambar QR */}
-              <div className="tw-mb-3">
-                <img
-                  src={qrDataFinish.qrImage}
-                  alt="QR Code"
-                  className="tw-max-w-xs tw-mx-auto tw-border tw-rounded-lg tw-shadow-md"
-                />
-              </div>
-              <ButtonGradient
-                action="download"
-                customText="Download QR Code"
-                onClick={() => downloadQRCode(qrDataFinish.qrImage)}
-                customColors={{
-                  primary: '#10B981',
-                  secondary: '#059669',
-                  gradient1: '#10B981',
-                  gradient2: '#34D399',
-                  text: '#FFFFFF'
-                }}
-              />
-            </Card.Body>
-          )}
-        </Card>
-      )}
-
-      {/* Permission Warning for students/teachers who can't start */}
-      {!canStartClass() && !isStarted && !isFinished && (
-        <Alert variant="info" className="tw-mb-4">
-          <strong>Informasi:</strong> Anda tidak memiliki hak untuk memulai kelas ini. 
-          Hanya guru pengajar atau admin yang dapat memulai kelas.
-        </Alert>
+        </>
       )}
     </LearningModal>
   );

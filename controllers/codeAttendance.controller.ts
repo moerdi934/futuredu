@@ -1,4 +1,5 @@
-// controllers/codeAttendance.controller.ts
+// controllers/codeAttendance.controller.ts - FIXED version with proper check & generate logic
+
 import { NextApiRequest, NextApiResponse } from 'next';
 import * as CodeAttendance from '../models/codeAttendance.model';
 import { generateUniqueToken } from '../utils/attendanceTokenGenerator';
@@ -15,7 +16,7 @@ export interface QRCodeData {
   token: string;
   reff_user_id: string;
   type_id: number;
-  meeting_url?: string; // New field for online classes
+  meeting_url?: string;
 }
 
 export interface ValidateQRCodeRequest {
@@ -35,13 +36,12 @@ export interface UpdateStatusRequest {
   status: string;
 }
 
-// Updated interface for creating code attendance with meeting URL
 export interface CreateCodeAttendanceRequest {
   class_mode: 'online' | 'offline';
   meeting_url?: string;
 }
 
-// Existing functions (getAllCodeAttendances, getCodeAttendanceById remain the same)
+// Existing functions remain the same
 export const getAllCodeAttendances = async (req: AuthenticatedRequest, res: NextApiResponse) => {
     try {
         const { session_id, status } = req.query;
@@ -71,34 +71,70 @@ export const getCodeAttendanceById = async (req: AuthenticatedRequest, res: Next
         res.status(500).json({ message: 'Server Error' });
     }
 };
- 
-// Updated createCodeAttendance with meeting URL support
+
+// FIXED: New function to get existing code by event ID (GET only, no generation)
+export const getCodeAttendanceByEventId = async (req: AuthenticatedRequest, res: NextApiResponse) => {
+    try {
+        const { event_id } = req.query;
+        const create_user_id = req.user!.id;
+
+        // Get session by event ID
+        const eventsession = await Session.getSessionByEventId(parseInt(event_id as string));
+        if (!eventsession) {
+            return res.status(404).json({ message: 'Session not found for this event' });
+        }
+
+        const session_id = eventsession.id;
+
+        // Get the existing code (valid or expired doesn't matter for viewing)
+        const existingCode = await CodeAttendance.getCodeAttendancesBySessionId(session_id);
+
+        if (!existingCode || existingCode.length === 0) {
+            return res.status(404).json({ message: 'No QR code found for this event' });
+        }
+
+        // Get the latest code for this session
+        const latestCode = existingCode[0]; // Assuming getCodeAttendancesBySessionId returns ordered by date
+
+        // Get class info for class_mode
+        const classInfo = await ClassModel.getClassesByEventId(eventsession.eventid.toString(), false, 'admin');
+
+        return res.status(200).json({
+            qrImage: latestCode.qr_image,
+            token: latestCode.token,
+            expiration_time: latestCode.expiration_time,
+            meeting_url: latestCode.meeting_url,
+            class_mode: classInfo?.class_mode || 'offline'
+        });
+
+    } catch (error) {
+        console.error('Get Code Attendance By Event ID Error:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// Existing createCodeAttendance remains the same
 export const createCodeAttendance = async (req: AuthenticatedRequest, res: NextApiResponse) => {
     try {
         const { session_id } = req.query;
         const { class_mode, meeting_url }: CreateCodeAttendanceRequest = req.body;
         const create_user_id = req.user!.id;
 
-        // Validasi sesi
         const session = await Session.getSessionById(parseInt(session_id as string));
         if (!session) {
             return res.status(404).json({ message: 'Session not found' });
         }
 
-        // Validasi apakah user adalah pembuat sesi
         if (session.create_user_id !== create_user_id) {
             return res.status(403).json({ message: 'Not authorized to generate QR Code for this session' });
         }
 
-        // Validate meeting URL for online classes
         if (class_mode === 'online' && !meeting_url) {
             return res.status(400).json({ message: 'URL meeting diperlukan untuk kelas online' });
         }
 
-        // Generate token unik 8 digit
         const token = await generateUniqueToken();
 
-        // Buat qr_data dengan meeting_url jika online
         const qr_data = JSON.stringify({ 
             session_id: parseInt(session_id as string), 
             token, 
@@ -107,11 +143,9 @@ export const createCodeAttendance = async (req: AuthenticatedRequest, res: NextA
             meeting_url: class_mode === 'online' ? meeting_url : undefined
         });
 
-        // Tentukan expiration_time (misalnya 15 menit dari sekarang)
-        const expiration_time = new Date(Date.now() + 15 * 60 * 1000); // 15 menit
+        const expiration_time = new Date(Date.now() + 15 * 60 * 1000);
         const qrImageBuffer = await QRCode.toBuffer(qr_data);
 
-        // Insert code attendance with meeting URL
         const codeData: CodeAttendance.CreateCodeAttendanceData = {
             session_id: parseInt(session_id as string),
             event_id: session.eventid,
@@ -125,8 +159,6 @@ export const createCodeAttendance = async (req: AuthenticatedRequest, res: NextA
         };
 
         const newCode = await CodeAttendance.createCodeAttendance(codeData);
-
-        // Generate QR Code image sebagai data URL
         const qrImage = await QRCode.toDataURL(qr_data);
 
         res.status(201).json({ 
@@ -142,7 +174,7 @@ export const createCodeAttendance = async (req: AuthenticatedRequest, res: NextA
     }
 };
 
-// Updated updateCodeAttendanceStatus remains the same
+// Existing updateCodeAttendanceStatus remains the same
 export const updateCodeAttendanceStatus = async (req: AuthenticatedRequest, res: NextApiResponse) => {
     try {
         const { token, status }: UpdateStatusRequest = req.body;
@@ -158,12 +190,14 @@ export const updateCodeAttendanceStatus = async (req: AuthenticatedRequest, res:
     }
 };
 
-// Updated checkAndGenerateFromEventCodeAttendance with class info and meeting URL
+// FIXED: Proper check and generate logic - only generate if no existing code
 export const checkAndGenerateFromEventCodeAttendance = async (req: AuthenticatedRequest, res: NextApiResponse) => {
     try {
         const { event_id } = req.query;
         const { class_mode, meeting_url }: CreateCodeAttendanceRequest = req.body;
         const create_user_id = req.user!.id;
+        
+        console.log(`[checkAndGenerateFromEventCodeAttendance] Starting for event_id: ${event_id}`);
         
         const eventsession = await Session.getSessionByEventId(parseInt(event_id as string));
         if (!eventsession) {
@@ -171,56 +205,77 @@ export const checkAndGenerateFromEventCodeAttendance = async (req: Authenticated
         }
 
         const session_id = eventsession.id;
+        console.log(`[checkAndGenerateFromEventCodeAttendance] Found session_id: ${session_id}`);
 
+        // FIXED: Check if ANY code attendance exists for this session (valid or expired)
+        const existingCodes = await CodeAttendance.getCodeAttendancesBySessionId(session_id);
+        
+        if (existingCodes && existingCodes.length > 0) {
+            // Return the most recent existing code, regardless of expiration
+            const latestCode = existingCodes[0]; // Assuming ordered by date DESC
+            
+            console.log(`[checkAndGenerateFromEventCodeAttendance] Found existing code, returning it`);
+            
+            // Get class info for class_mode
+            const classInfo = await ClassModel.getClassesByEventId(eventsession.eventid.toString(), false, 'admin');
+            
+            return res.status(200).json({
+                qrImage: latestCode.qr_image,
+                token: latestCode.token,
+                expiration_time: latestCode.expiration_time,
+                meeting_url: latestCode.meeting_url,
+                class_mode: classInfo?.class_mode || class_mode || 'offline'
+            });
+        }
+
+        // No existing code found, generate new one
+        console.log(`[checkAndGenerateFromEventCodeAttendance] No existing code found, generating new one`);
+        
         // Get class info to validate and update class mode
         const classInfo = await ClassModel.getClassesByEventId(eventsession.eventid.toString(), false, 'admin');
         if (!classInfo) {
             return res.status(404).json({ message: 'Class not found' });
         }
 
-        // Update class with meeting URL if online
-        if (class_mode === 'online') {
-            if (!meeting_url) {
-                return res.status(400).json({ message: 'URL meeting diperlukan untuk kelas online' });
-            }
-            // Update class meeting_url and class_mode
-            await ClassModel.updateClass(classInfo.id.toString(), {
-                ...classInfo,
-                class_mode,
-                meeting_url,
-                edit_user_id: create_user_id
-            });
+        // Validate meeting URL for online classes
+        if (class_mode === 'online' && !meeting_url) {
+            return res.status(400).json({ message: 'URL meeting diperlukan untuk kelas online' });
         }
+
+        // Update class with class mode and meeting URL
+        const updateData: ClassModel.ClassUpdateData = {
+            name: classInfo.name,
+            course_id: classInfo.course_id,
+            description: classInfo.description,
+            teacher_id: classInfo.teacher_id,
+            student_list_ids: classInfo.student_list,
+            start_time: classInfo.start_date,
+            end_time: classInfo.end_date,
+            edit_user_id: create_user_id,
+            class_mode,
+            meeting_url: class_mode === 'online' ? meeting_url : undefined
+        };
         
-        // Cek apakah sudah ada code attendance yang valid
-        const latestValidCode = await CodeAttendance.getValidCodeAttendances(session_id);
-
-        if (latestValidCode) {
-            // Jika ada code attendance yang masih valid, kirimkan data yang sudah ada
-            return res.status(200).json({
-                qrImage: latestValidCode.qr_image,
-                token: latestValidCode.token,
-                expiration_time: latestValidCode.expiration_time,
-                meeting_url: latestValidCode.meeting_url,
-                class_mode: classInfo.class_mode
-            });
+        try {
+            await ClassModel.updateClass(classInfo.id.toString(), updateData);
+            console.log(`[checkAndGenerateFromEventCodeAttendance] Class updated with mode: ${class_mode}`);
+        } catch (updateError) {
+            console.warn('Class update failed:', updateError);
         }
 
-        // Jika tidak ada code attendance yang valid, buat yang baru
+        // Validate user authorization
         const session = await Session.getSessionById(session_id);
         if (!session) {
             return res.status(404).json({ message: 'Session not found' });
         }
 
-        // Validasi apakah user adalah pembuat sesi
         if (session.create_user_id !== create_user_id) {
             return res.status(403).json({ message: 'Not authorized to generate QR Code for this session' });
         }
 
-        // Generate token unik 8 digit
+        // Generate new QR code
         const token = await generateUniqueToken();
-
-        // Buat qr_data dengan meeting_url jika online
+        
         const qr_data = JSON.stringify({ 
             session_id, 
             token, 
@@ -229,13 +284,9 @@ export const checkAndGenerateFromEventCodeAttendance = async (req: Authenticated
             meeting_url: class_mode === 'online' ? meeting_url : undefined
         });
 
-        // Tentukan expiration_time (misalnya 15 menit dari sekarang)
-        const expiration_time = new Date(Date.now() + 15 * 60 * 1000); // 15 menit
-
-        // Generate QR Code image sebagai buffer (bytea)
+        const expiration_time = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
         const qrImageBuffer = await QRCode.toBuffer(qr_data);
 
-        // Insert code attendance with meeting URL
         const codeData: CodeAttendance.CreateCodeAttendanceData = {
             session_id,
             event_id: session.eventid,
@@ -249,6 +300,7 @@ export const checkAndGenerateFromEventCodeAttendance = async (req: Authenticated
         };
 
         const newCode = await CodeAttendance.createCodeAttendance(codeData);
+        console.log(`[checkAndGenerateFromEventCodeAttendance] New code created with token: ${newCode.token}`);
 
         res.status(201).json({
             qrImage: `data:image/png;base64,${newCode.qr_image.toString('base64')}`,
@@ -263,7 +315,7 @@ export const checkAndGenerateFromEventCodeAttendance = async (req: Authenticated
     }
 };
 
-// Updated checkAndGenerateCodeAttendance with class mode support
+// FIXED: Updated checkAndGenerateCodeAttendance with proper logic
 export const checkAndGenerateCodeAttendance = async (req: AuthenticatedRequest, res: NextApiResponse) => {
     try {
         const { id } = req.query;
@@ -271,40 +323,44 @@ export const checkAndGenerateCodeAttendance = async (req: AuthenticatedRequest, 
         const create_user_id = req.user!.id;
         const session_id = parseInt(id as string);
         
-        // Validate meeting URL for online classes
+        console.log(`[checkAndGenerateCodeAttendance] Starting for session_id: ${session_id}`);
+        
         if (class_mode === 'online' && !meeting_url) {
             return res.status(400).json({ message: 'URL meeting diperlukan untuk kelas online' });
         }
         
-        // Cek apakah sudah ada code attendance yang valid
-        const latestValidCode = await CodeAttendance.getValidCodeAttendances(session_id);
-
-        if (latestValidCode) {
-            // Jika ada code attendance yang masih valid, kirimkan data yang sudah ada
+        // FIXED: Check if ANY code attendance exists for this session (valid or expired)
+        const existingCodes = await CodeAttendance.getCodeAttendancesBySessionId(session_id);
+        
+        if (existingCodes && existingCodes.length > 0) {
+            // Return the most recent existing code, regardless of expiration
+            const latestCode = existingCodes[0];
+            
+            console.log(`[checkAndGenerateCodeAttendance] Found existing code, returning it`);
+            
             return res.status(200).json({
-                qrImage: latestValidCode.qr_image,
-                token: latestValidCode.token,
-                expiration_time: latestValidCode.expiration_time,
-                meeting_url: latestValidCode.meeting_url,
+                qrImage: latestCode.qr_image,
+                token: latestCode.token,
+                expiration_time: latestCode.expiration_time,
+                meeting_url: latestCode.meeting_url,
                 class_mode: class_mode || 'offline'
             });
         }
 
-        // Jika tidak ada code attendance yang valid, buat yang baru
+        // No existing code found, generate new one
+        console.log(`[checkAndGenerateCodeAttendance] No existing code found, generating new one`);
+        
         const session = await Session.getSessionById(session_id);
         if (!session) {
             return res.status(404).json({ message: 'Session not found' });
         }
 
-        // Validasi apakah user adalah pembuat sesi
         if (session.create_user_id !== create_user_id) {
             return res.status(403).json({ message: 'Not authorized to generate QR Code for this session' });
         }
 
-        // Generate token unik 8 digit
         const token = await generateUniqueToken();
 
-        // Buat qr_data dengan meeting_url jika online
         const qr_data = JSON.stringify({ 
             session_id, 
             token, 
@@ -313,13 +369,9 @@ export const checkAndGenerateCodeAttendance = async (req: AuthenticatedRequest, 
             meeting_url: class_mode === 'online' ? meeting_url : undefined
         });
 
-        // Tentukan expiration_time (misalnya 15 menit dari sekarang)
-        const expiration_time = new Date(Date.now() + 15 * 60 * 1000); // 15 menit
-
-        // Generate QR Code image sebagai buffer (bytea)
+        const expiration_time = new Date(Date.now() + 15 * 60 * 1000);
         const qrImageBuffer = await QRCode.toBuffer(qr_data);
 
-        // Insert code attendance with meeting URL
         const codeData: CodeAttendance.CreateCodeAttendanceData = {
             session_id,
             event_id: session.eventid,
@@ -333,6 +385,7 @@ export const checkAndGenerateCodeAttendance = async (req: AuthenticatedRequest, 
         };
 
         const newCode = await CodeAttendance.createCodeAttendance(codeData);
+        console.log(`[checkAndGenerateCodeAttendance] New code created with token: ${newCode.token}`);
 
         res.status(201).json({
             qrImage: `data:image/png;base64,${newCode.qr_image.toString('base64')}`,
@@ -347,7 +400,7 @@ export const checkAndGenerateCodeAttendance = async (req: AuthenticatedRequest, 
     }
 };
 
-// Updated validateQRCode with meeting URL access
+// Existing validate functions remain the same
 export const validateQRCode = async (req: AuthenticatedRequest, res: NextApiResponse) => {
     try {
         const { qrCode, longitude, latitude }: ValidateQRCodeRequest = req.body;
@@ -356,7 +409,6 @@ export const validateQRCode = async (req: AuthenticatedRequest, res: NextApiResp
         const qrData: QRCodeData = JSON.parse(qrCode);
         const { session_id, token, reff_user_id, type_id, meeting_url } = qrData;
 
-        // Cek apakah QR Code valid
         const codeAttendance = await CodeAttendance.getCodeAttendanceByToken(token);
 
         if (!codeAttendance || new Date(codeAttendance.expiration_time) < new Date()) {
@@ -394,12 +446,10 @@ export const validateQRCode = async (req: AuthenticatedRequest, res: NextApiResp
 
         const result = await Attendance.createAttendance(attendanceData);
 
-        // Presensi sudah berhasil divalidasi dan disimpan
         const response: any = { 
             message: 'QR Code valid! Presensi berhasil.'
         };
 
-        // Include meeting URL in response if available for students
         if (meeting_url && req.user.role === 'student') {
             response.meeting_url = meeting_url;
             response.message = 'QR Code valid! Presensi berhasil. Link meeting tersedia.';
@@ -413,13 +463,11 @@ export const validateQRCode = async (req: AuthenticatedRequest, res: NextApiResp
     }
 };
 
-// Updated validateToken with meeting URL access
 export const validateToken = async (req: AuthenticatedRequest, res: NextApiResponse) => {
     try {
         const { token, longitude, latitude }: ValidateTokenRequest = req.body;
         const user_id = req.user!.id;
         
-        // Cek apakah token valid
         const codeAttendance = await CodeAttendance.getCodeAttendanceByToken(token);
 
         if (!codeAttendance || new Date(codeAttendance.expiration_time) < new Date()) {
@@ -449,7 +497,7 @@ export const validateToken = async (req: AuthenticatedRequest, res: NextApiRespo
         const attendanceData = {
             userid: user_id,
             reff_userid: codeAttendance.create_user_id,
-            type_id: 1, // Default type_id
+            type_id: 1,
             notes: generatenotes(1, user_id, session_id),
             latitude,
             longitude,
@@ -458,12 +506,10 @@ export const validateToken = async (req: AuthenticatedRequest, res: NextApiRespo
 
         const result = await Attendance.createAttendance(attendanceData);
 
-        // Presensi sudah berhasil divalidasi dan disimpan
         const response: any = { 
             message: 'Token valid! Presensi berhasil.'
         };
 
-        // Include meeting URL in response if available for students
         if (codeAttendance.meeting_url && req.user.role === 'student') {
             response.meeting_url = codeAttendance.meeting_url;
             response.message = 'Token valid! Presensi berhasil. Link meeting tersedia.';
@@ -474,5 +520,23 @@ export const validateToken = async (req: AuthenticatedRequest, res: NextApiRespo
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Terjadi kesalahan dalam memvalidasi token.' });
+    }
+};
+
+// NEW: Get code attendances by session ID
+export const getCodeAttendancesBySessionId = async (req: AuthenticatedRequest, res: NextApiResponse) => {
+    try {
+        const { session_id } = req.query;
+        
+        const codes = await CodeAttendance.getCodeAttendancesBySessionId(parseInt(session_id as string));
+        
+        if (!codes || codes.length === 0) {
+            return res.status(404).json({ message: 'No QR codes found for this session' });
+        }
+        
+        res.json(codes);
+    } catch (error) {
+        console.error('Get Code Attendances By Session ID Error:', error);
+        res.status(500).json({ message: 'Server Error' });
     }
 };
