@@ -99,7 +99,8 @@ import {
   Battery,
   WifiOff,
   Bluetooth,
-  USB
+  USB,
+  Square
 } from 'lucide-react';
 
 // Comprehensive action types with categories

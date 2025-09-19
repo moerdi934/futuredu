@@ -445,7 +445,7 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
       icon={isActuallyFinished ? <Eye className="tw-w-5 tw-h-5" /> : <Play className="tw-w-5 tw-h-5" />}
       size="lg"
       width="110vw"
-      height="110vh"
+      height="120vh"
       topButtons={topButtons}
       bottomButtons={bottomButtons}
       preventCloseOnOutsideClick={isAnyLoading}

@@ -1,8 +1,8 @@
-// models/course.model.ts
+// models/course.model.ts - Updated with Approval System
 import pool from '../lib/db';
 import { PoolClient } from 'pg';
 
-// Types
+// Updated Types
 export interface Course {
   id: number;
   title: string;
@@ -14,6 +14,16 @@ export interface Course {
   edit_user_id?: number;
   create_date?: Date;
   edit_date?: Date;
+  // New approval fields
+  approval_status: string;
+  approve_user_id?: number;
+  approve_date?: Date;
+  rejection_reason?: string;
+  // New soft delete fields
+  is_deleted: boolean;
+  delete_reason?: string;
+  delete_user_id?: number;
+  delete_date?: Date;
 }
 
 export interface Section {
@@ -58,6 +68,9 @@ export interface CourseData {
   description: string;
   imageUrl?: string;
   create_user_id: number;
+  learning_point?: any[];
+  approval_status?: string;
+  user_role?: string; // Added to determine auto-approval
 }
 
 export interface SectionData {
@@ -97,6 +110,7 @@ export interface UpdateCourseData {
   description: string;
   imageUrl?: string;
   edit_user_id: number;
+  learning_point?: any[];
 }
 
 export interface UserCourseProgress {
@@ -117,25 +131,185 @@ export interface UserCourseProgress {
   overall_progress_percentage: number;
 }
 
-// Course Model Functions
-export const getAll = async (): Promise<Course[]> => {
-  try {
-    const result = await pool.query('SELECT * FROM courses ORDER BY title');
-    return result.rows;
-  } catch (error) {
-    console.error('Error getting all courses:', error);
-    throw error;
+// New types for approval system
+export interface CourseGetOptions {
+  sortField?: string;
+  sortOrder?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+  approvalStatus?: string;
+  includeDeleted?: string;
+  userRole?: string;
+  userId?: string;
+}
+
+export interface CourseRow extends Course {
+  creator_name?: string;
+  approver_name?: string;
+  total?: number;
+}
+
+export interface CoursesResult {
+  courses: CourseRow[];
+  total: number;
+}
+
+export interface ApprovalData {
+  approve_user_id: string;
+  approval_status: string;
+  rejection_reason?: string;
+}
+
+// Helper function to build role-based WHERE conditions
+const buildRoleBasedConditions = (userRole: string, userId: string, values: any[]): string => {
+  if (userRole === 'admin') {
+    // Admin can see all courses
+    return '';
+  } else if (userRole === 'teacher') {
+    // Teacher can see courses they created
+    values.push(userId);
+    return ` AND c.create_user_id = $${values.length}`;
+  } else if (userRole === 'student') {
+    // Students can only see approved courses (for learning purposes)
+    return ` AND c.approval_status = 'approved'`;
   }
+  return '';
 };
 
-export const searchAll = async (search: string = ''): Promise<Partial<Course>[]> => {
-  try {
-    let query = 'SELECT id, title, description, imageUrl, courseUrl FROM courses ORDER BY title';
-    const values: string[] = [];
-    if (search) {
-      query = 'SELECT id, title, description, imageUrl, courseUrl FROM courses WHERE title ILIKE $1 ORDER BY title';
-      values.push(`%${search}%`);
+// Updated getAll function with role-based filtering
+export const getAll = async (options: CourseGetOptions = {}): Promise<CoursesResult> => {
+  const {
+    sortField = 'id',
+    sortOrder = 'asc',
+    search = '',
+    page = 1,
+    limit = 10,
+    approvalStatus = 'all',
+    includeDeleted = 'false',
+    userRole = 'admin',
+    userId = ''
+  } = options;
+
+  const offset = (page - 1) * limit;
+  
+  let query = `
+    WITH filtered_courses AS (
+      SELECT 
+        c.id,
+        c.title,
+        c.description,
+        c.imageUrl,
+        c.courseUrl,
+        c.learning_point,
+        c.create_user_id,
+        c.edit_user_id,
+        c.create_date,
+        c.edit_date,
+        c.approval_status,
+        c.approve_user_id,
+        c.approve_date,
+        c.rejection_reason,
+        c.is_deleted,
+        c.delete_reason,
+        c.delete_user_id,
+        c.delete_date,
+        cu.user_code || '-' || ua.nama_lengkap AS creator_name,
+        au.user_code || '-' || ua2.nama_lengkap AS approver_name
+      FROM courses c
+      LEFT JOIN users cu ON c.create_user_id = cu.id
+      LEFT JOIN user_account ua ON ua.user_id = cu.user_id
+      LEFT JOIN users au ON c.approve_user_id = au.id
+      LEFT JOIN user_account ua2 ON ua2.user_id = au.user_id
+      WHERE 1=1
+  `;
+
+  const values: any[] = [];
+  const conditions: string[] = [];
+
+  // Add role-based filtering
+  if (userId && userRole !== 'admin') {
+    const roleCondition = buildRoleBasedConditions(userRole, userId, values);
+    if (roleCondition) {
+      conditions.push(roleCondition);
     }
+  }
+
+  // Handle delete filter logic
+  if (includeDeleted === 'false') {
+    conditions.push('AND (c.is_deleted IS NULL OR c.is_deleted = false)');
+  } else if (includeDeleted === 'only_deleted') {
+    conditions.push('AND c.is_deleted = true');
+  }
+
+  // Filter by approval status
+  if (approvalStatus && approvalStatus !== 'all') {
+    values.push(approvalStatus);
+    conditions.push(`AND c.approval_status = $${values.length}`);
+  }
+
+  // Search functionality
+  if (search) {
+    values.push(`%${search}%`);
+    values.push(`%${search}%`);
+    conditions.push(`AND (c.title ILIKE $${values.length - 1} OR c.description ILIKE $${values.length})`);
+  }
+
+  if (conditions.length > 0) {
+    query += `${conditions.join(' ')}`;
+  }
+
+  query += `
+    )
+    SELECT 
+      *, 
+      COUNT(*) OVER() AS total 
+    FROM filtered_courses
+  `;
+
+  // Sorting
+  const validSortFields = ['id', 'title', 'description', 'creator_name', 'create_date', 'approval_status', 'approve_date'];
+  if (validSortFields.includes(sortField.toLowerCase()) && ['asc', 'desc'].includes(sortOrder.toLowerCase())) {
+    query += ` ORDER BY ${sortField} ${sortOrder.toUpperCase()}`;
+  } else {
+    query += ` ORDER BY id ASC`;
+  }
+
+  query += ` LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+
+  const result = await pool.query(query, [...values, limit, offset]);
+  
+  return {
+    courses: result.rows,
+    total: result.rows.length > 0 ? result.rows[0].total : 0
+  };
+};
+
+// Updated searchAll function
+export const searchAll = async (search: string = '', userRole: string = 'admin', userId?: string): Promise<Partial<Course>[]> => {
+  try {
+    let query = `
+      SELECT id, title, description, imageUrl, courseUrl, approval_status 
+      FROM courses 
+      WHERE (is_deleted IS NULL OR is_deleted = false)
+    `;
+    const values: string[] = [];
+    
+    // Role-based filtering for search
+    if (userRole === 'student') {
+      query += ` AND approval_status = 'approved'`;
+    } else if (userRole === 'teacher' && userId) {
+      values.push(userId);
+      query += ` AND (approval_status = 'approved' OR create_user_id = $${values.length})`;
+    }
+
+    if (search) {
+      values.push(`%${search}%`);
+      query += ` AND title ILIKE $${values.length}`;
+    }
+    
+    query += ` ORDER BY title`;
+    
     const result = await pool.query(query, values);
     return result.rows;
   } catch (error) {
@@ -144,34 +318,79 @@ export const searchAll = async (search: string = ''): Promise<Partial<Course>[]>
   }
 };
 
-export const getFilterCourses = async (type: string, search: string): Promise<Partial<Course>[]> => {
-  const query = `
-    SELECT DISTINCT c.id, c.title 
-    FROM courses c left join product_type pt on c."type"  = pt.id 
-    WHERE c.title ILIKE $2 AND pt.group_product = $1
-    LIMIT 5;
+// Get course by ID with role-based access
+export const getCourseById = async (id: number, includeDeleted: boolean = false, userRole: string = 'admin', userId?: string): Promise<CourseRow | null> => {
+  let query = `
+    SELECT 
+      c.*,
+      cu.user_code || '-' || ua.nama_lengkap AS creator_name,
+      au.user_code || '-' || ua2.nama_lengkap AS approver_name
+    FROM courses c
+    LEFT JOIN users cu ON c.create_user_id = cu.id
+    LEFT JOIN user_account ua ON ua.user_id = cu.user_id
+    LEFT JOIN users au ON c.approve_user_id = au.id
+    LEFT JOIN user_account ua2 ON ua2.user_id = au.user_id
+    WHERE c.id = $1
   `;
 
-  try {
-    console.log(search);
-    const result = await pool.query(query, [type, `%${search}%`]);
-    return result.rows;
-  } catch (error) {
-    console.error('Error filtering courses:', error);
-    throw error;
+  const values: any[] = [id];
+
+  // Add role-based filtering if not admin
+  if (userRole !== 'admin' && userId) {
+    const roleCondition = buildRoleBasedConditions(userRole, userId, values);
+    if (roleCondition) {
+      query += roleCondition;
+    }
   }
+
+  // Add soft delete filter if not including deleted records
+  if (!includeDeleted) {
+    query += ` AND (c.is_deleted IS NULL OR c.is_deleted = false)`;
+  }
+
+  const result = await pool.query(query, values);
+  return result.rows[0] || null;
 };
 
+// Updated createCourse function with admin auto-approval logic
 export const createCourse = async (courseData: CourseData): Promise<Course> => {
-  const { title, description, imageUrl, create_user_id } = courseData;
+  const { title, description, imageUrl, create_user_id, learning_point, approval_status, user_role } = courseData;
   
   try {
-    const result = await pool.query(
-      `INSERT INTO courses (title, description, imageUrl, create_user_id, create_date) 
-      VALUES ($1, $2, $3, $4, NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta') 
-      RETURNING id`,
-      [title, description, imageUrl, create_user_id]
-    );
+    let queryFields: string;
+    let queryValues: any[];
+    let finalApprovalStatus = approval_status || 'need_approve';
+    
+    // Check if admin is creating the course and should auto-approve
+    if (user_role === 'admin' && finalApprovalStatus === 'approved') {
+      // For admin auto-approval, set approve_user_id and approve_date
+      queryFields = `INSERT INTO courses (
+        title, description, imageUrl, create_user_id, create_date, learning_point, 
+        approval_status, approve_user_id, approve_date, is_deleted
+      ) VALUES ($1, $2, $3, $4, NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta', $5, $6, $7, NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta', false)`;
+      
+      queryValues = [
+        title, 
+        description, 
+        imageUrl, 
+        create_user_id, 
+        learning_point, 
+        finalApprovalStatus,
+        create_user_id // approve_user_id = create_user_id for admin
+      ];
+    } else {
+      // Regular course creation
+      queryFields = `INSERT INTO courses (
+        title, description, imageUrl, create_user_id, create_date, learning_point, 
+        approval_status, is_deleted
+      ) VALUES ($1, $2, $3, $4, NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta', $5, $6, false)`;
+      
+      queryValues = [title, description, imageUrl, create_user_id, learning_point, finalApprovalStatus];
+    }
+    
+    queryFields += ` RETURNING *`;
+    
+    const result = await pool.query(queryFields, queryValues);
     
     const courseId = result.rows[0].id;
     const baseUrl = process.env.BASE_URL || '';
@@ -189,6 +408,135 @@ export const createCourse = async (courseData: CourseData): Promise<Course> => {
   }
 };
 
+// Approve or reject course
+export const approveCourse = async (id: number, data: ApprovalData): Promise<Course> => {
+  const query = `
+    UPDATE courses 
+    SET 
+      approval_status = $1,
+      approve_user_id = $2,
+      approve_date = NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta',
+      rejection_reason = $3,
+      edit_user_id = $2,
+      edit_date = NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta'
+    WHERE id = $4
+    RETURNING *;
+  `;
+  const values = [
+    data.approval_status,
+    data.approve_user_id,
+    data.rejection_reason || null,
+    id,
+  ];
+  const result = await pool.query(query, values);
+  return result.rows[0];
+};
+
+// Get courses that need approval
+export const getCoursesNeedingApproval = async (): Promise<CourseRow[]> => {
+  const query = `
+    SELECT 
+      c.*,
+      cu.user_code || '-' || ua.nama_lengkap AS creator_name
+    FROM courses c
+    LEFT JOIN users cu ON c.create_user_id = cu.id
+    LEFT JOIN user_account ua ON ua.user_id = cu.user_id
+    WHERE c.approval_status = 'need_approve'
+      AND (c.is_deleted IS NULL OR c.is_deleted = false)
+    ORDER BY c.create_date ASC
+  `;
+
+  const result = await pool.query(query);
+  return result.rows;
+};
+
+// Soft delete function
+export const softDeleteCourse = async (id: number, deleteUserId: number, deleteReason: string): Promise<Course> => {
+  const query = `
+    UPDATE courses 
+    SET 
+      is_deleted = true,
+      delete_reason = $2,
+      delete_user_id = $3,
+      delete_date = NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta',
+      edit_user_id = $3,
+      edit_date = NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta'
+    WHERE id = $1 AND (is_deleted IS NULL OR is_deleted = false)
+    RETURNING *;
+  `;
+  const result = await pool.query(query, [id, deleteReason, deleteUserId]);
+  return result.rows[0];
+};
+
+// Hard delete function (for admin use only)
+export const deleteCourse = async (id: number): Promise<void> => {
+  try {
+    await pool.query('DELETE FROM courses WHERE id = $1', [id]);
+  } catch (error) {
+    console.error('Error deleting course:', error);
+    throw error;
+  }
+};
+
+// Restore soft deleted course
+export const restoreCourse = async (id: number, restoreUserId: number): Promise<Course> => {
+  const query = `
+    UPDATE courses 
+    SET 
+      is_deleted = false,
+      delete_reason = NULL,
+      delete_user_id = NULL,
+      delete_date = NULL,
+      edit_user_id = $2,
+      edit_date = NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta'
+    WHERE id = $1 AND is_deleted = true
+    RETURNING *;
+  `;
+  const result = await pool.query(query, [id, restoreUserId]);
+  return result.rows[0];
+};
+
+// Updated updateCourse function
+export const updateCourse = async (courseData: UpdateCourseData): Promise<Course> => {
+  const { id, title, description, imageUrl, edit_user_id, learning_point } = courseData;
+
+  try {
+    const result = await pool.query(
+      `UPDATE courses
+      SET title = $1, description = $2, imageUrl = $3, edit_user_id = $4, edit_date = NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta', learning_point = $5
+      WHERE id = $6 AND (is_deleted IS NULL OR is_deleted = false)
+      RETURNING *`,
+      [title, description, imageUrl, edit_user_id, learning_point, id]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error updating course:', error);
+    throw error;
+  }
+};
+
+// Keep existing functions for backward compatibility
+export const getFilterCourses = async (type: string, search: string): Promise<Partial<Course>[]> => {
+  const query = `
+    SELECT DISTINCT c.id, c.title 
+    FROM courses c left join product_type pt on c."type"  = pt.id 
+    WHERE c.title ILIKE $2 AND pt.group_product = $1
+      AND c.approval_status = 'approved'
+      AND (c.is_deleted IS NULL OR c.is_deleted = false)
+    LIMIT 5;
+  `;
+
+  try {
+    console.log(search);
+    const result = await pool.query(query, [type, `%${search}%`]);
+    return result.rows;
+  } catch (error) {
+    console.error('Error filtering courses:', error);
+    throw error;
+  }
+};
+
+// Keep other existing functions (createSection, createTopic, createMaterial, etc.) unchanged
 export const createSection = async (sectionData: SectionData): Promise<Section> => {
   const { course_id, title, order_index, create_user_id, description, time } = sectionData;
   
@@ -265,33 +613,6 @@ export const createMaterial = async (materialData: MaterialData): Promise<Materi
   }
 };
 
-export const updateCourse = async (courseData: UpdateCourseData): Promise<Course> => {
-  const { id, title, description, imageUrl, edit_user_id } = courseData;
-
-  try {
-    const result = await pool.query(
-      `UPDATE courses
-      SET title = $1, description = $2, imageUrl = $3, edit_user_id = $4, edit_date = NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta'
-      WHERE id = $5
-      RETURNING *`,
-      [title, description, imageUrl, edit_user_id, id]
-    );
-    return result.rows[0];
-  } catch (error) {
-    console.error('Error updating course:', error);
-    throw error;
-  }
-};
-
-export const deleteCourse = async (id: number): Promise<void> => {
-  try {
-    await pool.query('DELETE FROM courses WHERE id = $1', [id]);
-  } catch (error) {
-    console.error('Error deleting course:', error);
-    throw error;
-  }
-};
-
 export const getUserCourseProgress = async (userId: string): Promise<UserCourseProgress[]> => {
   try {
     const query = `
@@ -312,6 +633,7 @@ export const getUserCourseProgress = async (userId: string): Promise<UserCourseP
           ) material,
           c.id
         FROM courses c
+        WHERE c.approval_status = 'approved' AND (c.is_deleted IS NULL OR c.is_deleted = false)
       )
       SELECT
         c.id, 
@@ -353,6 +675,8 @@ export const getUserCourseProgress = async (userId: string): Promise<UserCourseP
       LEFT JOIN usercoursesession u ON u.topic_id = t.id AND u.user_id = ce.user_id
       WHERE ce.user_id = $1 
         AND (ce.expires_at IS NULL OR ce.expires_at > NOW())
+        AND c.approval_status = 'approved'
+        AND (c.is_deleted IS NULL OR c.is_deleted = false)
       GROUP BY c.id, c.title, c.description, c.imageurl, c."type", c.learning_point, c.course_string, ce.user_id, mc.quiz, mc.material, ce.expires_at
       ORDER BY c.title
     `;
@@ -385,7 +709,7 @@ export const getUserCourseProgressByCourseId = async (userId: string, courseId: 
           ) material,
           c.id
         FROM courses c
-        WHERE c.id = $2
+        WHERE c.id = $2 AND c.approval_status = 'approved' AND (c.is_deleted IS NULL OR c.is_deleted = false)
       )
       SELECT
         c.id, 
@@ -428,6 +752,8 @@ export const getUserCourseProgressByCourseId = async (userId: string, courseId: 
       WHERE ce.user_id = $1 
         AND ce.course_id = $2
         AND (ce.expires_at IS NULL OR ce.expires_at > NOW())
+        AND c.approval_status = 'approved'
+        AND (c.is_deleted IS NULL OR c.is_deleted = false)
       GROUP BY c.id, c.title, c.description, c.imageurl, c."type", c.learning_point, c.course_string, ce.user_id, mc.quiz, mc.material, ce.expires_at
     `;
 

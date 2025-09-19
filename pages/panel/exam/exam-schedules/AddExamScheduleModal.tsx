@@ -378,8 +378,8 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
         subtitle={`${totalSelectedExams} ujian dipilih • ${hasChanges ? 'Ada perubahan' : 'Belum ada perubahan'}`}
         icon={<Calendar className="tw-w-5 tw-h-5" />}
         size="xl"
-        width="95vw"
-        height="90vh"
+        width="110vw"
+        height="120vh"
         scrollable={true}
         topButtons={topButtons}
         bottomButtons={bottomButtons}

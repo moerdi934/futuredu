@@ -1,4 +1,4 @@
-// pages/api/courses/search.ts - Updated with Approval Filtering
+// pages/api/courses/options.ts - Course Options for Filters
 import { NextApiRequest, NextApiResponse } from 'next';
 import { runMiddleware, authenticateJWT, AuthenticatedRequest } from '../../../lib/middleware/auth';
 import * as Course from '../../../models/course.model';
@@ -20,17 +20,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const courses = await Course.searchAll(search, userRole, userId);
     
-    // Only send id and title for search purposes
-    const simplifiedCourses = courses.map(course => ({
-      id: course.id,
-      title: course.title,
-      value: course.id,
-      label: course.title
-    }));
+    // Format for select options
+    const courseOptions = courses
+      .filter(course => course.approval_status === 'approved' || userRole === 'admin')
+      .map(course => ({
+        value: course.id,
+        label: course.title
+      }));
 
-    res.json(simplifiedCourses);
+    res.json(courseOptions);
   } catch (error: any) {
-    console.error('API Search Courses Error:', error);
+    console.error('API Course Options Error:', error);
     res.status(500).json({ error: error.message });
   }
 }

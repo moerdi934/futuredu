@@ -233,8 +233,8 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({ show, onClose, classData,
       subtitle={`${userRole === 'teacher' ? 'Ambil' : 'Setujui atau tolak'} kelas "${classData.name}"`}
       icon={<CheckCircle className="tw-w-5 tw-h-5" />}
       size="lg"
-      width="90vw"
-      height="80vh"
+      width="110vw"
+      height="120vh"
       bottomButtons={bottomButtons}
       preventCloseOnOutsideClick={false}
     >

@@ -1,4 +1,4 @@
-// pages/panel/courses/create-course/PreviewComponent.tsx
+// pages/panel/courses/courses-page/create/PreviewComponent.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';

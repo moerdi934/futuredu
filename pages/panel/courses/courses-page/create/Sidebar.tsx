@@ -1,4 +1,4 @@
-// pages/panel/courses/create-course/Sidebar.tsx
+// pages/panel/courses/courses-page/create/Sidebar.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';

@@ -672,8 +672,8 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSave }
       subtitle={getSubtitle()}
       icon={<BookOpen className="tw-w-5 tw-h-5" />}
       size="lg"
-      width="95vw"
-      height="90vh"
+      width="110vw"
+      height="120vh"
       bottomButtons={bottomButtons}
       preventCloseOnOutsideClick={false}
     >

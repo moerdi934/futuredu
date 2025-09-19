@@ -605,8 +605,8 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
       subtitle={`${selectedQuestions.length} soal dipilih • Mode: ${questionMode === 'csv' ? 'CSV Import' : 'Manual'}`}
       icon={<PlusCircle className="tw-w-5 tw-h-5" />}
       size="xl"
-      width="90vw"
-      height="85vh"
+      width="110vw"
+      height="125vh"
       scrollable={true}
       topButtons={topButtons}
       bottomButtons={bottomButtons}

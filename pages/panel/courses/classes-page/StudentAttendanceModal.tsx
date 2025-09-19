@@ -457,8 +457,8 @@ const StudentAttendanceModal: React.FC<StudentAttendanceModalProps> = ({ show, o
       subtitle={`${classData.name} - ${classData.course_name}`}
       icon={<QrCode className="tw-w-5 tw-h-5" />}
       size="lg"
-      width="90vw"
-      height="85vh"
+      width="110vw"
+      height="120vh"
       bottomButtons={bottomButtons}
       preventCloseOnOutsideClick={false}
     >
