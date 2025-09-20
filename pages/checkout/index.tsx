@@ -1,8 +1,8 @@
+// pages/checkout.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
 import { Container, Row, Col, Card, Button, Form, Spinner, Alert } from 'react-bootstrap';
 import { 
   ArrowLeft, 
@@ -18,7 +18,8 @@ import {
 } from 'lucide-react';
 import NavigationBar from '../../components/layout/NavigationBar';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+// Import the safe API client
+import { apiClient } from '../../lib/api/client';
 
 interface CartItem {
   product_id: number;
@@ -51,29 +52,36 @@ export default function CheckoutPage() {
   const [processing, setProcessing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfetti, setShowConfetti] = useState<boolean>(false);
+  const [mounted, setMounted] = useState<boolean>(false);
+
+  // Set mounted state after component mounts (SSR fix)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
-    // Get data from sessionStorage in Next.js
-    if (typeof window !== 'undefined') {
+    // Only access sessionStorage after component is mounted
+    if (!mounted) return;
+
+    try {
       const storedData = sessionStorage.getItem('checkoutData');
       if (storedData) {
-        try {
-          const data: CheckoutData = JSON.parse(storedData);
-          setCheckoutData(data);
-          // Show confetti animation when page loads
-          setShowConfetti(true);
-          setTimeout(() => setShowConfetti(false), 3000);
-        } catch (err) {
-          console.error('Error parsing checkout data:', err);
-          router.push('/keranjang');
-        }
+        const data: CheckoutData = JSON.parse(storedData);
+        setCheckoutData(data);
+        // Show confetti animation when page loads
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 3000);
       } else {
         router.push('/keranjang');
       }
+    } catch (err) {
+      console.error('Error parsing checkout data:', err);
+      router.push('/keranjang');
     }
-  }, [router]);
+  }, [mounted, router]);
 
-  if (!checkoutData) {
+  // Don't render until mounted and data is loaded
+  if (!mounted || !checkoutData) {
     return (
       <div className="tw-h-full" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', minHeight: '100vh'}}>
         <NavigationBar />
@@ -108,27 +116,25 @@ export default function CheckoutPage() {
     setProcessing(true);
     setError(null);
     try {
-      const res = await axios.post<CheckoutResponse>(
-        `${API_URL}/checkout/process`,
-        { 
-          selectedProductIds: selectedIds, 
-          promoData: { amount: promo } 
-        },
-        { withCredentials: true }
-      );
+      // Use the safe API client
+      const res = await apiClient.post('/checkout/process', { 
+        selectedProductIds: selectedIds, 
+        promoData: { amount: promo } 
+      });
 
-      if (res.data.success) {
+      if (res.success) {
         // Clear checkout data from sessionStorage
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('checkoutData');
         }
         // Navigate to embedded payment page
-        router.push(`/pembayaran/${res.data.data.orderNumber}`);
+        router.push(`/pembayaran/${res.data.orderNumber}`);
       } else {
-        setError(res.data.message || 'Checkout gagal');
+        setError(res.message || 'Checkout gagal');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message);
+      console.error('Checkout error:', err);
+      setError(err.message || 'Terjadi kesalahan saat memproses checkout');
     } finally {
       setProcessing(false);
     }
@@ -282,8 +288,6 @@ export default function CheckoutPage() {
                     ))}
                   </Card.Body>
                 </Card>
-
-
               </Col>
 
               {/* Right Column - Summary */}
@@ -318,6 +322,7 @@ export default function CheckoutPage() {
                         max={gross}
                         onChange={e => setPromo(Number(e.target.value))}
                         placeholder="Masukkan nominal diskon"
+                        disabled={processing}
                         className="tw-border-purple-200 tw-rounded-xl tw-py-3 tw-px-4 tw-bg-purple-50/50 focus:tw-border-purple-400 focus:tw-shadow-lg tw-transition-all tw-duration-300"
                       />
                       <div className="tw-text-xs tw-text-gray-500 tw-mt-1">

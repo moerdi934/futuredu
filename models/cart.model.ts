@@ -39,31 +39,31 @@ export interface CartWithSelectedProducts {
 }
 
 // Cart Model Functions
-export const _findCart = async (userId: string): Promise<Cart | null> => {
-  const { rows } = await pool.query(
+export const _findCart = async (userId: string, client: PoolClient = pool): Promise<Cart | null> => {
+  const { rows } = await client.query(
     'SELECT * FROM cart WHERE user_id = $1',
     [userId]
   );
   return rows[0] || null;
 };
 
-export const _createCart = async (userId: string): Promise<Cart> => {
-  const { rows } = await pool.query(
+export const _createCart = async (userId: string, client: PoolClient = pool): Promise<Cart> => {
+  const { rows } = await client.query(
     'INSERT INTO cart (user_id) VALUES ($1) RETURNING *',
     [userId]
   );
   return rows[0];
 };
 
-export const _getOrCreateCart = async (userId: string): Promise<Cart> => {
-  return (await _findCart(userId)) || (await _createCart(userId));
+export const _getOrCreateCart = async (userId: string, client: PoolClient = pool): Promise<Cart> => {
+  return (await _findCart(userId, client)) || (await _createCart(userId, client));
 };
 
-export const addItem = async (userId: string, productId: number): Promise<CartWithProducts> => {
-  const cart = await _getOrCreateCart(userId);
+export const addItem = async (userId: string, productId: number, client: PoolClient = pool): Promise<CartWithProducts> => {
+  const cart = await _getOrCreateCart(userId, client);
 
   // Validasi stok
-  const stockCheck = await pool.query(
+  const stockCheck = await client.query(
     'SELECT stock FROM products WHERE product_id = $1',
     [productId]
   );
@@ -79,77 +79,77 @@ export const addItem = async (userId: string, productId: number): Promise<CartWi
                   updated_at = NOW()
     RETURNING quantity
   `;
-  const { rows } = await pool.query(upsertSQL, [cart.id, productId]);
+  const { rows } = await client.query(upsertSQL, [cart.id, productId]);
   if (rows[0].quantity > stock) {
     // rollback qty ++ satu langkah
-    await pool.query(
+    await client.query(
       'UPDATE cart_items SET quantity = quantity - 1 WHERE cart_id = $1 AND product_id = $2',
       [cart.id, productId]
     );
     throw new Error('Quantity exceeds available stock');
   }
 
-  await pool.query('UPDATE cart SET updated_at = NOW() WHERE id = $1', [
+  await client.query('UPDATE cart SET updated_at = NOW() WHERE id = $1', [
     cart.id,
   ]);
-  return getCartWithProducts(userId);
+  return getCartWithProducts(userId, client);
 };
 
-export const decreaseItem = async (userId: string, productId: number): Promise<CartWithProducts> => {
-  const cart = await _findCart(userId);
+export const decreaseItem = async (userId: string, productId: number, client: PoolClient = pool): Promise<CartWithProducts> => {
+  const cart = await _findCart(userId, client);
   if (!cart) return { cart: null, products: [], totalItems: 0, totalQty: 0 };
 
-  const { rows } = await pool.query(
+  const { rows } = await client.query(
     'SELECT quantity FROM cart_items WHERE cart_id = $1 AND product_id = $2',
     [cart.id, productId]
   );
-  if (!rows.length) return getCartWithProducts(userId); // nothing to do
+  if (!rows.length) return getCartWithProducts(userId, client); // nothing to do
 
   if (rows[0].quantity > 1) {
-    await pool.query(
+    await client.query(
       'UPDATE cart_items SET quantity = quantity - 1, updated_at = NOW() WHERE cart_id = $1 AND product_id = $2',
       [cart.id, productId]
     );
   } else {
-    await pool.query(
+    await client.query(
       'DELETE FROM cart_items WHERE cart_id = $1 AND product_id = $2',
       [cart.id, productId]
     );
   }
 
-  await pool.query('UPDATE cart SET updated_at = NOW() WHERE id = $1', [
+  await client.query('UPDATE cart SET updated_at = NOW() WHERE id = $1', [
     cart.id,
   ]);
-  return getCartWithProducts(userId);
+  return getCartWithProducts(userId, client);
 };
 
-export const removeItem = async (userId: string, productId: number): Promise<CartWithProducts> => {
-  const cart = await _findCart(userId);
+export const removeItem = async (userId: string, productId: number, client: PoolClient = pool): Promise<CartWithProducts> => {
+  const cart = await _findCart(userId, client);
   if (!cart) return { cart: null, products: [], totalItems: 0, totalQty: 0 };
 
-  await pool.query(
+  await client.query(
     'DELETE FROM cart_items WHERE cart_id = $1 AND product_id = $2',
     [cart.id, productId]
   );
-  await pool.query('UPDATE cart SET updated_at = NOW() WHERE id = $1', [
+  await client.query('UPDATE cart SET updated_at = NOW() WHERE id = $1', [
     cart.id,
   ]);
-  return getCartWithProducts(userId);
+  return getCartWithProducts(userId, client);
 };
 
-export const clearCart = async (userId: string): Promise<CartWithProducts> => {
-  const cart = await _findCart(userId);
+export const clearCart = async (userId: string, client: PoolClient = pool): Promise<CartWithProducts> => {
+  const cart = await _findCart(userId, client);
   if (!cart) return { cart: null, products: [], totalItems: 0, totalQty: 0 };
 
-  await pool.query('DELETE FROM cart_items WHERE cart_id = $1', [cart.id]);
-  await pool.query('UPDATE cart SET updated_at = NOW() WHERE id = $1', [
+  await client.query('DELETE FROM cart_items WHERE cart_id = $1', [cart.id]);
+  await client.query('UPDATE cart SET updated_at = NOW() WHERE id = $1', [
     cart.id,
   ]);
-  return getCartWithProducts(userId);
+  return getCartWithProducts(userId, client);
 };
 
-export const getCartWithProducts = async (userId: string): Promise<CartWithProducts> => {
-  const cart = await _findCart(userId);
+export const getCartWithProducts = async (userId: string, client: PoolClient = pool): Promise<CartWithProducts> => {
+  const cart = await _findCart(userId, client);
   if (!cart)
     return { cart: null, products: [], totalItems: 0, totalQty: 0 };
 
@@ -158,9 +158,9 @@ export const getCartWithProducts = async (userId: string): Promise<CartWithProdu
       ci.product_id,
       ci.quantity,
       p.*,
-      price_sub.price as current_price
+      COALESCE(price_sub.price, 0) as current_price
     FROM cart_items ci
-    JOIN products p          ON p.product_id = ci.product_id
+    JOIN products p ON p.product_id = ci.product_id
     LEFT JOIN LATERAL (
       SELECT price
       FROM   product_price_hist pph
@@ -173,14 +173,14 @@ export const getCartWithProducts = async (userId: string): Promise<CartWithProdu
     WHERE ci.cart_id = $1
     ORDER BY ci.updated_at DESC
   `;
-  const { rows } = await pool.query(sql, [cart.id]);
+  const { rows } = await client.query(sql, [cart.id]);
 
   const totalQty = rows.reduce((s: number, r: any) => s + r.quantity, 0);
   return { cart, products: rows, totalItems: rows.length, totalQty };
 };
 
-export const getSelectedItems = async (userId: string, ids: number[]): Promise<CartWithSelectedProducts> => {
-  const cart = await _findCart(userId);
+export const getSelectedItems = async (userId: string, ids: number[], client: PoolClient = pool): Promise<CartWithSelectedProducts> => {
+  const cart = await _findCart(userId, client);
   if (!cart) return { cart: null, products: [] };
 
   const sql = `
@@ -195,13 +195,13 @@ export const getSelectedItems = async (userId: string, ids: number[]): Promise<C
     SELECT ci.product_id,
            ci.quantity,
            p.*,
-           ap.price AS current_price
+           COALESCE(ap.price, 0) AS current_price
       FROM cart_items ci
       JOIN products      p  ON p.product_id = ci.product_id
-      JOIN active_price  ap ON ap.product_id = p.product_id
+      LEFT JOIN active_price  ap ON ap.product_id = p.product_id
      WHERE ci.cart_id = $1
        AND ci.product_id = ANY($2::int[])
      ORDER BY ci.updated_at DESC`;
-  const { rows } = await pool.query(sql, [cart.id, ids]);
+  const { rows } = await client.query(sql, [cart.id, ids]);
   return { cart, products: rows };
 };

@@ -1,4 +1,4 @@
-// pages/courses.tsx
+// pages/all-courses.tsx - Updated with Live Courses and Shopping Cart
 import React, { useState, useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';
@@ -9,24 +9,29 @@ import {
   BookOpen, Clock, Users, Star, Play, ChevronRight, Quote, Filter,
   Award, TrendingUp, Grid, List, Search, Eye, Calendar, User, ChevronDown, 
   ChevronUp, Target, Zap, Trophy, ShoppingCart, LogIn,
-  Brain, Rocket, Gift, RotateCcw
+  Brain, Rocket, Gift, RotateCcw, Tag, DollarSign
 } from 'lucide-react';
 import NavigationBar from '../../components/layout/NavigationBar';
 
 // Types
-interface Course {
+interface LiveCourse {
   id: number;
   title: string;
   description: string;
-  imageurl: string | null;
-  courseurl: string | null;
-  type: number;
+  imageUrl?: string;
+  learning_point?: string[];
+  course_string?: string;
+  product_id: number;
+  product_name: string;
+  price: number;
+  is_promo: boolean;
+  no_promo_price?: number;
+  promo_description?: string;
+  stock: number;
+  features?: string[];
+  classtype: string;
+  creator_name?: string;
   create_date: string;
-  create_user_id: number;
-  learning_point: string[] | null;
-  update_date: string | null;
-  update_user_id: number | null;
-  course_string: string;
 }
 
 interface UserCourseProgress {
@@ -53,23 +58,26 @@ interface QuoteType {
 }
 
 interface CoursePageProps {
-  courses: Course[];
   initialQuote: QuoteType;
 }
 
-const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initialQuote }) => {
+const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
   const router = useRouter();
   const { isAuthenticated, id: userId } = useAuth();
   
-  const [courses, setCourses] = useState<Course[]>(initialCourses);
-  const [filteredCourses, setFilteredCourses] = useState<Course[]>(initialCourses);
+  const [liveCourses, setLiveCourses] = useState<LiveCourse[]>([]);
+  const [filteredCourses, setFilteredCourses] = useState<LiveCourse[]>([]);
   const [currentQuote, setCurrentQuote] = useState<QuoteType>(initialQuote);
   const [loading, setLoading] = useState(false);
-  const [selectedType, setSelectedType] = useState<number | 'all'>('all');
+  const [selectedClasstype, setSelectedClasstype] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAll, setShowAll] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [quickFilter, setQuickFilter] = useState<'all' | 'popular' | 'newest' | 'recommended'>('all');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'newest' | 'cheapest' | 'premium'>('all');
+  const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 1000000 });
+  const [sortBy, setSortBy] = useState<string>('newest');
+  const [cartLoading, setCartLoading] = useState<{ [key: number]: boolean }>({});
+  const [purchasedCourses, setPurchasedCourses] = useState<Set<number>>(new Set());
   
   // Progress related states
   const [userProgress, setUserProgress] = useState<UserCourseProgress[]>([]);
@@ -102,12 +110,81 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
     }
   ];
 
+  // Fetch live courses
+  useEffect(() => {
+    fetchLiveCourses();
+  }, [sortBy, selectedClasstype]);
+
   // Fetch user progress when authenticated
   useEffect(() => {
     if (isAuthenticated && userId) {
       fetchUserProgress();
+      fetchPurchasedCourses();
     }
   }, [isAuthenticated, userId]);
+
+  // Filter courses
+  useEffect(() => {
+    let filtered = liveCourses;
+    
+    // Apply quick filter
+    if (quickFilter === 'newest') {
+      filtered = [...filtered].sort((a, b) => 
+        new Date(b.create_date).getTime() - new Date(a.create_date).getTime()
+      );
+    } else if (quickFilter === 'cheapest') {
+      filtered = [...filtered].sort((a, b) => a.price - b.price);
+    } else if (quickFilter === 'premium') {
+      filtered = filtered.filter(course => course.price >= 500000);
+    }
+    
+    // Apply classtype filter
+    if (selectedClasstype !== 'all') {
+      filtered = filtered.filter(course => course.classtype === selectedClasstype);
+    }
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(course =>
+        course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        course.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        course.product_name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Apply price range filter
+    filtered = filtered.filter(course => 
+      course.price >= priceRange.min && course.price <= priceRange.max
+    );
+    
+    setFilteredCourses(filtered);
+  }, [liveCourses, selectedClasstype, searchTerm, quickFilter, priceRange]);
+
+  // Fetch live courses
+  const fetchLiveCourses = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: '1',
+        limit: '100',
+        sortBy: sortBy,
+        classtype: selectedClasstype
+      });
+
+      const response = await fetch(`/api/courses/live?${params.toString()}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setLiveCourses(data.data.courses);
+      } else {
+        console.error('Failed to fetch live courses:', data.message);
+      }
+    } catch (error) {
+      console.error('Error fetching live courses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Fetch user progress
   const fetchUserProgress = async () => {
@@ -134,7 +211,28 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
     }
   };
 
-  // Navigation handler
+  // Fetch purchased courses
+  const fetchPurchasedCourses = async () => {
+    if (!isAuthenticated) return;
+    
+    const token = localStorage.getItem('authToken');
+    if (!token) return;
+
+    try {
+      // Get all purchased courses from progress (this indicates they have access)
+      const progress = userProgress;
+      const purchased = new Set(progress.map(p => p.id));
+      setPurchasedCourses(purchased);
+    } catch (error) {
+      console.error('Error fetching purchased courses:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchPurchasedCourses();
+  }, [userProgress]);
+
+  // Navigation handlers
   const handleStartLearning = (courseString: string) => {
     router.push(`/course/${courseString}`);
   };
@@ -151,79 +249,71 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
     router.push('/pricing');
   };
 
-  // Get unique course types
-  const courseTypes = Array.from(new Set(courses.map(course => course.type))).map(type => ({
-    value: type,
-    label: `Type ${type}`
-  }));
+  // Add to cart handler
+  const handleAddToCart = async (productId: number) => {
+    if (!isAuthenticated) {
+      alert('Silakan login terlebih dahulu untuk membeli kursus');
+      handleLogin();
+      return;
+    }
 
-  // Filter courses
-  useEffect(() => {
-    let filtered = courses;
-    
-    // Apply quick filter first
-    if (quickFilter === 'popular') {
-      filtered = [...filtered].sort((a, b) => {
-        const aPoints = a.learning_point?.length || 0;
-        const bPoints = b.learning_point?.length || 0;
-        return bPoints - aPoints;
-      }).slice(0, Math.ceil(courses.length * 0.6));
-    } else if (quickFilter === 'newest') {
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const recentCourses = filtered.filter(course => 
-        new Date(course.create_date) > thirtyDaysAgo
-      );
-      filtered = recentCourses.length > 0 ? recentCourses : 
-        [...filtered].sort((a, b) => 
-          new Date(b.create_date).getTime() - new Date(a.create_date).getTime()
-        ).slice(0, 3);
-    } else if (quickFilter === 'recommended') {
-      filtered = filtered.filter(course => 
-        course.learning_point && course.learning_point.length >= 3
-      );
-    }
-    
-    // Apply type filter
-    if (selectedType !== 'all') {
-      filtered = filtered.filter(course => course.type === selectedType);
-    }
-    
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(course =>
-        course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    setFilteredCourses(filtered);
-  }, [courses, selectedType, searchTerm, quickFilter]);
+    const token = localStorage.getItem('authToken');
+    if (!token) return;
 
-  // Fetch courses
-  const fetchCourses = async () => {
-    setLoading(true);
+    setCartLoading(prev => ({ ...prev, [productId]: true }));
+
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`);
-      const data = await response.json();
-      setCourses(data);
-    } catch (error) {
-      console.error('Error fetching courses:', error);
+      const response = await axios.post(
+        '/api/cart/add',
+        { productId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data.success) {
+        alert('Produk berhasil ditambahkan ke keranjang!');
+        // Optionally redirect to cart or show cart modal
+        router.push('/cart');
+      } else {
+        alert('Gagal menambahkan ke keranjang: ' + response.data.message);
+      }
+    } catch (error: any) {
+      console.error('Add to cart error:', error);
+      alert('Gagal menambahkan ke keranjang: ' + (error.response?.data?.message || 'Terjadi kesalahan'));
     } finally {
-      setLoading(false);
+      setCartLoading(prev => ({ ...prev, [productId]: false }));
     }
   };
 
-  useEffect(() => {
-    fetchCourses();
-  }, []);
+  // Get unique classtypes
+  const classtypes = Array.from(new Set(liveCourses.map(course => course.classtype)));
+
+  // Format price
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
+
+  // Calculate discount percentage
+  const getDiscountPercentage = (originalPrice: number, discountPrice: number) => {
+    return Math.round(((originalPrice - discountPrice) / originalPrice) * 100);
+  };
 
   const displayedCourses = showAll ? filteredCourses : filteredCourses.slice(0, displayLimit);
   const displayedProgress = showAllProgress ? userProgress : userProgress.slice(0, progressDisplayLimit);
 
   // Handle quick action clicks
-  const handleQuickAction = (action: 'popular' | 'newest' | 'recommended') => {
+  const handleQuickAction = (action: 'newest' | 'cheapest' | 'premium') => {
     setQuickFilter(action);
-    setSelectedType('all');
+    setSelectedClasstype('all');
     setSearchTerm('');
     setShowAll(false);
   };
@@ -242,7 +332,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
 
   return (
     <div className="tw-min-h-screen" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-      <NavigationBar></NavigationBar> 
+      <NavigationBar />
       <Head>
         <title>Courses - Platform Pembelajaran</title>
         <meta name="description" content="Jelajahi koleksi kursus menarik dan tingkatkan skill-mu dengan pembelajaran yang interaktif" />
@@ -342,7 +432,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
                   </div>
                 </div>
 
-                {/* Progress Courses List */}
+                {/* Progress Courses List - Same as before */}
                 <div className="tw-mb-6">
                   <h3 className="tw-text-xl tw-font-bold tw-text-white tw-mb-6 tw-text-center">
                     📚 Kursus yang Sedang Kamu Ikuti
@@ -381,11 +471,6 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
                                 alt={course.title}
                                 className="tw-w-full tw-h-full tw-object-cover"
                               />
-                              <div className="tw-absolute tw-top-4 tw-right-4">
-                                <div className="tw-bg-purple-600 tw-text-white tw-px-2 tw-py-1 tw-rounded-full tw-text-xs tw-font-semibold">
-                                  Type {course.type}
-                                </div>
-                              </div>
                               <div className="tw-absolute tw-bottom-0 tw-left-0 tw-right-0 tw-h-2 tw-bg-gray-200">
                                 <div 
                                   className={`tw-h-full tw-transition-all tw-duration-500 ${
@@ -476,231 +561,89 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
             </div>
           )}
 
-          {/* Login/Purchase Section - Show when not logged in or no progress */}
-          {(!isAuthenticated || userProgress.length === 0) && (
-            <div className="tw-max-w-full tw-mx-auto tw-mb-12 tw-px-4">
-              <div className="tw-bg-gradient-to-br tw-from-purple-600/20 tw-to-pink-600/20 tw-backdrop-blur-sm tw-rounded-3xl tw-p-8 tw-border tw-border-white/30 tw-shadow-2xl">
-                <div className="tw-text-center tw-mb-8">
-                  <div className="tw-inline-flex tw-items-center tw-justify-center tw-w-16 tw-h-16 tw-bg-gradient-to-br tw-from-purple-500 tw-to-pink-600 tw-rounded-full tw-mb-4 tw-shadow-lg">
-                    {!isAuthenticated ? <LogIn className="tw-w-8 tw-h-8 tw-text-white" /> : <Gift className="tw-w-8 tw-h-8 tw-text-white" />}
-                  </div>
-                  <h2 className="tw-text-3xl tw-font-bold tw-text-white tw-mb-4">
-                    {!isAuthenticated ? "🔐 Masuk untuk Melacak Progress" : "🎁 Mulai Petualangan Belajarmu"}
-                  </h2>
-                  <p className="tw-text-white/80 tw-text-lg tw-max-w-2xl tw-mx-auto tw-mb-6">
-                    {!isAuthenticated 
-                      ? "Login untuk melihat progress pembelajaran dan mengakses fitur-fitur eksklusif lainnya!"
-                      : "Daftar kursus premium untuk memulai perjalanan pembelajaran yang menakjubkan!"
-                    }
-                  </p>
-                </div>
-
-                <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-3 tw-gap-6 tw-mb-8">
-                  <div className="tw-bg-white/15 tw-backdrop-blur-sm tw-rounded-2xl tw-p-6 tw-text-center tw-border tw-border-white/20">
-                    <div className="tw-w-12 tw-h-12 tw-bg-gradient-to-br tw-from-blue-400 tw-to-blue-600 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-4">
-                      <Trophy className="tw-w-6 tw-h-6 tw-text-white" />
-                    </div>
-                    <h3 className="tw-text-lg tw-font-bold tw-text-white tw-mb-2">Progress Tracking</h3>
-                    <p className="tw-text-white/80 tw-text-sm">Pantau kemajuan belajarmu dengan sistem progress yang lengkap</p>
-                  </div>
-
-                  <div className="tw-bg-white/15 tw-backdrop-blur-sm tw-rounded-2xl tw-p-6 tw-text-center tw-border tw-border-white/20">
-                    <div className="tw-w-12 tw-h-12 tw-bg-gradient-to-br tw-from-green-400 tw-to-green-600 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-4">
-                      <Users className="tw-w-6 tw-h-6 tw-text-white" />
-                    </div>
-                    <h3 className="tw-text-lg tw-font-bold tw-text-white tw-mb-2">Komunitas Aktif</h3>
-                    <p className="tw-text-white/80 tw-text-sm">Bergabung dengan komunitas learner yang saling mendukung</p>
-                  </div>
-
-                  <div className="tw-bg-white/15 tw-backdrop-blur-sm tw-rounded-2xl tw-p-6 tw-text-center tw-border tw-border-white/20">
-                    <div className="tw-w-12 tw-h-12 tw-bg-gradient-to-br tw-from-purple-400 tw-to-purple-600 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-4">
-                      <Brain className="tw-w-6 tw-h-6 tw-text-white" />
-                    </div>
-                    <h3 className="tw-text-lg tw-font-bold tw-text-white tw-mb-2">Personalized Learning</h3>
-                    <p className="tw-text-white/80 tw-text-sm">Pembelajaran yang disesuaikan dengan kemampuanmu</p>
-                  </div>
-                </div>
-
-                <div className="tw-flex tw-flex-col sm:tw-flex-row tw-gap-4 tw-justify-center">
-                  {!isAuthenticated ? (
-                    <>
-                      <button 
-                        onClick={handleLogin}
-                        className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-violet-600 tw-text-white tw-font-bold tw-py-4 tw-px-8 tw-rounded-xl tw-shadow-lg tw-transition-all tw-duration-300 hover:tw-shadow-xl hover:tw-scale-105"
-                      >
-                        <div className="tw-flex tw-items-center tw-justify-center tw-gap-2">
-                          <LogIn className="tw-w-5 tw-h-5" />
-                          Masuk Sekarang
-                        </div>
-                      </button>
-                      <button 
-                        onClick={handlePurchase}
-                        className="tw-bg-white/20 tw-text-white tw-font-bold tw-py-4 tw-px-8 tw-rounded-xl tw-border tw-border-white/30 tw-backdrop-blur-sm tw-transition-all tw-duration-300 hover:tw-bg-white/30"
-                      >
-                        <div className="tw-flex tw-items-center tw-justify-center tw-gap-2">
-                          <Users className="tw-w-5 tw-h-5" />
-                          Daftar Gratis
-                        </div>
-                      </button>
-                    </>
-                  ) : (
-                    <button 
-                      onClick={handlePurchase}
-                      className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-violet-600 tw-text-white tw-font-bold tw-py-4 tw-px-8 tw-rounded-xl tw-shadow-lg tw-transition-all tw-duration-300 hover:tw-shadow-xl hover:tw-scale-105"
-                    >
-                      <div className="tw-flex tw-items-center tw-justify-center tw-gap-2">
-                        <ShoppingCart className="tw-w-5 tw-h-5" />
-                        Beli Kursus Premium
-                      </div>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Featured Section */}
           <div className="tw-max-w-full tw-mx-auto tw-mb-12 tw-px-4">
             <div className="tw-text-center tw-mb-8">
               <h2 className="tw-text-3xl tw-font-bold tw-text-white tw-mb-4">
-                🌟 Temukan Kursus Terbaikmu
+                🛒 Kursus Premium Terbaru
               </h2>
               <p className="tw-text-white/80 tw-text-lg">
-                Mulai perjalanan belajarmu dengan pilihan kursus yang tepat!
+                Investasi terbaik adalah investasi untuk diri sendiri!
               </p>
             </div>
             
-            {/* Learning Path Cards */}
-            <div className="tw-grid tw-grid-cols-2 md:tw-grid-cols-4 lg:tw-grid-cols-7 tw-gap-3 tw-mb-8">
-              {[
-                { icon: "🎯", name: "Skill Boost", color: "tw-from-blue-500 tw-to-cyan-500", desc: "Tingkatkan keahlianmu" },
-                { icon: "⚡", name: "Quick Learn", color: "tw-from-yellow-500 tw-to-orange-500", desc: "Belajar cepat efektif" },
-                { icon: "📝", name: "Quiz", color: "tw-from-green-500 tw-to-emerald-500", desc: "Uji pemahamanmu" },
-                { icon: "🎯", name: "Drill Exam", color: "tw-from-red-500 tw-to-pink-500", desc: "Latihan soal intensif" },
-                { icon: "📊", name: "Analysis", color: "tw-from-purple-500 tw-to-violet-500", desc: "Analisis mendalam" },
-                { icon: "🧭", name: "Exploration", color: "tw-from-indigo-500 tw-to-blue-500", desc: "Jelajahi topik baru" },
-                { icon: "🏋️", name: "Self-Practice", color: "tw-from-teal-500 tw-to-cyan-500", desc: "Latihan mandiri" }
-              ].map((item, index) => (
-                <div
-                  key={index}
-                  className={`tw-bg-gradient-to-br ${item.color} tw-rounded-2xl tw-p-3 tw-text-center tw-cursor-pointer tw-transition-all tw-duration-300 tw-hover:scale-105 tw-hover:shadow-xl tw-group tw-relative tw-overflow-hidden tw-min-h-[100px] tw-flex tw-flex-col tw-justify-center`}
-                >
-                  <div className="tw-absolute tw-inset-0 tw-bg-white/20 tw-opacity-0 tw-group-hover:tw-opacity-100 tw-transition-opacity tw-duration-300"></div>
-                  <div className="tw-relative tw-z-10">
-                    <div className="tw-text-2xl tw-mb-2 tw-group-hover:scale-110 tw-transition-transform">
-                      {item.icon}
-                    </div>
-                    <p className="tw-text-white tw-font-bold tw-text-xs tw-mb-1 tw-leading-tight">
-                      {item.name}
-                    </p>
-                    <p className="tw-text-white/80 tw-text-xs tw-leading-tight">
-                      {item.desc}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
             {/* Quick Actions */}
-            <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-3 tw-gap-6">
-              <div 
-                onClick={() => handleQuickAction('popular')}
-                className={`tw-backdrop-blur-sm tw-rounded-2xl tw-p-6 tw-border tw-text-center tw-group tw-cursor-pointer tw-transition-all tw-duration-300 tw-hover:scale-105 tw-relative ${
-                  quickFilter === 'popular' 
-                    ? 'tw-bg-yellow-500/30 tw-border-yellow-400/50 tw-shadow-lg tw-shadow-yellow-500/25' 
-                    : 'tw-bg-white/10 tw-border-white/20 tw-hover:bg-white/20'
-                }`}
-              >
-                <div className={`tw-w-16 tw-h-16 tw-bg-gradient-to-br tw-from-yellow-400 tw-to-orange-500 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-4 tw-group-hover:scale-110 tw-transition-transform tw-shadow-lg ${
-                  quickFilter === 'popular' ? 'tw-ring-4 tw-ring-yellow-300/50' : ''
-                }`}>
-                  <Star className="tw-w-8 tw-h-8 tw-text-white" />
-                </div>
-                <h3 className={`tw-text-xl tw-font-bold tw-mb-2 ${
-                  quickFilter === 'popular' ? 'tw-text-yellow-100' : 'tw-text-white'
-                }`}>
-                  Kursus Terpopuler
-                  {quickFilter === 'popular' && (
-                    <span className="tw-ml-2 tw-text-yellow-300">✨</span>
-                  )}
-                </h3>
-                <p className="tw-text-white/80 tw-text-sm">
-                  Lihat kursus yang paling banyak diambil pelajar lain
-                </p>
-                <div className="tw-mt-4 tw-text-white/60 tw-text-xs">
-                  📊 {courses.length > 0 ? Math.ceil(courses.length * 0.6) : 0} kursus tersedia
-                </div>
-                {quickFilter === 'popular' && (
-                  <div className="tw-absolute tw-top-2 tw-right-2 tw-w-3 tw-h-3 tw-bg-yellow-400 tw-rounded-full tw-animate-pulse"></div>
-                )}
-              </div>
-              
+            <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-3 tw-gap-6 tw-mb-8">
               <div 
                 onClick={() => handleQuickAction('newest')}
                 className={`tw-backdrop-blur-sm tw-rounded-2xl tw-p-6 tw-border tw-text-center tw-group tw-cursor-pointer tw-transition-all tw-duration-300 tw-hover:scale-105 tw-relative ${
                   quickFilter === 'newest' 
-                    ? 'tw-bg-green-500/30 tw-border-green-400/50 tw-shadow-lg tw-shadow-green-500/25' 
+                    ? 'tw-bg-blue-500/30 tw-border-blue-400/50 tw-shadow-lg tw-shadow-blue-500/25' 
                     : 'tw-bg-white/10 tw-border-white/20 tw-hover:bg-white/20'
                 }`}
               >
-                <div className={`tw-w-16 tw-h-16 tw-bg-gradient-to-br tw-from-green-400 tw-to-blue-500 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-4 tw-group-hover:scale-110 tw-transition-transform tw-shadow-lg ${
-                  quickFilter === 'newest' ? 'tw-ring-4 tw-ring-green-300/50' : ''
+                <div className={`tw-w-16 tw-h-16 tw-bg-gradient-to-br tw-from-blue-400 tw-to-cyan-500 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-4 tw-group-hover:scale-110 tw-transition-transform tw-shadow-lg ${
+                  quickFilter === 'newest' ? 'tw-ring-4 tw-ring-blue-300/50' : ''
                 }`}>
                   <Clock className="tw-w-8 tw-h-8 tw-text-white" />
                 </div>
                 <h3 className={`tw-text-xl tw-font-bold tw-mb-2 ${
-                  quickFilter === 'newest' ? 'tw-text-green-100' : 'tw-text-white'
+                  quickFilter === 'newest' ? 'tw-text-blue-100' : 'tw-text-white'
                 }`}>
                   Kursus Terbaru
-                  {quickFilter === 'newest' && (
-                    <span className="tw-ml-2 tw-text-green-300">🆕</span>
-                  )}
+                  {quickFilter === 'newest' && <span className="tw-ml-2 tw-text-blue-300">🆕</span>}
                 </h3>
                 <p className="tw-text-white/80 tw-text-sm">
-                  Temukan kursus-kursus yang baru saja dirilis
+                  Kursus-kursus yang baru saja dirilis
                 </p>
-                <div className="tw-mt-4 tw-text-white/60 tw-text-xs">
-                  🆕 {courses.filter(course => {
-                    const courseDate = new Date(course.create_date);
-                    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-                    return courseDate > thirtyDaysAgo;
-                  }).length} kursus baru
-                </div>
-                {quickFilter === 'newest' && (
-                  <div className="tw-absolute tw-top-2 tw-right-2 tw-w-3 tw-h-3 tw-bg-green-400 tw-rounded-full tw-animate-pulse"></div>
-                )}
               </div>
               
               <div 
-                onClick={() => handleQuickAction('recommended')}
+                onClick={() => handleQuickAction('cheapest')}
                 className={`tw-backdrop-blur-sm tw-rounded-2xl tw-p-6 tw-border tw-text-center tw-group tw-cursor-pointer tw-transition-all tw-duration-300 tw-hover:scale-105 tw-relative ${
-                  quickFilter === 'recommended' 
+                  quickFilter === 'cheapest' 
+                    ? 'tw-bg-green-500/30 tw-border-green-400/50 tw-shadow-lg tw-shadow-green-500/25' 
+                    : 'tw-bg-white/10 tw-border-white/20 tw-hover:bg-white/20'
+                }`}
+              >
+                <div className={`tw-w-16 tw-h-16 tw-bg-gradient-to-br tw-from-green-400 tw-to-emerald-500 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-4 tw-group-hover:scale-110 tw-transition-transform tw-shadow-lg ${
+                  quickFilter === 'cheapest' ? 'tw-ring-4 tw-ring-green-300/50' : ''
+                }`}>
+                  <DollarSign className="tw-w-8 tw-h-8 tw-text-white" />
+                </div>
+                <h3 className={`tw-text-xl tw-font-bold tw-mb-2 ${
+                  quickFilter === 'cheapest' ? 'tw-text-green-100' : 'tw-text-white'
+                }`}>
+                  Termurah
+                  {quickFilter === 'cheapest' && <span className="tw-ml-2 tw-text-green-300">💰</span>}
+                </h3>
+                <p className="tw-text-white/80 tw-text-sm">
+                  Kursus dengan harga paling terjangkau
+                </p>
+              </div>
+              
+              <div 
+                onClick={() => handleQuickAction('premium')}
+                className={`tw-backdrop-blur-sm tw-rounded-2xl tw-p-6 tw-border tw-text-center tw-group tw-cursor-pointer tw-transition-all tw-duration-300 tw-hover:scale-105 tw-relative ${
+                  quickFilter === 'premium' 
                     ? 'tw-bg-purple-500/30 tw-border-purple-400/50 tw-shadow-lg tw-shadow-purple-500/25' 
                     : 'tw-bg-white/10 tw-border-white/20 tw-hover:bg-white/20'
                 }`}
               >
                 <div className={`tw-w-16 tw-h-16 tw-bg-gradient-to-br tw-from-purple-400 tw-to-pink-500 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-4 tw-group-hover:scale-110 tw-transition-transform tw-shadow-lg ${
-                  quickFilter === 'recommended' ? 'tw-ring-4 tw-ring-purple-300/50' : ''
+                  quickFilter === 'premium' ? 'tw-ring-4 tw-ring-purple-300/50' : ''
                 }`}>
                   <Award className="tw-w-8 tw-h-8 tw-text-white" />
                 </div>
                 <h3 className={`tw-text-xl tw-font-bold tw-mb-2 ${
-                  quickFilter === 'recommended' ? 'tw-text-purple-100' : 'tw-text-white'
+                  quickFilter === 'premium' ? 'tw-text-purple-100' : 'tw-text-white'
                 }`}>
-                  Rekomendasi
-                  {quickFilter === 'recommended' && (
-                    <span className="tw-ml-2 tw-text-purple-300">⭐</span>
-                  )}
+                  Premium
+                  {quickFilter === 'premium' && <span className="tw-ml-2 tw-text-purple-300">👑</span>}
                 </h3>
                 <p className="tw-text-white/80 tw-text-sm">
-                  Kursus yang direkomendasikan khusus untukmu
+                  Kursus premium dengan kualitas terbaik
                 </p>
-                <div className="tw-mt-4 tw-text-white/60 tw-text-xs">
-                  ⭐ {courses.filter(course => course.learning_point && course.learning_point.length >= 3).length} kursus pilihan
-                </div>
-                {quickFilter === 'recommended' && (
-                  <div className="tw-absolute tw-top-2 tw-right-2 tw-w-3 tw-h-3 tw-bg-purple-400 tw-rounded-full tw-animate-pulse"></div>
-                )}
               </div>
             </div>
           </div>
@@ -725,26 +668,42 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
                   </div>
                   
                   <select
-                    value={selectedType}
+                    value={selectedClasstype}
                     onChange={(e) => {
-                      setSelectedType(e.target.value === 'all' ? 'all' : Number(e.target.value));
+                      setSelectedClasstype(e.target.value);
                       setQuickFilter('all');
                     }}
                     className="tw-px-4 tw-py-3 tw-rounded-xl tw-border-0 tw-bg-white/20 tw-text-white tw-backdrop-blur-sm"
                   >
-                    <option value="all">Semua Tipe</option>
-                    {courseTypes.map(type => (
-                      <option key={type.value} value={type.value} className="tw-text-gray-800">
-                        {type.label}
+                    <option value="all" className="tw-text-gray-800">Semua Kategori</option>
+                    {classtypes.map(classtype => (
+                      <option key={classtype} value={classtype} className="tw-text-gray-800">
+                        {classtype === 'online' ? 'Online' : 
+                         classtype === 'utbk' ? 'UTBK' : 
+                         classtype === 'sbmptn' ? 'SBMPTN' : 
+                         `Kelas ${classtype}`}
                       </option>
                     ))}
                   </select>
 
-                  {quickFilter !== 'all' && (
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="tw-px-4 tw-py-3 tw-rounded-xl tw-border-0 tw-bg-white/20 tw-text-white tw-backdrop-blur-sm"
+                  >
+                    <option value="newest" className="tw-text-gray-800">Terbaru</option>
+                    <option value="oldest" className="tw-text-gray-800">Terlama</option>
+                    <option value="price_low" className="tw-text-gray-800">Harga Terendah</option>
+                    <option value="price_high" className="tw-text-gray-800">Harga Tertinggi</option>
+                    <option value="name_asc" className="tw-text-gray-800">Nama A-Z</option>
+                    <option value="name_desc" className="tw-text-gray-800">Nama Z-A</option>
+                  </select>
+
+                  {(quickFilter !== 'all' || selectedClasstype !== 'all' || searchTerm) && (
                     <button
                       onClick={() => {
                         setQuickFilter('all');
-                        setSelectedType('all');
+                        setSelectedClasstype('all');
                         setSearchTerm('');
                       }}
                       className="tw-px-4 tw-py-3 tw-rounded-xl tw-bg-red-500/80 tw-text-white tw-font-semibold tw-backdrop-blur-sm tw-transition-all tw-duration-300 tw-hover:bg-red-600/80"
@@ -781,16 +740,16 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
               <div className="tw-flex tw-flex-wrap tw-justify-center tw-gap-4 tw-text-sm tw-text-white/80 tw-mt-4">
                 <div className="tw-flex tw-items-center tw-gap-2">
                   <Eye className="tw-w-4 tw-h-4 tw-text-blue-300" />
-                  <span>Showing {displayedCourses.length} of {filteredCourses.length} courses</span>
+                  <span>Menampilkan {displayedCourses.length} dari {filteredCourses.length} kursus</span>
                 </div>
                 <div className="tw-flex tw-items-center tw-gap-2">
                   <Filter className="tw-w-4 tw-h-4 tw-text-green-300" />
                   <span>
                     Filter: {quickFilter === 'all' 
-                      ? (selectedType === 'all' ? 'All Types' : `Type ${selectedType}`)
-                      : quickFilter === 'popular' ? 'Popular Courses'
-                      : quickFilter === 'newest' ? 'Newest Courses' 
-                      : 'Recommended Courses'
+                      ? (selectedClasstype === 'all' ? 'Semua' : `${selectedClasstype}`)
+                      : quickFilter === 'newest' ? 'Terbaru'
+                      : quickFilter === 'cheapest' ? 'Termurah' 
+                      : 'Premium'
                     }
                   </span>
                 </div>
@@ -798,9 +757,9 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
                   <div className="tw-flex tw-items-center tw-gap-2">
                     <Star className="tw-w-4 tw-h-4 tw-text-yellow-300" />
                     <span className="tw-capitalize tw-font-semibold">
-                      {quickFilter === 'popular' ? '🔥 Trending' 
-                       : quickFilter === 'newest' ? '🆕 Fresh' 
-                       : '⭐ Curated'}
+                      {quickFilter === 'newest' ? '🆕 Fresh' 
+                       : quickFilter === 'cheapest' ? '💰 Budget Friendly' 
+                       : '👑 Premium Quality'}
                     </span>
                   </div>
                 )}
@@ -808,7 +767,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
             </div>
           </div>
 
-          {/* Courses Grid */}
+          {/* Live Courses Grid */}
           <div className="tw-max-w-full tw-mx-auto tw-mb-12 tw-px-4">
             {loading ? (
               <div className="tw-flex tw-justify-center tw-items-center tw-py-12">
@@ -819,53 +778,39 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
                 {viewMode === 'grid' ? (
                   <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 lg:tw-grid-cols-3 xl:tw-grid-cols-4 tw-gap-6">
                     {displayedCourses.map((course) => {
-                      const userCourseProgress = userProgress.find(p => p.id === course.id);
-                      const hasProgress = userCourseProgress && userCourseProgress.overall_progress_percentage > 0;
-                      const isCompleted = userCourseProgress && userCourseProgress.overall_progress_percentage >= 100;
+                      const isPurchased = purchasedCourses.has(course.id);
+                      const isAddingToCart = cartLoading[course.product_id];
                       
                       return (
                         <div
                           key={course.id}
                           className="tw-bg-white tw-rounded-2xl tw-shadow-xl tw-transition-all tw-duration-300 tw-hover:shadow-2xl tw-hover:scale-105 tw-overflow-hidden tw-flex tw-flex-col tw-h-full tw-relative"
                         >
-                          {hasProgress && (
+                          {/* Promo Badge */}
+                          {course.is_promo && (
                             <div className="tw-absolute tw-top-4 tw-left-4 tw-z-10">
-                              <div className={`tw-text-white tw-px-2 tw-py-1 tw-rounded-full tw-text-xs tw-font-bold tw-flex tw-items-center tw-gap-1 ${
-                                isCompleted ? 'tw-bg-green-500' : 'tw-bg-blue-500'
-                              }`}>
-                                {isCompleted ? (
-                                  <Trophy className="tw-w-3 tw-h-3" />
-                                ) : (
-                                  <Zap className="tw-w-3 tw-h-3" />
-                                )}
-                                {Math.round(userCourseProgress!.overall_progress_percentage)}%
+                              <div className="tw-bg-gradient-to-r tw-from-red-500 tw-to-pink-600 tw-text-white tw-px-3 tw-py-1 tw-rounded-full tw-text-xs tw-font-bold tw-flex tw-items-center tw-gap-1 tw-shadow-lg">
+                                <Tag className="tw-w-3 tw-h-3" />
+                                {course.no_promo_price && getDiscountPercentage(course.no_promo_price, course.price)}% OFF
                               </div>
                             </div>
                           )}
-                          
+
+                          {/* Course Image */}
                           <div className="tw-relative tw-h-48">
                             <img
-                              src={course.imageurl || getDefaultImage()}
+                              src={course.imageUrl || getDefaultImage()}
                               alt={course.title}
                               className="tw-w-full tw-h-full tw-object-cover"
                             />
                             <div className="tw-absolute tw-top-4 tw-right-4">
                               <div className="tw-bg-purple-600 tw-text-white tw-px-3 tw-py-1 tw-rounded-full tw-text-sm tw-font-semibold">
-                                Type {course.type}
+                                {course.classtype === 'online' ? 'Online' : 
+                                 course.classtype === 'utbk' ? 'UTBK' : 
+                                 course.classtype === 'sbmptn' ? 'SBMPTN' : 
+                                 `Kelas ${course.classtype}`}
                               </div>
                             </div>
-                            {hasProgress && (
-                              <div className="tw-absolute tw-bottom-0 tw-left-0 tw-right-0 tw-h-1 tw-bg-gray-200">
-                                <div 
-                                  className={`tw-h-full tw-transition-all tw-duration-500 ${
-                                    isCompleted 
-                                      ? 'tw-bg-gradient-to-r tw-from-green-400 tw-to-green-600'
-                                      : 'tw-bg-gradient-to-r tw-from-blue-400 tw-to-blue-600'
-                                  }`}
-                                  style={{ width: `${userCourseProgress!.overall_progress_percentage}%` }}
-                                ></div>
-                              </div>
-                            )}
                           </div>
                           
                           <div className="tw-p-6 tw-flex tw-flex-col tw-flex-grow">
@@ -876,10 +821,11 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
                               {course.description}
                             </p>
                             
+                            {/* Learning Points */}
                             {course.learning_point && course.learning_point.length > 0 && (
                               <div className="tw-mb-4">
                                 <p className="tw-text-gray-700 tw-font-semibold tw-text-sm tw-mb-2">
-                                  Learning Points:
+                                  Yang akan kamu pelajari:
                                 </p>
                                 <div className="tw-space-y-1">
                                   {course.learning_point.slice(0, 2).map((point, index) => (
@@ -890,13 +836,62 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
                                   ))}
                                   {course.learning_point.length > 2 && (
                                     <p className="tw-text-xs tw-text-gray-500 tw-pl-5">
-                                      +{course.learning_point.length - 2} more points
+                                      +{course.learning_point.length - 2} poin lainnya
                                     </p>
                                   )}
                                 </div>
                               </div>
                             )}
+
+                            {/* Features */}
+                            {course.features && course.features.length > 0 && (
+                              <div className="tw-mb-4">
+                                <div className="tw-flex tw-flex-wrap tw-gap-1">
+                                  {course.features.slice(0, 3).map((feature, index) => (
+                                    <span key={index} className="tw-bg-blue-100 tw-text-blue-800 tw-text-xs tw-px-2 tw-py-1 tw-rounded-full">
+                                      {feature}
+                                    </span>
+                                  ))}
+                                  {course.features.length > 3 && (
+                                    <span className="tw-bg-gray-100 tw-text-gray-600 tw-text-xs tw-px-2 tw-py-1 tw-rounded-full">
+                                      +{course.features.length - 3}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Pricing */}
+                            <div className="tw-mb-4 tw-mt-auto">
+                              <div className="tw-flex tw-items-center tw-justify-between">
+                                <div>
+                                  {course.is_promo && course.no_promo_price ? (
+                                    <div>
+                                      <span className="tw-text-gray-500 tw-text-sm tw-line-through">
+                                        {formatPrice(course.no_promo_price)}
+                                      </span>
+                                      <div className="tw-text-2xl tw-font-bold tw-text-green-600">
+                                        {formatPrice(course.price)}
+                                      </div>
+                                      {course.promo_description && (
+                                        <p className="tw-text-xs tw-text-red-600 tw-font-medium">
+                                          {course.promo_description}
+                                        </p>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="tw-text-2xl tw-font-bold tw-text-purple-600">
+                                      {formatPrice(course.price)}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="tw-text-sm tw-text-gray-500">
+                                  Stok: {course.stock > 999 ? '∞' : course.stock}
+                                </div>
+                              </div>
+                            </div>
                             
+                            {/* Course Info */}
                             <div className="tw-flex tw-items-center tw-justify-between tw-mb-4 tw-text-sm tw-text-gray-500">
                               <div className="tw-flex tw-items-center tw-gap-2">
                                 <Calendar className="tw-w-4 tw-h-4" />
@@ -904,47 +899,58 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
                               </div>
                               <div className="tw-flex tw-items-center tw-gap-2">
                                 <User className="tw-w-4 tw-h-4" />
-                                <span>ID: {course.create_user_id}</span>
+                                <span>{course.creator_name || 'Instructor'}</span>
                               </div>
                             </div>
                             
+                            {/* Action Button */}
                             <div className="tw-mt-auto">
-                              <button 
-                                onClick={() => {
-                                  if (isCompleted) {
-                                    handleReviewCourse(course.course_string);
-                                  } else {
-                                    handleStartLearning(course.course_string);
-                                  }
-                                }}
-                                className={`tw-w-full tw-font-bold tw-py-3 tw-px-4 tw-rounded-xl tw-border-0 tw-transition-all tw-duration-300 tw-shadow-md tw-text-white hover:tw-shadow-lg hover:tw-scale-105 ${
-                                  isCompleted
-                                    ? 'tw-bg-gradient-to-r tw-from-green-500 tw-to-emerald-600'
-                                    : hasProgress 
-                                      ? 'tw-bg-gradient-to-r tw-from-blue-500 tw-to-cyan-600' 
-                                      : 'tw-bg-gradient-to-r tw-from-purple-500 tw-to-violet-600'
-                                }`}
-                              >
-                                <div className="tw-flex tw-items-center tw-justify-center tw-gap-2">
-                                  {isCompleted ? (
-                                    <>
-                                      <RotateCcw className="tw-w-5 tw-h-5" />
-                                      Review
-                                    </>
-                                  ) : hasProgress ? (
-                                    <>
-                                      <Play className="tw-w-5 tw-h-5" />
-                                      Lanjutkan Belajar
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Play className="tw-w-5 tw-h-5" />
-                                      Mulai Belajar
-                                    </>
-                                  )}
-                                  <ChevronRight className="tw-w-4 tw-h-4" />
-                                </div>
-                              </button>
+                              {!isAuthenticated ? (
+                                <button 
+                                  onClick={handleLogin}
+                                  className="tw-w-full tw-font-bold tw-py-3 tw-px-4 tw-rounded-xl tw-border-0 tw-transition-all tw-duration-300 tw-shadow-md tw-text-white hover:tw-shadow-lg hover:tw-scale-105 tw-bg-gradient-to-r tw-from-blue-500 tw-to-cyan-600"
+                                >
+                                  <div className="tw-flex tw-items-center tw-justify-center tw-gap-2">
+                                    <LogIn className="tw-w-5 tw-h-5" />
+                                    Login untuk Membeli
+                                  </div>
+                                </button>
+                              ) : isPurchased ? (
+                                <button 
+                                  onClick={() => handleStartLearning(course.course_string)}
+                                  className="tw-w-full tw-font-bold tw-py-3 tw-px-4 tw-rounded-xl tw-border-0 tw-transition-all tw-duration-300 tw-shadow-md tw-text-white hover:tw-shadow-lg hover:tw-scale-105 tw-bg-gradient-to-r tw-from-green-500 tw-to-emerald-600"
+                                >
+                                  <div className="tw-flex tw-items-center tw-justify-center tw-gap-2">
+                                    <Play className="tw-w-5 tw-h-5" />
+                                    Mulai Belajar
+                                    <ChevronRight className="tw-w-4 tw-h-4" />
+                                  </div>
+                                </button>
+                              ) : (
+                                <button 
+                                  onClick={() => handleAddToCart(course.product_id)}
+                                  disabled={isAddingToCart || course.stock <= 0}
+                                  className="tw-w-full tw-font-bold tw-py-3 tw-px-4 tw-rounded-xl tw-border-0 tw-transition-all tw-duration-300 tw-shadow-md tw-text-white hover:tw-shadow-lg hover:tw-scale-105 tw-bg-gradient-to-r tw-from-purple-500 tw-to-violet-600 disabled:tw-opacity-50 disabled:tw-cursor-not-allowed"
+                                >
+                                  <div className="tw-flex tw-items-center tw-justify-center tw-gap-2">
+                                    {isAddingToCart ? (
+                                      <>
+                                        <div className="tw-animate-spin tw-rounded-full tw-h-4 tw-w-4 tw-border-b-2 tw-border-white"></div>
+                                        Menambahkan...
+                                      </>
+                                    ) : course.stock <= 0 ? (
+                                      <>
+                                        <div className="tw-text-red-400">Stok Habis</div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <ShoppingCart className="tw-w-5 tw-h-5" />
+                                        Tambah ke Keranjang
+                                      </>
+                                    )}
+                                  </div>
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -952,63 +958,116 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
                     })}
                   </div>
                 ) : (
+                  // List View - Similar structure but horizontal layout
                   <div className="tw-space-y-6">
                     {displayedCourses.map((course) => {
-                      const userCourseProgress = userProgress.find(p => p.id === course.id);
-                      const hasProgress = userCourseProgress && userCourseProgress.overall_progress_percentage > 0;
-                      const isCompleted = userCourseProgress && userCourseProgress.overall_progress_percentage >= 100;
+                      const isPurchased = purchasedCourses.has(course.id);
+                      const isAddingToCart = cartLoading[course.product_id];
                       
                       return (
                         <div
                           key={course.id}
                           className="tw-bg-white tw-rounded-2xl tw-shadow-xl tw-transition-all tw-duration-300 tw-hover:shadow-2xl tw-overflow-hidden tw-relative"
                         >
-                          {hasProgress && (
+                          {/* Promo Badge */}
+                          {course.is_promo && (
                             <div className="tw-absolute tw-top-4 tw-left-4 tw-z-10">
-                              <div className={`tw-text-white tw-px-3 tw-py-1 tw-rounded-full tw-text-sm tw-font-bold tw-flex tw-items-center tw-gap-2 ${
-                                isCompleted ? 'tw-bg-green-500' : 'tw-bg-blue-500'
-                              }`}>
-                                {isCompleted ? (
-                                  <Trophy className="tw-w-4 tw-h-4" />
-                                ) : (
-                                  <Zap className="tw-w-4 tw-h-4" />
-                                )}
-                                Progress: {Math.round(userCourseProgress!.overall_progress_percentage)}%
+                              <div className="tw-bg-gradient-to-r tw-from-red-500 tw-to-pink-600 tw-text-white tw-px-3 tw-py-1 tw-rounded-full tw-text-sm tw-font-bold tw-flex tw-items-center tw-gap-2">
+                                <Tag className="tw-w-4 tw-h-4" />
+                                {course.no_promo_price && getDiscountPercentage(course.no_promo_price, course.price)}% OFF
                               </div>
                             </div>
                           )}
                           
                           <div className="tw-flex tw-flex-col md:tw-flex-row">
-                            <div className="tw-relative tw-w-full md:tw-w-64 tw-h-48 md:tw-h-auto">
+                            <div className="tw-relative tw-w-full md:tw-w-80 tw-h-48 md:tw-h-auto">
                               <img
-                                src={course.imageurl || getDefaultImage()}
+                                src={course.imageUrl || getDefaultImage()}
                                 alt={course.title}
                                 className="tw-w-full tw-h-full tw-object-cover"
                               />
                               <div className="tw-absolute tw-top-4 tw-right-4">
                                 <div className="tw-bg-purple-600 tw-text-white tw-px-3 tw-py-1 tw-rounded-full tw-text-sm tw-font-semibold">
-                                  Type {course.type}
+                                  {course.classtype === 'online' ? 'Online' : 
+                                   course.classtype === 'utbk' ? 'UTBK' : 
+                                   course.classtype === 'sbmptn' ? 'SBMPTN' : 
+                                   `Kelas ${course.classtype}`}
                                 </div>
                               </div>
-                              {hasProgress && (
-                                <div className="tw-absolute tw-bottom-0 tw-left-0 tw-right-0 tw-h-2 tw-bg-gray-200">
-                                  <div 
-                                    className={`tw-h-full tw-transition-all tw-duration-500 ${
-                                      isCompleted 
-                                        ? 'tw-bg-gradient-to-r tw-from-green-400 tw-to-green-600'
-                                        : 'tw-bg-gradient-to-r tw-from-blue-400 tw-to-blue-600'
-                                    }`}
-                                    style={{ width: `${userCourseProgress!.overall_progress_percentage}%` }}
-                                  ></div>
-                                </div>
-                              )}
                             </div>
                             
-                            <div className="tw-flex-1 tw-p-6">
+                            <div className="tw-flex-1 tw-p-6 tw-flex tw-flex-col">
                               <div className="tw-flex tw-justify-between tw-items-start tw-mb-4">
-                                <h5 className="tw-font-bold tw-text-xl tw-text-purple-600">
-                                  {course.title}
-                                </h5>
+                                <div className="tw-flex-1">
+                                  <h5 className="tw-font-bold tw-text-2xl tw-text-purple-600 tw-mb-2">
+                                    {course.title}
+                                  </h5>
+                                  <p className="tw-text-gray-600 tw-mb-4 tw-leading-relaxed">
+                                    {course.description}
+                                  </p>
+                                </div>
+                                
+                                <div className="tw-text-right tw-ml-6">
+                                  {course.is_promo && course.no_promo_price ? (
+                                    <div>
+                                      <span className="tw-text-gray-500 tw-text-lg tw-line-through">
+                                        {formatPrice(course.no_promo_price)}
+                                      </span>
+                                      <div className="tw-text-3xl tw-font-bold tw-text-green-600">
+                                        {formatPrice(course.price)}
+                                      </div>
+                                      {course.promo_description && (
+                                        <p className="tw-text-sm tw-text-red-600 tw-font-medium">
+                                          {course.promo_description}
+                                        </p>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="tw-text-3xl tw-font-bold tw-text-purple-600">
+                                      {formatPrice(course.price)}
+                                    </div>
+                                  )}
+                                  <p className="tw-text-sm tw-text-gray-500 tw-mt-1">
+                                    Stok: {course.stock > 999 ? '∞' : course.stock}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              {/* Features and Learning Points */}
+                              <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4 tw-mb-4">
+                                {course.learning_point && course.learning_point.length > 0 && (
+                                  <div>
+                                    <p className="tw-text-gray-700 tw-font-semibold tw-mb-2">
+                                      Yang akan kamu pelajari:
+                                    </p>
+                                    <div className="tw-space-y-2">
+                                      {course.learning_point.map((point, index) => (
+                                        <div key={index} className="tw-flex tw-items-start tw-gap-2 tw-text-sm tw-text-gray-600">
+                                          <Star className="tw-w-3 tw-h-3 tw-text-yellow-500 tw-mt-1 tw-flex-shrink-0" />
+                                          <span>{point}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {course.features && course.features.length > 0 && (
+                                  <div>
+                                    <p className="tw-text-gray-700 tw-font-semibold tw-mb-2">
+                                      Fitur produk:
+                                    </p>
+                                    <div className="tw-flex tw-flex-wrap tw-gap-2">
+                                      {course.features.map((feature, index) => (
+                                        <span key={index} className="tw-bg-blue-100 tw-text-blue-800 tw-text-sm tw-px-3 tw-py-1 tw-rounded-full">
+                                          {feature}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="tw-flex tw-justify-between tw-items-center tw-mt-auto">
                                 <div className="tw-flex tw-items-center tw-gap-4 tw-text-sm tw-text-gray-500">
                                   <div className="tw-flex tw-items-center tw-gap-1">
                                     <Calendar className="tw-w-4 tw-h-4" />
@@ -1016,68 +1075,58 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
                                   </div>
                                   <div className="tw-flex tw-items-center tw-gap-1">
                                     <User className="tw-w-4 tw-h-4" />
-                                    <span>ID: {course.create_user_id}</span>
+                                    <span>{course.creator_name || 'Instructor'}</span>
                                   </div>
                                 </div>
-                              </div>
-                              
-                              <p className="tw-text-gray-600 tw-mb-4 tw-leading-relaxed">
-                                {course.description}
-                              </p>
-                              
-                              {course.learning_point && course.learning_point.length > 0 && (
-                                <div className="tw-mb-4">
-                                  <p className="tw-text-gray-700 tw-font-semibold tw-mb-2">
-                                    Learning Points:
-                                  </p>
-                                  <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-2">
-                                    {course.learning_point.map((point, index) => (
-                                      <div key={index} className="tw-flex tw-items-start tw-gap-2 tw-text-sm tw-text-gray-600">
-                                        <Star className="tw-w-3 tw-h-3 tw-text-yellow-500 tw-mt-1 tw-flex-shrink-0" />
-                                        <span>{point}</span>
+                                
+                                <div className="tw-ml-4">
+                                  {!isAuthenticated ? (
+                                    <button 
+                                      onClick={handleLogin}
+                                      className="tw-font-bold tw-py-3 tw-px-6 tw-rounded-xl tw-border-0 tw-transition-all tw-duration-300 tw-shadow-md tw-text-white hover:tw-shadow-lg hover:tw-scale-105 tw-bg-gradient-to-r tw-from-blue-500 tw-to-cyan-600"
+                                    >
+                                      <div className="tw-flex tw-items-center tw-gap-2">
+                                        <LogIn className="tw-w-5 tw-h-5" />
+                                        Login untuk Membeli
                                       </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                              
-                              <div className="tw-flex tw-justify-end">
-                                <button 
-                                  onClick={() => {
-                                    if (isCompleted) {
-                                      handleReviewCourse(course.course_string);
-                                    } else {
-                                      handleStartLearning(course.course_string);
-                                    }
-                                  }}
-                                  className={`tw-font-bold tw-py-3 tw-px-6 tw-rounded-xl tw-border-0 tw-transition-all tw-duration-300 tw-shadow-md tw-text-white hover:tw-shadow-lg hover:tw-scale-105 ${
-                                    isCompleted
-                                      ? 'tw-bg-gradient-to-r tw-from-green-500 tw-to-emerald-600'
-                                      : hasProgress 
-                                        ? 'tw-bg-gradient-to-r tw-from-blue-500 tw-to-cyan-600' 
-                                        : 'tw-bg-gradient-to-r tw-from-purple-500 tw-to-violet-600'
-                                  }`}
-                                >
-                                  <div className="tw-flex tw-items-center tw-gap-2">
-                                    {isCompleted ? (
-                                      <>
-                                        <RotateCcw className="tw-w-5 tw-h-5" />
-                                        Review
-                                      </>
-                                    ) : hasProgress ? (
-                                      <>
-                                        <Play className="tw-w-5 tw-h-5" />
-                                        Lanjutkan Belajar
-                                      </>
-                                    ) : (
-                                      <>
+                                    </button>
+                                  ) : isPurchased ? (
+                                    <button 
+                                      onClick={() => handleStartLearning(course.course_string)}
+                                      className="tw-font-bold tw-py-3 tw-px-6 tw-rounded-xl tw-border-0 tw-transition-all tw-duration-300 tw-shadow-md tw-text-white hover:tw-shadow-lg hover:tw-scale-105 tw-bg-gradient-to-r tw-from-green-500 tw-to-emerald-600"
+                                    >
+                                      <div className="tw-flex tw-items-center tw-gap-2">
                                         <Play className="tw-w-5 tw-h-5" />
                                         Mulai Belajar
-                                      </>
-                                    )}
-                                    <ChevronRight className="tw-w-4 tw-h-4" />
-                                  </div>
-                                </button>
+                                        <ChevronRight className="tw-w-4 tw-h-4" />
+                                      </div>
+                                    </button>
+                                  ) : (
+                                    <button 
+                                      onClick={() => handleAddToCart(course.product_id)}
+                                      disabled={isAddingToCart || course.stock <= 0}
+                                      className="tw-font-bold tw-py-3 tw-px-6 tw-rounded-xl tw-border-0 tw-transition-all tw-duration-300 tw-shadow-md tw-text-white hover:tw-shadow-lg hover:tw-scale-105 tw-bg-gradient-to-r tw-from-purple-500 tw-to-violet-600 disabled:tw-opacity-50 disabled:tw-cursor-not-allowed"
+                                    >
+                                      <div className="tw-flex tw-items-center tw-gap-2">
+                                        {isAddingToCart ? (
+                                          <>
+                                            <div className="tw-animate-spin tw-rounded-full tw-h-4 tw-w-4 tw-border-b-2 tw-border-white"></div>
+                                            Menambahkan...
+                                          </>
+                                        ) : course.stock <= 0 ? (
+                                          <>
+                                            <div className="tw-text-red-400">Stok Habis</div>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <ShoppingCart className="tw-w-5 tw-h-5" />
+                                            Tambah ke Keranjang
+                                          </>
+                                        )}
+                                      </div>
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1113,7 +1162,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
                 {filteredCourses.length === 0 && (
                   <div className="tw-text-center tw-py-12">
                     <div className="tw-bg-white/10 tw-backdrop-blur-sm tw-rounded-2xl tw-p-8 tw-border tw-border-white/20">
-                      <BookOpen className="tw-w-16 tw-h-16 tw-text-white/60 tw-mx-auto tw-mb-4" />
+                      <ShoppingCart className="tw-w-16 tw-h-16 tw-text-white/60 tw-mx-auto tw-mb-4" />
                       <h3 className="tw-text-xl tw-font-bold tw-text-white tw-mb-2">
                         Tidak ada kursus ditemukan
                       </h3>
@@ -1127,7 +1176,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
             )}
           </div>
 
-          {/* Enhanced Learning Tips */}
+          {/* Enhanced Learning Tips - Same as before */}
           <div className="tw-max-w-6xl tw-mx-auto tw-mt-12 tw-mb-12">
             <div className="tw-bg-gradient-to-br tw-from-indigo-600/20 tw-to-purple-700/20 tw-backdrop-blur-sm tw-rounded-3xl tw-p-8 tw-border tw-border-white/30 tw-shadow-2xl">
               <div className="tw-text-center tw-mb-8">
@@ -1224,11 +1273,9 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
           {/* Enhanced Call to Action */}
           <div className="tw-max-w-6xl tw-mx-auto tw-mt-12">
             <div className="tw-relative tw-overflow-hidden tw-bg-gradient-to-br tw-from-purple-600 tw-via-violet-600 tw-to-indigo-700 tw-rounded-3xl tw-p-8 tw-text-center tw-shadow-2xl">
-              {/* Animated Background Elements */}
               <div className="tw-absolute tw-top-0 tw-left-0 tw-w-full tw-h-full tw-overflow-hidden">
                 <div className="tw-absolute tw-top-10 tw-right-10 tw-w-20 tw-h-20 tw-bg-yellow-300/20 tw-rounded-full tw-blur-xl tw-animate-pulse tw-delay-1000"></div>
                 <div className="tw-absolute tw-bottom-10 tw-left-10 tw-w-32 tw-h-32 tw-bg-pink-300/20 tw-rounded-full tw-blur-2xl tw-animate-pulse tw-delay-500"></div>
-                <div className="tw-absolute tw-top-1/2 tw-left-1/2 tw-w-16 tw-h-16 tw-bg-blue-300/20 tw-rounded-full tw-blur-lg tw-animate-pulse"></div>
               </div>
 
               <div className="tw-relative tw-z-10">
@@ -1273,40 +1320,12 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="tw-flex tw-flex-col sm:tw-flex-row tw-gap-4 tw-justify-center tw-items-center">
-                  <button 
-                    onClick={() => router.push('/courses')}
-                    className="tw-bg-white tw-text-purple-600 tw-font-bold tw-py-4 tw-px-8 tw-rounded-xl tw-shadow-lg tw-transition-all tw-duration-300 hover:tw-shadow-xl hover:tw-scale-105 tw-group"
-                  >
-                    <div className="tw-flex tw-items-center tw-justify-center tw-gap-2">
-                      <Play className="tw-w-5 tw-h-5 tw-group-hover:tw-scale-110 tw-transition-transform" />
-                      Mulai Belajar Gratis
-                      <ChevronRight className="tw-w-4 tw-h-4 tw-group-hover:tw-translate-x-1 tw-transition-transform" />
-                    </div>
-                  </button>
-                  
-                  <button 
-                    onClick={() => router.push('/about')}
-                    className="tw-bg-white/20 tw-text-white tw-font-bold tw-py-4 tw-px-8 tw-rounded-xl tw-border tw-border-white/30 tw-backdrop-blur-sm tw-transition-all tw-duration-300 hover:tw-bg-white/30 tw-group"
-                  >
-                    <div className="tw-flex tw-items-center tw-justify-center tw-gap-2">
-                      <Eye className="tw-w-5 tw-h-5 tw-group-hover:tw-scale-110 tw-transition-transform" />
-                      Pelajari Lebih Lanjut
-                    </div>
-                  </button>
-                </div>
-
                 {/* Stats */}
-                <div className="tw-mt-8 tw-pt-8 tw-border-t tw-border-white/20">
+                <div className="tw-pt-8 tw-border-t tw-border-white/20">
                   <div className="tw-grid tw-grid-cols-2 md:tw-grid-cols-4 tw-gap-6 tw-text-center">
                     <div>
-                      <div className="tw-text-2xl md:tw-text-3xl tw-font-bold tw-text-yellow-300 tw-mb-1">10,000+</div>
-                      <div className="tw-text-white/80 tw-text-sm">Pelajar Aktif</div>
-                    </div>
-                    <div>
-                      <div className="tw-text-2xl md:tw-text-3xl tw-font-bold tw-text-yellow-300 tw-mb-1">500+</div>
-                      <div className="tw-text-white/80 tw-text-sm">Kursus Tersedia</div>
+                      <div className="tw-text-2xl md:tw-text-3xl tw-font-bold tw-text-yellow-300 tw-mb-1">{liveCourses.length}+</div>
+                      <div className="tw-text-white/80 tw-text-sm">Kursus Live</div>
                     </div>
                     <div>
                       <div className="tw-text-2xl md:tw-text-3xl tw-font-bold tw-text-yellow-300 tw-mb-1">50+</div>
@@ -1315,6 +1334,10 @@ const CoursePage: React.FC<CoursePageProps> = ({ courses: initialCourses, initia
                     <div>
                       <div className="tw-text-2xl md:tw-text-3xl tw-font-bold tw-text-yellow-300 tw-mb-1">95%</div>
                       <div className="tw-text-white/80 tw-text-sm">Tingkat Kepuasan</div>
+                    </div>
+                    <div>
+                      <div className="tw-text-2xl md:tw-text-3xl tw-font-bold tw-text-yellow-300 tw-mb-1">24/7</div>
+                      <div className="tw-text-white/80 tw-text-sm">Support</div>
                     </div>
                   </div>
                 </div>
@@ -1354,19 +1377,8 @@ export const getServerSideProps: GetServerSideProps = async () => {
 
   const randomQuote = inspirationalQuotes[Math.floor(Math.random() * inspirationalQuotes.length)];
 
-  // Initial fetch for SSR
-  let courses: Course[] = [];
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`);
-    courses = await response.json();
-  } catch (error) {
-    console.error('Error fetching courses in SSR:', error);
-    courses = [];
-  }
-
   return {
     props: {
-      courses,
       initialQuote: randomQuote,
     },
   };

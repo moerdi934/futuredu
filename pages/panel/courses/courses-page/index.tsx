@@ -1,7 +1,6 @@
-// pages/panel/courses/courses-page/index.tsx - Updated with new modals and functionality
-
+// pages/panel/courses/courses-page/index.tsx - Updated with Go Live functionality
 import React, { useState } from 'react';
-import { FaPlus, FaEye, FaEdit, FaTrash, FaGraduationCap, FaBook, FaCheckCircle, FaUndo, FaCheck, FaTimes, FaClock, FaUser } from 'react-icons/fa';
+import { FaPlus, FaEye, FaEdit, FaTrash, FaGraduationCap, FaBook, FaCheckCircle, FaUndo, FaCheck, FaTimes, FaClock, FaUser, FaRocket } from 'react-icons/fa';
 import { BookOpen, Users, Calendar, Settings, FileText, Award } from 'lucide-react';
 import MainLayout from '../../../../components/layout/DashboardLayout';
 import ReportLayout from '../../../../components/report/ReportLayout';
@@ -11,6 +10,7 @@ import AddCourseModal from './AddCourseModal';
 import EditCourseModal from './EditCourseModal';
 import DetailCourseModal from './DetailCourseModal';
 import ApprovalModal from './ApprovalModal';
+import GoLiveModal from './GoLiveModal';
 
 const CoursesPage: React.FC = () => {
   const { id: currentUserId, role: userRole } = useAuth();
@@ -20,6 +20,7 @@ const CoursesPage: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showGoLiveModal, setShowGoLiveModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [selectedCourse, setSelectedCourse] = useState(null);
   
@@ -118,6 +119,31 @@ const CoursesPage: React.FC = () => {
     );
   };
 
+  // Format Go Live Status
+  const formatGoLiveStatus = (value: any, row: any) => {
+    // Check if course is live by looking for product_courses relationship
+    // This would need to be added to the API response
+    const isLive = row.is_live || false; // This should come from API
+    
+    return (
+      <div className="tw-text-center">
+        <span className={`tw-px-3 tw-py-2 tw-rounded-full tw-text-xs tw-font-medium tw-flex tw-items-center tw-justify-center tw-gap-2 ${
+          isLive 
+            ? 'tw-bg-blue-100 tw-text-blue-800' 
+            : 'tw-bg-gray-100 tw-text-gray-600'
+        }`}>
+          <FaRocket size={12} />
+          {isLive ? 'Live' : 'Not Live'}
+        </span>
+        {isLive && row.live_since && (
+          <div className="tw-text-xs tw-text-gray-500 tw-mt-1">
+            sejak {new Date(row.live_since).toLocaleDateString('id-ID')}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const formatCreator = (value: string) => {
     return (
       <div className="tw-flex tw-items-center tw-gap-2">
@@ -173,24 +199,35 @@ const CoursesPage: React.FC = () => {
     return userRole === 'admin';
   };
 
+  // Check if course can go live
+  const canGoLive = (row: any) => {
+    return userRole === 'admin' && 
+           row.approval_status === 'approved' && 
+           !row.is_deleted &&
+           !row.is_live; // Not already live
+  };
+
   // Handler functions
   const handleAddSave = (courseData: any) => {
     console.log('Course creation initiated:', courseData);
-    // Call refresh function to update table data only
     refreshFunction?.();
   };
 
   const handleEditSave = (courseData: any) => {
     console.log('Course edit initiated:', courseData);
     setEditingCourse(null);
-    // Call refresh function to update table data only
     refreshFunction?.();
   };
 
   const handleApprovalSave = () => {
     setShowApprovalModal(false);
     setSelectedCourse(null);
-    // Call refresh function to update table data only
+    refreshFunction?.();
+  };
+
+  const handleGoLiveSave = () => {
+    setShowGoLiveModal(false);
+    setSelectedCourse(null);
     refreshFunction?.();
   };
 
@@ -209,12 +246,17 @@ const CoursesPage: React.FC = () => {
     setShowApprovalModal(true);
   };
 
+  const handleGoLive = (row: any) => {
+    setSelectedCourse(row);
+    setShowGoLiveModal(true);
+  };
+
   const handleDelete = async (row: any) => {
     const reason = window.prompt(`Apakah Anda yakin ingin menghapus kursus "${row.title}"?\n\nMasukkan alasan penghapusan (opsional):`);
     
-    if (reason !== null) { // User didn't cancel
+    if (reason !== null) {
       try {
-        const response = await fetch(`/courses/${row.id}`, {
+        const response = await fetch(`/api/courses/${row.id}`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
@@ -242,7 +284,7 @@ const CoursesPage: React.FC = () => {
   const handleRestore = async (row: any) => {
     if (window.confirm(`Apakah Anda yakin ingin mengembalikan kursus "${row.title}"?`)) {
       try {
-        const response = await fetch(`/courses/${row.id}/restore`, {
+        const response = await fetch(`/api/courses/${row.id}/restore`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -277,12 +319,23 @@ const CoursesPage: React.FC = () => {
       onClick: () => handleDetail(row)
     });
 
+    // Go Live button - only for admin on approved courses that are not live yet
+    if (canGoLive(row)) {
+      buttons.push({
+        label: 'Go Live',
+        icon: React.createElement(FaRocket),
+        variant: 'outline-success',
+        size: 'sm',
+        onClick: () => handleGoLive(row)
+      });
+    }
+
     // Approval button - only for admin on pending courses
     if ((row.approval_status === 'need_approve') && canApproveCourse(row)) {
       buttons.push({
         label: 'Setujui',
         icon: React.createElement(FaCheck),
-        variant: 'outline-success',
+        variant: 'outline-primary',
         size: 'sm',
         onClick: () => handleApprove(row)
       });
@@ -329,7 +382,7 @@ const CoursesPage: React.FC = () => {
     return buttons;
   };
 
-  // Definisi kolom-kolom lengkap berdasarkan response API
+  // Updated columns with Go Live status
   const columns: ColumnConfig[] = [
     {
       key: 'id',
@@ -347,6 +400,12 @@ const CoursesPage: React.FC = () => {
       formatter: (value, row) => (
         <div className={`tw-font-semibold tw-leading-tight ${row.is_deleted ? 'tw-text-gray-400 tw-line-through' : 'tw-text-gray-800'}`}>
           {value || '-'}
+          {row.is_live && (
+            <span className="tw-ml-2 tw-inline-flex tw-items-center tw-gap-1 tw-px-2 tw-py-1 tw-bg-blue-100 tw-text-blue-800 tw-text-xs tw-rounded-full">
+              <FaRocket size={10} />
+              LIVE
+            </span>
+          )}
         </div>
       )
     },
@@ -401,6 +460,14 @@ const CoursesPage: React.FC = () => {
       width: 170,
       colGroup: 'status',
       formatter: formatApprovalStatus
+    },
+    {
+      key: 'is_live',
+      label: 'Status Go Live',
+      type: 'string',
+      width: 130,
+      colGroup: 'status',
+      formatter: formatGoLiveStatus
     },
     {
       key: 'is_deleted',
@@ -498,7 +565,7 @@ const CoursesPage: React.FC = () => {
     }
   ];
 
-  // Updated filters with new options
+  // Updated filters
   const filters = [
     {
       key: 'title',
@@ -517,6 +584,16 @@ const CoursesPage: React.FC = () => {
       ]
     },
     {
+      key: 'liveStatus',
+      type: 'select',
+      label: 'Status Go Live',
+      options: [
+        { value: 'all', label: 'Semua' },
+        { value: 'live', label: 'Sudah Live' },
+        { value: 'not_live', label: 'Belum Live' }
+      ]
+    },
+    {
       key: 'includeDeleted',
       type: 'select',
       label: 'Tampilkan Data',
@@ -528,7 +605,7 @@ const CoursesPage: React.FC = () => {
     }
   ];
 
-  // Konfigurasi report dengan sistem batch filtering
+  // Updated report config
   const reportConfig: ReportConfig = {
     title: 'Manajemen Kursus (Courses)',
     columns,
@@ -546,7 +623,7 @@ const CoursesPage: React.FC = () => {
       {
         key: 'status',
         label: 'Status',
-        columns: ['approval_status', 'is_deleted']
+        columns: ['approval_status', 'is_live', 'is_deleted']
       },
       {
         key: 'creator',
@@ -573,6 +650,7 @@ const CoursesPage: React.FC = () => {
       'description', 
       'learning_point',
       'approval_status',
+      'is_live',
       'creator_name',
       'create_date'
     ],
@@ -589,9 +667,9 @@ const CoursesPage: React.FC = () => {
     actionColumn: {
       enabled: true,
       label: 'Actions',
-      width: 300,
+      width: 320,
       sticky: false,
-      buttons: getActionButtons // Dynamic buttons function
+      buttons: getActionButtons
     },
     actionButtons: [
       {
@@ -627,7 +705,7 @@ const CoursesPage: React.FC = () => {
         apiEndpoint="/courses"
         fetchOnMount={true}
         searchMode="server"
-        onRefreshFunctionReady={setRefreshFunction} // Pass callback to get refresh function
+        onRefreshFunctionReady={setRefreshFunction}
       />
     );
   };
@@ -638,14 +716,14 @@ const CoursesPage: React.FC = () => {
         <ReportLayoutWithRefresh />
       </div>
 
-      {/* Modal Buat Kursus - Updated with LearningModal */}
+      {/* Modal Buat Kursus */}
       <AddCourseModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSave={handleAddSave}
       />
 
-      {/* Modal Edit Kursus - Updated with LearningModal */}
+      {/* Modal Edit Kursus */}
       <EditCourseModal
         isOpen={showEditModal}
         onClose={() => {
@@ -678,6 +756,17 @@ const CoursesPage: React.FC = () => {
           onSave={handleApprovalSave}
         />
       )}
+
+      {/* Modal Go Live Kursus */}
+      <GoLiveModal
+        isOpen={showGoLiveModal}
+        onClose={() => {
+          setShowGoLiveModal(false);
+          setSelectedCourse(null);
+        }}
+        onSave={handleGoLiveSave}
+        courseData={selectedCourse}
+      />
     </MainLayout>
   );
 };

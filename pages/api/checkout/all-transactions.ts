@@ -4,9 +4,21 @@ import { runMiddleware, authenticateJWT, AuthenticatedRequest } from '../../../l
 import CheckoutController from '../../../controllers/Checkout.controller';
 
 export default async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   // Only allow GET method
   if (req.method !== 'GET') {
-    return res.status(405).json({ success: false, message: 'Method not allowed' });
+    return res.status(405).json({ 
+      success: false, 
+      message: 'Method not allowed' 
+    });
   }
 
   try {

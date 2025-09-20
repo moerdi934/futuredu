@@ -1,13 +1,13 @@
 // controllers/Checkout.controller.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
-import axios from 'axios';
+import axios from 'axios';  // Import axios directly, no interceptors
 import pool from '../lib/db';
-import SalesOrder, { ItemData } from '../models/salesOrder.model';
-import Invoice from '../models/invoice.model';
+import SalesOrder, { ItemData } from '../models/SalesOrder.model';
+import Invoice from '../models/Invoice.model';
 import { AuthenticatedRequest } from '../lib/middleware/auth';
 
-// Import Cart model (assumed to exist)
+// Import Cart model functions directly
 import * as Cart from '../models/cart.model';
 
 // Types
@@ -94,12 +94,21 @@ export interface UserOrdersResponse {
   };
 }
 
+// Create a server-safe axios instance (no interceptors that access localStorage)
+const serverAxios = axios.create({
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+});
+
 class CheckoutController {
   /* ────────────────────────────────────────────────────────────────────── */
   /* 0. Ping – dibutuhkan Midtrans dashboard                                */
   /* ────────────────────────────────────────────────────────────────────── */
   static pingMidtrans(req: NextApiRequest, res: NextApiResponse): NextApiResponse {
-    return res.status(200).send('OK');               // Midtrans expects HTTP-200
+    return res.status(200).send('OK');
   }
 
   /* ────────────────────────────────────────────────────────────────────── */
@@ -109,12 +118,12 @@ class CheckoutController {
     const client: PoolClient = await pool.connect();
 
     // ─── helper untuk stempel waktu ───────────────────────────────────────
-    const t0 = process.hrtime.bigint();      // titik awal
-    let last = t0;                          // penanda segmen sebelumnya
+    const t0 = process.hrtime.bigint();
+    let last = t0;
     const lap = (label: string) => {
       const now = process.hrtime.bigint();
-      const msSinceStart = Number(now - t0) / 1e6;   // total   sejak awal
-      const msLap = Number(now - last) / 1e6;   // durasi  segmen ini
+      const msSinceStart = Number(now - t0) / 1e6;
+      const msLap = Number(now - last) / 1e6;
       last = now;
       console.log(
         `[LATENCY] ${label.padEnd(15)} | +${msLap.toFixed(2).padStart(7)} ms | `
@@ -125,114 +134,148 @@ class CheckoutController {
     try {
       /* 1-a. Validasi keranjang ▸────────────────────────────────────────── */
       const userId = req.user!.id;
-      console.log(userId);
+      console.log('Processing checkout for user:', userId);
+      
       const { selectedProductIds = [], promoData = {} } = req.body;
-      if (!selectedProductIds.length)
-        return res.status(400).json({ success: false, message: 'No products selected' });
-      const { cart, products } = await Cart.getSelectedItems(userId, selectedProductIds);
-      lap('load-cart');                                    // ←─ LOG #1
+      
+      if (!selectedProductIds || !Array.isArray(selectedProductIds) || selectedProductIds.length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'No products selected for checkout' 
+        });
+      }
+
+      // Get selected items from cart with proper client parameter
+      const { cart, products } = await Cart.getSelectedItems(userId, selectedProductIds, client);
+      
+      if (!cart || !products || products.length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'No valid items found in cart' 
+        });
+      }
+
+      lap('load-cart');
 
       /* 1-b. Mulai transaksi DB ▸────────────────────────────────────────── */
       await client.query('BEGIN');
 
       const orderNumber = await SalesOrder.generateOrderNumber('000', client);
-      lap('gen-orderNo');                                  // ←─ LOG #2
+      lap('gen-orderNo');
 
       const expiredAt = new Date(Date.now() + 24 * 60 * 60 * 1_000);
       const orderId = await SalesOrder.createHeader(
-        { orderNumber, userId, expiredAt }, client);
-      lap('insert-header');                                // ←─ LOG #3
+        { orderNumber, userId, expiredAt }, 
+        client
+      );
+      lap('insert-header');
 
       /* 1-d. Siapkan array item */
       const taxPct = 0.11;
       const promo1 = Number(promoData.amount || 0);
-      const itemsData: ItemData[] = products
-        .filter((p: any) => selectedProductIds.includes(p.product_id))
-        .map((it: any) => {
-          const itemPrice = Number(it.current_price);
-          const totalPrice = itemPrice * it.quantity;
-          const tax = totalPrice * taxPct;
-          const totalAmount = totalPrice - promo1 + tax;
-          return {
-            product_id: it.product_id,
-            quantity: it.quantity,
-            item_price: itemPrice,
-            total_price: totalPrice,
-            tax,
-            total_amount: totalAmount
-          };
-        });
-      lap('prep-items');                                   // ←─ LOG #4
+      
+      const itemsData: ItemData[] = products.map((item: any) => {
+        const itemPrice = Number(item.current_price) || 0;
+        const quantity = Number(item.quantity) || 1;
+        const totalPrice = itemPrice * quantity;
+        const tax = totalPrice * taxPct;
+        const totalAmount = Math.max(0, totalPrice - promo1 + tax);
+        
+        return {
+          product_id: item.product_id,
+          quantity: quantity,
+          item_price: itemPrice,
+          total_price: totalPrice,
+          tax: tax,
+          total_amount: totalAmount
+        };
+      });
+
+      if (itemsData.length === 0) {
+        throw new Error('No valid items to process');
+      }
+
+      lap('prep-items');
 
       const orderItems = await SalesOrder.bulkInsertItems(orderId, itemsData, client);
-      lap('insert-items');                                 // ←─ LOG #5
+      lap('insert-items');
 
-      /* 1-e. Kurangi stok – dengan lock baris (SELECT … FOR UPDATE) */
-      const ids = itemsData.map(i => i.product_id);
-      const qtys = itemsData.map(i => i.quantity);
+      /* 1-e. Kurangi stok – dengan lock baris */
+      const productIds = itemsData.map(i => i.product_id);
+      const quantities = itemsData.map(i => i.quantity);
 
-      // lock semua produk yang mau dikurangi stoknya
+      // Lock products for stock update
       await client.query(`
         SELECT product_id, stock
-          FROM products
-         WHERE product_id = ANY($1::int[])
-         FOR UPDATE
-      `, [ids]);
+        FROM products
+        WHERE product_id = ANY($1::int[])
+        FOR UPDATE
+      `, [productIds]);
       lap('lock-stock');
 
-      // lalu update stok dan cek rowCount
-      const upd = await client.query(`
+      // Update stock with validation
+      const stockUpdate = await client.query(`
         UPDATE products AS p
-           SET stock = p.stock - sub.qty,
-               updated_at = NOW()
-          FROM (
-            SELECT UNNEST($1::int[]) AS product_id,
-                   UNNEST($2::int[]) AS qty
-          ) sub
-         WHERE p.product_id = sub.product_id
-           AND p.stock >= sub.qty
-      `, [ids, qtys]);
+        SET stock = p.stock - sub.qty,
+            updated_at = NOW()
+        FROM (
+          SELECT UNNEST($1::int[]) AS product_id,
+                 UNNEST($2::int[]) AS qty
+        ) sub
+        WHERE p.product_id = sub.product_id
+          AND p.stock >= sub.qty
+        RETURNING p.product_id
+      `, [productIds, quantities]);
 
-      if (upd.rowCount !== ids.length) {
-        throw new Error('Stock tidak mencukupi untuk beberapa item');
+      if (stockUpdate.rowCount !== productIds.length) {
+        throw new Error('Insufficient stock for some items');
       }
-      lap('update-stock');                                // ←─ LOG #6
+      lap('update-stock');
 
       /* 1-f. Bersihkan keranjang ▸───────────────────────────────────────── */
       await client.query(`
-        WITH del AS (
-          DELETE FROM cart_items
-           WHERE cart_id   = $1
-             AND product_id = ANY($2::int[])
-           RETURNING 1        -- optional; hanya agar CTE tidak kosong
-        )
-        UPDATE cart
-           SET updated_at = NOW()
-         WHERE id = $1
+        DELETE FROM cart_items
+        WHERE cart_id = $1
+          AND product_id = ANY($2::int[])
       `, [cart.id, selectedProductIds]);
-      lap('clear-cart');                                  // ←─ LOG #7
+
+      await client.query(`
+        UPDATE cart
+        SET updated_at = NOW()
+        WHERE id = $1
+      `, [cart.id]);
+      lap('clear-cart');
 
       /* 1-g. Midtrans Snap ▸─────────────────────────────────────────────── */
-      const grossAmount = itemsData.reduce((s, r) => s + r.total_amount, 0);
-      const { snapToken, midtransUrl } =
-        await CheckoutController.createMidtransTransaction(orderNumber, grossAmount, userId);
-      lap('midtrans');                                     // ←─ LOG #8
+      const grossAmount = itemsData.reduce((sum, item) => sum + item.total_amount, 0);
+      
+      if (grossAmount <= 0) {
+        throw new Error('Invalid total amount');
+      }
+
+      const { snapToken, midtransUrl } = await CheckoutController.createMidtransTransaction(
+        orderNumber, 
+        grossAmount, 
+        userId
+      );
+      lap('midtrans');
 
       /* 1-h. Simpan token/url ▸──────────────────────────────────────────── */
       await client.query(`
         UPDATE sales_order_header
-           SET midtrans_token = $1,
-               midtrans_url   = $2,
-               updated_at     = NOW()
-         WHERE order_id = $3`, [snapToken, midtransUrl, orderId]);
-      lap('save-token');                                   // ←─ LOG #9
+        SET midtrans_token = $1,
+            midtrans_url = $2,
+            updated_at = NOW()
+        WHERE order_id = $3
+      `, [snapToken, midtransUrl, orderId]);
+      lap('save-token');
 
       await client.query('COMMIT');
-      lap('commit');                                       // ←─ LOG #10
+      lap('commit');
 
       return res.json({
         success: true,
-        message: 'Checkout OK',
+        message: 'Checkout processed successfully',
         data: {
           orderNumber,
           snapToken,
@@ -244,57 +287,106 @@ class CheckoutController {
       });
 
     } catch (err: any) {
-      await client.query('ROLLBACK');
       console.error('Checkout error:', err);
-      return res.status(500).json({ success: false, message: err.message });
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackErr) {
+        console.error('Rollback error:', rollbackErr);
+      }
+      
+      return res.status(500).json({ 
+        success: false, 
+        message: err.message || 'Checkout failed' 
+      });
     } finally {
       client.release();
-      lap('done');        // ←─ LOG total hingga finally
+      lap('done');
     }
   }
 
   /* ────────────────────────────────────────────────────────────────────── */
-  /* 2. Membuat transaksi Midtrans Snap                                    */
+  /* 2. Membuat transaksi Midtrans Snap (Server-Safe)                     */
   /* ────────────────────────────────────────────────────────────────────── */
   static async createMidtransTransaction(
     orderNumber: string, 
     grossAmount: number, 
     userId: string
   ): Promise<{ snapToken: string; midtransUrl: string }> {
-    const serverKey = process.env.MIDTRANS_SERVER_KEY;
-    if (!serverKey) throw new Error('MIDTRANS_SERVER_KEY not set');
-
-    const params: MidtransTransactionParams = {
-      transaction_details: {
-        order_id: orderNumber,
-        gross_amount: Math.round(grossAmount)
-      },
-      credit_card: { secure: true },
-      customer_details: {
-        user_id: userId,
-        email: `${userId}@example.com`,
-        phone: '08111222333'
-      },
-      expiry: {
-        start_time: new Date().toISOString().replace('T', ' ').slice(0, 19) + ' +0000',
-        unit: 'minute',
-        duration: 1440
-      },
-      callbacks: { finish: '' }
-    };
-
-    const { data }: { data: MidtransResponse } = await axios.post(
-      'https://app.sandbox.midtrans.com/snap/v1/transactions',
-      params,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          Authorization: `Basic ${Buffer.from(serverKey).toString('base64')}`
-        }
+    try {
+      const serverKey = process.env.MIDTRANS_SERVER_KEY;
+      if (!serverKey) {
+        throw new Error('MIDTRANS_SERVER_KEY not configured');
       }
-    );
-    return { snapToken: data.token, midtransUrl: data.redirect_url };
+
+      const params: MidtransTransactionParams = {
+        transaction_details: {
+          order_id: orderNumber,
+          gross_amount: Math.round(grossAmount)
+        },
+        credit_card: { 
+          secure: true 
+        },
+        customer_details: {
+          user_id: userId,
+          email: `${userId}@example.com`,
+          phone: '08111222333'
+        },
+        expiry: {
+          start_time: new Date().toISOString().replace('T', ' ').slice(0, 19) + ' +0000',
+          unit: 'minute',
+          duration: 1440
+        },
+        callbacks: { 
+          finish: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' 
+        }
+      };
+
+      console.log('Creating Midtrans transaction with params:', {
+        order_id: params.transaction_details.order_id,
+        gross_amount: params.transaction_details.gross_amount,
+        user_id: params.customer_details.user_id
+      });
+
+      // Use server-safe axios instance
+      const response = await serverAxios.post(
+        'https://app.sandbox.midtrans.com/snap/v1/transactions',
+        params,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Basic ${Buffer.from(serverKey).toString('base64')}`
+          },
+          timeout: 30000
+        }
+      );
+
+      const data: MidtransResponse = response.data;
+      
+      if (!data.token || !data.redirect_url) {
+        throw new Error('Invalid response from Midtrans');
+      }
+
+      console.log('Midtrans transaction created successfully:', {
+        token: data.token.substring(0, 20) + '...',
+        redirect_url: data.redirect_url
+      });
+
+      return { 
+        snapToken: data.token, 
+        midtransUrl: data.redirect_url 
+      };
+    } catch (error: any) {
+      console.error('Midtrans transaction error:', error);
+      if (error.response) {
+        console.error('Midtrans error response:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        });
+      }
+      throw new Error(`Failed to create payment transaction: ${error.message}`);
+    }
   }
 
   /* ────────────────────────────────────────────────────────────────────── */
@@ -305,134 +397,189 @@ class CheckoutController {
     res: NextApiResponse
   ) {
     const client: PoolClient = await pool.connect();
+    
     try {
-      const n: MidtransNotification = req.body;
-      console.log('Midtrans notif:', n);
+      const notification: MidtransNotification = req.body;
+      console.log('Midtrans notification received:', notification);
 
-      // 1. Tentukan payment_status
-      const state = n.transaction_status;
-      const payStatus =
-        state === 'capture'
-          ? (n.fraud_status === 'challenge' ? 'challenge' : 'success')
-          : state === 'settlement' ? 'success'
-            : ['cancel', 'deny', 'expire'].includes(state) ? 'failed'
-              : 'pending';
+      if (!notification.order_id || !notification.transaction_status) {
+        throw new Error('Invalid notification data');
+      }
+
+      // Determine payment status
+      const transactionStatus = notification.transaction_status;
+      const fraudStatus = notification.fraud_status;
+      
+      let paymentStatus: string;
+      
+      if (transactionStatus === 'capture') {
+        paymentStatus = fraudStatus === 'challenge' ? 'challenge' : 'success';
+      } else if (transactionStatus === 'settlement') {
+        paymentStatus = 'success';
+      } else if (['cancel', 'deny', 'expire'].includes(transactionStatus)) {
+        paymentStatus = 'failed';
+      } else {
+        paymentStatus = 'pending';
+      }
 
       await client.query('BEGIN');
 
-      // 2. Update header → ambil order_id
-      const upd = await client.query(
+      // Update order status
+      const orderUpdate = await client.query(
         `UPDATE sales_order_header
-            SET payment_status = $1, updated_at = NOW()
-          WHERE order_number = $2
-        RETURNING order_id, user_id`,
-        [payStatus, n.order_id]
+         SET payment_status = $1, updated_at = NOW()
+         WHERE order_number = $2
+         RETURNING order_id, user_id`,
+        [paymentStatus, notification.order_id]
       );
-      if (!upd.rows.length) throw new Error('Order not found');
-      const { order_id: orderId, user_id: userId } = upd.rows[0];
 
-      // 3. Jika gagal → restore stock
-      if (payStatus === 'failed') {
-        await CheckoutController.restoreStock(n.order_id);
+      if (!orderUpdate.rows.length) {
+        throw new Error(`Order not found: ${notification.order_id}`);
       }
 
-      // 4. Jika sukses → invoice + entitlements permanen
-      if (payStatus === 'success') {
-        // A. Buat invoice jika belum ada
-        const already = await Invoice.existsForOrder(orderId, client);
-        if (!already) {
+      const { order_id: orderId, user_id: userId } = orderUpdate.rows[0];
+
+      // Handle failed payment - restore stock
+      if (paymentStatus === 'failed') {
+        await CheckoutController.restoreStock(notification.order_id, client);
+      }
+
+      // Handle successful payment - create invoice and entitlements
+      if (paymentStatus === 'success') {
+        // Create invoice if not exists
+        const invoiceExists = await Invoice.existsForOrder(orderId, client);
+        
+        if (!invoiceExists) {
           const invoiceNumber = await Invoice.generateInvoiceNumber('000', client);
+          
           await Invoice.create({
             orderId,
             invoiceNumber,
-            midtrans_transaction_id: n.transaction_id,
-            transaction_time: n.transaction_time,
-            settlement_time: n.settlement_time,
-            payment_type: n.payment_type,
-            issuer: n.issuer,
-            amount: Number(n.gross_amount),
-            fraud_status: n.fraud_status,
-            currency: n.currency,
-            acquirer: n.acquirer
+            midtrans_transaction_id: notification.transaction_id,
+            transaction_time: notification.transaction_time,
+            settlement_time: notification.settlement_time,
+            payment_type: notification.payment_type,
+            issuer: notification.issuer,
+            amount: Number(notification.gross_amount),
+            fraud_status: notification.fraud_status,
+            currency: notification.currency,
+            acquirer: notification.acquirer
           }, client);
 
-          // B. Ambil product_id dari order items
-          const items = await client.query(
-            `SELECT product_id
-               FROM sales_order_item
-              WHERE order_id = $1`,
-            [orderId]
-          );
-          const productIds = items.rows.map((r: any) => r.product_id);
-
-          if (productIds.length) {
-            // 1) Course entitlements (permanen)
-            const courses = await client.query(
-              `SELECT DISTINCT course_id
-                 FROM product_courses
-                WHERE product_id = ANY($1::int[])`,
-              [productIds]
-            );
-            for (const { course_id } of courses.rows) {
-              await client.query(
-                `INSERT INTO course_entitlements
-                   (user_id, course_id, granted_at, expires_at)
-                 VALUES ($1, $2, NOW(), NULL)
-                 ON CONFLICT (user_id, course_id)
-                 DO UPDATE
-                   SET granted_at = EXCLUDED.granted_at,
-                       expires_at = NULL`,
-                [userId, course_id]
-              );
-            }
-
-            // 2) Exam schedule entitlements (permanen)
-            const exams = await client.query(
-              `SELECT DISTINCT exam_schedule_id
-                 FROM product_exam_schedules
-                WHERE product_id = ANY($1::int[])`,
-              [productIds]
-            );
-            for (const { exam_schedule_id } of exams.rows) {
-              await client.query(
-                `INSERT INTO exam_schedule_entitlements
-                   (user_id, exam_schedule_id, granted_at, expires_at)
-                 VALUES ($1, $2, NOW(), NULL)
-                 ON CONFLICT (user_id, exam_schedule_id)
-                 DO UPDATE
-                   SET granted_at = EXCLUDED.granted_at,
-                       expires_at = NULL`,
-                [userId, exam_schedule_id]
-              );
-            }
-          }
+          // Grant entitlements
+          await CheckoutController.grantEntitlements(orderId, userId, client);
         }
       }
 
       await client.query('COMMIT');
-      return res.json({ success: true, message: 'Callback processed' });
-    } catch (err: any) {
-      await client.query('ROLLBACK');
-      console.error('Callback error:', err);
-      return res.status(500).json({ success: false, message: err.message });
+      
+      return res.json({ 
+        success: true, 
+        message: 'Notification processed successfully' 
+      });
+
+    } catch (error: any) {
+      console.error('Callback processing error:', error);
+      
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackErr) {
+        console.error('Rollback error:', rollbackErr);
+      }
+      
+      return res.status(500).json({ 
+        success: false, 
+        message: error.message || 'Callback processing failed' 
+      });
     } finally {
       client.release();
     }
   }
 
   /* ────────────────────────────────────────────────────────────────────── */
-  /* Helper: kembalikan stok bila gagal                                    */
+  /* Helper: Grant entitlements for successful payment                     */
   /* ────────────────────────────────────────────────────────────────────── */
-  static async restoreStock(orderNumber: string) {
-    const items = await SalesOrder.getItemsByOrderNumber(orderNumber);
-    for (const it of items) {
-      await pool.query(
-        `UPDATE products
-            SET stock = stock + $1,
-                updated_at = NOW()
-          WHERE product_id = $2`,
-        [it.quantity, it.product_id]
+  static async grantEntitlements(orderId: number, userId: string, client: PoolClient) {
+    try {
+      // Get product IDs from order items
+      const orderItems = await client.query(
+        `SELECT product_id FROM sales_order_item WHERE order_id = $1`,
+        [orderId]
       );
+
+      if (orderItems.rows.length === 0) {
+        return;
+      }
+
+      const productIds = orderItems.rows.map((row: any) => row.product_id);
+
+      // Grant course entitlements
+      const courses = await client.query(
+        `SELECT DISTINCT course_id
+         FROM product_courses
+         WHERE product_id = ANY($1::int[])`,
+        [productIds]
+      );
+
+      for (const course of courses.rows) {
+        await client.query(
+          `INSERT INTO course_entitlements
+           (user_id, course_id, granted_at, expires_at)
+           VALUES ($1, $2, NOW(), NULL)
+           ON CONFLICT (user_id, course_id)
+           DO UPDATE SET
+             granted_at = EXCLUDED.granted_at,
+             expires_at = NULL`,
+          [userId, course.course_id]
+        );
+      }
+
+      // Grant exam schedule entitlements
+      const exams = await client.query(
+        `SELECT DISTINCT exam_schedule_id
+         FROM product_exam_schedules
+         WHERE product_id = ANY($1::int[])`,
+        [productIds]
+      );
+
+      for (const exam of exams.rows) {
+        await client.query(
+          `INSERT INTO exam_schedule_entitlements
+           (user_id, exam_schedule_id, granted_at, expires_at)
+           VALUES ($1, $2, NOW(), NULL)
+           ON CONFLICT (user_id, exam_schedule_id)
+           DO UPDATE SET
+             granted_at = EXCLUDED.granted_at,
+             expires_at = NULL`,
+          [userId, exam.exam_schedule_id]
+        );
+      }
+
+    } catch (error) {
+      console.error('Error granting entitlements:', error);
+      throw error;
+    }
+  }
+
+  /* ────────────────────────────────────────────────────────────────────── */
+  /* Helper: Restore stock for failed payments                             */
+  /* ────────────────────────────────────────────────────────────────────── */
+  static async restoreStock(orderNumber: string, client: PoolClient = pool) {
+    try {
+      const items = await SalesOrder.getItemsByOrderNumber(orderNumber, client);
+      
+      for (const item of items) {
+        await client.query(
+          `UPDATE products
+           SET stock = stock + $1,
+               updated_at = NOW()
+           WHERE product_id = $2`,
+          [item.quantity, item.product_id]
+        );
+      }
+    } catch (error) {
+      console.error('Error restoring stock:', error);
+      throw error;
     }
   }
 
@@ -447,19 +594,46 @@ class CheckoutController {
       const { orderNumber } = req.query;
       const userId = req.user!.id;
 
-      const summary = await SalesOrder.getOrderSummary(orderNumber as string);
-      if (!summary)
-        return res.status(404).json({ success: false, message: 'Order not found' });
-      if (summary.user_id !== userId)
-        return res.status(403).json({ success: false, message: 'Forbidden' });
+      if (!orderNumber || typeof orderNumber !== 'string') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Order number is required' 
+        });
+      }
 
-      return res.json({ success: true, data: summary });
+      const summary = await SalesOrder.getOrderSummary(orderNumber);
+      
+      if (!summary) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Order not found' 
+        });
+      }
 
-    } catch (err: any) {
-      return res.status(500).json({ success: false, message: err.message });
+      if (summary.user_id !== userId) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Access denied' 
+        });
+      }
+
+      return res.json({ 
+        success: true, 
+        data: summary 
+      });
+
+    } catch (error: any) {
+      console.error('Get order status error:', error);
+      return res.status(500).json({ 
+        success: false, 
+        message: error.message || 'Failed to get order status' 
+      });
     }
   }
 
+  /* ────────────────────────────────────────────────────────────────────── */
+  /* 5. GET /checkout/all-transactions                                     */
+  /* ────────────────────────────────────────────────────────────────────── */
   static async getAllTransactions(
     req: AuthenticatedRequest, 
     res: NextApiResponse
@@ -467,15 +641,22 @@ class CheckoutController {
     try {
       const userId = req.user!.id;
       const transactions = await SalesOrder.getAllByUserId(userId);
-      return res.json({ success: true, data: transactions });
-    } catch (err: any) {
-      console.error('getAllTransactions error:', err);
-      return res.status(500).json({ success: false, message: err.message });
+      
+      return res.json({ 
+        success: true, 
+        data: transactions 
+      });
+    } catch (error: any) {
+      console.error('Get all transactions error:', error);
+      return res.status(500).json({ 
+        success: false, 
+        message: error.message || 'Failed to get transactions' 
+      });
     }
   }
-  
+
   /* ────────────────────────────────────────────────────────────────────── */
-  /* 5. GET /checkout/orders                                               */
+  /* 6. GET /checkout/orders                                               */
   /* ────────────────────────────────────────────────────────────────────── */
   static async getUserOrders(
     req: AuthenticatedRequest, 
@@ -483,28 +664,32 @@ class CheckoutController {
   ) {
     try {
       const userId = req.user!.id;
-      const page = parseInt(req.query.page as string || '1', 10);
-      const limit = parseInt(req.query.limit as string || '10', 10);
+      const page = Math.max(1, parseInt(req.query.page as string || '1', 10));
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string || '10', 10)));
+      const offset = (page - 1) * limit;
 
-      const orders = await SalesOrder.findByUserId(
-        userId, limit, (page - 1) * limit);
+      const orders = await SalesOrder.findByUserId(userId, limit, offset);
 
       return res.json({
         success: true,
         data: {
           orders,
-          pagination: { page, limit, total: orders.length }
+          pagination: { 
+            page, 
+            limit, 
+            total: orders.length 
+          }
         }
       });
 
-    } catch (err: any) {
-      return res.status(500).json({ success: false, message: err.message });
+    } catch (error: any) {
+      console.error('Get user orders error:', error);
+      return res.status(500).json({ 
+        success: false, 
+        message: error.message || 'Failed to get user orders' 
+      });
     }
   }
-
 }
 
-
-
 export default CheckoutController;
-
