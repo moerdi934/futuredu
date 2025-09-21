@@ -3,8 +3,8 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
 import axios from 'axios';  // Import axios directly, no interceptors
 import pool from '../lib/db';
-import SalesOrder, { ItemData } from '../models/SalesOrder.model';
-import Invoice from '../models/Invoice.model';
+import SalesOrder, { ItemData } from '../models/salesOrder.model';
+import Invoice from '../models/invoice.model';
 import { AuthenticatedRequest } from '../lib/middleware/auth';
 import PQueue from 'p-queue';
 
