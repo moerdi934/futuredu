@@ -1,4 +1,4 @@
-// pages/panel/courses/classes-page/StartFinishClassModal.tsx - Updated with atomic operations
+// pages/panel/courses/classes-page/StartFinishClassModal.tsx - Fixed with SSR safety
 
 import React, { useState, useEffect } from 'react';
 import { Form, Alert, Card, ButtonGroup, Button, Spinner } from 'react-bootstrap';
@@ -34,7 +34,7 @@ interface ClassData {
 interface StartFinishClassModalProps {
   show: boolean;
   handleClose: () => void;
-  classData: ClassData;
+  classData?: ClassData; // Made optional to handle undefined during SSR
   onStatusChange?: () => void;
 }
 
@@ -52,10 +52,32 @@ interface ApiResponse<T> {
   data?: T;
 }
 
+// Default class data for SSR safety
+const defaultClassData: ClassData = {
+  id: 0,
+  event_id: 0,
+  starter_user_id: 0,
+  name: '',
+  course_name: '',
+  course_id: 0,
+  teacher_id: null,
+  description: '',
+  teacher_name: '',
+  student_list_ids: [],
+  student_list_names: [],
+  date: '',
+  start_time: '',
+  end_time: '',
+  status: '',
+  class_mode: 'offline',
+  meeting_url: '',
+  approval_status: ''
+};
+
 const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
   show,
   handleClose,
-  classData,
+  classData = defaultClassData, // Provide default value
   onStatusChange,
 }) => {
   const { id: currentUserId, role: userRole } = useAuth();
@@ -71,9 +93,13 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
   const [errorStart, setErrorStart] = useState<string | null>(null);
   const [errorFinish, setErrorFinish] = useState<string | null>(null);
 
-  // Class mode states
-  const [classMode, setClassMode] = useState<'online' | 'offline'>(classData.class_mode as 'online' | 'offline' || 'offline');
-  const [meetingUrl, setMeetingUrl] = useState(classData.meeting_url || '');
+  // Class mode states - Safe access with fallback
+  const [classMode, setClassMode] = useState<'online' | 'offline'>(() => {
+    if (!classData || !classData.class_mode) return 'offline';
+    return classData.class_mode as 'online' | 'offline';
+  });
+  
+  const [meetingUrl, setMeetingUrl] = useState(() => classData?.meeting_url || '');
 
   // QR Data states
   const [qrData, setQrData] = useState<QRResponse | null>(null);
@@ -84,36 +110,39 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
+  // Safe destructuring with fallbacks
   const {
-    id,
-    event_id,
-    name,
-    course_name,
-    course_id,
-    teacher_id,
-    teacher_name,
-    student_list_ids,
-    student_list_names,
-    description,
-    date,
-    start_time,
-    end_time,
+    id = 0,
+    event_id = 0,
+    name = '',
+    course_name = '',
+    course_id = 0,
+    teacher_id = null,
+    teacher_name = '',
+    student_list_ids = [],
+    student_list_names = [],
+    description = '',
+    date = '',
+    start_time = '',
+    end_time = '',
     real_start_datetime,
     real_end_datetime,
-    status,
-    approval_status,
-  } = classData;
+    status = '',
+    approval_status = '',
+  } = classData || defaultClassData;
 
-  // Class status determination
+  // Class status determination - Safe access
   const isStarted = status === 'Started';
   const isFinished = status === 'Finished';
   const isNotApproved = approval_status === 'need_approve' || approval_status === 'rejected';
   const isActuallyFinished = isFinished || (real_end_datetime && new Date(real_end_datetime) < new Date());
   const isFormLocked = isStarted || classStartedInSession || isActuallyFinished;
 
-  // Check if user can start class
+  // Check if user can start class - Safe access
   const canStartClass = () => {
-    return currentUserId && (
+    if (!currentUserId || !classData) return false;
+    
+    return (
       (classData.starter_user_id && (parseInt(classData.starter_user_id.toString()) === currentUserId || classData.starter_user_id.toString() === currentUserId.toString())) ||
       userRole === 'admin' ||
       (classData.teacher_id && (parseInt(classData.teacher_id.toString()) === currentUserId || classData.teacher_id.toString() === currentUserId.toString()))
@@ -122,18 +151,25 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
 
   // Initial data loading on modal open
   useEffect(() => {
-    if (show && (isStarted || isActuallyFinished)) {
+    if (show && classData && (isStarted || isActuallyFinished)) {
       fetchExistingQRCode();
     } else {
       setInitialLoading(false);
     }
-  }, [show, isStarted, isActuallyFinished]);
+  }, [show, isStarted, isActuallyFinished, classData]);
 
   // Update class mode when classData changes
   useEffect(() => {
-    setClassMode(classData.class_mode as 'online' | 'offline' || 'offline');
-    setMeetingUrl(classData.meeting_url || '');
+    if (classData) {
+      setClassMode(classData.class_mode as 'online' | 'offline' || 'offline');
+      setMeetingUrl(classData.meeting_url || '');
+    }
   }, [classData]);
+
+  // Early return if no valid classData during SSR
+  if (!classData && typeof window === 'undefined') {
+    return null;
+  }
 
   // UPDATED: Fetch existing QR Code using new endpoint
   const fetchExistingQRCode = async () => {
@@ -369,8 +405,10 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
     setErrorFinish(null);
     setShowQrCode(false);
     setClassStartedInSession(false);
-    setClassMode(classData.class_mode as 'online' | 'offline' || 'offline');
-    setMeetingUrl(classData.meeting_url || '');
+    if (classData) {
+      setClassMode(classData.class_mode as 'online' | 'offline' || 'offline');
+      setMeetingUrl(classData.meeting_url || '');
+    }
     setInitialLoading(true);
     setQrData(null);
     handleClose();
@@ -523,7 +561,7 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
             </Alert>
           )}
 
-          {/* Class Information - Same as before */}
+          {/* Class Information */}
           <Card className="tw-mb-4 tw-border-0 tw-shadow-sm">
             <Card.Header className="tw-bg-gray-50 tw-border-0">
               <h6 className="tw-font-semibold tw-text-gray-800 tw-mb-0">Informasi Kelas</h6>
@@ -552,9 +590,9 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
                 </div>
                 <div>
                   <strong className="tw-text-gray-700">Mode Kelas:</strong>
-                  <div className={`tw-flex tw-items-center tw-gap-2 tw-font-medium ${classData.class_mode === 'online' ? 'tw-text-blue-600' : 'tw-text-green-600'}`}>
-                    {classData.class_mode === 'online' ? <Video size={16} /> : <MapPin size={16} />}
-                    {classData.class_mode === 'online' ? 'Online' : 'Offline'}
+                  <div className={`tw-flex tw-items-center tw-gap-2 tw-font-medium ${(classData?.class_mode || 'offline') === 'online' ? 'tw-text-blue-600' : 'tw-text-green-600'}`}>
+                    {(classData?.class_mode || 'offline') === 'online' ? <Video size={16} /> : <MapPin size={16} />}
+                    {(classData?.class_mode || 'offline') === 'online' ? 'Online' : 'Offline'}
                     {isFormLocked && <Lock size={14} className="tw-text-gray-400" />}
                   </div>
                 </div>
@@ -627,7 +665,7 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
             </Card>
           )}
 
-          {/* Student List - Same as before */}
+          {/* Student List */}
           <Card className="tw-mb-4 tw-border-0 tw-shadow-sm">
             <Card.Header className="tw-bg-green-50 tw-border-0">
               <strong className="tw-text-green-800 tw-mb-0">Daftar Siswa</strong>
@@ -669,7 +707,7 @@ const StartFinishClassModal: React.FC<StartFinishClassModalProps> = ({
           {errorStart && <Alert variant="danger" className="tw-mb-3">{errorStart}</Alert>}
           {errorFinish && <Alert variant="danger" className="tw-mb-3">{errorFinish}</Alert>}
 
-          {/* QR Code Display - Same as before */}
+          {/* QR Code Display */}
           {qrData && (
             <Card className="tw-mb-4 tw-border-0 tw-shadow-sm">
               <Card.Header className={`tw-border-0 ${isActuallyFinished ? 'tw-bg-blue-50' : 'tw-bg-green-50'}`}>
