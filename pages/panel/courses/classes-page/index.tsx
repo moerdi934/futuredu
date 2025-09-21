@@ -1,7 +1,7 @@
-// pages/panel/courses/classes-page/index.tsx - Fixed Version Without Page Reload
+// pages/panel/courses/classes-page/index.tsx - Updated with Go Live functionality
 
 import React, { useState } from 'react';
-import { FaPlus, FaEye, FaEdit, FaTrash, FaCalendar, FaClock, FaUsers, FaPlay, FaStop, FaCheckCircle, FaUndo, FaInfo, FaCheck, FaTimes, FaVideo, FaMapMarkerAlt, FaQrcode } from 'react-icons/fa';
+import { FaPlus, FaEye, FaEdit, FaTrash, FaCalendar, FaClock, FaUsers, FaPlay, FaStop, FaCheckCircle, FaUndo, FaInfo, FaCheck, FaTimes, FaVideo, FaMapMarkerAlt, FaQrcode, FaRocket } from 'react-icons/fa';
 import { BookOpen, GraduationCap, Video, MapPin, UserCheck, Clock } from 'lucide-react';
 import MainLayout from '../../../../components/layout/DashboardLayout';
 import ReportLayout from '../../../../components/report/ReportLayout';
@@ -13,6 +13,7 @@ import DetailClassModal from './DetailClassModal';
 import StartFinishClassModal from './StartFinishClassModal';
 import ApprovalModal from './ApprovalModal';
 import StudentAttendanceModal from './StudentAttendanceModal';
+import GoLiveClassModal from './GoLiveClassModal'; // NEW: Import Go Live Modal
 
 const ClassesPage: React.FC = () => {
   const { id: currentUserId, role: userRole } = useAuth();
@@ -24,6 +25,7 @@ const ClassesPage: React.FC = () => {
   const [showStartFinishModal, setShowStartFinishModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [showGoLiveModal, setShowGoLiveModal] = useState(false); // NEW: Go Live modal state
   const [editingClass, setEditingClass] = useState(null);
   const [selectedClass, setSelectedClass] = useState(null);
   
@@ -190,6 +192,30 @@ const ClassesPage: React.FC = () => {
     );
   };
 
+  // NEW: Format Go Live Status
+  const formatGoLiveStatus = (value: any, row: any) => {
+    // Check if class is live by looking for is_live field or checking for product relationship
+    const isLive = row.is_live || false; // This should come from API response
+    
+    return (
+      <div className="tw-text-center">
+        <span className={`tw-px-3 tw-py-2 tw-rounded-full tw-text-xs tw-font-medium tw-flex tw-items-center tw-justify-center tw-gap-2 ${
+          isLive 
+            ? 'tw-bg-orange-100 tw-text-orange-800' 
+            : 'tw-bg-gray-100 tw-text-gray-600'
+        }`}>
+          <FaRocket size={12} />
+          {isLive ? 'Live' : 'Not Live'}
+        </span>
+        {isLive && row.live_since && (
+          <div className="tw-text-xs tw-text-gray-500 tw-mt-1">
+            sejak {new Date(row.live_since).toLocaleDateString('id-ID')}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const formatCreator = (value: string) => {
     return (
       <div className="tw-flex tw-items-center tw-gap-2">
@@ -249,6 +275,15 @@ const ClassesPage: React.FC = () => {
     return false;
   };
 
+  // NEW: Check if class can go live
+  const canGoLive = (row: any) => {
+    return userRole === 'admin' && 
+           row.approval_status === 'approved' && 
+           !row.is_deleted &&
+           !row.real_start_datetime && // Class hasn't started yet
+           !row.is_live; // Not already live
+  };
+
   // Check if user is student in this class
   const isStudentInClass = (row: any) => {
     return row.student_list_ids?.includes(currentUserId) || false;
@@ -275,6 +310,14 @@ const ClassesPage: React.FC = () => {
     refreshFunction?.();
   };
 
+  // NEW: Handle Go Live Save
+  const handleGoLiveSave = () => {
+    setShowGoLiveModal(false);
+    setSelectedClass(null);
+    // Call refresh function to update table data only
+    refreshFunction?.();
+  };
+
   const handleDetail = (row: any) => {
     setSelectedClass(row);
     setShowDetailModal(true);
@@ -288,6 +331,12 @@ const ClassesPage: React.FC = () => {
   const handleApprove = (row: any) => {
     setSelectedClass(row);
     setShowApprovalModal(true);
+  };
+
+  // NEW: Handle Go Live
+  const handleGoLive = (row: any) => {
+    setSelectedClass(row);
+    setShowGoLiveModal(true);
   };
 
   // Updated handleStartFinish with correct data transformation
@@ -405,6 +454,17 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
     onClick: () => handleDetail(row)
   });
 
+  // NEW: Go Live button - only for admin on approved classes that are not live yet and haven't started
+  if (canGoLive(row)) {
+    buttons.push({
+      label: 'Go Live',
+      icon: React.createElement(FaRocket),
+      variant: 'outline-success',
+      size: 'sm',
+      onClick: () => handleGoLive(row)
+    });
+  }
+
   // Student attendance button - show for Started and Finished classes
   if (userRole === 'student' && isStudentInClass(row) && (row.status === 'Started' || row.status === 'Finished')) {
     buttons.push({
@@ -421,7 +481,7 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
     buttons.push({
       label: 'Setujui',
       icon: React.createElement(FaCheck),
-      variant: 'outline-success',
+      variant: 'outline-primary',
       size: 'sm',
       onClick: () => handleApprove(row)
     });
@@ -522,6 +582,13 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
       formatter: (value, row) => (
         <div className={`tw-font-semibold tw-leading-tight ${row.is_deleted ? 'tw-text-gray-400 tw-line-through' : 'tw-text-gray-800'}`}>
           {value || '-'}
+          {/* NEW: Show live indicator */}
+          {row.is_live && (
+            <span className="tw-ml-2 tw-inline-flex tw-items-center tw-gap-1 tw-px-2 tw-py-1 tw-bg-orange-100 tw-text-orange-800 tw-text-xs tw-rounded-full">
+              <FaRocket size={10} />
+              LIVE
+            </span>
+          )}
         </div>
       )
     },
@@ -635,6 +702,15 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
       width: 170,
       colGroup: 'status',
       formatter: formatApprovalStatus
+    },
+    // NEW: Go Live Status Column
+    {
+      key: 'is_live',
+      label: 'Status Go Live',
+      type: 'string',
+      width: 130,
+      colGroup: 'status',
+      formatter: formatGoLiveStatus
     },
     {
       key: 'class_mode',
@@ -879,6 +955,17 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
         { value: 'rejected', label: 'Ditolak' }
       ]
     },
+    // NEW: Go Live Status Filter
+    {
+      key: 'liveStatus',
+      type: 'select',
+      label: 'Status Go Live',
+      options: [
+        { value: 'all', label: 'Semua' },
+        { value: 'live', label: 'Sudah Live' },
+        { value: 'not_live', label: 'Belum Live' }
+      ]
+    },
     {
       key: 'includeDeleted',
       type: 'select',
@@ -924,7 +1011,7 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
       {
         key: 'status',
         label: 'Status',
-        columns: ['status', 'approval_status', 'class_mode', 'meeting_url', 'is_started', 'is_deleted']
+        columns: ['status', 'approval_status', 'is_live', 'class_mode', 'meeting_url', 'is_started', 'is_deleted'] // Updated to include is_live
       },
       {
         key: 'schedule',
@@ -964,6 +1051,7 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
       'students_display',
       'status',
       'approval_status',
+      'is_live', // NEW: Include go live status in default visible columns
       'class_mode',
       'date',
       'start_time',
@@ -983,7 +1071,7 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
     actionColumn: {
       enabled: true,
       label: 'Actions',
-      width: 400,
+      width: 450, // Increased width to accommodate Go Live button
       sticky: false,
       buttons: getActionButtons // Dynamic buttons function
     },
@@ -1081,6 +1169,17 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
           onSave={handleApprovalSave}
         />
       )}
+
+      {/* NEW: Modal Go Live Kelas */}
+      <GoLiveClassModal
+        isOpen={showGoLiveModal}
+        onClose={() => {
+          setShowGoLiveModal(false);
+          setSelectedClass(null);
+        }}
+        onSave={handleGoLiveSave}
+        classData={selectedClass}
+      />
 
       {/* Modal Student Attendance */}
       {selectedClass && (
