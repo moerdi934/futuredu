@@ -56,3 +56,5 @@ Thumbs.db
 
 # .gitignore
 .next/
+# ── IGNORE DEMO PAGES ─────────────────────────────────────────
+/pages/demo/
