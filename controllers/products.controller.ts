@@ -1,10 +1,10 @@
-// controllers/products.controller.ts
+// controllers/products.controller.ts - Updated with is_stackable support
 import { NextApiRequest, NextApiResponse } from 'next';
 import pool from '../lib/db';
 import ProductModel, { ProductPrice } from '../models/products.model';
 import { PoolClient } from 'pg';
 
-// Types for request bodies
+// Types for request bodies (updated with is_stackable)
 export interface UpdateProductRequest {
   name: string;
   description: string;
@@ -12,6 +12,7 @@ export interface UpdateProductRequest {
   type: number;
   features: string[];
   classtype: string;
+  is_stackable?: boolean;  // New field
   course_ids?: number[];
   exam_schedule_ids?: number[];
   prices?: ProductPrice[];
@@ -30,11 +31,11 @@ export interface CreateProductRequest {
   exam_schedule_id?: number;
   features: string[];
   classtype: string;
+  is_stackable?: boolean;  // New field
 }
 
-// Helper functions for entitlements
+// Helper functions for entitlements (unchanged)
 async function grantCourseEntitlementForProduct(product_id: string | number, course_id: number, client: PoolClient): Promise<void> {
-  // Semua user yang sudah beli produk ini dan masih aktif
   const { rows: users } = await client.query(`
     SELECT soh.user_id
       FROM sales_order_header soh
@@ -71,7 +72,6 @@ async function grantExamEntitlementForProduct(product_id: string | number, exam_
 }
 
 async function revokeCourseEntitlementForProduct(product_id: string | number, course_id: number, client: PoolClient): Promise<void> {
-  // Ambil semua user yang dapat course_id ini dari produk ini
   const { rows: users } = await client.query(`
     SELECT soh.user_id
       FROM sales_order_header soh
@@ -81,7 +81,6 @@ async function revokeCourseEntitlementForProduct(product_id: string | number, co
   `, [product_id]);
   
   for (const { user_id } of users) {
-    // Pastikan dia TIDAK dapat course_id ini dari produk lain
     const { rows: others } = await client.query(`
       SELECT 1
         FROM sales_order_item soi2
@@ -134,7 +133,7 @@ const ProductController = {
     try {
       await client.query('BEGIN');
 
-      // --- Ambil data dari body
+      // --- Ambil data dari body (updated to include is_stackable)
       const {
         name, 
         description, 
@@ -142,6 +141,7 @@ const ProductController = {
         type, 
         features, 
         classtype,
+        is_stackable = true,  // Default to true if not provided
         course_ids = [], 
         exam_schedule_ids = [],
         prices = []
@@ -149,12 +149,24 @@ const ProductController = {
       
       const { id } = req.query;
 
-      // --- 1. Update produk utama
+      // --- 1. Update produk utama (including is_stackable)
       await client.query(`
         UPDATE products SET name=$1, description=$2, stock=$3, type=$4,
-          features=$5, classtype=$6, updated_at=NOW()
-        WHERE product_id=$7
-      `, [name, description, stock, type, features, classtype, id]);
+          features=$5, classtype=$6, is_stackable=$7, updated_at=NOW()
+        WHERE product_id=$8
+      `, [name, description, stock, type, features, classtype, is_stackable, id]);
+
+      // --- Handle special logic for non-stackable products
+      if (!is_stackable) {
+        // If product becomes non-stackable, remove excess quantities from all carts
+        await client.query(`
+          UPDATE cart_items 
+          SET quantity = 1 
+          WHERE product_id = $1 AND quantity > 1
+        `, [id]);
+        
+        console.log(`Product ${id} set to non-stackable. Cart quantities adjusted to maximum 1.`);
+      }
 
       // --- 2. Sync course
       const { rows: oldCourses } = await client.query(
@@ -167,7 +179,6 @@ const ProductController = {
       for (const cid of addedCourses) {
         await client.query(
           'INSERT INTO product_courses (product_id, course_id) VALUES ($1, $2)', [id, cid]);
-        // Grant entitlement ke user lama
         await grantCourseEntitlementForProduct(id as string, cid, client);
       }
       
@@ -175,7 +186,6 @@ const ProductController = {
       for (const cid of removedCourses) {
         await client.query(
           'DELETE FROM product_courses WHERE product_id=$1 AND course_id=$2', [id, cid]);
-        // Hapus entitlement dari user yang dapat course_id ini HANYA dari produk ini
         await revokeCourseEntitlementForProduct(id as string, cid, client);
       }
 
@@ -201,7 +211,6 @@ const ProductController = {
       }
 
       // --- 4. Update harga (product_price_hist)
-      // Cara simple: hapus semua lalu insert ulang
       await client.query('DELETE FROM product_price_hist WHERE product_id = $1', [id]);
       for (const p of prices) {
         await client.query(`
@@ -298,17 +307,58 @@ const ProductController = {
       type, 
       exam_schedule_id, 
       features, 
-      classtype 
+      classtype,
+      is_stackable = true  // Default to true for new products
     }: CreateProductRequest = req.body;
     
     try {
       const newProduct = await ProductModel.createProduct({
-        name, description, price, stock, type, exam_schedule_id, features, classtype
+        name, description, price, stock, type, exam_schedule_id, features, classtype, is_stackable
       });
       return res.json({ success: true, data: newProduct });
     } catch (error: any) {
       console.error('Error creating product:', error);
       return res.status(500).json({ success: false, message: 'Failed to create product' });
+    }
+  },
+
+  // New endpoint: Update only product stackability
+  updateProductStackability: async (req: NextApiRequest, res: NextApiResponse) => {
+    const { id } = req.query;
+    const { is_stackable }: { is_stackable: boolean } = req.body;
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      const success = await ProductModel.updateProductStackability(id as string, is_stackable, client);
+      
+      if (!success) {
+        throw new Error('Product not found or update failed');
+      }
+
+      // If setting to non-stackable, adjust cart quantities
+      if (!is_stackable) {
+        await client.query(`
+          UPDATE cart_items 
+          SET quantity = 1 
+          WHERE product_id = $1 AND quantity > 1
+        `, [id]);
+        
+        console.log(`Product ${id} set to non-stackable. Cart quantities adjusted.`);
+      }
+      
+      await client.query('COMMIT');
+      res.json({ 
+        success: true, 
+        message: `Product stackability updated to ${is_stackable ? 'stackable' : 'non-stackable'}` 
+      });
+    } catch (err: any) {
+      await client.query('ROLLBACK');
+      console.error('Error updating product stackability:', err);
+      res.status(500).json({ success: false, message: err.message });
+    } finally {
+      client.release();
     }
   }
 };

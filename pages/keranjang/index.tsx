@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Button, Spinner, Alert, Form, Container, Row, Col, Card } from 'react-bootstrap';
-import { PlusCircle, MinusCircle, Trash2, ShoppingCart, Package, Plus, Minus, CheckCircle, Circle } from 'lucide-react';
+import { Button, Spinner, Alert, Form, Container, Row, Col, Card, Badge } from 'react-bootstrap';
+import { PlusCircle, MinusCircle, Trash2, ShoppingCart, Package, Plus, Minus, CheckCircle, Circle, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import NavigationBar from '../../components/layout/NavigationBar';
 
@@ -16,6 +16,8 @@ interface CartItem {
   description: string;
   current_price: number;
   stock: number;
+  is_stackable: boolean;  // Added this field
+  type: number;           // Added to help identify product types
 }
 
 interface CartResponse {
@@ -110,6 +112,19 @@ export default function CartPage() {
   };
 
   const isAllSelected = selectedIds.length === items.length && items.length > 0;
+
+  // Helper function to get product type label
+  const getProductTypeInfo = (item: CartItem) => {
+    if (item.type === 13) {
+      return { label: 'Kelas', color: 'primary', icon: '🎓' };
+    } else if (item.type === 12) {
+      return { label: 'Kursus', color: 'info', icon: '📚' };
+    } else if (item.type === 14) {
+      return { label: 'Paket', color: 'success', icon: '📦' };
+    } else {
+      return { label: 'Produk', color: 'secondary', icon: '🛍️' };
+    }
+  };
 
   if (loading) {
     return (
@@ -223,6 +238,9 @@ export default function CartPage() {
                 <Row className="tw-g-4 tw-mb-4">
                   {items.map((item) => {
                     const checked = selectedIds.includes(item.product_id);
+                    const productTypeInfo = getProductTypeInfo(item);
+                    const isNonStackable = !item.is_stackable;
+                    
                     return (
                       <Col key={item.product_id} xs={12} md={6} lg={4} className="tw-mb-4">
                         <Card 
@@ -238,6 +256,27 @@ export default function CartPage() {
                           )}
                           
                           <Card.Body className="tw-p-4 tw-d-flex tw-flex-column">
+                            {/* Product Type Badge & Non-Stackable Indicator */}
+                            <div className="tw-flex tw-justify-between tw-items-center tw-mb-3">
+                              <div className="tw-flex tw-items-center tw-gap-2">
+                                <Badge 
+                                  bg={productTypeInfo.color} 
+                                  className="tw-text-xs tw-px-2 tw-py-1"
+                                >
+                                  {productTypeInfo.icon} {productTypeInfo.label}
+                                </Badge>
+                                {isNonStackable && (
+                                  <Badge 
+                                    bg="warning" 
+                                    className="tw-text-xs tw-px-2 tw-py-1 tw-flex tw-items-center tw-gap-1"
+                                  >
+                                    <Lock size={10} />
+                                    Sekali Beli
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            
                             {/* Selection Button - More Prominent */}
                             <div className="tw-flex tw-justify-between tw-items-start tw-mb-3">
                               <Button
@@ -300,32 +339,46 @@ export default function CartPage() {
                                 </span>
                               </div>
                               
-                              <div className="tw-flex tw-justify-between tw-items-center tw-mb-3">
-                                <span className="tw-text-sm tw-text-gray-600">Jumlah:</span>
-                                <div className="tw-flex tw-items-center tw-gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline-secondary"
-                                    onClick={() => updateQty(item.product_id, 'decrease')}
-                                    disabled={item.quantity <= 1}
-                                    className="tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50 tw-transition-all tw-duration-300"
-                                  >
-                                    <Minus size={14} />
-                                  </Button>
-                                  <span className="tw-font-semibold tw-text-purple-700 tw-min-w-[2rem] tw-text-center">
-                                    {item.quantity}
-                                  </span>
-                                  <Button
-                                    size="sm"
-                                    variant="outline-secondary"
-                                    onClick={() => updateQty(item.product_id, 'increase')}
-                                    disabled={item.quantity >= item.stock}
-                                    className="tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50 tw-transition-all tw-duration-300"
-                                  >
-                                    <Plus size={14} />
-                                  </Button>
+                              {/* Quantity Controls - Conditional rendering */}
+                              {isNonStackable ? (
+                                <div className="tw-flex tw-justify-between tw-items-center tw-mb-3">
+                                  <span className="tw-text-sm tw-text-gray-600">Jumlah:</span>
+                                  <div className="tw-flex tw-items-center tw-gap-2">
+                                    <div className="tw-bg-gray-100 tw-px-3 tw-py-2 tw-rounded tw-border tw-flex tw-items-center tw-gap-2">
+                                      <Lock size={14} className="tw-text-gray-500" />
+                                      <span className="tw-font-semibold tw-text-gray-700">1</span>
+                                      <span className="tw-text-xs tw-text-gray-500">(Fixed)</span>
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
+                              ) : (
+                                <div className="tw-flex tw-justify-between tw-items-center tw-mb-3">
+                                  <span className="tw-text-sm tw-text-gray-600">Jumlah:</span>
+                                  <div className="tw-flex tw-items-center tw-gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline-secondary"
+                                      onClick={() => updateQty(item.product_id, 'decrease')}
+                                      disabled={item.quantity <= 1}
+                                      className="tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50 tw-transition-all tw-duration-300"
+                                    >
+                                      <Minus size={14} />
+                                    </Button>
+                                    <span className="tw-font-semibold tw-text-purple-700 tw-min-w-[2rem] tw-text-center">
+                                      {item.quantity}
+                                    </span>
+                                    <Button
+                                      size="sm"
+                                      variant="outline-secondary"
+                                      onClick={() => updateQty(item.product_id, 'increase')}
+                                      disabled={item.quantity >= item.stock}
+                                      className="tw-border-purple-300 tw-text-purple-600 hover:tw-bg-purple-50 tw-transition-all tw-duration-300"
+                                    >
+                                      <Plus size={14} />
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
                               
                               <div className="tw-flex tw-justify-between tw-items-center tw-border-t tw-pt-3">
                                 <span className="tw-text-sm tw-text-gray-600">Subtotal:</span>

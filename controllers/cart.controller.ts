@@ -1,4 +1,4 @@
-// controllers/cart.controller.ts
+// controllers/cart.controller.ts - Updated to include is_stackable in response
 import { NextApiRequest, NextApiResponse } from 'next';
 import { AuthenticatedRequest } from '../lib/middleware/auth';
 import * as Cart from '../models/cart.model';
@@ -24,6 +24,8 @@ export const getCart = async (req: AuthenticatedRequest, res: NextApiResponse<Ca
   try {
     const userId = req.user!.id;
     const result = await Cart.getCartWithProducts(userId);
+    
+    // The result already includes is_stackable from the updated cart model
     res.json({ success: true, data: result });
   } catch (err: any) {
     console.error(err);

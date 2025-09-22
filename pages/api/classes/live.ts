@@ -123,7 +123,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         WHERE c.approval_status = 'approved'
           AND (c.is_deleted IS NULL OR c.is_deleted = false)
           AND c.real_start_datetime IS NULL  -- Class hasn't started yet
-          AND p.type = 2  -- Class product type
+          AND p.type = 13  -- Class product type
           AND p.stock > 0  -- Still has available slots
           AND (
             ph.effective_start <= NOW()

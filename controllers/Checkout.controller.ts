@@ -1,7 +1,7 @@
-// controllers/Checkout.controller.ts
+// controllers/Checkout.controller.ts - Updated with correct product types
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
-import axios from 'axios';  // Import axios directly, no interceptors
+import axios from 'axios';
 import pool from '../lib/db';
 import SalesOrder, { ItemData } from '../models/salesOrder.model';
 import Invoice from '../models/invoice.model';
@@ -9,16 +9,15 @@ import { AuthenticatedRequest } from '../lib/middleware/auth';
 import PQueue from 'p-queue';
 
 const checkoutQueue = new PQueue({
-  concurrency: 1, // Process one checkout at a time to prevent race conditions
-  timeout: 30000, // 30 second timeout per operation
+  concurrency: 1,
+  timeout: 30000,
   throwOnTimeout: true
 });
-
 
 // Import Cart model functions directly
 import * as Cart from '../models/cart.model';
 
-// Types
+// Types (keeping existing interfaces)
 export interface CheckoutRequest extends AuthenticatedRequest {
   body: {
     selectedProductIds: number[];
@@ -102,7 +101,7 @@ export interface UserOrdersResponse {
   };
 }
 
-// Create a server-safe axios instance (no interceptors that access localStorage)
+// Create a server-safe axios instance
 const serverAxios = axios.create({
   timeout: 30000,
   headers: {
@@ -119,11 +118,10 @@ class CheckoutController {
     return res.status(200).send('OK');
   }
 
-/* ────────────────────────────────────────────────────────────────────── */
+  /* ────────────────────────────────────────────────────────────────────── */
   /* 1. POST /checkout/process - Enhanced with Queue and Class Support      */
   /* ────────────────────────────────────────────────────────────────────── */
   static async processCheckout(req: CheckoutRequest, res: NextApiResponse<CheckoutResponse>) {
-    // Add checkout to queue to prevent race conditions
     return checkoutQueue.add(async () => {
       return await CheckoutController._processCheckoutInternal(req, res);
     });
@@ -132,7 +130,6 @@ class CheckoutController {
   private static async _processCheckoutInternal(req: CheckoutRequest, res: NextApiResponse<CheckoutResponse>) {
     const client: PoolClient = await pool.connect();
 
-    // ─── helper untuk stempel waktu ───────────────────────────────────────
     const t0 = process.hrtime.bigint();
     let last = t0;
     const lap = (label: string) => {
@@ -181,7 +178,7 @@ class CheckoutController {
 
       // Check for class-specific validations
       for (const product of productDetails) {
-        if (product.type === 2) { // Class product
+        if (product.type === 13) { // Class product (updated from 2 to 13)
           // Check if class has started
           if (product.class_real_start_datetime) {
             throw new Error(`Class "${product.name}" has already started and cannot be purchased`);
@@ -202,7 +199,7 @@ class CheckoutController {
       const orderNumber = await SalesOrder.generateOrderNumber('000', client);
       lap('gen-orderNo');
 
-      // Set checkout expiry to 30 minutes
+      // Set checkout expiry to 30 minutes (already correct)
       const expiredAt = new Date(Date.now() + 30 * 60 * 1000);
       const orderId = await SalesOrder.createHeader(
         { orderNumber, userId, expiredAt }, 
@@ -228,7 +225,7 @@ class CheckoutController {
         
         // Real-time stock check with row locking
         const stockCheckResult = await client.query(`
-          SELECT product_id, stock, type
+          SELECT product_id, stock, type, is_stackable
           FROM products
           WHERE product_id = $1
           FOR UPDATE
@@ -240,9 +237,15 @@ class CheckoutController {
 
         const currentStock = stockCheckResult.rows[0].stock;
         const productType = stockCheckResult.rows[0].type;
+        const isStackable = stockCheckResult.rows[0].is_stackable;
+
+        // Check stackable constraint
+        if (!isStackable && quantity > 1) {
+          throw new Error(`Product "${productDetail.name}" can only be purchased once. Please adjust quantity to 1.`);
+        }
 
         if (currentStock < quantity) {
-          if (productType === 2) {
+          if (productType === 13) { // Class products
             throw new Error(`Not enough slots available for class "${productDetail.name}". Available: ${currentStock}, Requested: ${quantity}`);
           } else {
             throw new Error(`Not enough stock for product "${productDetail.name}". Available: ${currentStock}, Requested: ${quantity}`);
@@ -364,7 +367,8 @@ class CheckoutController {
       lap('done');
     }
   }
-   /* ────────────────────────────────────────────────────────────────────── */
+
+  /* ────────────────────────────────────────────────────────────────────── */
   /* Helper: Get detailed product information including class data          */
   /* ────────────────────────────────────────────────────────────────────── */
   private static async getProductDetails(productIds: number[], client: PoolClient) {
@@ -374,6 +378,7 @@ class CheckoutController {
         p.name,
         p.type,
         p.stock,
+        p.is_stackable,
         -- Class specific data
         c.id as class_id,
         c.name as class_name,
@@ -391,7 +396,7 @@ class CheckoutController {
   }
 
   /* ────────────────────────────────────────────────────────────────────── */
-  /* 2. Membuat transaksi Midtrans Snap (Server-Safe)                     */
+  /* 2. Membuat transaksi Midtrans Snap (Server-Safe) - Updated expiry      */
   /* ────────────────────────────────────────────────────────────────────── */
   static async createMidtransTransaction(
     orderNumber: string, 
@@ -420,7 +425,7 @@ class CheckoutController {
         expiry: {
           start_time: new Date().toISOString().replace('T', ' ').slice(0, 19) + ' +0000',
           unit: 'minute',
-          duration: 1440
+          duration: 30  // Changed from 1440 to 30 minutes
         },
         callbacks: { 
           finish: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' 
@@ -433,7 +438,6 @@ class CheckoutController {
         user_id: params.customer_details.user_id
       });
 
-      // Use server-safe axios instance
       const response = await serverAxios.post(
         'https://app.sandbox.midtrans.com/snap/v1/transactions',
         params,
@@ -492,7 +496,6 @@ class CheckoutController {
         throw new Error('Invalid notification data');
       }
 
-      // Determine payment status
       const transactionStatus = notification.transaction_status;
       const fraudStatus = notification.fraud_status;
       
@@ -510,7 +513,6 @@ class CheckoutController {
 
       await client.query('BEGIN');
 
-      // Update order status
       const orderUpdate = await client.query(
         `UPDATE sales_order_header
          SET payment_status = $1, updated_at = NOW()
@@ -525,14 +527,11 @@ class CheckoutController {
 
       const { order_id: orderId, user_id: userId } = orderUpdate.rows[0];
 
-      // Handle failed payment - restore stock
       if (paymentStatus === 'failed') {
         await CheckoutController.restoreStock(notification.order_id, client);
       }
 
-      // Handle successful payment - create invoice and entitlements
       if (paymentStatus === 'success') {
-        // Create invoice if not exists
         const invoiceExists = await Invoice.existsForOrder(orderId, client);
         
         if (!invoiceExists) {
@@ -552,7 +551,6 @@ class CheckoutController {
             acquirer: notification.acquirer
           }, client);
 
-          // Grant entitlements
           await CheckoutController.grantEntitlements(orderId, userId, client);
         }
       }
@@ -585,9 +583,8 @@ class CheckoutController {
   /* ────────────────────────────────────────────────────────────────────── */
   /* Helper: Grant entitlements for successful payment                     */
   /* ────────────────────────────────────────────────────────────────────── */
- static async grantEntitlements(orderId: number, userId: string, client: PoolClient) {
+  static async grantEntitlements(orderId: number, userId: string, client: PoolClient) {
     try {
-      // Get order items with product details
       const orderItems = await client.query(`
         SELECT 
           soi.product_id, 
@@ -607,8 +604,7 @@ class CheckoutController {
       }
 
       for (const item of orderItems.rows) {
-        if (item.type === 1) {
-          // Course product - grant course entitlement
+        if (item.type === 12) { // Course product (updated types)
           if (item.course_id) {
             await client.query(
               `INSERT INTO course_entitlements
@@ -621,8 +617,7 @@ class CheckoutController {
               [userId, item.course_id]
             );
           }
-        } else if (item.type === 2) {
-          // Class product - enroll user in class
+        } else if (item.type === 13) { // Class product
           if (item.class_id) {
             await client.query(
               `UPDATE classes
@@ -638,7 +633,7 @@ class CheckoutController {
         }
       }
 
-      // Handle exam schedule entitlements for both courses and classes
+      // Handle exam schedule entitlements for all relevant product types
       const exams = await client.query(
         `SELECT DISTINCT exam_schedule_id
          FROM product_exam_schedules

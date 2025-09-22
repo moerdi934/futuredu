@@ -1,4 +1,4 @@
-// models/cart.model.ts
+// models/cart.model.ts - Updated with is_stackable support
 import pool from '../lib/db';
 import { PoolClient } from 'pg';
 
@@ -21,6 +21,8 @@ export interface Product {
   name: string;
   description?: string;
   stock: number;
+  type: number;
+  is_stackable: boolean;  // New field
   created_at: Date;
   updated_at: Date;
   [key: string]: any;
@@ -62,15 +64,44 @@ export const _getOrCreateCart = async (userId: string, client: PoolClient = pool
 export const addItem = async (userId: string, productId: number, client: PoolClient = pool): Promise<CartWithProducts> => {
   const cart = await _getOrCreateCart(userId, client);
 
-  // Validasi stok
-  const stockCheck = await client.query(
-    'SELECT stock FROM products WHERE product_id = $1',
+  // Get product details including is_stackable and stock
+  const productCheck = await client.query(
+    'SELECT stock, is_stackable, type, name FROM products WHERE product_id = $1',
     [productId]
   );
-  if (!stockCheck.rowCount) throw new Error('Product not found');
-  const stock = stockCheck.rows[0].stock;
+  
+  if (!productCheck.rowCount) {
+    throw new Error('Product not found');
+  }
+  
+  const { stock, is_stackable, type, name } = productCheck.rows[0];
 
-  /* Upsert: kalau qty existing +1 > stock → error */
+  // Check if item already exists in cart
+  const existingItem = await client.query(
+    'SELECT quantity FROM cart_items WHERE cart_id = $1 AND product_id = $2',
+    [cart.id, productId]
+  );
+
+  const currentQuantity = existingItem.rows[0]?.quantity || 0;
+
+  // If product is not stackable and already in cart, don't allow adding more
+  if (!is_stackable && currentQuantity > 0) {
+    throw new Error(`Product "${name}" can only be purchased once. It's already in your cart.`);
+  }
+
+  // Calculate new quantity
+  const newQuantity = currentQuantity + 1;
+
+  // Check stock availability
+  if (newQuantity > stock) {
+    if (type === 13) { // Class products
+      throw new Error(`Not enough slots available for class "${name}". Available: ${stock}, Requested: ${newQuantity}`);
+    } else {
+      throw new Error(`Not enough stock for product "${name}". Available: ${stock}, Requested: ${newQuantity}`);
+    }
+  }
+
+  // Add or update cart item
   const upsertSQL = `
     INSERT INTO cart_items (cart_id, product_id, quantity)
     VALUES ($1, $2, 1)
@@ -79,19 +110,12 @@ export const addItem = async (userId: string, productId: number, client: PoolCli
                   updated_at = NOW()
     RETURNING quantity
   `;
-  const { rows } = await client.query(upsertSQL, [cart.id, productId]);
-  if (rows[0].quantity > stock) {
-    // rollback qty ++ satu langkah
-    await client.query(
-      'UPDATE cart_items SET quantity = quantity - 1 WHERE cart_id = $1 AND product_id = $2',
-      [cart.id, productId]
-    );
-    throw new Error('Quantity exceeds available stock');
-  }
+  
+  await client.query(upsertSQL, [cart.id, productId]);
 
-  await client.query('UPDATE cart SET updated_at = NOW() WHERE id = $1', [
-    cart.id,
-  ]);
+  // Update cart timestamp
+  await client.query('UPDATE cart SET updated_at = NOW() WHERE id = $1', [cart.id]);
+  
   return getCartWithProducts(userId, client);
 };
 
@@ -103,6 +127,7 @@ export const decreaseItem = async (userId: string, productId: number, client: Po
     'SELECT quantity FROM cart_items WHERE cart_id = $1 AND product_id = $2',
     [cart.id, productId]
   );
+  
   if (!rows.length) return getCartWithProducts(userId, client); // nothing to do
 
   if (rows[0].quantity > 1) {
@@ -117,9 +142,7 @@ export const decreaseItem = async (userId: string, productId: number, client: Po
     );
   }
 
-  await client.query('UPDATE cart SET updated_at = NOW() WHERE id = $1', [
-    cart.id,
-  ]);
+  await client.query('UPDATE cart SET updated_at = NOW() WHERE id = $1', [cart.id]);
   return getCartWithProducts(userId, client);
 };
 
@@ -131,9 +154,7 @@ export const removeItem = async (userId: string, productId: number, client: Pool
     'DELETE FROM cart_items WHERE cart_id = $1 AND product_id = $2',
     [cart.id, productId]
   );
-  await client.query('UPDATE cart SET updated_at = NOW() WHERE id = $1', [
-    cart.id,
-  ]);
+  await client.query('UPDATE cart SET updated_at = NOW() WHERE id = $1', [cart.id]);
   return getCartWithProducts(userId, client);
 };
 
@@ -142,9 +163,7 @@ export const clearCart = async (userId: string, client: PoolClient = pool): Prom
   if (!cart) return { cart: null, products: [], totalItems: 0, totalQty: 0 };
 
   await client.query('DELETE FROM cart_items WHERE cart_id = $1', [cart.id]);
-  await client.query('UPDATE cart SET updated_at = NOW() WHERE id = $1', [
-    cart.id,
-  ]);
+  await client.query('UPDATE cart SET updated_at = NOW() WHERE id = $1', [cart.id]);
   return getCartWithProducts(userId, client);
 };
 

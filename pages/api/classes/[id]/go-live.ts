@@ -123,7 +123,7 @@ export default async function handler(req: AuthenticatedRequest, res: NextApiRes
     const productResult = await client.query(`
       INSERT INTO products 
         (name, description, stock, type, features, classtype)
-      VALUES ($1, $2, $3, 2, $4, $5)
+      VALUES ($1, $2, $3, 13, $4, $5)
       RETURNING product_id
     `, [
       name.trim(),

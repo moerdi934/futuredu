@@ -1,4 +1,4 @@
-// models/products.model.ts
+// models/products.model.ts - Updated with is_stackable field
 import pool from '../lib/db';
 import { PoolClient } from 'pg';
 
@@ -12,6 +12,7 @@ export interface Product {
   exam_schedule_id?: number;
   features: string[];
   classtype: string;
+  is_stackable: boolean;  // New field
   created_at: Date;
   updated_at: Date;
 }
@@ -56,6 +57,7 @@ export interface CreateProductInput {
   exam_schedule_id?: number;
   features: string[];
   classtype: string;
+  is_stackable?: boolean;  // New optional field, defaults to true
 }
 
 const basePriceJoin = `
@@ -85,7 +87,7 @@ const basePriceJoin = `
 `;
 
 const ProductModel = {
-  // Get all products + price
+  // Get all products + price (updated to include is_stackable)
   getProducts: async (): Promise<ProductWithPrice[]> => {
     const sql = `
       SELECT
@@ -103,7 +105,7 @@ const ProductModel = {
   },
 
   getProductDetail: async (id: string | number): Promise<ProductDetail | null> => {
-    // 1. Produk utama
+    // 1. Produk utama (updated to include is_stackable)
     const { rows: productRows } = await pool.query(`
       SELECT *
       FROM products
@@ -163,7 +165,7 @@ const ProductModel = {
     }
   },
 
-  // Get products linked to a specific try-out
+  // Get products linked to a specific try-out (updated to include is_stackable)
   getProductsFromTryOut: async (exam_schedule_id: string | number): Promise<ProductWithPrice[]> => {
     const sql = `
       SELECT
@@ -182,7 +184,7 @@ const ProductModel = {
     return rows;
   },
 
-  // Get paket products by classtype
+  // Get paket products by classtype (updated to include is_stackable)
   getProductsPaket: async (classtype: string): Promise<ProductWithPrice[]> => {
     const sql = `
       SELECT
@@ -193,7 +195,7 @@ const ProductModel = {
         ph.promo_description
       FROM products p
       ${basePriceJoin}
-      WHERE p.type = 10
+      WHERE p.type = 14  -- Updated from 10 to 14 for paket products
         AND p.classtype = $1
       ORDER BY p.product_id
     `;
@@ -201,7 +203,7 @@ const ProductModel = {
     return rows;
   },
 
-  // Create a new product
+  // Create a new product (updated to include is_stackable)
   createProduct: async (productData: CreateProductInput): Promise<Product> => {
     const {
       name,
@@ -210,14 +212,15 @@ const ProductModel = {
       type,
       exam_schedule_id,
       features,
-      classtype
+      classtype,
+      is_stackable = true  // Default to true for backward compatibility
     } = productData;
 
     const sql = `
       INSERT INTO products
-        (name, description, stock, type, exam_schedule_id, features, classtype, updated_at)
+        (name, description, stock, type, exam_schedule_id, features, classtype, is_stackable, updated_at)
       VALUES
-        ($1,$2,$3,$4,$5,$6,$7,NOW())
+        ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
       RETURNING *
     `;
     const params = [
@@ -227,10 +230,48 @@ const ProductModel = {
       type,
       exam_schedule_id,
       features,
-      classtype
+      classtype,
+      is_stackable
     ];
     const { rows } = await pool.query(sql, params);
     return rows[0];
+  },
+
+  // Helper: Update product stackability
+  updateProductStackability: async (product_id: string | number, is_stackable: boolean, client: PoolClient = pool): Promise<boolean> => {
+    try {
+      const { rowCount } = await client.query(
+        `UPDATE products 
+         SET is_stackable = $1, updated_at = NOW() 
+         WHERE product_id = $2`,
+        [is_stackable, product_id]
+      );
+      return rowCount === 1;
+    } catch (error) {
+      console.error('Error updating product stackability:', error);
+      throw new Error('Failed to update product stackability');
+    }
+  },
+
+  // Helper: Get product type info for validation
+  getProductTypeInfo: async (product_id: string | number, client: PoolClient = pool): Promise<{
+    type: number;
+    is_stackable: boolean;
+    stock: number;
+    name: string;
+  } | null> => {
+    try {
+      const { rows } = await client.query(
+        `SELECT type, is_stackable, stock, name 
+         FROM products 
+         WHERE product_id = $1`,
+        [product_id]
+      );
+      return rows[0] || null;
+    } catch (error) {
+      console.error('Error getting product type info:', error);
+      throw new Error('Failed to get product info');
+    }
   }
 };
 
