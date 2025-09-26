@@ -7,7 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return await getValidExamSchedules(req, res);
   } else if (req.method === 'POST') {
     return await createExamSchedule(req, res);
-  } else {
+  } else {    
     res.setHeader('Allow', ['GET', 'POST']);
     res.status(405).end(`Method ${req.method} Not Allowed`);
   }

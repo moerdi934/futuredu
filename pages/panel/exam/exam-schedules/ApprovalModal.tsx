@@ -1,0 +1,405 @@
+// components/modals/ExamScheduleApprovalModal.tsx
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Alert, Card, Badge, ButtonGroup, Button } from 'react-bootstrap';
+import { CheckCircle, XCircle, User, Calendar, Clock, BookOpen, Award, Target } from 'lucide-react';
+import { LearningModal } from '../../../../components/modal/ModalTemplate';
+import { useAuth } from '../../../../context/AuthContext';
+
+interface ExamScheduleApprovalModalProps {
+  show: boolean;
+  onClose: () => void;
+  examScheduleData: any;
+  onSave: () => void;
+}
+
+const ExamScheduleApprovalModal: React.FC<ExamScheduleApprovalModalProps> = ({ 
+  show, 
+  onClose, 
+  examScheduleData, 
+  onSave 
+}) => {
+  const { role: userRole, id: currentUserId, username } = useAuth();
+  
+  // State for approval decision
+  const [approvalStatus, setApprovalStatus] = useState<'approved' | 'rejected'>('approved');
+  const [rejectionReason, setRejectionReason] = useState('');
+  
+  // Loading and error states
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+
+  // Reset state when modal closes or opens
+  useEffect(() => {
+    if (show) {
+      setApprovalStatus('approved');
+      setRejectionReason('');
+      setError('');
+    }
+  }, [show]);
+
+  // Handle approval submission
+  const handleSubmit = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // Validation for rejection
+      if (approvalStatus === 'rejected' && !rejectionReason.trim()) {
+        throw new Error('Mohon berikan alasan penolakan');
+      }
+
+      // Prepare approval data
+      const approvalData = {
+        approval_status: approvalStatus,
+        rejection_reason: approvalStatus === 'rejected' ? rejectionReason.trim() : undefined
+      };
+
+      console.log('Sending approval data:', approvalData);
+
+      const response = await fetch(`${API_URL}/exam-schedules/approve/${examScheduleData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify(approvalData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Gagal memproses persetujuan');
+      }
+
+      const result = await response.json();
+      
+      const successMessage = approvalStatus === 'approved' 
+        ? `Jadwal ujian "${examScheduleData.name}" berhasil disetujui!`
+        : `Jadwal ujian "${examScheduleData.name}" telah ditolak.`;
+      
+      alert(successMessage);
+      onSave();
+      handleClose();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    setApprovalStatus('approved');
+    setRejectionReason('');
+    setError('');
+    onClose();
+  };
+
+  if (!examScheduleData) return null;
+
+  const bottomButtons = [
+    {
+      action: 'cancel' as const,
+      text: 'Batal',
+      onClick: handleClose,
+      disabled: isLoading
+    },
+    {
+      action: 'save' as const,
+      text: isLoading 
+        ? 'Memproses...' 
+        : approvalStatus === 'approved' 
+          ? 'Setujui Jadwal Ujian'
+          : 'Tolak Jadwal Ujian',
+      onClick: handleSubmit,
+      disabled: isLoading,
+      loading: isLoading,
+      customColors: approvalStatus === 'rejected' ? {
+        primary: '#EF4444',
+        secondary: '#DC2626',
+        gradient1: '#EF4444',
+        gradient2: '#F87171',
+        text: '#FFFFFF'
+      } : undefined
+    }
+  ];
+
+  return (
+    <LearningModal
+      show={show}
+      onHide={handleClose}
+      title="Persetujuan Jadwal Ujian"
+      subtitle={`Setujui atau tolak jadwal ujian "${examScheduleData.name}"`}
+      icon={<Target className="tw-w-5 tw-h-5" />}
+      size="lg"
+      width="110vw"
+      height="120vh"
+      bottomButtons={bottomButtons}
+      preventCloseOnOutsideClick={false}
+    >
+      {error && (
+        <Alert variant="danger" className="tw-mb-4">
+          {error}
+        </Alert>
+      )}
+
+      {/* User Role Info */}
+      <Alert variant="info" className="tw-mb-4">
+        <strong>Mode Persetujuan:</strong> Administrator
+        <div className="tw-mt-1 tw-text-sm">
+          Sebagai admin, Anda dapat menyetujui atau menolak jadwal ujian yang dibuat oleh guru.
+          Jadwal ujian yang disetujui akan dapat digunakan oleh seluruh pengguna sistem dan dapat di-go-live.
+        </div>
+      </Alert>
+
+      {/* Exam Schedule Information */}
+      <Card className="tw-mb-4 tw-border-0 tw-shadow-sm">
+        <Card.Header className="tw-bg-blue-50 tw-border-0">
+          <h6 className="tw-font-semibold tw-text-blue-800 tw-mb-0 tw-flex tw-items-center tw-gap-2">
+            <Target className="tw-w-4 tw-h-4" />
+            Detail Jadwal Ujian yang Memerlukan Persetujuan
+          </h6>
+        </Card.Header>
+        <Card.Body>
+          <div className="tw-space-y-4">
+            {/* Basic Info */}
+            <div className="tw-space-y-2">
+              <h5 className="tw-font-bold tw-text-gray-800 tw-mb-1">{examScheduleData.name}</h5>
+              <p className="tw-text-gray-600 tw-text-sm tw-leading-relaxed">
+                {examScheduleData.description || 'Tidak ada deskripsi'}
+              </p>
+            </div>
+
+            {/* Exam Info */}
+            {examScheduleData.exam_id_list && (
+              <div>
+                <strong className="tw-text-gray-700 tw-flex tw-items-center tw-gap-2 tw-mb-2">
+                  <BookOpen className="tw-w-4 tw-h-4 tw-text-blue-600" />
+                  Ujian yang Terkait:
+                </strong>
+                <div className="tw-text-sm tw-text-gray-600 tw-bg-blue-50 tw-p-2 tw-rounded">
+                  {Array.isArray(examScheduleData.exam_id_list) ? (
+                    examScheduleData.exam_id_list.map((examId: number, index: number) => (
+                      <Badge key={index} variant="info" className="tw-mr-1 tw-mb-1">
+                        Exam ID: {examId}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span>Exam IDs: {examScheduleData.exam_id_list.toString()}</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Schedule Details */}
+            <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4">
+              <div>
+                <strong className="tw-text-gray-700">Tipe Ujian:</strong>
+                <div className="tw-text-gray-600 tw-flex tw-items-center tw-gap-2 tw-mt-1">
+                  <span className="tw-bg-purple-100 tw-text-purple-800 tw-px-2 tw-py-1 tw-rounded tw-text-sm">
+                    {examScheduleData.exam_type || 'Unknown'}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <strong className="tw-text-gray-700">Status:</strong>
+                <div className="tw-text-gray-600 tw-flex tw-items-center tw-gap-2 tw-mt-1">
+                  <span className={`tw-px-2 tw-py-1 tw-rounded tw-text-sm tw-font-medium ${
+                    examScheduleData.isfree 
+                      ? 'tw-bg-green-100 tw-text-green-800' 
+                      : 'tw-bg-red-100 tw-text-red-800'
+                  }`}>
+                    {examScheduleData.isfree ? '✓ Gratis' : '✗ Berbayar'}
+                  </span>
+                  <span className={`tw-px-2 tw-py-1 tw-rounded tw-text-sm tw-font-medium ${
+                    examScheduleData.is_valid 
+                      ? 'tw-bg-blue-100 tw-text-blue-800' 
+                      : 'tw-bg-gray-100 tw-text-gray-800'
+                  }`}>
+                    {examScheduleData.is_valid ? '✓ Valid' : '✗ Tidak Valid'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Schedule Time */}
+            <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4">
+              <div>
+                <strong className="tw-text-gray-700">Waktu Mulai:</strong>
+                <div className="tw-text-gray-600 tw-flex tw-items-center tw-gap-1 tw-mt-1">
+                  <Calendar className="tw-w-4 tw-h-4" />
+                  {examScheduleData.start_time ? 
+                    new Date(examScheduleData.start_time).toLocaleString('id-ID') : 
+                    'Tidak ditentukan'
+                  }
+                </div>
+              </div>
+              <div>
+                <strong className="tw-text-gray-700">Waktu Selesai:</strong>
+                <div className="tw-text-gray-600 tw-flex tw-items-center tw-gap-1 tw-mt-1">
+                  <Calendar className="tw-w-4 tw-h-4" />
+                  {examScheduleData.end_time ? 
+                    new Date(examScheduleData.end_time).toLocaleString('id-ID') : 
+                    'Tidak ditentukan'
+                  }
+                </div>
+              </div>
+            </div>
+
+            {/* Creator and Date Info */}
+            <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4">
+              <div>
+                <strong className="tw-text-gray-700">Pembuat Jadwal:</strong>
+                <div className="tw-text-gray-600 tw-flex tw-items-center tw-gap-2 tw-mt-1">
+                  <div className="tw-w-6 tw-h-6 tw-bg-blue-500 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-text-white tw-text-xs tw-font-bold">
+                    {examScheduleData.creator_name ? examScheduleData.creator_name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  {examScheduleData.creator_name || 'Unknown'}
+                </div>
+              </div>
+              <div>
+                <strong className="tw-text-gray-700">Tanggal Dibuat:</strong>
+                <div className="tw-text-gray-600 tw-flex tw-items-center tw-gap-1 tw-mt-1">
+                  <Clock className="tw-w-4 tw-h-4" />
+                  {examScheduleData.create_date ? 
+                    new Date(examScheduleData.create_date).toLocaleString('id-ID') : 
+                    '-'
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card.Body>
+      </Card>
+
+      {/* Approval Decision */}
+      <Card className="tw-mb-4 tw-border-0 tw-shadow-sm">
+        <Card.Header className="tw-bg-yellow-50 tw-border-0">
+          <h6 className="tw-font-semibold tw-text-yellow-800 tw-mb-0">
+            Keputusan Persetujuan
+          </h6>
+        </Card.Header>
+        <Card.Body>
+          <div className="tw-space-y-4">
+            {/* Approval Status Selection */}
+            <div>
+              <label className="tw-font-semibold tw-text-gray-700 tw-mb-3 tw-block">
+                Keputusan Persetujuan:
+              </label>
+              <ButtonGroup className="tw-w-full">
+                <Button
+                  variant={approvalStatus === 'approved' ? 'success' : 'outline-success'}
+                  onClick={() => setApprovalStatus('approved')}
+                  className="tw-flex tw-items-center tw-justify-center tw-gap-2"
+                >
+                  <CheckCircle size={16} />
+                  Setujui
+                </Button>
+                <Button
+                  variant={approvalStatus === 'rejected' ? 'danger' : 'outline-danger'}
+                  onClick={() => setApprovalStatus('rejected')}
+                  className="tw-flex tw-items-center tw-justify-center tw-gap-2"
+                >
+                  <XCircle size={16} />
+                  Tolak
+                </Button>
+              </ButtonGroup>
+            </div>
+
+            {/* Approval Information */}
+            {approvalStatus === 'approved' && (
+              <Alert variant="success" className="tw-flex tw-items-center tw-gap-2">
+                <CheckCircle className="tw-w-5 tw-h-5 tw-text-green-600" />
+                <div>
+                  <strong>Persetujuan:</strong> Dengan mengklik "Setujui Jadwal Ujian", jadwal ini akan dapat digunakan oleh seluruh pengguna sistem.
+                  <div className="tw-mt-1 tw-text-sm">
+                    Jadwal ujian akan muncul dalam daftar yang tersedia dan dapat di-go-live untuk dijual sebagai produk.
+                  </div>
+                </div>
+              </Alert>
+            )}
+
+            {/* Rejection Reason */}
+            {approvalStatus === 'rejected' && (
+              <div>
+                <label className="tw-font-semibold tw-text-gray-700 tw-block tw-mb-2">
+                  Alasan Penolakan *
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Masukkan alasan mengapa jadwal ujian ini ditolak..."
+                  className="tw-w-full tw-p-3 tw-border tw-border-gray-300 tw-rounded-lg tw-resize-none focus:tw-ring-2 focus:tw-ring-red-500 focus:tw-border-red-500"
+                  rows={4}
+                  required
+                />
+                <small className="tw-text-gray-500">
+                  Alasan ini akan diberikan kepada pembuat jadwal ujian sebagai feedback untuk perbaikan.
+                </small>
+              </div>
+            )}
+          </div>
+        </Card.Body>
+      </Card>
+
+      {/* Summary */}
+      <Card className="tw-border-0 tw-shadow-sm">
+        <Card.Header className={`tw-border-0 ${
+          approvalStatus === 'approved' ? 'tw-bg-green-50' : 'tw-bg-red-50'
+        }`}>
+          <h6 className={`tw-font-semibold tw-mb-0 ${
+            approvalStatus === 'approved' ? 'tw-text-green-800' : 'tw-text-red-800'
+          }`}>
+            Ringkasan Keputusan
+          </h6>
+        </Card.Header>
+        <Card.Body>
+          <div className="tw-space-y-2 tw-text-sm">
+            <div>
+              <span className="tw-font-medium">Jadwal Ujian:</span> {examScheduleData.name}
+            </div>
+            <div>
+              <span className="tw-font-medium">Keputusan:</span>
+              <span className={`tw-ml-2 tw-px-2 tw-py-1 tw-rounded tw-text-xs tw-font-medium ${
+                approvalStatus === 'approved' 
+                  ? 'tw-bg-green-100 tw-text-green-800' 
+                  : 'tw-bg-red-100 tw-text-red-800'
+              }`}>
+                {approvalStatus === 'approved' ? 'DISETUJUI' : 'DITOLAK'}
+              </span>
+            </div>
+            
+            {approvalStatus === 'rejected' && rejectionReason && (
+              <div>
+                <span className="tw-font-medium">Alasan Penolakan:</span> {rejectionReason}
+              </div>
+            )}
+            
+            <div>
+              <span className="tw-font-medium">Diproses oleh:</span> 
+              Administrator ({username || 'Unknown'})
+            </div>
+            
+            {approvalStatus === 'approved' && (
+              <div className="tw-mt-3 tw-p-2 tw-bg-green-50 tw-rounded tw-border tw-border-green-200">
+                <div className="tw-text-green-700 tw-text-xs">
+                  <strong>Dampak:</strong> Jadwal ujian akan tersedia untuk semua pengguna dan dapat di-go-live sebagai produk berbayar.
+                </div>
+              </div>
+            )}
+            
+            {approvalStatus === 'rejected' && (
+              <div className="tw-mt-3 tw-p-2 tw-bg-red-50 tw-rounded tw-border tw-border-red-200">
+                <div className="tw-text-red-700 tw-text-xs">
+                  <strong>Dampak:</strong> Jadwal ujian tidak akan tersedia untuk pengguna lain. Pembuat dapat memperbaiki dan mengajukan kembali.
+                </div>
+              </div>
+            )}
+          </div>
+        </Card.Body>
+      </Card>
+    </LearningModal>
+  );
+};
+
+export default ExamScheduleApprovalModal;

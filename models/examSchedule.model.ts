@@ -19,8 +19,10 @@ export interface ExamScheduleFilters {
   sortKey?: string;
   sortOrder?: string;
   userId?: string;
+  approvalStatus?: string;
+  includeDeleted?: string;
+  userRole?: string;
 }
-
 export interface ExamScheduleResult {
   data: any[];
   total: number;
@@ -44,6 +46,16 @@ export interface ExamSchedule {
   create_date?: Date;
   update_date?: Date;
   updated_by?: string;
+  // New approval fields
+  approval_status: string;
+  approve_user_id?: number;
+  approve_date?: Date;
+  rejection_reason?: string;
+  // New soft delete fields
+  is_deleted: boolean;
+  delete_reason?: string;
+  delete_user_id?: number;
+  delete_date?: Date;
 }
 
 export interface SearchExamSchedule {
@@ -61,8 +73,53 @@ export interface AccessCheck {
   accessGranted: boolean;
 }
 
+export interface ExamScheduleRow extends ExamSchedule {
+  creator_name?: string;
+  approver_name?: string;
+  total?: number;
+  is_live?: boolean;
+  live_since?: Date;
+}
+
+export interface ApprovalData {
+  approve_user_id: string;
+  approval_status: string;
+  rejection_reason?: string;
+}
+
+export interface GoLiveData {
+  product_type_id: number;
+  price: number;
+  stock: number;
+  features: string[];
+  classtype: string;
+  is_promo: boolean;
+  no_promo_price?: number;
+  promo_description?: string;
+  effective_start: string;
+  effective_end?: string;
+}
+const isAutoCreateSchedule = (description: string): boolean => {
+  return description && description.trim().toUpperCase().startsWith('AUTOCREATE');
+};
+const buildRoleBasedConditions = (userRole: string, userId: string, values: any[]): string => {
+  if (userRole === 'admin') {
+    // Admin can see all exam schedules
+    return '';
+  } else if (userRole === 'teacher') {
+    // Teacher can see schedules they created
+    values.push(userId);
+    return ` AND es.created_by = $${values.length}`;
+  } else if (userRole === 'student') {
+    // Students can only see approved schedules
+    return ` AND es.approval_status = 'approved'`;
+  }
+  return '';
+};
+
 // Get exam schedules with comprehensive filters, sorting, and pagination
-export const getExamSchedules = async (filters: ExamScheduleFilters): Promise<ExamScheduleResult> => {
+// Fixed version of getExamSchedules function in examSchedule.model.ts
+export const getExamSchedules = async (filters: ExamScheduleFilters): Promise<{data: any[], total: number, totalPages: number}> => {
   const {
     page = 1,
     limit = 50,
@@ -78,49 +135,46 @@ export const getExamSchedules = async (filters: ExamScheduleFilters): Promise<Ex
     sortKey = 'es.id',
     sortOrder = 'asc',
     userId,
+    approvalStatus = 'all',
+    includeDeleted = 'false',
+    userRole = 'admin'
   } = filters;
 
   const offset = (page - 1) * limit;
 
-  // Define allowed sort keys to prevent SQL injection
+  // Define allowed sort keys
   const allowedSortKeys = [
-    'es.id',
-    'schedule_name',
-    'exam_id',
-    'exam_name',
-    'exam_duration',
-    'exam_type',
-    'isfree',
-    'is_valid',
-    'start_time',
-    'end_time',
-    'question_qty',
-    'schedule_creator',
-    'exam_creator',
+    'es.id', 'schedule_name', 'exam_id', 'exam_name', 'exam_duration', 'exam_type',
+    'isfree', 'is_valid', 'start_time', 'end_time', 'question_qty',
+    'schedule_creator', 'exam_creator', 'approval_status', 'approve_date'
   ];
 
   const validatedSortKey = allowedSortKeys.includes(sortKey) ? sortKey : 'es.id';
   const validatedSortOrder = sortOrder.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
 
-  // Common FROM and JOIN clauses using v_dashboard_userdata
+  // Updated base query with approval fields
   const baseFromClause = `
     FROM exam_schedule es
     JOIN LATERAL unnest(es.exam_id_list) AS u(exam_id) ON true
     JOIN exams ex ON ex.id = u.exam_id
     LEFT JOIN v_dashboard_userdata us ON us.userid = es.created_by
     LEFT JOIN v_dashboard_userdata us2 ON us2.userid = ex.create_user_id
+    LEFT JOIN v_dashboard_userdata approver ON approver.userid = es.approve_user_id
+    -- Check if exam schedule is live (has associated product)
+    LEFT JOIN product_exam_schedules pes ON pes.exam_schedule_id = es.id
+    LEFT JOIN products p ON p.product_id = pes.product_id
   `;
 
-  // Base SELECT clause
+  // Updated SELECT clause with approval and live status
   const baseSelectClause = `
     SELECT 
       es.id,
       es.name AS schedule_name,
       es.description,
       es.exam_id_list::TEXT exam_id,
+      es.isfree,
       (
-        SELECT
-        string_agg(ex2.name, '.') AS exam_name
+        SELECT string_agg(ex2.name, '.') AS exam_name
         FROM exam_schedule es2
         JOIN LATERAL unnest(es2.exam_id_list) AS u(exam_id) ON true
         JOIN exams ex2 ON ex2.id = u.exam_id
@@ -128,8 +182,7 @@ export const getExamSchedules = async (filters: ExamScheduleFilters): Promise<Ex
         GROUP BY es2.id
       ) AS exam_name,
       (
-        SELECT
-        SUM(ex2.duration)
+        SELECT SUM(ex2.duration)
         FROM exam_schedule es2
         JOIN LATERAL unnest(es2.exam_id_list) AS u(exam_id) ON true
         JOIN exams ex2 ON ex2.id = u.exam_id
@@ -137,119 +190,142 @@ export const getExamSchedules = async (filters: ExamScheduleFilters): Promise<Ex
         GROUP BY es2.id
       ) AS exam_duration,
       COALESCE(es.exam_type, 'Unknown') as exam_type,
-      es.isfree,
       es.is_valid,
       es.start_time,
       es.end_time,
       COALESCE(us.name, 'admin') AS schedule_creator,
       COALESCE(us2.name, 'admin') AS exam_creator,
       (
-        SELECT
-        SUM(array_length(ex2.question_id_list, 1))
+        SELECT SUM(array_length(ex2.question_id_list, 1))
         FROM exam_schedule es2
         JOIN LATERAL unnest(es2.exam_id_list) AS u(exam_id) ON true
         JOIN exams ex2 ON ex2.id = u.exam_id
         WHERE es2.id = es.id
         GROUP BY es2.id
-      ) AS question_qty
+      ) AS question_qty,
+      -- Approval fields
+      es.approval_status,
+      es.approve_user_id,
+      es.approve_date,
+      es.rejection_reason,
+      COALESCE(approver.name, 'admin') AS approver_name,
+      -- Soft delete fields
+      es.is_deleted,
+      es.delete_reason,
+      es.delete_user_id,
+      es.delete_date,
+      -- Live status
+      CASE WHEN p.product_id IS NOT NULL THEN true ELSE false END AS is_live,
+      p.updated_at AS live_since,
+      -- Creator info
+      es.created_by,
+      es.create_date
   `;
 
-  // Base GROUP BY clause
+  // Updated GROUP BY clause
   const baseGroupByClause = `
-    GROUP BY es.id, es.name, es.description, es.exam_type, es.isfree, es.is_valid, es.start_time, es.end_time, us.name, us2.name
+    GROUP BY es.id, es.name, es.description, es.exam_type, es.isfree, es.is_valid, 
+             es.start_time, es.end_time, us.name, us2.name, es.approval_status, 
+             es.approve_user_id, es.approve_date, es.rejection_reason, approver.name,
+             es.is_deleted, es.delete_reason, es.delete_user_id, es.delete_date,
+             es.created_by, es.create_date, p.product_id, p.updated_at
   `;
 
-  // Initialize WHERE clauses
+  // Initialize WHERE clauses and parameters
   let whereClauses: string[] = [];
   let values: any[] = [];
-  let valueIndex = 1;
-  let filterParamsCount = 0;
+  
+  // AUTOCREATE filtering - hide AUTOCREATE schedules from general view
+  whereClauses.push(`NOT (es.description ILIKE 'AUTOCREATE%')`);
 
-  // Global search - searches across multiple fields
-  if (search && search.trim()) {
-    whereClauses.push(`(
-      es.name ILIKE $${valueIndex} OR 
-      es.id::TEXT ILIKE $${valueIndex} OR
-      es.description ILIKE $${valueIndex} OR
-      es.exam_type ILIKE $${valueIndex} OR
-      us.name ILIKE $${valueIndex} OR
-      us2.name ILIKE $${valueIndex}
-    )`);
-    values.push(`%${search.trim()}%`);
-    valueIndex++;
-    filterParamsCount++;
+  // Role-based filtering
+  if (userId && userRole !== 'admin') {
+    if (userRole === 'teacher') {
+      whereClauses.push(`es.created_by = $${values.length + 1}`);
+      values.push(userId);
+    } else if (userRole === 'student') {
+      whereClauses.push(`es.approval_status = 'approved'`);
+    }
   }
 
-  // Schedule name filter (separate from global search)
+  // Soft delete filter
+  if (includeDeleted === 'false') {
+    whereClauses.push(`(es.is_deleted IS NULL OR es.is_deleted = false)`);
+  } else if (includeDeleted === 'only_deleted') {
+    whereClauses.push(`es.is_deleted = true`);
+  }
+
+  // Approval status filter
+  if (approvalStatus && approvalStatus !== 'all') {
+    whereClauses.push(`es.approval_status = $${values.length + 1}`);
+    values.push(approvalStatus);
+  }
+
+  // Global search
+  if (search && search.trim()) {
+    whereClauses.push(`(
+      es.name ILIKE $${values.length + 1} OR 
+      es.id::TEXT ILIKE $${values.length + 1} OR
+      es.description ILIKE $${values.length + 1} OR
+      es.exam_type ILIKE $${values.length + 1} OR
+      us.name ILIKE $${values.length + 1} OR
+      us2.name ILIKE $${values.length + 1}
+    )`);
+    values.push(`%${search.trim()}%`);
+  }
+
+  // Schedule name filter
   if (schedule_name && schedule_name.trim()) {
-    whereClauses.push(`es.name ILIKE $${valueIndex}`);
+    whereClauses.push(`es.name ILIKE $${values.length + 1}`);
     values.push(`%${schedule_name.trim()}%`);
-    valueIndex++;
-    filterParamsCount++;
   }
 
   // Exam type filter
   if (exam_type && exam_type !== 'All') {
-    whereClauses.push(`es.exam_type = $${valueIndex}`);
+    whereClauses.push(`es.exam_type = $${values.length + 1}`);
     values.push(exam_type);
-    valueIndex++;
-    filterParamsCount++;
   }
 
-  // Free status filter
+  // Is free filter
   if (isfree && isfree !== 'All') {
-    whereClauses.push(`es.isfree = $${valueIndex}`);
+    whereClauses.push(`es.isfree = $${values.length + 1}`);
     values.push(isfree === 'true');
-    valueIndex++;
-    filterParamsCount++;
   }
 
-  // Valid status filter
+  // Is valid filter
   if (is_valid && is_valid !== 'All') {
-    whereClauses.push(`es.is_valid = $${valueIndex}`);
+    whereClauses.push(`es.is_valid = $${values.length + 1}`);
     values.push(is_valid === 'true');
-    valueIndex++;
-    filterParamsCount++;
   }
 
-  // Date range filters
+  // Start time filter
   if (start_time) {
-    whereClauses.push(`es.start_time >= $${valueIndex}`);
+    whereClauses.push(`es.start_time >= $${values.length + 1}`);
     values.push(start_time);
-    valueIndex++;
-    filterParamsCount++;
   }
 
+  // End time filter
   if (end_time) {
-    whereClauses.push(`es.end_time <= $${valueIndex}`);
+    whereClauses.push(`es.end_time <= $${values.length + 1}`);
     values.push(end_time);
-    valueIndex++;
-    filterParamsCount++;
   }
 
-  // Schedule creators filter (multiple values)
+  // Schedule creator filter
   if (schedule_creator && schedule_creator.length > 0) {
-    const creatorPlaceholders = schedule_creator.map(() => `$${valueIndex++}`).join(',');
-    whereClauses.push(`us.userid IN (${creatorPlaceholders})`);
+    const placeholders = schedule_creator.map(() => `$${values.length + 1 + values.filter((_, i) => i >= values.length).length}`).join(',');
+    whereClauses.push(`us.userid IN (${schedule_creator.map((_, i) => `$${values.length + 1 + i}`).join(',')})`);
     values.push(...schedule_creator);
-    filterParamsCount += schedule_creator.length;
   }
 
-  // Exam creators filter (multiple values)
+  // Exam creator filter
   if (exam_creator && exam_creator.length > 0) {
-    const creatorPlaceholders = exam_creator.map(() => `$${valueIndex++}`).join(',');
-    whereClauses.push(`us2.userid IN (${creatorPlaceholders})`);
+    const startIndex = values.length + 1;
+    whereClauses.push(`us2.userid IN (${exam_creator.map((_, i) => `$${startIndex + i}`).join(',')})`);
     values.push(...exam_creator);
-    filterParamsCount += exam_creator.length;
   }
 
-  // User filter (for filtering by user-created schedules/exams)
-  if (userId) {
-    whereClauses.push(`(us.userid = $${valueIndex} OR us2.userid = $${valueIndex})`);
-    values.push(userId);
-    valueIndex++;
-    filterParamsCount++;
-  }
+  // Store the count of parameters for the count query
+  const filterParamsCount = values.length;
 
   // Construct WHERE clause
   let whereClause = '';
@@ -257,18 +333,20 @@ export const getExamSchedules = async (filters: ExamScheduleFilters): Promise<Ex
     whereClause = ' WHERE ' + whereClauses.join(' AND ');
   }
 
-  // Construct the main query
+  // Construct main query
   const mainQuery = `
     ${baseSelectClause}
     ${baseFromClause}
     ${whereClause}
     ${baseGroupByClause}
     ORDER BY ${validatedSortKey} ${validatedSortOrder}
-    LIMIT $${valueIndex} OFFSET $${valueIndex + 1}
+    LIMIT $${values.length + 1} OFFSET $${values.length + 2}
   `;
-  values.push(limit, offset);
+  
+  // Add pagination parameters
+  const mainQueryValues = [...values, limit, offset];
 
-  // Construct the count query using a subquery
+  // Count query (uses only filter parameters, not pagination)
   const countQuery = `
     SELECT COUNT(*) AS total
     FROM (
@@ -280,12 +358,14 @@ export const getExamSchedules = async (filters: ExamScheduleFilters): Promise<Ex
   `;
 
   try {
-    console.log('Executing main query:', mainQuery);
-    console.log('Query values:', values);
+    console.log('Main Query:', mainQuery);
+    console.log('Main Query Values:', mainQueryValues);
+    console.log('Count Query:', countQuery);
+    console.log('Count Query Values:', values.slice(0, filterParamsCount));
 
     const [dataResult, countResult] = await Promise.all([
-      pool.query(mainQuery, values),
-      pool.query(countQuery, values.slice(0, filterParamsCount)),
+      pool.query(mainQuery, mainQueryValues),
+      pool.query(countQuery, values.slice(0, filterParamsCount))
     ]);
 
     const total = parseInt(countResult.rows[0].total, 10);
@@ -294,14 +374,13 @@ export const getExamSchedules = async (filters: ExamScheduleFilters): Promise<Ex
     return {
       data: dataResult.rows,
       total,
-      totalPages,
+      totalPages
     };
   } catch (error) {
     console.error('Error fetching exam schedules:', error);
     throw error;
   }
 };
-
 
 // Search exam schedules (simple search for autocomplete)
 export const searchExamSchedules = async (search: string, limit: number, userId?: string): Promise<SearchExamSchedule[]> => {
@@ -315,14 +394,17 @@ export const searchExamSchedules = async (search: string, limit: number, userId?
     let values: any[] = [];
     let valueIndex = 1;
     
+    // Hide AUTOCREATE schedules
+    whereClauses.push(`NOT (description ILIKE 'AUTOCREATE%')`);
+    
     if (search) {
-      whereClauses.push(`(name ILIKE $${valueIndex} OR id::TEXT ILIKE $${valueIndex})`);
+      whereClauses.push(`(name ILIKE ${valueIndex} OR id::TEXT ILIKE ${valueIndex})`);
       values.push(`%${search}%`);
       valueIndex++;
     }
 
     if (userId) {
-      whereClauses.push(`created_by = $${valueIndex}`);
+      whereClauses.push(`created_by = ${valueIndex}`);
       values.push(userId);
       valueIndex++;
     }
@@ -333,7 +415,7 @@ export const searchExamSchedules = async (search: string, limit: number, userId?
 
     query += `
       ORDER BY id ASC
-      LIMIT $${valueIndex}
+      LIMIT ${valueIndex}
     `;
     values.push(limit);
 
@@ -378,15 +460,32 @@ export const searchExamScheduleByExamType = async (search: string = '', examType
 };
 
 // Get all valid exam schedules (is_valid = true)
-export const getValidExamSchedules = async (): Promise<ExamSchedule[]> => {
+export const getValidExamSchedules = async (userRole: string = 'admin', userId?: string): Promise<ExamSchedule[]> => {
   try {
-    const result = await pool.query('SELECT * FROM exam_schedule WHERE is_valid = TRUE');
+    let query = 'SELECT * FROM exam_schedule WHERE is_valid = TRUE AND approval_status = $1';
+    const values: any[] = ['approved'];
+
+    // Hide AUTOCREATE schedules from general view
+    query += ' AND NOT (description ILIKE $2)';
+    values.push('AUTOCREATE%');
+
+    // Add role-based filtering
+    if (userRole !== 'admin' && userId) {
+      const roleCondition = buildRoleBasedConditions(userRole, userId, values);
+      if (roleCondition) {
+        query += roleCondition;
+      }
+    }
+
+    // Only show non-deleted records
+    query += ' AND (is_deleted IS NULL OR is_deleted = false)';
+
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (error) {
     throw error;
   }
 };
-
 // Get a specific exam schedule by ID
 export const getExamScheduleById = async (id: string): Promise<any> => {
   try {
@@ -435,14 +534,61 @@ export const createExamSchedule = async (
   exam_type: number,
   is_auto_move: boolean,
   is_need_order_exam: boolean,
-  is_need_weighted_score: boolean
+  is_need_weighted_score: boolean,
+  user_role?: string
 ): Promise<ExamSchedule> => {
   try {
-    const result = await pool.query(
-      `INSERT INTO exam_schedule (name, description, exam_id_list, start_time, end_time, isfree, is_valid, created_by, type, is_auto_move, is_need_order_exam, is_need_weighted_score)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-      [name, description, exam_id_list, start_time, end_time, isfree, is_valid, created_by, exam_type, is_auto_move, is_need_order_exam, is_need_weighted_score]
-    );
+    // Check if description starts with AUTOCREATE for auto-approval
+    const isAutoCreate = isAutoCreateSchedule(description);
+    
+    // Determine approval status based on role and AUTOCREATE
+    let approvalStatus: string;
+    if (isAutoCreate) {
+      // AUTOCREATE schedules are always auto-approved
+      approvalStatus = 'approved';
+    } else {
+      // Regular approval logic based on role
+      approvalStatus = user_role === 'admin' ? 'approved' : 'need_approve';
+    }
+    
+    let query: string;
+    let values: any[];
+
+    if (approvalStatus === 'approved') {
+      // Auto-approval (admin or AUTOCREATE)
+      query = `
+        INSERT INTO exam_schedule (
+          name, description, exam_id_list, start_time, end_time, isfree, is_valid, 
+          created_by, type, is_auto_move, is_need_order_exam, is_need_weighted_score,
+          approval_status, approve_user_id, approve_date, is_deleted
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), false)
+        RETURNING *
+      `;
+      values = [
+        name, description, exam_id_list, start_time, end_time, isfree, is_valid, 
+        created_by, exam_type, is_auto_move, is_need_order_exam, is_need_weighted_score,
+        approvalStatus, created_by // approve_user_id = created_by for auto-approval
+      ];
+    } else {
+      // Regular creation needing approval
+      query = `
+        INSERT INTO exam_schedule (
+          name, description, exam_id_list, start_time, end_time, isfree, is_valid, 
+          created_by, type, is_auto_move, is_need_order_exam, is_need_weighted_score,
+          approval_status, is_deleted
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, false)
+        RETURNING *
+      `;
+      values = [
+        name, description, exam_id_list, start_time, end_time, isfree, is_valid, 
+        created_by, exam_type, is_auto_move, is_need_order_exam, is_need_weighted_score,
+        approvalStatus
+      ];
+    }
+
+    const result = await pool.query(query, values);
     return result.rows[0];
   } catch (error) {
     throw error;
@@ -459,19 +605,181 @@ export const updateExamSchedule = async (
   end_time: Date,
   is_valid: boolean,
   updated_by: string,
-  exam_type: string
+  exam_type: string,
+  userRole?: string
 ): Promise<ExamSchedule> => {
   try {
+    // For teachers, reset approval status when updating
+    let approvalFields = '';
+    let values = [name, description, exam_id_list, start_time, end_time, is_valid, updated_by, id];
+    
+    if (userRole === 'teacher') {
+      approvalFields = ', approval_status = $9, approve_user_id = NULL, approve_date = NULL, rejection_reason = NULL';
+      values.splice(7, 0, 'need_approve'); // Insert at index 7
+    }
+
     const result = await pool.query( 
       `UPDATE exam_schedule 
-       SET name = $1, description = $2, exam_id_list = $3, start_time = $4, end_time = $5, is_valid = $6, updated_by = $7, update_date = NOW()
-       WHERE id = $8 RETURNING *`,
-      [name, description, exam_id_list, start_time, end_time, is_valid, updated_by, id]
+       SET name = $1, description = $2, exam_id_list = $3, start_time = $4, end_time = $5, 
+           is_valid = $6, updated_by = $7, update_date = NOW()${approvalFields}
+       WHERE id = $8 AND (is_deleted IS NULL OR is_deleted = false)
+       RETURNING *`,
+      values
     );
     return result.rows[0];
   } catch (error) {
     throw error;
   }
+};
+
+export const approveExamSchedule = async (id: string, data: ApprovalData): Promise<ExamSchedule> => {
+  const query = `
+    UPDATE exam_schedule 
+    SET 
+      approval_status = $1,
+      approve_user_id = $2,
+      approve_date = NOW(),
+      rejection_reason = $3,
+      updated_by = $2,
+      update_date = NOW()
+    WHERE id = $4
+    RETURNING *;
+  `;
+  const values = [
+    data.approval_status,
+    data.approve_user_id,
+    data.rejection_reason || null,
+    id
+  ];
+  const result = await pool.query(query, values);
+  return result.rows[0];
+};
+
+export const getExamSchedulesNeedingApproval = async (): Promise<ExamScheduleRow[]> => {
+  const query = `
+    SELECT 
+      es.*,
+      us.name as creator_name
+    FROM exam_schedule es
+    LEFT JOIN v_dashboard_userdata us ON us.userid = es.created_by
+    WHERE es.approval_status = 'need_approve'
+      AND (es.is_deleted IS NULL OR es.is_deleted = false)
+    ORDER BY es.create_date ASC
+  `;
+
+  const result = await pool.query(query);
+  return result.rows;
+};
+
+// Go live exam schedule
+export const goLiveExamSchedule = async (examScheduleId: string, data: GoLiveData): Promise<any> => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+
+    // Get exam schedule details
+    const examScheduleResult = await client.query(
+      'SELECT * FROM exam_schedule WHERE id = $1 AND approval_status = $2 AND (is_deleted IS NULL OR is_deleted = false)',
+      [examScheduleId, 'approved']
+    );
+
+    if (examScheduleResult.rows.length === 0) {
+      throw new Error('Exam schedule not found or not approved');
+    }
+
+    const examSchedule = examScheduleResult.rows[0];
+
+    // Create product
+    const productResult = await client.query(`
+      INSERT INTO products (
+        name, description, stock, type, features, classtype, updated_at, is_stackable
+      ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), true)
+      RETURNING product_id
+    `, [
+      examSchedule.name,
+      examSchedule.description,
+      data.stock,
+      data.product_type_id, // Use the selected product type
+      JSON.stringify(data.features),
+      data.classtype
+    ]);
+
+    const productId = productResult.rows[0].product_id;
+
+    // Create product-exam schedule relationship
+    await client.query(
+      'INSERT INTO product_exam_schedules (product_id, exam_schedule_id) VALUES ($1, $2)',
+      [productId, examScheduleId]
+    );
+
+    // Create price history
+    await client.query(`
+      INSERT INTO product_price_hist (
+        product_id, price, effective_start, effective_end, description,
+        is_promo, no_promo_price, promo_description
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `, [
+      productId,
+      data.price,
+      data.effective_start,
+      data.effective_end || null,
+      `Initial pricing for ${examSchedule.name}`,
+      data.is_promo,
+      data.no_promo_price || null,
+      data.promo_description || null
+    ]);
+
+    await client.query('COMMIT');
+
+    return {
+      productId,
+      examScheduleId,
+      message: `Exam schedule "${examSchedule.name}" successfully went live!`
+    };
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+// Soft delete exam schedule
+export const softDeleteExamSchedule = async (id: string, deleteUserId: number, deleteReason: string): Promise<ExamSchedule> => {
+  const query = `
+    UPDATE exam_schedule 
+    SET 
+      is_deleted = true,
+      delete_reason = $2,
+      delete_user_id = $3,
+      delete_date = NOW(),
+      updated_by = $3,
+      update_date = NOW()
+    WHERE id = $1 AND (is_deleted IS NULL OR is_deleted = false)
+    RETURNING *;
+  `;
+  const result = await pool.query(query, [id, deleteReason, deleteUserId]);
+  return result.rows[0];
+};
+
+// Restore exam schedule
+export const restoreExamSchedule = async (id: string, restoreUserId: number): Promise<ExamSchedule> => {
+  const query = `
+    UPDATE exam_schedule 
+    SET 
+      is_deleted = false,
+      delete_reason = NULL,
+      delete_user_id = NULL,
+      delete_date = NULL,
+      updated_by = $2,
+      update_date = NOW()
+    WHERE id = $1 AND is_deleted = true
+    RETURNING *;
+  `;
+  const result = await pool.query(query, [id, restoreUserId]);
+  return result.rows[0];
 };
 
 // Delete an exam schedule by ID
@@ -598,4 +906,44 @@ export const getExamCreators = async (search: string): Promise<{id: string, name
   } catch (error) {
     throw new Error(`Database error: ${error.message}`);
   }
+};
+
+export const getExamScheduleByIdWithAccess = async (
+  id: string, 
+  includeDeleted: boolean = false, 
+  userRole: string = 'admin', 
+  userId?: string
+): Promise<ExamScheduleRow | null> => {
+  let query = `
+    SELECT 
+      es.*,
+      us1.name as creator_name,
+      us2.name as approver_name,
+      CASE WHEN pes.exam_schedule_id IS NOT NULL THEN true ELSE false END AS is_live,
+      p.updated_at AS live_since
+    FROM exam_schedule es
+    LEFT JOIN v_dashboard_userdata us1 ON us1.userid = es.created_by
+    LEFT JOIN v_dashboard_userdata us2 ON us2.userid = es.approve_user_id
+    LEFT JOIN product_exam_schedules pes ON pes.exam_schedule_id = es.id
+    LEFT JOIN products p ON p.product_id = pes.product_id
+    WHERE es.id = $1
+  `;
+
+  const values: any[] = [id];
+
+  // Add role-based filtering if not admin
+  if (userRole !== 'admin' && userId) {
+    const roleCondition = buildRoleBasedConditions(userRole, userId, values);
+    if (roleCondition) {
+      query += roleCondition;
+    }
+  }
+
+  // Add soft delete filter if not including deleted records
+  if (!includeDeleted) {
+    query += ` AND (es.is_deleted IS NULL OR es.is_deleted = false)`;
+  }
+
+  const result = await pool.query(query, values);
+  return result.rows[0] || null;
 };

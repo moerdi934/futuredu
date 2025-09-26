@@ -3,6 +3,53 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import * as examScheduleModel from '../models/examSchedule.model';
 import { AuthenticatedRequest } from '../lib/middleware/auth';
 
+export interface ApprovalRequest {
+  approval_status: 'approved' | 'rejected';
+  rejection_reason?: string;
+}
+
+export interface GoLiveRequest {
+  product_type_id: number;
+  price: number;
+  stock: number;
+  features: string[];
+  classtype: string;
+  is_promo: boolean;
+  no_promo_price?: number;
+  promo_description?: string;
+  effective_start: string;
+  effective_end?: string;
+}
+
+export interface DeleteRequest {
+  delete_reason?: string;
+}
+const isAutoCreateSchedule = (description: string): boolean => {
+  return description && description.trim().toUpperCase().startsWith('AUTOCREATE');
+};
+
+// Helper function to check if user can access exam schedule
+const canUserAccessExamSchedule = (examScheduleData: any, userRole: string, userId: number): boolean => {
+  if (userRole === 'admin') {
+    return true;
+  } else if (userRole === 'teacher') {
+    return examScheduleData.created_by === userId.toString() || examScheduleData.approval_status === 'approved';
+  } else if (userRole === 'student') {
+    return examScheduleData.approval_status === 'approved';
+  }
+  return false;
+};
+
+// Helper function to check if user can modify exam schedule
+const canUserModifyExamSchedule = (examScheduleData: any, userRole: string, userId: number): boolean => {
+  if (userRole === 'admin') {
+    return true;
+  } else if (userRole === 'teacher') {
+    return examScheduleData.created_by === userId.toString() && examScheduleData.approval_status === 'need_approve';
+  }
+  return false;
+};
+
 // Parse comma-separated multiple values
 const parseMultipleValues = (value: string | string[]): string[] => {
   if (!value) return [];
@@ -24,8 +71,11 @@ const parseSortParam = (sortParam: string) => {
 };
 
 // Get exam schedules with comprehensive filters, sorting, and pagination
-export const getExamSchedules = async (req: NextApiRequest, res: NextApiResponse) => {
+export const getExamSchedules = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   try {
+    const userRole = req.user?.role || 'student';
+    const userId = req.user?.id?.toString();
+
     // Parse pagination
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -39,6 +89,8 @@ export const getExamSchedules = async (req: NextApiRequest, res: NextApiResponse
     const series = (req.query.series as string) || 'All';
     const isfree = (req.query.isfree as string) || 'All';
     const is_valid = (req.query.is_valid as string) || 'All';
+    const approvalStatus = (req.query.approvalStatus as string) || 'all';
+    const includeDeleted = (req.query.includeDeleted as string) || 'false';
     
     // Parse date filters
     const start_time = (req.query.start_time as string) || null;
@@ -48,14 +100,14 @@ export const getExamSchedules = async (req: NextApiRequest, res: NextApiResponse
     const schedule_creator = parseMultipleValues(req.query.schedule_creator as string);
     const exam_creator = parseMultipleValues(req.query.exam_creator as string);
     
-    // Parse name filter (for direct name searching)
+    // Parse name filter
     const schedule_name = (req.query.schedule_name as string) || '';
     
     // Parse sort parameter
     const { sortKey, sortOrder } = parseSortParam(req.query.sort as string);
     
     // Parse user filter
-    const userId = (req.query.userId as string) || null;
+    const userIdFilter = (req.query.userId as string) || null;
 
     // Build filters object
     const filters = {
@@ -74,7 +126,10 @@ export const getExamSchedules = async (req: NextApiRequest, res: NextApiResponse
       exam_creator,
       sortKey,
       sortOrder,
-      userId,
+      userId: userIdFilter,
+      approvalStatus,
+      includeDeleted,
+      userRole
     };
 
     console.log('Controller filters:', filters);
@@ -130,9 +185,11 @@ export const searchExamSchedulesByExamType = async (req: NextApiRequest, res: Ne
 };
 
 // Get all valid exam schedules (is_valid = true)
-export const getValidExamSchedules = async (req: NextApiRequest, res: NextApiResponse) => {
+export const getValidExamSchedules = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   try {
-    const schedules = await examScheduleModel.getValidExamSchedules();
+    const userRole = req.user?.role || 'student';
+    const userId = req.user?.id?.toString();
+    const schedules = await examScheduleModel.getValidExamSchedules(userRole, userId);
     res.status(200).json(schedules);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -140,19 +197,48 @@ export const getValidExamSchedules = async (req: NextApiRequest, res: NextApiRes
 };
 
 // Get exam schedule by ID
-export const getExamScheduleById = async (req: NextApiRequest, res: NextApiResponse) => {
+export const getExamScheduleById = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   const { id } = req.query;
+  const userRole = req.user?.role || 'student';
+  const userId = req.user?.id;
+
   try {
-    const schedule = await examScheduleModel.getExamScheduleById(id as string);
+    const schedule = await examScheduleModel.getExamScheduleByIdWithAccess(
+      id as string, 
+      false, 
+      userRole, 
+      userId?.toString()
+    );
+
     if (!schedule) {
-      return res.status(404).json({ message: 'Exam schedule not found' });
+      return res.status(404).json({ message: 'Jadwal ujian tidak ditemukan atau akses ditolak' });
     }
-    res.status(200).json(schedule);
+
+    // Check if exam schedule is soft deleted
+    if (schedule.is_deleted) {
+      return res.status(410).json({ 
+        message: 'Jadwal ujian telah dihapus',
+        delete_reason: schedule.delete_reason 
+      });
+    }
+
+    // Check if this is an AUTOCREATE schedule and user is not admin
+    if (userRole !== 'admin' && isAutoCreateSchedule(schedule.description)) {
+      return res.status(404).json({ 
+        message: 'Jadwal ujian tidak ditemukan atau akses ditolak' 
+      });
+    }
+
+    res.status(200).json({
+      ...schedule,
+      is_free_exam: schedule.isfree === true,
+      is_autocreate: isAutoCreateSchedule(schedule.description)
+    });
   } catch (error: any) {
+    console.error('Get exam schedule by ID error:', error);
     res.status(500).json({ error: error.message });
   }
 };
-
 // Get exam schedules by exam type
 export const getExamSchedulesByType = async (req: NextApiRequest, res: NextApiResponse) => {
   const { examtype } = req.query;
@@ -168,7 +254,7 @@ export const getExamSchedulesByType = async (req: NextApiRequest, res: NextApiRe
 };
 
 // Create a new exam schedule
-export const createExamSchedule = async (req: NextApiRequest, res: NextApiResponse) => {
+export const createExamSchedule = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   const { 
     name, 
     description, 
@@ -183,8 +269,22 @@ export const createExamSchedule = async (req: NextApiRequest, res: NextApiRespon
     is_need_order_exam, 
     is_need_weighted_score 
   } = req.body;
+
+  const userRole = req.user?.role;
+  const userId = req.user?.id;
   
   try {
+    // Only teachers and admins can create exam schedules
+    if (userRole !== 'teacher' && userRole !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Akses ditolak. Hanya guru dan admin yang dapat membuat jadwal ujian.'
+      });
+    }
+
+    // Check if this is an AUTOCREATE schedule
+    const isAutoCreate = isAutoCreateSchedule(description);
+
     const newSchedule = await examScheduleModel.createExamSchedule(
       name, 
       description, 
@@ -193,20 +293,36 @@ export const createExamSchedule = async (req: NextApiRequest, res: NextApiRespon
       end_time, 
       isfree, 
       is_valid, 
-      created_by, 
+      userId?.toString() || created_by, 
       exam_type,
       is_auto_move, 
       is_need_order_exam, 
-      is_need_weighted_score
+      is_need_weighted_score,
+      userRole
     );
-    res.status(201).json(newSchedule);
+
+    // Determine response message based on approval status and AUTOCREATE
+    let responseMessage: string;
+    if (isAutoCreate) {
+      responseMessage = 'Jadwal ujian AUTOCREATE berhasil dibuat dan disetujui otomatis (tersembunyi dari tampilan umum)';
+    } else if (newSchedule.approval_status === 'need_approve') {
+      responseMessage = 'Jadwal ujian berhasil dibuat dan menunggu persetujuan admin';
+    } else {
+      responseMessage = 'Jadwal ujian berhasil dibuat dan disetujui otomatis';
+    }
+
+    res.status(201).json({
+      ...newSchedule,
+      message: responseMessage,
+      is_autocreate: isAutoCreate
+    });
   } catch (error: any) {
+    console.error('Create exam schedule error:', error);
     res.status(500).json({ error: error.message });
   }
 };
-
 // Update an existing exam schedule
-export const updateExamSchedule = async (req: NextApiRequest, res: NextApiResponse) => {
+export const updateExamSchedule = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   const { id } = req.query;
   const { 
     name, 
@@ -218,8 +334,44 @@ export const updateExamSchedule = async (req: NextApiRequest, res: NextApiRespon
     updated_by, 
     exam_type 
   } = req.body;
+
+  const userRole = req.user?.role;
+  const userId = req.user?.id;
   
   try {
+    // Check if exam schedule exists and user can access it
+    const existingSchedule = await examScheduleModel.getExamScheduleByIdWithAccess(
+      id as string, 
+      false, 
+      userRole, 
+      userId?.toString()
+    );
+
+    if (!existingSchedule) {
+      return res.status(404).json({ message: 'Jadwal ujian tidak ditemukan atau akses ditolak' });
+    }
+
+    if (existingSchedule.is_deleted) {
+      return res.status(410).json({ 
+        message: 'Jadwal ujian telah dihapus dan tidak dapat diubah',
+        delete_reason: existingSchedule.delete_reason 
+      });
+    }
+
+    // Check if user can modify this exam schedule
+    if (!canUserModifyExamSchedule(existingSchedule, userRole, userId)) {
+      return res.status(403).json({ 
+        message: 'Anda tidak memiliki hak untuk mengubah jadwal ujian ini' 
+      });
+    }
+
+    // Teachers can only edit schedules that are not approved yet
+    if (userRole === 'teacher' && existingSchedule.approval_status !== 'need_approve') {
+      return res.status(403).json({ 
+        message: 'Jadwal ujian yang sudah disetujui tidak dapat diubah' 
+      });
+    }
+
     const updatedSchedule = await examScheduleModel.updateExamSchedule(
       id as string, 
       name, 
@@ -228,18 +380,28 @@ export const updateExamSchedule = async (req: NextApiRequest, res: NextApiRespon
       start_time, 
       end_time, 
       is_valid, 
-      updated_by, 
-      exam_type
+      userId?.toString() || updated_by, 
+      exam_type,
+      userRole
     );
+
     if (!updatedSchedule) {
-      return res.status(404).json({ message: 'Exam schedule not found' });
+      return res.status(404).json({ message: 'Jadwal ujian tidak ditemukan' });
     }
-    res.status(200).json(updatedSchedule);
+
+    const responseMessage = userRole === 'teacher' 
+      ? 'Jadwal ujian berhasil diubah dan kembali memerlukan persetujuan admin'
+      : 'Jadwal ujian berhasil diubah';
+
+    res.status(200).json({
+      ...updatedSchedule,
+      message: responseMessage
+    });
   } catch (error: any) {
+    console.error('Update exam schedule error:', error);
     res.status(500).json({ error: error.message });
   }
 };
-
 // Delete an exam schedule
 export const deleteExamSchedule = async (req: NextApiRequest, res: NextApiResponse) => {
   const { id } = req.query;
@@ -346,3 +508,298 @@ export const getExamCreatorsController = async (req: NextApiRequest, res: NextAp
     res.status(500).json({ error: error.message });
   }
 };
+
+export const approveExamSchedule = async (req: AuthenticatedRequest, res: NextApiResponse) => {
+  const { id } = req.query;
+  const { approval_status, rejection_reason }: ApprovalRequest = req.body;
+  const userRole = req.user?.role;
+  const userId = req.user?.id;
+
+  try {
+    console.log('Approve Exam Schedule Request:', { id, approval_status, rejection_reason, userRole, userId });
+
+    // Only admin can approve exam schedules
+    if (userRole !== 'admin') {
+      return res.status(403).json({ 
+        message: 'Akses ditolak. Hanya admin yang dapat menyetujui jadwal ujian.' 
+      });
+    }
+
+    // Check if exam schedule exists
+    const existingSchedule = await examScheduleModel.getExamScheduleByIdWithAccess(id as string, false, 'admin');
+    if (!existingSchedule) {
+      return res.status(404).json({ message: 'Jadwal ujian tidak ditemukan' });
+    }
+
+    console.log('Existing Exam Schedule:', existingSchedule);
+
+    // Check if exam schedule is already processed
+    if (existingSchedule.approval_status !== 'need_approve') {
+      return res.status(400).json({ 
+        message: 'Jadwal ujian ini sudah diproses sebelumnya' 
+      });
+    }
+
+    // Validation for rejection
+    if (approval_status === 'rejected' && !rejection_reason?.trim()) {
+      return res.status(400).json({
+        message: 'Alasan penolakan harus diisi'
+      });
+    }
+
+    const approvalData = {
+      approval_status,
+      approve_user_id: userId.toString(),
+      rejection_reason: approval_status === 'rejected' ? rejection_reason : undefined
+    };
+
+    console.log('Approval Data:', approvalData);
+
+    const approvedSchedule = await examScheduleModel.approveExamSchedule(id as string, approvalData);
+
+    const successMessage = approval_status === 'approved' 
+      ? `Jadwal ujian "${existingSchedule.name}" berhasil disetujui!`
+      : `Jadwal ujian "${existingSchedule.name}" telah ditolak.`;
+
+    res.status(200).json({
+      ...approvedSchedule,
+      message: successMessage
+    });
+  } catch (error) {
+    console.error('Approve Exam Schedule Error:', error);
+    res.status(500).json({ 
+      message: 'Server Error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Get exam schedules that need approval (admin only)
+export const getExamSchedulesNeedingApproval = async (req: AuthenticatedRequest, res: NextApiResponse) => {
+  const userRole = req.user?.role;
+
+  try {
+    // Only admin can access this endpoint
+    if (userRole !== 'admin') {
+      return res.status(403).json({ 
+        message: 'Akses ditolak. Hanya admin yang dapat melihat jadwal ujian yang memerlukan persetujuan.' 
+      });
+    }
+
+    const schedules = await examScheduleModel.getExamSchedulesNeedingApproval();
+    
+    const processedSchedules = schedules.map(schedule => ({
+      id: schedule.id,
+      name: schedule.name,
+      description: schedule.description,
+      creator_name: schedule.creator_name,
+      create_date: schedule.create_date,
+      approval_status: schedule.approval_status,
+      exam_id_list: schedule.exam_id_list
+    }));
+
+    res.json(processedSchedules);
+  } catch (error) {
+    console.error('Get Exam Schedules Needing Approval Error:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+
+// Go live exam schedule (admin only)
+export const goLiveExamSchedule = async (req: AuthenticatedRequest, res: NextApiResponse) => {
+  const { id } = req.query;
+  const goLiveData: GoLiveRequest = req.body;
+  const userRole = req.user?.role;
+  const userId = req.user?.id;
+
+  try {
+    // Only admin can make exam schedules go live
+    if (userRole !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Akses ditolak. Hanya admin yang dapat melakukan go-live jadwal ujian.'
+      });
+    }
+
+    // Check if exam schedule exists and is approved
+    const existingSchedule = await examScheduleModel.getExamScheduleByIdWithAccess(id as string, false, 'admin');
+    if (!existingSchedule) {
+      return res.status(404).json({
+        success: false,
+        message: 'Jadwal ujian tidak ditemukan'
+      });
+    }
+
+    if (existingSchedule.approval_status !== 'approved') {
+      return res.status(400).json({
+        success: false,
+        message: 'Jadwal ujian harus disetujui terlebih dahulu sebelum go-live'
+      });
+    }
+
+    if (existingSchedule.is_deleted) {
+      return res.status(400).json({
+        success: false,
+        message: 'Jadwal ujian yang dihapus tidak dapat go-live'
+      });
+    }
+
+    if (existingSchedule.is_live) {
+      return res.status(400).json({
+        success: false,
+        message: 'Jadwal ujian sudah dalam status live'
+      });
+    }
+
+    // Check if exam is free
+    const isFreeExam = existingSchedule.isfree === true;
+
+    // Modify goLiveData for free exams
+    const processedGoLiveData = {
+      ...goLiveData,
+      price: isFreeExam ? 0 : goLiveData.price,
+      is_promo: isFreeExam ? false : goLiveData.is_promo,
+      no_promo_price: isFreeExam ? undefined : goLiveData.no_promo_price,
+      promo_description: isFreeExam ? undefined : goLiveData.promo_description
+    };
+
+    // Validate required fields (skip price validation for free exams)
+    if (!processedGoLiveData.product_type_id || !processedGoLiveData.effective_start) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product type dan tanggal mulai harus diisi'
+      });
+    }
+
+    // Validate price only for paid exams
+    if (!isFreeExam && (!processedGoLiveData.price || processedGoLiveData.price <= 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Harga harus lebih dari 0 untuk ujian berbayar'
+      });
+    }
+
+    const result = await examScheduleModel.goLiveExamSchedule(id as string, processedGoLiveData);
+
+    const examType = isFreeExam ? 'gratis' : 'berbayar';
+    const successMessage = `Jadwal ujian ${examType} "${existingSchedule.name}" berhasil go-live!`;
+
+    res.status(200).json({
+      success: true,
+      message: successMessage,
+      data: {
+        ...result,
+        is_free_exam: isFreeExam,
+        final_price: processedGoLiveData.price
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Go Live Exam Schedule Error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server Error'
+    });
+  }
+};
+
+// Soft delete exam schedule
+export const deleteExamScheduleWithApproval = async (req: AuthenticatedRequest, res: NextApiResponse) => {
+  const { id } = req.query;
+  const { delete_reason }: DeleteRequest = req.body;
+  const userRole = req.user?.role;
+  const userId = req.user?.id;
+
+  try {
+    // Check exam schedule exists
+    const existingSchedule = await examScheduleModel.getExamScheduleByIdWithAccess(
+      id as string, 
+      false, 
+      userRole, 
+      userId?.toString()
+    );
+    
+    if (!existingSchedule) {
+      return res.status(404).json({ message: 'Jadwal ujian tidak ditemukan atau akses ditolak' });
+    }
+
+    // Check if already deleted
+    if (existingSchedule.is_deleted) {
+      return res.status(410).json({ 
+        message: 'Jadwal ujian sudah dihapus sebelumnya',
+        delete_reason: existingSchedule.delete_reason 
+      });
+    }
+
+    // Check if user can delete this exam schedule
+    if (!canUserModifyExamSchedule(existingSchedule, userRole, userId)) {
+      return res.status(403).json({ 
+        message: 'Anda tidak memiliki hak untuk menghapus jadwal ujian ini' 
+      });
+    }
+
+    // Perform soft delete
+    const deletedSchedule = await examScheduleModel.softDeleteExamSchedule(
+      id as string, 
+      userId, 
+      delete_reason || 'Dihapus oleh pengguna'
+    );
+
+    res.status(200).json({
+      message: 'Jadwal ujian berhasil dihapus',
+      data: deletedSchedule
+    });
+  } catch (error) {
+    console.error('Delete Exam Schedule Error:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// Restore exam schedule
+export const restoreExamSchedule = async (req: AuthenticatedRequest, res: NextApiResponse) => {
+  const { id } = req.query;
+  const userRole = req.user?.role;
+  const userId = req.user?.id;
+
+  try {
+    // Check if exam schedule exists (including deleted ones)
+    const existingSchedule = await examScheduleModel.getExamScheduleByIdWithAccess(id as string, true, 'admin');
+    if (!existingSchedule) {
+      return res.status(404).json({ message: 'Jadwal ujian tidak ditemukan' });
+    }
+
+    // Check if exam schedule is actually deleted
+    if (!existingSchedule.is_deleted) {
+      return res.status(400).json({ 
+        message: 'Jadwal ujian ini tidak dalam status terhapus' 
+      });
+    }
+
+    // Check permissions - same as delete permissions
+    if (!canUserModifyExamSchedule(existingSchedule, userRole, userId)) {
+      return res.status(403).json({ 
+        message: 'Anda tidak memiliki hak untuk mengembalikan jadwal ujian ini' 
+      });
+    }
+
+    // Perform restore
+    const restoredSchedule = await examScheduleModel.restoreExamSchedule(id as string, userId);
+
+    if (!restoredSchedule) {
+      return res.status(400).json({ 
+        message: 'Gagal mengembalikan jadwal ujian' 
+      });
+    }
+
+    res.status(200).json({
+      message: 'Jadwal ujian berhasil dikembalikan',
+      data: restoredSchedule
+    });
+  } catch (error) {
+    console.error('Restore Exam Schedule Error:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// Updated getValidExamSchedules with role-based access
