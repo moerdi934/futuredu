@@ -1,22 +1,18 @@
-// components/modals/ExamModal.tsx
+// components/modals/ExamModal.tsx - Updated with Templates
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { Modal, Button, Spinner, Alert } from 'react-bootstrap';
+import { Spinner, Table, Badge } from 'react-bootstrap';
 import {
-  BookOpen,
-  Play,
-  Clock,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  Sparkles,
+  BookOpen, Play, Clock, AlertCircle, CheckCircle, XCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useExam } from '../../context/ExamContext';
 import NoAccessProductModal from './NoAccessProductModal';
+import { LearningModal } from '../../components/modal/ModalTemplate';
+import { ButtonGradient } from '../../components/button/ButtonTemplate';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -36,6 +32,7 @@ interface ExamSchedule {
   name: string;
   start_time: string;
   end_time: string;
+  is_need_weighted_score?: boolean;
 }
 
 interface ExamSession {
@@ -50,6 +47,23 @@ interface ExamSession {
   end_time: string;
   is_auto_move: boolean;
   minute_exam: number;
+}
+
+interface ExamScore {
+  exam_name: string;
+  score: number;
+  total_correct: number;
+  total_questions: number;
+  completion_time: string;
+}
+
+interface ScoreResult {
+  total_score: number;
+  average_score: number;
+  total_correct: number;
+  total_questions: number;
+  exam_scores: ExamScore[];
+  is_need_weighted_score: boolean;
 }
 
 interface ExamModalProps {
@@ -70,7 +84,6 @@ export default function ExamModal({
   const router = useRouter();
   const { username, id: userId } = useAuth();
   
-  // Context untuk passing data tanpa localStorage/URL params
   const { 
     setTopicId: setContextTopicId,
     setExamScheduleId: setContextExamScheduleId,
@@ -80,10 +93,8 @@ export default function ExamModal({
     setSelectedSchedule: setContextSelectedSchedule,
     setExamType: setContextExamType,
     setOriginPath: setContextOriginPath,
-    clearExamData
   } = useExam();
   
-  // Local state untuk UI
   const [loadingExam, setLoadingExam] = useState<boolean>(false);
   const [noAccessModal, setNoAccessModal] = useState<boolean>(false);
   const [loadingProduct, setLoadingProduct] = useState<boolean>(false);
@@ -96,6 +107,9 @@ export default function ExamModal({
   const [creatingSession, setCreatingSession] = useState<boolean>(false);
   const [selectedSchedule, setSelectedSchedule] = useState<ExamSchedule | null>(null);
   const [selectedTopicId] = useState<number | null>(topicId);
+  const [isCompleted, setIsCompleted] = useState<boolean>(false);
+  const [scoreResult, setScoreResult] = useState<ScoreResult | null>(null);
+  const [loadingScore, setLoadingScore] = useState<boolean>(false);
 
   useEffect(() => {
     if (!scheduleId || !username || !show) return;
@@ -107,7 +121,6 @@ export default function ExamModal({
       setLoadingExam(true);
       
       try {
-        // Fetch exam schedule details
         const scheduleResponse = await axios.get(
           `${apiUrl}/exam-schedules/${scheduleId}`,
           {
@@ -116,7 +129,6 @@ export default function ExamModal({
         );
         setSelectedSchedule(scheduleResponse.data);
 
-        // Check exam access
         const accessResponse = await axios.post(
           `${apiUrl}/exam-schedules/checkAccess`,
           { username, examId: scheduleId },
@@ -128,7 +140,26 @@ export default function ExamModal({
         if (accessResponse.status === 200 && 
             accessResponse.data.message === 'Access granted to the exam') {
           
-          // Fetch exam order
+          const sessionResponse = await axios.get(
+            `${apiUrl}/examSession/examSchedule`,
+            {
+              params: { exam_schedule_id: scheduleId },
+              headers: { Authorization: `Bearer ${authToken}` }
+            }
+          );
+
+          const sessionData = sessionResponse.data?.data || [];
+          
+          const hasActiveSession = sessionData.some((s: ExamSession) => !s.is_submitted);
+
+          if (!hasActiveSession && sessionData.length > 0) {
+            setIsCompleted(true);
+            setLoadingExam(false);
+            
+            fetchExamScores(scheduleId, authToken);
+            return;
+          }
+
           const examResponse = await axios.post(
             `${apiUrl}/examOrder/getExamOrder`,
             { userName: username, scheduleId },
@@ -143,29 +174,9 @@ export default function ExamModal({
           setExamOrder(examOrderData);
           setExamIdList(examOrderData.map(exam => exam.exam_id));
 
-          // Check existing sessions
-          const sessionResponse = await axios.get(
-            `${apiUrl}/examSession/examSchedule`,
-            {
-              params: { exam_schedule_id: scheduleId },
-              headers: { Authorization: `Bearer ${authToken}` }
-            }
-          );
-
-          if (sessionResponse.data?.data?.length > 0) {
-            const sessionData = sessionResponse.data.data;
+          if (sessionData.length > 0) {
             const sortedSessions = [...sessionData].sort(
-              (a, b) => {
-                const aTime = new Date(a.start_time);
-                const bTime = new Date(b.start_time);
-                
-                // Handle invalid dates
-                if (isNaN(aTime.getTime()) && isNaN(bTime.getTime())) return 0;
-                if (isNaN(aTime.getTime())) return 1;
-                if (isNaN(bTime.getTime())) return -1;
-                
-                return aTime.getTime() - bTime.getTime();
-              }
+              (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
             );
             setExamSessions(sortedSessions);
             setActiveSession(sortedSessions.find(s => !s.is_submitted) || sortedSessions[0]);
@@ -209,6 +220,23 @@ export default function ExamModal({
     checkAccessAndFetchData();
   }, [scheduleId, username, show, examType]);
 
+  const fetchExamScores = async (scheduleId: number, authToken: string) => {
+    setLoadingScore(true);
+    try {
+      const response = await axios.get(
+        `${apiUrl}/exam-schedules/${scheduleId}/scores`,
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      setScoreResult(response.data);
+    } catch (error) {
+      console.error('Error fetching scores:', error);
+    } finally {
+      setLoadingScore(false);
+    }
+  };
+
   const mergeSessionDataIntoExamOrder = (
     examOrderData: ExamOrder[],
     sessionData: ExamSession[]
@@ -223,17 +251,7 @@ export default function ExamModal({
     }
 
     const sortedSessions = [...sessionData].sort(
-      (a, b) => {
-        const aTime = new Date(a.start_time);
-        const bTime = new Date(b.start_time);
-        
-        // Handle invalid dates
-        if (isNaN(aTime.getTime()) && isNaN(bTime.getTime())) return 0;
-        if (isNaN(aTime.getTime())) return 1;
-        if (isNaN(bTime.getTime())) return -1;
-        
-        return aTime.getTime() - bTime.getTime();
-      }
+      (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
     );
 
     return examOrderData.map(exam => {
@@ -265,17 +283,7 @@ export default function ExamModal({
     
     if (activeExamId !== null) {
       const sortedExamOrder = [...examOrder].sort(
-        (a, b) => {
-          const aTime = new Date(a.start_time || "");
-          const bTime = new Date(b.start_time || "");
-          
-          // Handle invalid dates - put them at the end
-          if (isNaN(aTime.getTime()) && isNaN(bTime.getTime())) return 0;
-          if (isNaN(aTime.getTime())) return 1;
-          if (isNaN(bTime.getTime())) return -1;
-          
-          return aTime.getTime() - bTime.getTime();
-        }
+        (a, b) => new Date(a.start_time || "").getTime() - new Date(b.start_time || "").getTime()
       );
       const activeExamIndex = sortedExamOrder.findIndex(e => e.exam_id === activeExamId);
       const currentExamIndex = sortedExamOrder.findIndex(e => e.exam_id === exam.exam_id);
@@ -286,16 +294,12 @@ export default function ExamModal({
     return false;
   };
 
-  // Function untuk check apakah semua ujian sudah selesai
   const areAllExamsCompleted = (): boolean => {
-    // Jika tidak ada session sama sekali, berarti belum ada yang dikerjakan
     if (examSessions.length === 0) return false;
-    
-    // Jika ada session, cek apakah semua sudah di-submit
     return examSessions.length > 0 && examSessions.every(session => session.is_submitted);
   };
 
-  const handleStartExam = async () => {
+  const handleStart = async () => {
     if (!scheduleId || !userId) return;
     setCreatingSession(true);
 
@@ -303,7 +307,6 @@ export default function ExamModal({
       const authToken = localStorage.getItem('authToken');
       if (!authToken) throw new Error('No auth token');
       
-      // Set origin path ke context instead of localStorage
       setContextOriginPath(window.location.pathname);
       
       if (!activeSession) {
@@ -318,31 +321,19 @@ export default function ExamModal({
         if (response.data?.sessions) {
           const newSessions = response.data.sessions;
           const sortedSessions = [...newSessions].sort(
-            (a, b) => {
-              const aTime = new Date(a.start_time);
-              const bTime = new Date(b.start_time);
-              
-              // Handle invalid dates
-              if (isNaN(aTime.getTime()) && isNaN(bTime.getTime())) return 0;
-              if (isNaN(aTime.getTime())) return 1;
-              if (isNaN(bTime.getTime())) return -1;
-              
-              return aTime.getTime() - bTime.getTime();
-            }
+            (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
           );
           setExamSessions(sortedSessions);
           setActiveSession(sortedSessions[0]);
           const updatedExamOrder = mergeSessionDataIntoExamOrder(examOrder, sortedSessions);
           setExamOrder(updatedExamOrder);
           
-          // Set context dengan data yang baru dibuat
           setContextExamSessions(sortedSessions);
           setContextActiveSession(sortedSessions[0]);
           setContextExamOrder(updatedExamOrder);
         }
       }
 
-      // Set semua data ke context instead of localStorage
       setContextTopicId(selectedTopicId);
       setContextExamScheduleId(scheduleId);
       setContextExamOrder(examOrder);
@@ -350,23 +341,11 @@ export default function ExamModal({
       setContextActiveSession(activeSession);
       setContextSelectedSchedule(selectedSchedule);
       setContextExamType(examType);
-
-      // Hanya set username ke localStorage jika masih diperlukan di halaman exam
       localStorage.setItem('userName', username || '');
 
       if (examSessions.length > 0) {
         const sortedSessions = [...examSessions].sort(
-          (a, b) => {
-            const aTime = new Date(a.start_time);
-            const bTime = new Date(b.start_time);
-            
-            // Handle invalid dates
-            if (isNaN(aTime.getTime()) && isNaN(bTime.getTime())) return 0;
-            if (isNaN(aTime.getTime())) return 1;
-            if (isNaN(bTime.getTime())) return -1;
-            
-            return aTime.getTime() - bTime.getTime();
-          }
+          (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
         );
         
         const incompleteSession = sortedSessions.find(session => !session.is_submitted);
@@ -376,7 +355,6 @@ export default function ExamModal({
             exam => exam.exam_id === parseInt(incompleteSession.exam_id.toString())
           );
           if (examData) {
-            // Navigate tanpa query parameters
             router.push(`/exam/${examData.exam_string}`);
             onClose();
             setCreatingSession(false);
@@ -385,19 +363,8 @@ export default function ExamModal({
         }
       }
 
-      // Find first incomplete exam
       const sortedExamOrder = [...examOrder].sort(
-        (a, b) => {
-          const aTime = new Date(a.start_time || "");
-          const bTime = new Date(b.start_time || "");
-          
-          // Handle invalid dates - put them at the end
-          if (isNaN(aTime.getTime()) && isNaN(bTime.getTime())) return 0;
-          if (isNaN(aTime.getTime())) return 1;
-          if (isNaN(bTime.getTime())) return -1;
-          
-          return aTime.getTime() - bTime.getTime();
-        }
+        (a, b) => new Date(a.start_time || "").getTime() - new Date(b.start_time || "").getTime()
       );
       
       const activeExamId = activeSession ? parseInt(activeSession.exam_id.toString()) : null;
@@ -405,7 +372,6 @@ export default function ExamModal({
         exam => !isExamEffectivelySubmitted(exam, activeExamId)
       );
       
-      // Navigate tanpa query parameters
       router.push(
         `/exam/${firstIncompleteExam 
           ? firstIncompleteExam.exam_string 
@@ -434,54 +400,31 @@ export default function ExamModal({
   const getExamTimeStatus = (exam: ExamOrder): { isPast: boolean; isCurrent: boolean } => {
     const now = new Date();
     
-    // Handle null/undefined times safely
-    let startTime: Date | null = null;
-    let endTime: Date | null = null;
-    let hasValidTimes = false;
+    const startTime = exam.start_time ? new Date(exam.start_time) : null;
+    const endTime = exam.end_time ? new Date(exam.end_time) : null;
     
-    if (exam.start_time && exam.start_time !== 'null') {
-      startTime = new Date(exam.start_time);
-      if (!isNaN(startTime.getTime())) {
-        hasValidTimes = startTime.getTime() > 0;
-      }
+    if (!startTime || !endTime || isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+      return { isPast: false, isCurrent: false };
     }
     
-    if (exam.end_time && exam.end_time !== 'null') {
-      endTime = new Date(exam.end_time);
-      if (hasValidTimes && !isNaN(endTime.getTime())) {
-        hasValidTimes = hasValidTimes && endTime.getTime() > 0;
-      } else {
-        hasValidTimes = false;
-      }
-    } else if (hasValidTimes) {
-      // If we have start time but no end time, not valid
-      hasValidTimes = false;
-    }
-    
-    if (!hasValidTimes || exam.is_submitted) {
+    if (startTime.getFullYear() < 2000 || exam.is_submitted) {
       return { isPast: false, isCurrent: false };
     }
     
     return { 
-      isPast: endTime ? now > endTime : false, 
-      isCurrent: startTime && endTime ? (now >= startTime && now <= endTime) : false
+      isPast: now > endTime, 
+      isCurrent: now >= startTime && now <= endTime
     };
   };
 
   const formatTimeDisplay = (timeString: string | undefined): JSX.Element => {
-    if (!timeString || timeString === 'null' || timeString === 'undefined') {
+    if (!timeString || timeString === 'null') {
       return <span>Anytime</span>;
     }
     
     const timeDate = new Date(timeString);
     
-    // Check if date is invalid
-    if (isNaN(timeDate.getTime())) {
-      return <span>Anytime</span>;
-    }
-    
-    // Check if date is epoch (year 1970) or very old (before 2000)
-    if (timeDate.getFullYear() < 2000) {
+    if (isNaN(timeDate.getTime()) || timeDate.getFullYear() < 2000) {
       return (
         <span className="tw-flex tw-items-center">
           <span className="tw-text-violet-600 tw-font-semibold">Anytime</span>
@@ -498,237 +441,252 @@ export default function ExamModal({
     if (isPast) className += " tw-text-red-600 tw-line-through";
     if (isFuture) className += " tw-text-yellow-600";
     
-    return <span className={className}>{timeDate.toLocaleString()}</span>;
+    return <span className={className}>{timeDate.toLocaleString('id-ID')}</span>;
   };
+
+  // Prepare modal buttons
+  const completedBottomButtons = [
+    {
+      action: 'close' as const,
+      text: 'Tutup',
+      onClick: onClose
+    }
+  ];
+
+  const activeExamBottomButtons = [
+    {
+      action: 'cancel' as const,
+      text: 'Tutup',
+      onClick: onClose
+    },
+    {
+      action: activeSession ? 'continue' as const : 'start' as const,
+      text: creatingSession ? 'Memuat...' : (activeSession ? 'Lanjutkan' : 'Mulai Ujian'),
+      onClick: handleStart,
+      disabled: creatingSession || areAllExamsCompleted(),
+      loading: creatingSession
+    }
+  ];
 
   return (
     <>
       {/* Loading Modal */}
-      <Modal show={loadingExam} backdrop="static" centered>
-        <Modal.Body className="tw-text-center tw-py-8">
-          <Spinner animation="border" className="tw-text-purple-600" />
-          <p className="tw-mt-3">Memuat data ujian...</p>
-        </Modal.Body>
-      </Modal>
-
-      {/* Main Exam Modal */}
-      <Modal
-        show={show && !noAccessModal && !loadingExam}
-        onHide={onClose}
-        size="lg"
-        centered
-        className="tw-border-0"
-        dialogClassName="modal-90w"
+      <LearningModal
+        show={loadingExam || loadingScore}
+        onHide={() => {}}
+        title={loadingScore ? 'Memuat hasil ujian...' : 'Memuat data ujian...'}
+        showCloseButton={false}
+        preventCloseOnOutsideClick={true}
       >
-        <div className="tw-bg-gradient-to-br tw-from-violet-500 tw-via-purple-600 tw-to-indigo-600 tw-rounded-3xl tw-shadow-2xl tw-overflow-hidden tw-border-4 tw-border-white/20">
-          <Modal.Header
-            closeButton
-            className="tw-bg-transparent tw-border-0 tw-text-white tw-py-6 tw-px-8 tw-relative"
-          >
-            <div className="tw-flex tw-items-center tw-gap-4">
-              <div className="tw-bg-white/20 tw-p-3 tw-rounded-2xl tw-backdrop-blur-sm">
-                <BookOpen className="tw-w-8 tw-h-8 tw-text-white" />
-              </div>
-              <div>
-                <Modal.Title className="tw-text-2xl tw-font-bold tw-text-white tw-mb-1 tw-flex tw-items-center tw-gap-2">
-                  Urutan Ujian Anda
-                  <Sparkles className="tw-w-6 tw-h-6 tw-text-yellow-300 tw-animate-pulse" />
-                </Modal.Title>
-                <p className="tw-text-violet-100 tw-text-sm tw-mb-0">Siap untuk menghadapi tantangan? 🚀</p>
-              </div>
-            </div>
-          </Modal.Header>
+        <div className="tw-text-center tw-py-8">
+          <Spinner animation="border" className="tw-text-purple-600 tw-w-16 tw-h-16" />
+        </div>
+      </LearningModal>
 
-          <Modal.Body className="tw-p-0 tw-bg-gradient-to-b tw-from-violet-50 tw-to-white tw-relative">
-            <div className="tw-p-8 tw-relative tw-z-10">
-              <div className="tw-mb-6">
-                <p className="tw-text-lg tw-text-violet-800 tw-font-medium tw-mb-2">
-                  📚 Berikut adalah daftar ujian yang menanti:
-                </p>
-                <div className="tw-w-full tw-h-1 tw-bg-gradient-to-r tw-from-violet-400 tw-via-purple-500 tw-to-indigo-500 tw-rounded-full tw-mb-6"></div>
+      {/* Completed Exam Modal with Scores */}
+      {isCompleted && scoreResult && (
+        <LearningModal
+          show={show && !loadingExam && !loadingScore}
+          onHide={onClose}
+          title="Hasil Try Out Anda"
+          subtitle={selectedSchedule?.name}
+          size="xl"
+          icon={<BookOpen className="tw-w-5 tw-h-5" />}
+          bottomButtons={completedBottomButtons}
+        >
+          {/* Summary Cards */}
+          <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-3 tw-gap-4 tw-mb-6">
+            <div className="tw-bg-gradient-to-br tw-from-purple-100 tw-to-purple-200 tw-p-6 tw-rounded-2xl tw-border-2 tw-border-purple-300">
+              <div className="tw-flex tw-items-center tw-gap-3 tw-mb-2">
+                <CheckCircle className="tw-w-8 tw-h-8 tw-text-purple-600" />
+                <div>
+                  <p className="tw-text-sm tw-text-purple-700 tw-mb-0">Skor Total</p>
+                  <p className="tw-text-3xl tw-font-bold tw-text-purple-900 tw-mb-0">
+                    {scoreResult.total_score}
+                  </p>
+                </div>
               </div>
-              
-              <div className="tw-space-y-4">
-                {examOrder
-                  .sort((a, b) => {
-                    const aTime = new Date(a.start_time || "");
-                    const bTime = new Date(b.start_time || "");
-                    
-                    // Handle invalid dates - put them at the end
-                    if (isNaN(aTime.getTime()) && isNaN(bTime.getTime())) return 0;
-                    if (isNaN(aTime.getTime())) return 1;
-                    if (isNaN(bTime.getTime())) return -1;
-                    
-                    return aTime.getTime() - bTime.getTime();
-                  })
-                  .map((exam, index) => {
-                    const activeExamId = activeSession 
-                      ? parseInt(activeSession.exam_id.toString()) 
-                      : null;
-                      
-                    const isSubmitted = isExamEffectivelySubmitted(exam, activeExamId);
-                    const { isPast, isCurrent } = getExamTimeStatus(exam);
-                    
-                    let cardClasses = "tw-bg-white tw-rounded-2xl tw-shadow-lg tw-border tw-transition-all tw-duration-500 tw-hover:shadow-xl tw-hover:scale-[1.02] tw-relative tw-overflow-hidden";
-                    let iconComponent = <Clock className="tw-w-5 tw-h-5" />;
-                    let badgeClasses = "tw-px-3 tw-py-1 tw-rounded-full tw-text-sm tw-font-bold tw-flex tw-items-center tw-gap-2 tw-shadow-sm";
-                    
-                    if (isSubmitted) {
-                      cardClasses += " tw-border-gray-300 tw-bg-gradient-to-r tw-from-gray-50 tw-to-gray-100";
-                      iconComponent = <CheckCircle className="tw-w-5 tw-h-5 tw-text-green-600" />;
-                      badgeClasses += " tw-bg-green-500 tw-text-white";
-                    } else if (isPast) {
-                      cardClasses += " tw-border-red-300 tw-bg-gradient-to-r tw-from-red-50 tw-to-orange-50";
-                      iconComponent = <XCircle className="tw-w-5 tw-h-5 tw-text-red-600" />;
-                      badgeClasses += " tw-bg-red-500 tw-text-white";
-                    } else if (isCurrent) {
-                      cardClasses += " tw-border-green-400 tw-bg-gradient-to-r tw-from-green-50 tw-to-emerald-50 tw-ring-2 tw-ring-green-400/50 tw-animate-pulse";
-                      iconComponent = <Play className="tw-w-5 tw-h-5 tw-text-green-600" />;
-                      badgeClasses += " tw-bg-green-500 tw-text-white tw-animate-bounce";
-                    } else {
-                      cardClasses += " tw-border-amber-300 tw-bg-gradient-to-r tw-from-amber-50 tw-to-yellow-50";
-                      iconComponent = <AlertCircle className="tw-w-5 tw-h-5 tw-text-amber-600" />;
-                      badgeClasses += " tw-bg-amber-500 tw-text-white";
-                    }
-                    
+              <p className="tw-text-xs tw-text-purple-600 tw-mb-0">
+                {scoreResult.is_need_weighted_score ? 'Skor Tertimbang' : 'Skor Standar'}
+              </p>
+            </div>
+
+            <div className="tw-bg-gradient-to-br tw-from-blue-100 tw-to-blue-200 tw-p-6 tw-rounded-2xl tw-border-2 tw-border-blue-300">
+              <div className="tw-flex tw-items-center tw-gap-3 tw-mb-2">
+                <Clock className="tw-w-8 tw-h-8 tw-text-blue-600" />
+                <div>
+                  <p className="tw-text-sm tw-text-blue-700 tw-mb-0">Rata-rata</p>
+                  <p className="tw-text-3xl tw-font-bold tw-text-blue-900 tw-mb-0">
+                    {scoreResult.average_score.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+              <p className="tw-text-xs tw-text-blue-600 tw-mb-0">Per Ujian</p>
+            </div>
+
+            <div className="tw-bg-gradient-to-br tw-from-green-100 tw-to-green-200 tw-p-6 tw-rounded-2xl tw-border-2 tw-border-green-300">
+              <div className="tw-flex tw-items-center tw-gap-3 tw-mb-2">
+                <CheckCircle className="tw-w-8 tw-h-8 tw-text-green-600" />
+                <div>
+                  <p className="tw-text-sm tw-text-green-700 tw-mb-0">Benar</p>
+                  <p className="tw-text-3xl tw-font-bold tw-text-green-900 tw-mb-0">
+                    {scoreResult.total_correct}/{scoreResult.total_questions}
+                  </p>
+                </div>
+              </div>
+              <p className="tw-text-xs tw-text-green-600 tw-mb-0">
+                {((scoreResult.total_correct / scoreResult.total_questions) * 100).toFixed(1)}% Akurasi
+              </p>
+            </div>
+          </div>
+
+          {/* Detail Scores Table */}
+          <div className="tw-bg-white tw-rounded-2xl tw-shadow-lg tw-overflow-hidden">
+            <div className="tw-bg-gradient-to-r tw-from-violet-600 tw-to-purple-600 tw-px-6 tw-py-4">
+              <h5 className="tw-text-white tw-font-bold tw-mb-0 tw-flex tw-items-center tw-gap-2">
+                <BookOpen className="tw-w-5 tw-h-5" />
+                Detail Skor Per Ujian
+              </h5>
+            </div>
+            <div className="tw-overflow-x-auto">
+              <Table className="tw-mb-0" striped bordered hover>
+                <thead className="tw-bg-gray-100">
+                  <tr>
+                    <th className="tw-px-4 tw-py-3 tw-text-left tw-text-sm tw-font-semibold tw-text-gray-700">No</th>
+                    <th className="tw-px-4 tw-py-3 tw-text-left tw-text-sm tw-font-semibold tw-text-gray-700">Nama Ujian</th>
+                    <th className="tw-px-4 tw-py-3 tw-text-center tw-text-sm tw-font-semibold tw-text-gray-700">Skor</th>
+                    <th className="tw-px-4 tw-py-3 tw-text-center tw-text-sm tw-font-semibold tw-text-gray-700">Benar</th>
+                    <th className="tw-px-4 tw-py-3 tw-text-center tw-text-sm tw-font-semibold tw-text-gray-700">Total Soal</th>
+                    <th className="tw-px-4 tw-py-3 tw-text-center tw-text-sm tw-font-semibold tw-text-gray-700">Akurasi</th>
+                    <th className="tw-px-4 tw-py-3 tw-text-left tw-text-sm tw-font-semibold tw-text-gray-700">Waktu Selesai</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scoreResult.exam_scores.map((exam, index) => {
+                    const accuracy = (exam.total_correct / exam.total_questions) * 100;
                     return (
-                      <div key={index} className={cardClasses}>
-                        <div className="tw-absolute tw-top-4 tw-left-4 tw-bg-violet-600 tw-text-white tw-w-8 tw-h-8 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-text-sm tw-font-bold tw-shadow-lg">
-                          {index + 1}
-                        </div>
-                        
-                        {isSubmitted && (
-                          <div className="tw-absolute tw-inset-0 tw-flex tw-items-center tw-justify-center tw-pointer-events-none">
-                            <div className="tw-w-full tw-h-1 tw-bg-gray-400 tw-transform tw-rotate-12"></div>
-                          </div>
-                        )}
-                        
-                        <div className="tw-p-6 tw-pl-16">
-                          <div className="tw-flex tw-flex-col lg:tw-flex-row lg:tw-items-start tw-gap-4">
-                            <div className="tw-flex-1">
-                              <h3 className={`tw-text-xl tw-font-bold tw-mb-3 tw-flex tw-items-center tw-gap-3 ${isSubmitted ? 'tw-text-gray-500' : 'tw-text-violet-900'}`}>
-                                {iconComponent}
-                                {exam.name}
-                              </h3>
-                              
-                              <div className="tw-flex tw-items-center tw-gap-2 tw-mb-3 tw-text-violet-700">
-                                <Clock className="tw-w-4 tw-h-4" />
-                                <span className="tw-font-medium">Durasi: {exam.duration} menit</span>
-                              </div>
-                              
-                              <div className="tw-mb-4">
-                                <div className={badgeClasses}>
-                                  {isSubmitted && (
-                                    <>
-                                      <CheckCircle className="tw-w-4 tw-h-4" />
-                                      ✅ Sudah Dikumpulkan
-                                    </>
-                                  )}
-                                  {!isSubmitted && isPast && (
-                                    <>
-                                      <XCircle className="tw-w-4 tw-h-4" />
-                                      ⏰ Waktu Habis
-                                    </>
-                                  )}
-                                  {!isSubmitted && isCurrent && (
-                                    <>
-                                      <Play className="tw-w-4 tw-h-4" />
-                                      🎯 Sedang Berlangsung
-                                    </>
-                                  )}
-                                  {!isSubmitted && !isPast && !isCurrent && (
-                                    <>
-                                      <AlertCircle className="tw-w-4 tw-h-4" />
-                                      ⏳ Belum Dimulai
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              <div className="tw-bg-white/70 tw-rounded-xl tw-p-4 tw-space-y-2 tw-backdrop-blur-sm">
-                                <div className="tw-flex tw-items-center tw-gap-2 tw-text-violet-700">
-                                  <div className="tw-w-2 tw-h-2 tw-bg-violet-500 tw-rounded-full"></div>
-                                  <span className="tw-font-medium">Mulai:</span>
-                                  <span className="tw-font-semibold">
-                                    {formatTimeDisplay(exam.start_time)}
-                                  </span>
-                                </div>
-                                
-                                <div className="tw-flex tw-items-center tw-gap-2 tw-text-violet-700">
-                                  <div className="tw-w-2 tw-h-2 tw-bg-violet-500 tw-rounded-full"></div>
-                                  <span className="tw-font-medium">Selesai:</span>
-                                  <span className="tw-font-semibold">
-                                    {formatTimeDisplay(exam.end_time)}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                      <tr key={index} className="tw-hover:bg-violet-50 tw-transition-colors">
+                        <td className="tw-px-4 tw-py-3 tw-text-sm">{index + 1}</td>
+                        <td className="tw-px-4 tw-py-3 tw-text-sm tw-font-medium tw-text-gray-900">{exam.exam_name}</td>
+                        <td className="tw-px-4 tw-py-3 tw-text-center">
+                          <span className="tw-inline-block tw-px-3 tw-py-1 tw-bg-purple-100 tw-text-purple-800 tw-rounded-full tw-font-bold tw-text-sm">
+                            {exam.score}
+                          </span>
+                        </td>
+                        <td className="tw-px-4 tw-py-3 tw-text-center tw-text-sm tw-text-green-600 tw-font-semibold">
+                          {exam.total_correct}
+                        </td>
+                        <td className="tw-px-4 tw-py-3 tw-text-center tw-text-sm tw-text-gray-700">
+                          {exam.total_questions}
+                        </td>
+                        <td className="tw-px-4 tw-py-3 tw-text-center">
+                          <span className={`tw-inline-block tw-px-3 tw-py-1 tw-rounded-full tw-font-semibold tw-text-xs ${
+                            accuracy >= 80 ? 'tw-bg-green-100 tw-text-green-800' :
+                            accuracy >= 60 ? 'tw-bg-yellow-100 tw-text-yellow-800' :
+                            'tw-bg-red-100 tw-text-red-800'
+                          }`}>
+                            {accuracy.toFixed(1)}%
+                          </span>
+                        </td>
+                        <td className="tw-px-4 tw-py-3 tw-text-sm tw-text-gray-600">
+                          {new Date(exam.completion_time).toLocaleString('id-ID', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </td>
+                      </tr>
                     );
                   })}
-              </div>
+                </tbody>
+              </Table>
+            </div>
+          </div>
+        </LearningModal>
+      )}
 
-              {/* Important notices */}
-              {activeSession && selectedSchedule && isScheduleEnded() && 
-                !examSessions.every(session => session.is_submitted) && (
-                <div className="tw-mt-6 tw-bg-gradient-to-r tw-from-amber-50 tw-to-orange-50 tw-border-2 tw-border-amber-300 tw-rounded-2xl tw-p-6 tw-shadow-lg">
-                  <div className="tw-flex tw-items-start tw-gap-4">
-                    <div className="tw-bg-amber-500 tw-p-3 tw-rounded-full">
-                      <AlertCircle className="tw-w-6 tw-h-6 tw-text-white" />
-                    </div>
-                    <div>
-                      <h4 className="tw-text-xl tw-font-bold tw-text-amber-900 tw-mb-2">
-                        ⚠️ Perhatian Penting!
-                      </h4>
-                      <p className="tw-text-amber-800 tw-text-lg">
-                        Waktu ujian telah berakhir. Jika Anda melanjutkan, sistem akan langsung menyimpan jawaban yang telah Anda kerjakan.
-                      </p>
+      {/* Main Exam Modal - for active exams */}
+      {!isCompleted && (
+        <LearningModal
+          show={show && !noAccessModal && !loadingExam}
+          onHide={onClose}
+          title="Urutan Ujian Anda"
+          subtitle="Siap untuk menghadapi tantangan?"
+          size="lg"
+          icon={<BookOpen className="tw-w-5 tw-h-5" />}
+          bottomButtons={activeExamBottomButtons}
+        >
+          <div className="tw-space-y-4">
+            {examOrder
+              .sort((a, b) => new Date(a.start_time || "").getTime() - new Date(b.start_time || "").getTime())
+              .map((exam, index) => {
+                const activeExamId = activeSession ? parseInt(activeSession.exam_id.toString()) : null;
+                const isSubmitted = isExamEffectivelySubmitted(exam, activeExamId);
+                const { isPast, isCurrent } = getExamTimeStatus(exam);
+                
+                let cardClasses = "tw-bg-white tw-rounded-2xl tw-shadow-lg tw-border tw-transition-all tw-duration-300 tw-hover:shadow-xl tw-relative";
+                let iconComponent = <Clock className="tw-w-5 tw-h-5" />;
+                let badgeClasses = "tw-px-3 tw-py-1 tw-rounded-full tw-text-sm tw-font-bold tw-flex tw-items-center tw-gap-2";
+                
+                if (isSubmitted) {
+                  cardClasses += " tw-border-gray-300 tw-bg-gray-50";
+                  iconComponent = <CheckCircle className="tw-w-5 tw-h-5 tw-text-green-600" />;
+                  badgeClasses += " tw-bg-green-500 tw-text-white";
+                } else if (isPast) {
+                  cardClasses += " tw-border-red-300";
+                  iconComponent = <XCircle className="tw-w-5 tw-h-5 tw-text-red-600" />;
+                  badgeClasses += " tw-bg-red-500 tw-text-white";
+                } else if (isCurrent) {
+                  cardClasses += " tw-border-green-400 tw-ring-2 tw-ring-green-400/50";
+                  iconComponent = <Play className="tw-w-5 tw-h-5 tw-text-green-600" />;
+                  badgeClasses += " tw-bg-green-500 tw-text-white";
+                } else {
+                  cardClasses += " tw-border-amber-300";
+                  iconComponent = <AlertCircle className="tw-w-5 tw-h-5 tw-text-amber-600" />;
+                  badgeClasses += " tw-bg-amber-500 tw-text-white";
+                }
+                
+                return (
+                  <div key={index} className={cardClasses}>
+                    <div className="tw-p-4">
+                      <div className="tw-flex tw-items-center tw-gap-3 tw-mb-2">
+                        <div className="tw-bg-violet-600 tw-text-white tw-w-8 tw-h-8 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-text-sm tw-font-bold">
+                          {index + 1}
+                        </div>
+                        <h6 className="tw-font-bold tw-text-violet-900 tw-mb-0 tw-flex-1">{exam.name}</h6>
+                        <div className={badgeClasses}>
+                          {iconComponent}
+                          {isSubmitted ? 'Selesai' : isPast ? 'Lewat' : isCurrent ? 'Aktif' : 'Menunggu'}
+                        </div>
+                      </div>
+                      <div className="tw-flex tw-items-center tw-gap-4 tw-text-sm tw-text-gray-600">
+                        <span className="tw-flex tw-items-center tw-gap-1">
+                          <Clock className="tw-w-4 tw-h-4" />
+                          {exam.duration} menit
+                        </span>
+                        <span>{formatTimeDisplay(exam.start_time)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })}
+          </div>
+
+          {activeSession && selectedSchedule && isScheduleEnded() && 
+            !examSessions.every(session => session.is_submitted) && (
+            <div className="tw-mt-6 tw-bg-amber-50 tw-border-2 tw-border-amber-300 tw-rounded-2xl tw-p-4">
+              <div className="tw-flex tw-items-start tw-gap-3">
+                <AlertCircle className="tw-w-6 tw-h-6 tw-text-amber-600 tw-flex-shrink-0" />
+                <p className="tw-text-amber-800 tw-text-sm tw-mb-0">
+                  Waktu ujian telah berakhir. Jika melanjutkan, sistem akan menyimpan jawaban yang telah dikerjakan.
+                </p>
+              </div>
             </div>
-          </Modal.Body>
-          
-          <Modal.Footer className="tw-bg-gradient-to-r tw-from-violet-100 tw-to-purple-100 tw-py-4 tw-px-8 tw-border-0">
-            <div className="tw-flex tw-flex-col sm:tw-flex-row tw-gap-3 tw-w-full tw-justify-end">
-              <Button
-                variant="secondary"
-                onClick={onClose}
-                className="tw-bg-white tw-text-violet-700 tw-border-2 tw-border-violet-300 tw-font-bold tw-py-3 tw-px-6 tw-rounded-2xl tw-transition-all tw-duration-300 tw-hover:bg-violet-50 tw-hover:border-violet-400 tw-hover:scale-105 tw-shadow-md"
-              >
-                ❌ Tutup
-              </Button>
-              
-              <Button
-                variant="primary"
-                onClick={handleStartExam}
-                disabled={creatingSession || areAllExamsCompleted()}
-                className="tw-bg-gradient-to-r tw-from-violet-600 tw-to-purple-600 tw-text-white tw-border-0 tw-font-bold tw-py-3 tw-px-8 tw-rounded-2xl tw-transition-all tw-duration-300 tw-hover:from-violet-700 tw-hover:to-purple-700 tw-hover:scale-105 tw-shadow-lg tw-flex tw-items-center tw-justify-center tw-gap-2"
-              >
-                {creatingSession ? (
-                  <>
-                    <Spinner animation="border" size="sm" className="tw-text-white" />
-                    ⏳ Memuat...
-                  </>
-                ) : activeSession ? (
-                  <>
-                    <Play className="tw-w-5 tw-h-5" />
-                    🚀 Lanjutkan Ujian
-                  </>
-                ) : (
-                  <>
-                    <BookOpen className="tw-w-5 tw-h-5" />
-                    ✨ Mulai Ujian
-                  </>
-                )}
-              </Button>
-            </div>
-          </Modal.Footer>
-        </div>
-      </Modal>
+          )}
+        </LearningModal>
+      )}
 
       {/* No Access Modal */}
       <NoAccessProductModal

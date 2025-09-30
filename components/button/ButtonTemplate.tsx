@@ -396,7 +396,7 @@ const getActionIcon = (action: ActionType): React.ReactNode => {
       // Media Actions - WITH PROPER FALLBACKS
       'play': Play ? <Play className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
       'pause': Pause ? <Pause className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,
-      'stop': (Square) ? (Stop ? <Stop className="tw-w-4 tw-h-4" /> : <Square className="tw-w-4 tw-h-4" />) : <AlertCircle className="tw-w-4 tw-h-4" />,
+      'stop': (Square) ? (<Square className="tw-w-4 tw-h-4" />) : <AlertCircle className="tw-w-4 tw-h-4" />,
       'next': SkipForward ? <SkipForward className="tw-w-4 tw-h-4" /> : <ArrowRight className="tw-w-4 tw-h-4" />,
       'previous': SkipBack ? <SkipBack className="tw-w-4 tw-h-4" /> : <ArrowLeft className="tw-w-4 tw-h-4" />,
       'record': Mic ? <Mic className="tw-w-4 tw-h-4" /> : <AlertCircle className="tw-w-4 tw-h-4" />,

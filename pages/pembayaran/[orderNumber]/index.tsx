@@ -124,7 +124,7 @@ export default function PaymentPage() {
             onSuccess: () => {
               setShowSuccessAnimation(true);
               setTimeout(() => {
-                router.push(`/orders/${orderNumber}`);
+                router.push(`/`);
               }, 2000);
             },
             onError: (e: any) => setError('Error pembayaran: ' + JSON.stringify(e)),

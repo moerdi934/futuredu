@@ -216,14 +216,14 @@ export const login = async (req: NextApiRequest, res: NextApiResponse) => {
     await updateLastLogin(username);
 
     // Create JWT token if login successful
-    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, secretKey, { expiresIn: '6h' });
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, secretKey, { expiresIn: '24h' });
     const refreshToken = jwt.sign({ id: user.id, username: user.username, role: user.role }, refreshTokenSecret, { expiresIn: '30d' });
 
     refreshTokens.push(refreshToken);
 
     // Send token in cookie
     res.setHeader('Set-Cookie', [
-      `authToken=${token}; HttpOnly; Secure=${process.env.NODE_ENV === 'production'}; SameSite=Strict; Max-Age=${6 * 60 * 60}; Path=/`,
+      `authToken=${token}; HttpOnly; Secure=${process.env.NODE_ENV === 'production'}; SameSite=Strict; Max-Age=${24 * 60 * 60}; Path=/`,
       `refreshToken=${refreshToken}; HttpOnly; Secure=${process.env.NODE_ENV === 'production'}; SameSite=Strict; Max-Age=${30 * 24 * 60 * 60}; Path=/`
     ]);
 
