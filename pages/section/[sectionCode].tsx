@@ -1,8 +1,8 @@
-// [sectionCode].tsx ->next 
+// [sectionCode].tsx
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Row, Col, Card, ProgressBar, Badge, Button, Spinner, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, ProgressBar, Badge, Button, Spinner, Alert, Modal } from 'react-bootstrap';
 import { 
   BookOpen, 
   FileText, 
@@ -24,13 +24,17 @@ import {
   Target,
   Zap,
   ArrowLeftFromLine,
-  Lock
+  Lock,
+  ShoppingCart,
+  AlertCircle
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
 import ExamModal from '../try-out/ExamModal';
 import DrillModal from '../drill/DrillModal';
+import NavigationBar from '@/ components/layout/NavigationBar';
+
 
 interface Material {
   id: number;
@@ -209,6 +213,12 @@ const SectionPage: React.FC = () => {
   const [materialDetail, setMaterialDetail] = useState<MaterialDetail | null>(null);
   const [loadingMaterial, setLoadingMaterial] = useState<boolean>(false);
   const [materialError, setMaterialError] = useState<string | null>(null);
+  
+  // State untuk cart
+  const [showCartModal, setShowCartModal] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [cartSuccess, setCartSuccess] = useState(false);
+  const [cartError, setCartError] = useState<string | null>(null);
 
   // Tracking state via refs
   const trackingRef = useRef<{
@@ -294,14 +304,13 @@ const SectionPage: React.FC = () => {
     fetchMaterialDetail();
   }, [selectedMaterialId]);
 
-  // Fetch data section awal - TANPA AUTH CHECK seperti paste1
+  // Fetch data section awal
   useEffect(() => {
     const fetchSectionData = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        // Selalu kirim header auth jika ada, tapi jangan paksa
         const headers: Record<string,string> = {};
         const token = localStorage.getItem('authToken');
         if (token) headers.Authorization = `Bearer ${token}`;
@@ -421,7 +430,7 @@ const SectionPage: React.FC = () => {
     }
   }, [sectionCode]);
 
-  // Format durasi (menit ke jam/menit)
+  // Format durasi
   const formatDuration = (minutes: number | undefined): string => {
     if (!minutes) return '';
     
@@ -448,7 +457,7 @@ const SectionPage: React.FC = () => {
     setExpandedTopics(newExpanded);
   };
 
-  // Pemilihan konten (material/quiz/drill) - TANPA CHECK AUTH seperti paste1
+  // Pemilihan konten
   const selectContent = (topicId: number, contentType: 'material' | 'quiz' | 'drill', materialId?: number) => {
     setSelectedTopicId(topicId);
     setSelectedContentType(contentType);
@@ -474,6 +483,12 @@ const SectionPage: React.FC = () => {
     topicId: number,
     materialId?: number
   ) => {
+    // Check entitlement first
+    if (!selectedSection?.isEntitled) {
+      setShowCartModal(true);
+      return;
+    }
+
     try {
       setMarkingLoading(true);
       setMarkingError(null);
@@ -546,6 +561,53 @@ const SectionPage: React.FC = () => {
     }
   };
 
+  // Function untuk tambah ke keranjang (tanpa refresh)
+  const handleAddToCart = async () => {
+    if (!selectedSection) return;
+
+    try {
+      setAddingToCart(true);
+      setCartError(null);
+      setCartSuccess(false);
+
+      const authToken = localStorage.getItem('authToken');
+      if (!authToken) {
+        throw new Error('Anda harus login terlebih dahulu');
+      }
+
+      // API call untuk tambah ke keranjang
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/cart/add`,
+        {
+          course_string: selectedSection.courseString,
+          // tambahkan field lain sesuai kebutuhan API
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${authToken}`
+          }
+        }
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        setCartSuccess(true);
+        setTimeout(() => {
+          setShowCartModal(false);
+          setCartSuccess(false);
+        }, 2000);
+      }
+    } catch (err: any) {
+      console.error('Error adding to cart:', err);
+      setCartError(
+        err.response?.data?.message || 
+        err.message || 
+        'Gagal menambahkan ke keranjang. Silakan coba lagi.'
+      );
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
   // Hitung progress topik
   const calculateTopicProgress = (topic: Topic) => {
     const mandatoryMaterials = topic.materials.filter(m => m.isMandatory);
@@ -561,7 +623,7 @@ const SectionPage: React.FC = () => {
     return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
   };
 
-  // Hitung progress materi tak wajib (ekstra)
+  // Hitung progress materi tak wajib
   const calculateExtraProgress = (topic: Topic) => {
     const nonMandatoryMaterials = topic.materials.filter(m => !m.isMandatory);
     const completedNonMandatoryMaterials = nonMandatoryMaterials.filter(m => completedMaterials.has(m.id));
@@ -571,7 +633,7 @@ const SectionPage: React.FC = () => {
       : 0;
   };
 
-  // Warna progress bar utama
+  // Warna progress bar
   const getProgressColor = (progress: number) => {
     if (progress === 100) return 'success';
     if (progress >= 70) return 'info';
@@ -579,7 +641,6 @@ const SectionPage: React.FC = () => {
     return 'danger';
   };
 
-  // Warna progress bar ekstra
   const getExtraProgressColor = (progress: number) => {
     if (progress === 100) return 'success';
     if (progress >= 50) return 'warning';
@@ -600,6 +661,12 @@ const SectionPage: React.FC = () => {
 
   // Navigasi ke konten berikutnya
   const handleNext = () => {
+    // Check entitlement
+    if (!selectedSection?.isEntitled) {
+      setShowCartModal(true);
+      return;
+    }
+
     const currentTopic = getCurrentTopic();
     if (!currentTopic || !selectedSection) return;
 
@@ -720,6 +787,12 @@ const SectionPage: React.FC = () => {
 
   // Mulai quiz atau drill
   const startQuizOrDrill = (type: 'quiz' | 'drill', id: number, topicId: number) => {
+    // Check entitlement
+    if (!selectedSection?.isEntitled) {
+      setShowCartModal(true);
+      return;
+    }
+
     setCurrentTopicId(topicId);
     if (type === 'quiz') {
       setExamType(type);
@@ -733,13 +806,12 @@ const SectionPage: React.FC = () => {
   // Handler menutup ExamModal
   const handleExamModalClose = () => {
     setShowExamModal(false);
-    // Jika quiz sudah selesai, tandai sebagai lengkap
     if (examType === 'quiz' && currentTopicId) {
       markContentComplete('quiz', currentTopicId);
     }
   };
 
-  // FUNCTION UNTUK MENGAKHIRI TRACKING dan KIRIM DATA (dengan topic_id)
+  // Finalize tracking
   const finalizeTracking = () => {
     const { materialId, topicId, startTime, elapsedTime, intervalId } = trackingRef.current;
     if (intervalId) {
@@ -755,7 +827,6 @@ const SectionPage: React.FC = () => {
       console.log('Final session:', record);
 
       const authToken = localStorage.getItem('authToken');
-      // POST ke server
       if (authToken) {
         axios.post(
           `${process.env.NEXT_PUBLIC_API_URL}/userCourse/timer`,
@@ -765,10 +836,8 @@ const SectionPage: React.FC = () => {
           }
         ).catch(err => console.error('Error posting session:', err));
       }
-      // Simpan ke IndexedDB
       saveSessionToIndexedDB(record).catch(err => console.error('Error saving to IndexedDB:', err));
     }
-    // Reset trackingRef
     trackingRef.current = {
       materialId: null,
       topicId: null,
@@ -778,31 +847,25 @@ const SectionPage: React.FC = () => {
     };
   };
 
-  // EFFECT: Memulai/menyelesaikan tracking saat selectedMaterialId berubah
+  // Effect tracking
   useEffect(() => {
-    // Selesaikan tracking sebelumnya, jika ada
     finalizeTracking();
 
     if (selectedContentType === 'material' && selectedMaterialId && selectedTopicId) {
-      // Mulai tracking baru
       const start = new Date();
       trackingRef.current.materialId = selectedMaterialId;
       trackingRef.current.topicId = selectedTopicId;
       trackingRef.current.startTime = start;
       trackingRef.current.elapsedTime = 0;
 
-      // Fungsi timer tiap detik
       const tick = () => {
         trackingRef.current.elapsedTime += 1;
-        console.log('Elapsed time (detik):', trackingRef.current.elapsedTime);
       };
 
-      // Set interval
       const id = window.setInterval(tick, 1000);
       trackingRef.current.intervalId = id;
     }
 
-    // Bersihkan interval jika component unmount atau selectedMaterialId berubah
     return () => {
       if (trackingRef.current.intervalId) {
         clearInterval(trackingRef.current.intervalId);
@@ -810,21 +873,17 @@ const SectionPage: React.FC = () => {
     };
   }, [selectedMaterialId, selectedContentType, selectedTopicId]);
 
-  // EFFECT: Pause/resume timer saat tab bergeser (visibility change)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        // Pause
         if (trackingRef.current.intervalId) {
           clearInterval(trackingRef.current.intervalId);
           trackingRef.current.intervalId = null;
         }
       } else if (document.visibilityState === 'visible') {
-        // Resume jika masih dalam tracking
         if (trackingRef.current.materialId && trackingRef.current.topicId && !trackingRef.current.intervalId) {
           const tick = () => {
             trackingRef.current.elapsedTime += 1;
-            console.log('Elapsed time (detik):', trackingRef.current.elapsedTime);
           };
           const id = window.setInterval(tick, 1000);
           trackingRef.current.intervalId = id;
@@ -836,7 +895,6 @@ const SectionPage: React.FC = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
-  // EFFECT: Saat page ditutup atau direfresh, finalize session
   useEffect(() => {
     const handleBeforeUnload = () => {
       finalizeTracking();
@@ -920,6 +978,7 @@ const SectionPage: React.FC = () => {
 
   return (
     <div className="tw-bg-gradient-to-br tw-from-purple-100 tw-via-pink-50 tw-to-indigo-100 tw-min-h-[125vh]">
+      <NavigationBar></NavigationBar>
       <Container fluid className="tw-px-0 md:tw-px-4 md:tw-py-10 tw-min-h-screen">
         <div className="tw-relative">
           {markingSuccess && (
@@ -936,6 +995,24 @@ const SectionPage: React.FC = () => {
               <div className="tw-flex tw-items-center tw-gap-2">
                 <X className="tw-text-danger" size={20} />
                 <span>{markingError}</span>
+              </div>
+            </Alert>
+          )}
+
+          {/* Alert untuk isEntitled false */}
+          {!selectedSection.isEntitled && (
+            <Alert variant="warning" className="tw-mb-6 tw-border-2 tw-border-yellow-400 tw-shadow-lg">
+              <div className="tw-flex tw-items-center tw-gap-3">
+                <Lock className="tw-text-yellow-700" size={24} />
+                <div className="tw-flex-1">
+                  <h5 className="tw-text-yellow-800 tw-font-bold tw-mb-1">
+                    Preview Mode - Akses Terbatas
+                  </h5>
+                  <p className="tw-text-yellow-700 tw-mb-0">
+                    Anda dapat melihat preview materi, tetapi tidak dapat menandai selesai atau melanjutkan. 
+                    Beli course ini untuk akses penuh!
+                  </p>
+                </div>
               </div>
             </Alert>
           )}
@@ -976,6 +1053,12 @@ const SectionPage: React.FC = () => {
                           <Badge bg="light" text="dark" className="tw-text-xs">
                             Bagian {selectedSection.sectionPosition}
                           </Badge>
+                          {!selectedSection.isEntitled && (
+                            <Badge bg="warning" className="tw-text-xs tw-flex tw-items-center tw-gap-1">
+                              <Lock size={10} />
+                              Preview
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     )}
@@ -997,7 +1080,7 @@ const SectionPage: React.FC = () => {
                           href={`/course/${selectedSection.courseString}`}
                         >
                           <ChevronsLeft size={16} />
-                          <span className="tw-hidden sm:tw-inline tw-ml-1"><ArrowLeftFromLine /> Course</span>
+                          <span className="tw-hidden sm:tw-inline tw-ml-1">Course</span>
                         </Button>
                       )}
                     </div>
@@ -1060,7 +1143,6 @@ const SectionPage: React.FC = () => {
                         </div>
                         {expandedTopics.has(topic.id) && (
                           <div className="tw-bg-gradient-to-r tw-from-purple-25 tw-to-pink-25 tw-border-t tw-border-purple-100">
-                            {/* Materials */}
                             {topic.materials.map(material => (
                               <div
                                 key={material.id}
@@ -1080,7 +1162,7 @@ const SectionPage: React.FC = () => {
                                     </Badge>
                                   )}
                                   {!material.isAccessible && (
-                                    <span className="tw-ml-2 tw-text-red-500 lock-icon">
+                                    <span className="tw-ml-2 tw-text-red-500">
                                       <Lock size={12} />
                                     </span>
                                   )}
@@ -1088,7 +1170,6 @@ const SectionPage: React.FC = () => {
                               </div>
                             ))}
 
-                            {/* Quiz */}
                             {topic.quiz.quiz_question_count > 0 && (
                               <div
                                 className={`tw-px-6 tw-py-3 tw-cursor-pointer tw-border-b tw-border-purple-50 tw-transition-colors
@@ -1107,7 +1188,7 @@ const SectionPage: React.FC = () => {
                                     </Badge>
                                   )}
                                   {!topic.quizAccessible && (
-                                    <span className="tw-ml-2 tw-text-red-500 lock-icon">
+                                    <span className="tw-ml-2 tw-text-red-500">
                                       <Lock size={12} />
                                     </span>
                                   )}
@@ -1115,7 +1196,6 @@ const SectionPage: React.FC = () => {
                               </div>
                             )}
 
-                            {/* Drill */}
                             {topic.drill.drill_question_count > 0 && (
                               <div
                                 className={`tw-px-6 tw-py-3 tw-cursor-pointer tw-transition-colors
@@ -1134,7 +1214,7 @@ const SectionPage: React.FC = () => {
                                     </Badge>
                                   )}
                                   {!topic.drillAccessible && (
-                                    <span className="tw-ml-2 tw-text-red-500 lock-icon">
+                                    <span className="tw-ml-2 tw-text-red-500">
                                       <Lock size={12} />
                                     </span>
                                   )}
@@ -1151,7 +1231,6 @@ const SectionPage: React.FC = () => {
               </Card>
             </Col>
 
-            {/* Main Content Area - sama seperti paste1 */}
             <Col xs={12} lg={sidebarCollapsed ? 11 : 8} className={`${isMobile && !sidebarCollapsed ? 'tw-blur-sm tw-pointer-events-none' : ''}`}>
               <div className="tw-space-y-6 tw-mx-2">
                 {isMobile && sidebarCollapsed && (
@@ -1163,6 +1242,12 @@ const SectionPage: React.FC = () => {
                       <span className="tw-text-purple-800 tw-font-bold tw-text-sm tw-truncate">
                         {selectedSection.title}
                       </span>
+                      {!selectedSection.isEntitled && (
+                        <Badge bg="warning" className="tw-text-xs tw-flex tw-items-center tw-gap-1">
+                          <Lock size={10} />
+                          Preview
+                        </Badge>
+                      )}
                     </div>
                     <Button
                       variant="outline-primary"
@@ -1207,7 +1292,6 @@ const SectionPage: React.FC = () => {
                                 }
                               }}
                             >
-                              {/* Topic card content sama seperti paste1 */}
                               <div className="tw-flex tw-items-start tw-justify-between tw-mb-4">
                                 <div className="tw-flex tw-items-center tw-gap-3">
                                   <div className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-pink-500 tw-text-white tw-rounded-full tw-w-10 tw-h-10 tw-flex tw-items-center tw-justify-center tw-font-bold tw-text-lg tw-shadow-lg">
@@ -1303,8 +1387,6 @@ const SectionPage: React.FC = () => {
                     </Card.Body>
                   </Card>
                 ) : (
-                  /* Content areas untuk material/quiz/drill - sama seperti paste1 t
-                  /* Content areas untuk material/quiz/drill - sama seperti paste1 tanpa LoginModal */
                   <div className="tw-space-y-6">
                     {selectedContentType === 'material' && selectedMaterial && (
                       <Card className="tw-border-0 tw-shadow-2xl tw-bg-white tw-rounded-2xl tw-overflow-hidden">
@@ -1338,9 +1420,14 @@ const SectionPage: React.FC = () => {
                               variant={completedMaterials.has(selectedMaterial.id) ? "success" : "light"}
                               className="tw-px-4 tw-py-2 tw-rounded-lg tw-font-bold tw-transition-all tw-duration-300 tw-hover:tw-scale-105"
                               onClick={() => markMaterialComplete(selectedMaterial.id, selectedTopic!.id)}
-                              disabled={markingLoading || completedMaterials.has(selectedMaterial.id)}
+                              disabled={markingLoading || completedMaterials.has(selectedMaterial.id) || !selectedSection.isEntitled}
                             >
-                              {markingLoading ? (
+                              {!selectedSection.isEntitled ? (
+                                <div className="tw-flex tw-items-center tw-gap-2">
+                                  <Lock size={16} />
+                                  Terkunci
+                                </div>
+                              ) : markingLoading ? (
                                 <div className="tw-flex tw-items-center tw-gap-2">
                                   <Spinner animation="border" size="sm" />
                                   Menandai...
@@ -1442,13 +1529,8 @@ const SectionPage: React.FC = () => {
                                         Materi Pembelajaran Menarik! 
                                       </h3>
                                       <p className="tw-text-purple-500 tw-text-lg">
-                                        Konten edukatif yang seru akan ditampilkan di sini untuk membantu kamu belajar dengan mudah dan menyenangkan!
+                                        Konten edukatif yang seru akan ditampilkan di sini!
                                       </p>
-                                      <div className="tw-flex tw-items-center tw-justify-center tw-gap-3 tw-mt-4">
-                                        <Heart className="tw-text-pink-500 tw-animate-bounce" size={20} />
-                                        <Star className="tw-text-yellow-500 tw-animate-pulse" size={20} />
-                                        <Zap className="tw-text-indigo-500 tw-animate-bounce" size={20} />
-                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -1461,7 +1543,7 @@ const SectionPage: React.FC = () => {
                                 Materi Belum Tersedia
                               </h4>
                               <p className="tw-text-gray-600">
-                                Maaf, materi ini sedang dalam persiapan. Silakan pilih materi lainnya.
+                                Maaf, materi ini sedang dalam persiapan.
                               </p>
                             </div>
                           )}
@@ -1481,10 +1563,20 @@ const SectionPage: React.FC = () => {
                             <Button
                               variant="primary"
                               onClick={handleNext}
+                              disabled={!selectedSection.isEntitled}
                               className="tw-flex tw-items-center tw-gap-2 tw-bg-gradient-to-r tw-from-purple-600 tw-to-pink-600 tw-border-0"
                             >
-                              {isLastContent() ? "Selesai" : "Selanjutnya"}
-                              <ChevronRight size={16} />
+                              {!selectedSection.isEntitled ? (
+                                <>
+                                  <Lock size={16} />
+                                  Terkunci
+                                </>
+                              ) : (
+                                <>
+                                  {isLastContent() ? "Selesai" : "Selanjutnya"}
+                                  <ChevronRight size={16} />
+                                </>
+                              )}
                             </Button>
                           </div>
                         </Card.Footer>
@@ -1506,7 +1598,7 @@ const SectionPage: React.FC = () => {
                                 </h3>
                                 <div className="tw-flex tw-items-center tw-gap-2">
                                   <Badge bg="light" text="dark" className="tw-text-xs">
-                                    {selectedTopic.quiz.quiz_question_count} Soal Seru
+                                    {selectedTopic.quiz.quiz_question_count} Soal
                                   </Badge>
                                 </div>
                               </div>
@@ -1515,9 +1607,14 @@ const SectionPage: React.FC = () => {
                               variant={completedQuizzes.has(selectedTopic.id) ? "success" : "warning"}
                               className="tw-px-4 tw-py-2 tw-rounded-lg tw-font-bold tw-transition-all tw-duration-300 tw-hover:tw-scale-105"
                               onClick={() => startQuizOrDrill('quiz', selectedTopic.quiz.quiz_id, selectedTopic.id)}
-                              disabled={markingLoading || completedQuizzes.has(selectedTopic.id)}
+                              disabled={markingLoading || completedQuizzes.has(selectedTopic.id) || !selectedSection.isEntitled}
                             >
-                              {markingLoading ? (
+                              {!selectedSection.isEntitled ? (
+                                <div className="tw-flex tw-items-center tw-gap-2">
+                                  <Lock size={16} />
+                                  Terkunci
+                                </div>
+                              ) : markingLoading ? (
                                 <div className="tw-flex tw-items-center tw-gap-2">
                                   <Spinner animation="border" size="sm" />
                                   Memproses...
@@ -1556,12 +1653,19 @@ const SectionPage: React.FC = () => {
                                       size="lg"
                                       className="tw-px-8 tw-py-3 tw-rounded-xl tw-font-bold tw-bg-gradient-to-r tw-from-purple-600 tw-to-pink-600 tw-border-0 tw-shadow-lg tw-hover:tw-scale-105 tw-transition-all tw-duration-300"
                                       onClick={() => startQuizOrDrill('quiz', selectedTopic.quiz.quiz_id, selectedTopic.id)}
-                                      disabled={markingLoading}
+                                      disabled={markingLoading || !selectedSection.isEntitled}
                                     >
-                                      <div className="tw-flex tw-items-center tw-gap-3">
-                                        <Play size={20} />
-                                        Mulai Quiz Sekarang!
-                                      </div>
+                                      {!selectedSection.isEntitled ? (
+                                        <div className="tw-flex tw-items-center tw-gap-3">
+                                          <Lock size={20} />
+                                          Beli Course untuk Akses
+                                        </div>
+                                      ) : (
+                                        <div className="tw-flex tw-items-center tw-gap-3">
+                                          <Play size={20} />
+                                          Mulai Quiz Sekarang!
+                                        </div>
+                                      )}
                                     </Button>
                                   </div>
                                 ) : (
@@ -1571,21 +1675,18 @@ const SectionPage: React.FC = () => {
                                       Selamat! Quiz Sudah Selesai!
                                     </h4>
                                     <p className="tw-text-green-700">
-                                      Kamu telah menyelesaikan quiz ini dengan baik. Lanjutkan ke materi berikutnya!
+                                      Kamu telah menyelesaikan quiz ini dengan baik!
                                     </p>
                                   </div>
                                 )}
                               </div>
                             </div>
                           ) : (
-                            <div className="tw-text-center tw-py-12 tw-bg-white tw-rounded-xl tw-shadow-lg tw-border tw-border-pink-200">
+                            <div className="tw-text-center tw-py-12">
                               <FileText className="tw-text-pink-400 tw-mx-auto tw-mb-4" size={64} />
                               <h3 className="tw-text-pink-600 tw-font-bold tw-text-xl tw-mb-2">
-                                Quiz Sedang Disiapkan! 
+                                Quiz Sedang Disiapkan!
                               </h3>
-                              <p className="tw-text-pink-500 tw-text-lg">
-                                Quiz yang seru dan menantang akan segera hadir untuk menguji pemahamanmu!
-                              </p>
                             </div>
                           )}
                         </Card.Body>
@@ -1603,11 +1704,20 @@ const SectionPage: React.FC = () => {
                             <Button
                               variant="primary"
                               onClick={handleNext}
-                              disabled={!completedQuizzes.has(selectedTopic.id)}
+                              disabled={!completedQuizzes.has(selectedTopic.id) || !selectedSection.isEntitled}
                               className="tw-flex tw-items-center tw-gap-2 tw-bg-gradient-to-r tw-from-pink-600 tw-to-purple-600 tw-border-0"
                             >
-                              {selectedTopic.drill.drill_question_count > 0 ? "Lanjut ke Drill" : "Selesai"}
-                              <ChevronRight size={16} />
+                              {!selectedSection.isEntitled ? (
+                                <>
+                                  <Lock size={16} />
+                                  Terkunci
+                                </>
+                              ) : (
+                                <>
+                                  {selectedTopic.drill.drill_question_count > 0 ? "Lanjut ke Drill" : "Selesai"}
+                                  <ChevronRight size={16} />
+                                </>
+                              )}
                             </Button>
                           </div>
                         </Card.Footer>
@@ -1627,7 +1737,7 @@ const SectionPage: React.FC = () => {
                                 {selectedTopic.drill.title}
                               </h3>
                               <Badge bg="light" text="dark" className="tw-text-xs">
-                                {selectedTopic.drill.drill_question_count} Latihan Interaktif
+                                {selectedTopic.drill.drill_question_count} Latihan
                               </Badge>
                             </div>
                           </div>
@@ -1641,7 +1751,7 @@ const SectionPage: React.FC = () => {
                                     Siap untuk Latihan Drill?
                                   </h4>
                                   <p className="tw-text-gray-600">
-                                    Drill ini berisi {selectedTopic.drill.drill_question_count} latihan untuk mengasah kemampuanmu!
+                                    Drill ini berisi {selectedTopic.drill.drill_question_count} latihan!
                                   </p>
                                 </div>
                                 
@@ -1652,12 +1762,19 @@ const SectionPage: React.FC = () => {
                                       size="lg"
                                       className="tw-px-8 tw-py-3 tw-rounded-xl tw-font-bold tw-bg-gradient-to-r tw-from-indigo-600 tw-to-purple-600 tw-border-0 tw-shadow-lg tw-hover:tw-scale-105 tw-transition-all tw-duration-300"
                                       onClick={() => startQuizOrDrill('drill', selectedTopic.drill.drill_id, selectedTopic.id)}
-                                      disabled={markingLoading}
+                                      disabled={markingLoading || !selectedSection.isEntitled}
                                     >
-                                      <div className="tw-flex tw-items-center tw-gap-3">
-                                        <Zap size={20} />
-                                        Mulai Drill Sekarang!
-                                      </div>
+                                      {!selectedSection.isEntitled ? (
+                                        <div className="tw-flex tw-items-center tw-gap-3">
+                                          <Lock size={20} />
+                                          Beli Course untuk Akses
+                                        </div>
+                                      ) : (
+                                        <div className="tw-flex tw-items-center tw-gap-3">
+                                          <Zap size={20} />
+                                          Mulai Drill Sekarang!
+                                        </div>
+                                      )}
                                     </Button>
                                   </div>
                                 ) : (
@@ -1666,36 +1783,20 @@ const SectionPage: React.FC = () => {
                                     <h4 className="tw-text-green-800 tw-font-bold tw-text-xl tw-mb-2">
                                       Selamat! Drill Sudah Selesai!
                                     </h4>
-                                    <p className="tw-text-green-700">
-                                      Kamu telah menyelesaikan drill ini dengan baik. Lanjutkan ke materi berikutnya!
-                                    </p>
-                                    <div className="tw-mt-4">
-                                      <Button
-                                        variant="outline-success"
-                                        className="tw-px-6 tw-py-2 tw-rounded-xl tw-font-bold tw-border-2 tw-border-green-500 tw-text-green-700"
-                                        onClick={() => setShowDrillModal(true)}
-                                      >
-                                        Lihat Hasil Drill
-                                      </Button>
-                                    </div>
                                   </div>
                                 )}
                               </div>
                             </div>
                           ) : (
-                            <div className="tw-text-center tw-py-12 tw-bg-white tw-rounded-xl tw-shadow-lg tw-border tw-border-indigo-200">
-                              <FileText className="tw-text-yellow-500 tw-mx-auto tw-mb-4" size={64} />
+                            <div className="tw-text-center tw-py-12 tw-bg-white tw-rounded-xl tw-shadow-lg">
+                              <AlertCircle className="tw-text-yellow-500 tw-mx-auto tw-mb-4" size={64} />
                               <h3 className="tw-text-yellow-600 tw-font-bold tw-text-xl tw-mb-2">
                                 Selesaikan Quiz Dulu!
                               </h3>
-                              <p className="tw-text-yellow-600 tw-text-lg tw-mb-4">
-                                Untuk memulai drill, selesaikan quiz dulu yaa
-                              </p>
                               <Button
                                 variant="primary"
-                                size="lg"
-                                className="tw-px-6 tw-py-3 tw-rounded-xl tw-font-bold tw-bg-gradient-to-r tw-from-yellow-600 tw-to-orange-600 tw-border-0 tw-shadow-lg"
                                 onClick={() => selectContent(selectedTopic.id, 'quiz')}
+                                className="tw-mt-4"
                               >
                                 Kembali ke Quiz
                               </Button>
@@ -1719,10 +1820,20 @@ const SectionPage: React.FC = () => {
                                 setSelectedTopicId(null);
                                 setSelectedContentType(null);
                               }}
+                              disabled={!selectedSection.isEntitled}
                               className="tw-flex tw-items-center tw-gap-2 tw-bg-gradient-to-r tw-from-indigo-600 tw-to-purple-600 tw-border-0"
                             >
-                              Selesai
-                              <Check size={16} />
+                              {!selectedSection.isEntitled ? (
+                                <>
+                                  <Lock size={16} />
+                                  Terkunci
+                                </>
+                              ) : (
+                                <>
+                                  Selesai
+                                  <Check size={16} />
+                                </>
+                              )}
                             </Button>
                           </div>
                         </Card.Footer>
@@ -1736,6 +1847,111 @@ const SectionPage: React.FC = () => {
         </div>
       </Container>
 
+      {/* Modal untuk Entitlement - Tambah ke Keranjang */}
+      <Modal show={showCartModal} onHide={() => setShowCartModal(false)} centered>
+        <Modal.Header closeButton className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-pink-500 tw-text-white tw-border-0">
+          <Modal.Title className="tw-flex tw-items-center tw-gap-2">
+            <Lock size={24} />
+            <span>Akses Terbatas</span>
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="tw-p-6">
+          {cartSuccess ? (
+            <div className="tw-text-center tw-py-4">
+              <div className="tw-inline-block tw-bg-green-100 tw-p-4 tw-rounded-full tw-mb-4">
+                <Check className="tw-text-green-600" size={48} />
+              </div>
+              <h4 className="tw-text-green-800 tw-font-bold tw-text-xl tw-mb-2">
+                Berhasil Ditambahkan!
+              </h4>
+              <p className="tw-text-gray-600">
+                Course telah ditambahkan ke keranjang Anda
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="tw-text-center tw-mb-6">
+                <div className="tw-inline-block tw-bg-yellow-100 tw-p-4 tw-rounded-full tw-mb-4">
+                  <AlertCircle className="tw-text-yellow-600" size={48} />
+                </div>
+                <h4 className="tw-text-purple-800 tw-font-bold tw-text-xl tw-mb-3">
+                  Beli Course untuk Akses Penuh
+                </h4>
+                <p className="tw-text-gray-600 tw-mb-4">
+                  Anda sedang dalam mode preview. Untuk dapat menandai selesai, mengerjakan quiz/drill, dan melanjutkan pembelajaran, Anda perlu membeli course ini terlebih dahulu.
+                </p>
+              </div>
+
+              <div className="tw-bg-gradient-to-r tw-from-purple-50 tw-to-pink-50 tw-p-4 tw-rounded-xl tw-mb-4">
+                <h5 className="tw-text-purple-800 tw-font-bold tw-mb-3">
+                  Dengan membeli course ini, Anda akan mendapat:
+                </h5>
+                <ul className="tw-space-y-2 tw-text-gray-700">
+                  <li className="tw-flex tw-items-center tw-gap-2">
+                    <Check className="tw-text-green-600 tw-flex-shrink-0" size={18} />
+                    <span>Akses penuh ke semua materi pembelajaran</span>
+                  </li>
+                  <li className="tw-flex tw-items-center tw-gap-2">
+                    <Check className="tw-text-green-600 tw-flex-shrink-0" size={18} />
+                    <span>Dapat menandai materi sebagai selesai</span>
+                  </li>
+                  <li className="tw-flex tw-items-center tw-gap-2">
+                    <Check className="tw-text-green-600 tw-flex-shrink-0" size={18} />
+                    <span>Akses ke quiz dan drill untuk latihan</span>
+                  </li>
+                  <li className="tw-flex tw-items-center tw-gap-2">
+                    <Check className="tw-text-green-600 tw-flex-shrink-0" size={18} />
+                    <span>Tracking progress pembelajaran Anda</span>
+                  </li>
+                  <li className="tw-flex tw-items-center tw-gap-2">
+                    <Check className="tw-text-green-600 tw-flex-shrink-0" size={18} />
+                    <span>Sertifikat setelah menyelesaikan course</span>
+                  </li>
+                </ul>
+              </div>
+
+              {cartError && (
+                <Alert variant="danger" className="tw-mb-4">
+                  <div className="tw-flex tw-items-center tw-gap-2">
+                    <X size={18} />
+                    <span>{cartError}</span>
+                  </div>
+                </Alert>
+              )}
+            </>
+          )}
+        </Modal.Body>
+        {!cartSuccess && (
+          <Modal.Footer className="tw-border-0 tw-flex tw-gap-3 tw-justify-end">
+            <Button
+              variant="outline-secondary"
+              onClick={() => setShowCartModal(false)}
+              disabled={addingToCart}
+            >
+              Nanti Saja
+            </Button>
+            <Button
+              variant="primary"
+              className="tw-bg-gradient-to-r tw-from-purple-600 tw-to-pink-600 tw-border-0 tw-flex tw-items-center tw-gap-2"
+              onClick={handleAddToCart}
+              disabled={addingToCart}
+            >
+              {addingToCart ? (
+                <>
+                  <Spinner animation="border" size="sm" />
+                  <span>Menambahkan...</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingCart size={18} />
+                  <span>Tambah ke Keranjang</span>
+                </>
+              )}
+            </Button>
+          </Modal.Footer>
+        )}
+      </Modal>
+
       {/* Exam Modal untuk Quiz */}
       {showExamModal && examType === 'quiz' && examId && (
         <ExamModal 
@@ -1747,7 +1963,7 @@ const SectionPage: React.FC = () => {
         />
       )}
 
-      {/* Drill Modal untuk menampilkan hasil */}
+      {/* Drill Modal */}
       {showDrillModal && selectedTopic && (
         <DrillModal
           show={showDrillModal}

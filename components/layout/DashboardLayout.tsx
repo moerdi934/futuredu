@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Nav, Container, Button, Modal } from 'react-bootstrap';
 import Link from 'next/link';
-import { useAuth } from '../../context/AuthContext'; // Sesuaikan path dengan struktur project Anda
+import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
   Users,
@@ -57,6 +57,8 @@ import {
   LogOut,
   LucideIcon
 } from 'lucide-react';
+import NavigationBar from './NavigationBar';
+
 
 // Types
 interface SubMenuItem {
@@ -298,7 +300,7 @@ interface SidebarHeaderProps {
 
 const SidebarHeader: React.FC<SidebarHeaderProps> = ({ isExpanded, onToggle }) => {
   return (
-    <div className="sidebar-header border-bottom border-purple-700 p-3 mt-3">
+    <div className="sidebar-header border-bottom border-purple-700 p-3">
       {isExpanded ? (
         <div className="d-flex flex-column">
           <div className="tw-flex tw-justify-end">
@@ -329,14 +331,14 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({ isExpanded, onToggle }) =
   );
 };
 
-// Navigation Component with useAuth - FIXED
+// Navigation Component with useAuth
 interface SidebarNavProps {
   isExpanded: boolean;
 }
 
 const SidebarNav: React.FC<SidebarNavProps> = ({ isExpanded }) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
-  const { isAuthenticated, role } = useAuth(); // Menggunakan role langsung dari AuthContext
+  const { isAuthenticated, role } = useAuth();
   console.log('is auth', isAuthenticated, 'role', role)
 
   const handleMenuClick = (menuPath: string) => {
@@ -344,15 +346,12 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ isExpanded }) => {
   };
 
   const filteredMenuItems = useMemo(() => {
-    // Jika tidak authenticated, return empty array
     if (!isAuthenticated || !role) {
       return [];
     }
 
-    // Ambil role dari AuthContext
     const userRole = role as UserRole;
     
-    // Validasi role
     const validRoles: UserRole[] = ['admin', 'teacher', 'student'];
     if (!validRoles.includes(userRole)) {
       console.warn('Invalid user role:', userRole);
@@ -369,7 +368,6 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ isExpanded }) => {
     return filtered;
   }, [isAuthenticated, role]);
 
-  // User not authenticated
   if (!isAuthenticated) {
     return (
       <div className="p-3 text-white text-center">
@@ -378,7 +376,6 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ isExpanded }) => {
     );
   }
 
-  // No menu items
   if (filteredMenuItems.length === 0) {
     return (
       <div className="p-3 text-white text-center">
@@ -410,7 +407,7 @@ interface SidebarFooterProps {
 
 const SidebarFooter: React.FC<SidebarFooterProps> = ({ isExpanded }) => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const { logout } = useAuth(); // Menggunakan logout dari useAuth
+  const { logout } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -458,7 +455,18 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isExpanded, onToggle }) => {
   return (
-    <div className={`sidebar ${isExpanded ? 'sidebar-expanded' : 'sidebar-collapsed'}`}>
+    <div 
+      className={`sidebar ${isExpanded ? 'sidebar-expanded' : 'sidebar-collapsed'}`}
+      style={{
+        position: 'fixed',
+        top: '64px', // Height of NavigationBar (60px + 4px buffer)
+        left: 0,
+        height: 'calc(100vh - 64px)', // Full height minus navbar
+        zIndex: 30,
+        overflowY: 'auto',
+        transition: 'width 0.3s ease'
+      }}
+    >
       <SidebarHeader isExpanded={isExpanded} onToggle={onToggle} />
       <SidebarNav isExpanded={isExpanded} />
       <SidebarFooter isExpanded={isExpanded} />
@@ -476,15 +484,28 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   return (
     <>
-      <Sidebar 
-        isExpanded={isExpanded} 
-        onToggle={() => setIsExpanded(!isExpanded)}
-      />
-      <main className={`${isExpanded ? 'main-content' : 'main-content-collapsed'}`}>
-        <Container fluid className="p-4">
-          {children}
-        </Container>
-      </main>
+      <NavigationBar />
+      
+      <div style={{ paddingTop: '64px' }}> {/* Spacer for fixed navbar */}
+        <Sidebar 
+          isExpanded={isExpanded} 
+          onToggle={() => setIsExpanded(!isExpanded)}
+        />
+        
+        <main 
+          className={`${isExpanded ? 'main-content' : 'main-content-collapsed'}`}
+          style={{
+            marginLeft: isExpanded ? '280px' : '80px', // Adjust based on your sidebar widths
+            transition: 'margin-left 0.3s ease',
+            minHeight: 'calc(100vh - 64px)',
+            paddingTop: '1rem'
+          }}
+        >
+          <Container fluid className="p-4">
+            {children}
+          </Container>
+        </main>
+      </div>
     </>
   );
 };

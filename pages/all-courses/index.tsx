@@ -1,4 +1,4 @@
-// pages/all-courses.tsx - Updated with Modals and Floater
+// pages/all-courses.tsx - Updated with direct course access
 import React, { useState, useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';
@@ -7,7 +7,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import {
   BookOpen, Star, ChevronDown, ChevronUp, 
-  GraduationCap, User, Search, Grid, List, Quote
+  GraduationCap, User, Search, Grid, List, Quote, Eye
 } from 'lucide-react';
 import NavigationBar from '../../components/layout/NavigationBar';
 import { ButtonGradient } from '../../components/button/ButtonTemplate';
@@ -314,6 +314,10 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
     router.push(`/course/${courseString}`);
   };
 
+  const handleViewCourse = (courseString: string) => {
+    router.push(`/course/${courseString}`);
+  };
+
   const handleLogin = () => {
     router.push('/login');
   };
@@ -370,8 +374,8 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
     }).format(price);
   };
 
-  const getDiscountPercentage = (originalPrice: number, discountPrice: number) => {
-    return Math.round(((originalPrice - discountPrice) / originalPrice) * 100);
+  const calculateDiscount = (originalPrice: number, promoPrice: number) => {
+    return Math.round(((originalPrice - promoPrice) / originalPrice) * 100);
   };
 
   const formatDateTime = (dateString: string) => {
@@ -757,16 +761,26 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
                 }>
                   {availableCourses.map((course) => (
                     <div key={course.id} className="tw-bg-white tw-rounded-2xl tw-shadow-xl tw-overflow-hidden tw-transition-all tw-duration-300 hover:tw-scale-105">
-                      <div className="tw-relative tw-h-48">
+                      <div className="tw-relative tw-h-48 tw-group tw-cursor-pointer" onClick={() => handleViewCourse(course.course_string || '')}>
                         <img
                           src={course.imageUrl || getDefaultImage()}
                           alt={course.title}
                           className="tw-w-full tw-h-full tw-object-cover"
                         />
+                        <div className="tw-absolute tw-inset-0 tw-bg-black tw-bg-opacity-0 group-hover:tw-bg-opacity-40 tw-transition-all tw-duration-300 tw-flex tw-items-center tw-justify-center">
+                          <div className="tw-opacity-0 group-hover:tw-opacity-100 tw-transition-opacity tw-duration-300 tw-bg-white tw-rounded-full tw-p-3">
+                            <Eye className="tw-w-6 tw-h-6 tw-text-purple-600" />
+                          </div>
+                        </div>
                       </div>
                       
                       <div className="tw-p-6">
-                        <h5 className="tw-font-bold tw-text-lg tw-text-purple-600 tw-mb-2">{course.title}</h5>
+                        <h5 
+                          className="tw-font-bold tw-text-lg tw-text-purple-600 tw-mb-2 tw-cursor-pointer hover:tw-text-purple-800"
+                          onClick={() => handleViewCourse(course.course_string || '')}
+                        >
+                          {course.title}
+                        </h5>
                         <p className="tw-text-gray-600 tw-text-sm tw-mb-4 tw-line-clamp-3">{course.description}</p>
                         
                         {course.learning_point && course.learning_point.length > 0 && (
@@ -799,23 +813,37 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
                           )}
                         </div>
                         
-                        {!isAuthenticated ? (
+                        <div className="tw-flex tw-gap-2">
                           <ButtonGradient
-                            action="login"
-                            onClick={handleLogin}
-                            customText="Login untuk Membeli"
+                            action="view"
+                            onClick={() => handleViewCourse(course.course_string || '')}
+                            customText="Lihat Detail"
                             size="sm"
-                            className="tw-w-full"
+                            className="tw-flex-1"
+                            customColors={{
+                              gradient1: '#6366F1',
+                              gradient2: '#8B5CF6',
+                              text: '#FFFFFF'
+                            }}
                           />
-                        ) : (
-                          <ButtonGradient
-                            action="cart"
-                            onClick={() => handleBuyCourse(course.id, course.title)}
-                            customText="Beli Kursus"
-                            size="sm"
-                            className="tw-w-full"
-                          />
-                        )}
+                          {!isAuthenticated ? (
+                            <ButtonGradient
+                              action="login"
+                              onClick={handleLogin}
+                              customText="Login"
+                              size="sm"
+                              className="tw-flex-1"
+                            />
+                          ) : (
+                            <ButtonGradient
+                              action="cart"
+                              onClick={() => handleBuyCourse(course.id, course.title)}
+                              customText="Beli"
+                              size="sm"
+                              className="tw-flex-1"
+                            />
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

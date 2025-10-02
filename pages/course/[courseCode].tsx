@@ -19,8 +19,13 @@ import {
   BookMarked,
   Gift,
   Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  Lock,
+  Tag
 } from 'lucide-react';
+import CoursePurchaseModal from '../all-courses/CoursePurchaseModal';
+import GoToCartFloater from '../../components/floater/GoToCartFloater';
+import NavigationBar from '@/ components/layout/NavigationBar';
 
 interface TopicApi {
   id: number;
@@ -51,15 +56,34 @@ interface CourseData {
   sections: SectionApi[];
 }
 
+interface CourseProduct {
+  product_id: number;
+  name: string;
+  description: string;
+  stock: number;
+  price: number;
+  is_promo: boolean;
+  no_promo_price?: number;
+  promo_description?: string;
+  features: string[];
+}
+
 const CoursePage: React.FC = () => {
   const params = useParams();
   const courseCode = params?.courseCode as string;
   const [courseData, setCourseData] = useState<CourseData & { isEntitled: boolean } | null>(null);
+  const [courseProducts, setCourseProducts] = useState<CourseProduct[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [hoveredSectionId, setHoveredSectionId] = useState<number | null>(null);
+  
+  // Modal & Floater states
+  const [showCourseModal, setShowCourseModal] = useState(false);
+  const [showFloater, setShowFloater] = useState(false);
+  const [floaterItemName, setFloaterItemName] = useState('');
 
   useEffect(() => {
     const fetchCourseData = async () => {
@@ -75,17 +99,29 @@ const CoursePage: React.FC = () => {
         );
         
         if (response.data.data) {
-          setCourseData(response.data.data);
+          const data = response.data.data;
+          setCourseData(data);
+          
+          // Fetch products for this course
+          if (data.courseId) {
+            fetchCourseProducts(data.courseId);
+          }
         } else {
           throw new Error(response.data.message);
         }
       } catch (err: any) {
         if (err.response?.status === 401) {
+          const unauthorizedData = err.response.data.data;
           setCourseData({ 
-            ...( (err.response.data.data as any) || {} ),
+            ...unauthorizedData,
             isEntitled: false,
-            sections: []
+            sections: unauthorizedData?.sections || []
           });
+          
+          // Still fetch products even if not entitled
+          if (unauthorizedData?.courseId) {
+            fetchCourseProducts(unauthorizedData.courseId);
+          }
         } else {
           setError(err.message);
         }
@@ -99,6 +135,27 @@ const CoursePage: React.FC = () => {
     }
   }, [courseCode]);
 
+  const fetchCourseProducts = async (courseId: number) => {
+    try {
+      setProductsLoading(true);
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/products/course/${courseId}`,
+        {
+          headers: { 'Cache-Control': 'no-cache' },
+          params: { _t: Date.now() }
+        }
+      );
+      
+      if (response.data.success && response.data.data) {
+        setCourseProducts(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching course products:', error);
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 992);
@@ -108,6 +165,41 @@ const CoursePage: React.FC = () => {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  const handleAddToCart = async (productId: number) => {
+    const token = localStorage.getItem('authToken');
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await axios.post(
+      '/api/cart/add',
+      { productId },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Failed to add to cart');
+    }
+  };
+
+  const handlePurchaseSuccess = (itemName: string) => {
+    setFloaterItemName(itemName);
+    setShowFloater(true);
+    // Don't refresh - let user continue browsing
+  };
+
+  const handleBuyCourse = () => {
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+      router.push('/login');
+      return;
+    }
+    setShowCourseModal(true);
+  };
 
   const displayedSections = courseData
     ? courseData.sections.map(sec => ({
@@ -132,6 +224,19 @@ const CoursePage: React.FC = () => {
     }
   };
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
+
+  const getDiscountPercentage = (originalPrice: number, discountPrice: number) => {
+    return Math.round(((originalPrice - discountPrice) / originalPrice) * 100);
+  };
+
   const getProgressColor = (progress: number) => {
     if (progress === 100) return 'success';
     if (progress >= 70) return 'info';
@@ -149,6 +254,13 @@ const CoursePage: React.FC = () => {
   const sortedSections = courseData?.sections
     ? [...courseData.sections].sort((a, b) => a.position - b.position)
     : [];
+
+  // Get cheapest product for main display
+  const cheapestProduct = courseProducts.length > 0
+    ? courseProducts.reduce((prev, current) => 
+        (prev.price < current.price) ? prev : current
+      )
+    : null;
 
   if (loading) {
     return (
@@ -188,7 +300,29 @@ const CoursePage: React.FC = () => {
   }
 
   return (
+    <>
+    
     <div className="tw-bg-gradient-to-br tw-from-purple-50 tw-via-pink-50 tw-to-indigo-50 tw-min-h-screen">
+      <NavigationBar></NavigationBar>
+      {/* Floater */}
+      <GoToCartFloater
+        show={showFloater}
+        onHide={() => setShowFloater(false)}
+        itemName={floaterItemName}
+      />
+
+      {/* Purchase Modal */}
+      {courseData && (
+        <CoursePurchaseModal
+          show={showCourseModal}
+          onHide={() => setShowCourseModal(false)}
+          courseId={courseData.courseId}
+          courseName={courseData.title}
+          onAddToCart={handleAddToCart}
+          onSuccess={handlePurchaseSuccess}
+        />
+      )}
+
       <Container className="tw-py-8">
         <Row>
           <Col xs={12}>
@@ -225,7 +359,9 @@ const CoursePage: React.FC = () => {
                     </div>
                     <div className="tw-flex tw-items-center tw-gap-2 tw-bg-pink-100 tw-px-3 tw-py-1 tw-rounded-full">
                       <Target className="tw-text-pink-600" size={16} />
-                      <span className="tw-text-pink-700 tw-text-sm tw-font-medium">8 Minggu</span>
+                      <span className="tw-text-pink-700 tw-text-sm tw-font-medium">
+                        {sortedSections.length} Section
+                      </span>
                     </div>
                     <div className="tw-flex tw-items-center tw-gap-2 tw-bg-indigo-100 tw-px-3 tw-py-1 tw-rounded-full">
                       <Zap className="tw-text-indigo-600" size={16} />
@@ -259,34 +395,86 @@ const CoursePage: React.FC = () => {
                 </div>
               </div>
 
-              {!courseData.isEntitled && (
-                <div className="tw-mt-8 tw-bg-gradient-to-r tw-from-indigo-50 tw-to-purple-50 tw-p-6 tw-rounded-xl tw-border-2 tw-border-purple-300 tw-shadow-lg tw-max-w-xl tw-mx-auto">
-                  <div className="tw-flex tw-flex-col md:tw-flex-row tw-items-center tw-justify-between tw-gap-4">
-                    <div className="tw-flex tw-items-center tw-gap-3">
-                      <div className="tw-bg-gradient-to-r tw-from-indigo-500 tw-to-purple-600 tw-p-3 tw-rounded-full">
-                        <ShoppingCart className="tw-text-white" size={24} />
-                      </div>
-                      <div>
-                        <div className="tw-flex tw-items-baseline tw-gap-2">
-                          <span className="tw-text-2xl tw-font-bold tw-text-purple-700">Rp299.000</span>
-                          <span className="tw-text-gray-500 tw-line-through">Rp499.000</span>
-                          <Badge bg="danger" className="tw-animate-pulse">
-                            Promo 40%
-                          </Badge>
+              {/* Pricing Section */}
+              {!courseData.isEntitled && cheapestProduct && (
+                <div className="tw-mt-8 tw-bg-gradient-to-r tw-from-indigo-50 tw-to-purple-50 tw-p-6 tw-rounded-xl tw-border-2 tw-border-purple-300 tw-shadow-lg tw-max-w-2xl tw-mx-auto">
+                  <div className="tw-flex tw-flex-col tw-gap-4">
+                    <div className="tw-text-center">
+                      <h4 className="tw-text-lg tw-font-bold tw-text-purple-700 tw-mb-3">
+                        Mulai Belajar Sekarang!
+                      </h4>
+                      
+                      {cheapestProduct.is_promo && cheapestProduct.no_promo_price ? (
+                        <div className="tw-mb-4">
+                          <div className="tw-flex tw-items-center tw-justify-center tw-gap-3 tw-mb-2">
+                            <Badge bg="danger" className="tw-animate-pulse tw-text-base tw-py-2 tw-px-3">
+                              <Tag className="tw-inline tw-mr-1" size={14} />
+                              HEMAT {getDiscountPercentage(cheapestProduct.no_promo_price, cheapestProduct.price)}%
+                            </Badge>
+                          </div>
+                          <div className="tw-flex tw-items-center tw-justify-center tw-gap-3">
+                            <span className="tw-text-3xl md:tw-text-4xl tw-font-bold tw-text-green-600">
+                              {formatPrice(cheapestProduct.price)}
+                            </span>
+                            <span className="tw-text-xl tw-text-gray-500 tw-line-through">
+                              {formatPrice(cheapestProduct.no_promo_price)}
+                            </span>
+                          </div>
+                          {cheapestProduct.promo_description && (
+                            <p className="tw-text-sm tw-text-red-600 tw-font-semibold tw-mt-2">
+                              {cheapestProduct.promo_description}
+                            </p>
+                          )}
                         </div>
-                        <p className="tw-text-gray-600 tw-text-sm tw-mb-0">
-                          Akses seumur hidup untuk semua materi
+                      ) : (
+                        <div className="tw-mb-4">
+                          <div className="tw-text-3xl md:tw-text-4xl tw-font-bold tw-text-purple-700">
+                            {cheapestProduct.price === 0 ? (
+                              <span className="tw-text-green-600">GRATIS</span>
+                            ) : (
+                              formatPrice(cheapestProduct.price)
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {courseProducts.length > 1 && (
+                        <p className="tw-text-sm tw-text-gray-600 tw-mb-3">
+                          Mulai dari harga di atas • {courseProducts.length} paket tersedia
                         </p>
-                      </div>
+                      )}
                     </div>
-                    <Button 
-                      variant="primary" 
-                      size="lg"
-                      className="tw-bg-gradient-to-r tw-from-purple-600 tw-to-pink-600 tw-border-0 tw-shadow-lg hover:tw-scale-105 tw-transition-transform tw-duration-300 tw-font-bold tw-px-6"
-                    >
-                      Beli Sekarang
-                    </Button>
+
+                    <div className="tw-flex tw-flex-col sm:tw-flex-row tw-gap-3 tw-justify-center">
+                      <Button 
+                        variant="primary" 
+                        size="lg"
+                        onClick={handleBuyCourse}
+                        className="tw-bg-gradient-to-r tw-from-purple-600 tw-to-pink-600 tw-border-0 tw-shadow-lg hover:tw-scale-105 tw-transition-transform tw-duration-300 tw-font-bold tw-px-6 tw-flex tw-items-center tw-justify-center tw-gap-2"
+                      >
+                        <ShoppingCart size={20} />
+                        Beli Kursus Sekarang
+                      </Button>
+                      
+                      {courseProducts.length > 1 && (
+                        <Button 
+                          variant="outline-primary"
+                          size="lg"
+                          onClick={handleBuyCourse}
+                          className="tw-border-2 tw-border-purple-600 tw-text-purple-600 hover:tw-bg-purple-50 tw-font-semibold tw-px-6"
+                        >
+                          Lihat Semua Paket
+                        </Button>
+                      )}
+                    </div>
                   </div>
+                </div>
+              )}
+
+              {!courseData.isEntitled && productsLoading && (
+                <div className="tw-mt-8 tw-text-center">
+                  <Spinner animation="border" variant="primary" size="sm" />
+                  <p className="tw-text-gray-600 tw-text-sm tw-mt-2">Memuat informasi harga...</p>
                 </div>
               )}
             </div>
@@ -302,7 +490,9 @@ const CoursePage: React.FC = () => {
                   <div className="tw-bg-white tw-bg-opacity-20 tw-p-3 tw-rounded-full">
                     <BookMarked className="tw-text-white" size={28} />
                   </div>
-                  <h2 className="tw-text-xl md:tw-text-2xl tw-font-bold tw-mb-0">Pilih Section untuk Memulai Belajar!</h2>
+                  <h2 className="tw-text-xl md:tw-text-2xl tw-font-bold tw-mb-0">
+                    {courseData.isEntitled ? 'Pilih Section untuk Memulai Belajar!' : 'Preview Materi Kursus'}
+                  </h2>
                   <div className="tw-bg-yellow-400 tw-p-2 tw-rounded-full tw-animate-pulse">
                     <Star className="tw-text-yellow-800" size={20} />
                   </div>
@@ -324,15 +514,19 @@ const CoursePage: React.FC = () => {
                             <div className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-pink-500 tw-text-white tw-rounded-full tw-w-8 tw-h-8 tw-flex tw-items-center tw-justify-center tw-font-bold tw-text-sm">
                               {index + 1}
                             </div>
-                            <Badge bg={section.progress === 100 ? 'success' : section.progress >= 50 ? 'warning' : 'secondary'} className="tw-flex tw-items-center tw-gap-1 tw-text-sm">
-                              {section.progress === 100 && <Trophy size={12} />}
-                              {section.progress}%
-                            </Badge>
-                            {section.totalBonus > 0 && (
-                              <Badge bg={getBonusProgressColor(section.bonusProgress)} className="tw-flex tw-items-center tw-gap-1 tw-text-sm">
-                                <Gift size={12} />
-                                {section.bonus}/{section.totalBonus} Bonus
-                              </Badge>
+                            {courseData.isEntitled && (
+                              <>
+                                <Badge bg={section.progress === 100 ? 'success' : section.progress >= 50 ? 'warning' : 'secondary'} className="tw-flex tw-items-center tw-gap-1 tw-text-sm">
+                                  {section.progress === 100 && <Trophy size={12} />}
+                                  {section.progress}%
+                                </Badge>
+                                {section.totalBonus > 0 && (
+                                  <Badge bg={getBonusProgressColor(section.bonusProgress)} className="tw-flex tw-items-center tw-gap-1 tw-text-sm">
+                                    <Gift size={12} />
+                                    {section.bonus}/{section.totalBonus} Bonus
+                                  </Badge>
+                                )}
+                              </>
                             )}
                             <span className="tw-text-purple-800 tw-font-bold tw-text-sm md:tw-text-lg tw-break-words">
                               {section.title}
@@ -362,53 +556,55 @@ const CoursePage: React.FC = () => {
                             )}
                           </div>
 
-                          <div className="tw-space-y-3">
-                            <div>
-                              <div className="tw-flex tw-items-center tw-justify-between tw-mb-1">
-                                <span className="tw-text-sm tw-font-medium tw-text-purple-700">Materi Wajib</span>
-                                <span className="tw-text-sm tw-font-bold tw-text-purple-700">{section.progress}%</span>
-                              </div>
-                              <ProgressBar 
-                                variant={getProgressColor(section.progress)} 
-                                now={section.progress} 
-                                className="tw-h-3 tw-rounded-full tw-shadow-inner"
-                                style={{background: '#f3f4f6'}}
-                              />
-                            </div>
-
-                            {section.totalBonus > 0 && (
+                          {courseData.isEntitled && (
+                            <div className="tw-space-y-3">
                               <div>
                                 <div className="tw-flex tw-items-center tw-justify-between tw-mb-1">
-                                  <div className="tw-flex tw-items-center tw-gap-2">
-                                    <Gift size={14} className="tw-text-pink-500" />
-                                    <span className="tw-text-sm tw-font-medium tw-text-pink-700">Materi Bonus</span>
-                                  </div>
-                                  <div className="tw-flex tw-items-center tw-gap-2">
-                                    <span className="tw-text-sm tw-font-bold tw-text-pink-700">
-                                      {section.bonus}/{section.totalBonus}
-                                    </span>
-                                    <span className="tw-text-xs tw-text-pink-600">
-                                      ({section.bonusProgress}%)
-                                    </span>
-                                  </div>
+                                  <span className="tw-text-sm tw-font-medium tw-text-purple-700">Materi Wajib</span>
+                                  <span className="tw-text-sm tw-font-bold tw-text-purple-700">{section.progress}%</span>
                                 </div>
                                 <ProgressBar 
-                                  variant={getBonusProgressColor(section.bonusProgress)} 
-                                  now={section.bonusProgress} 
-                                  className="tw-h-2 tw-rounded-full tw-shadow-inner"
-                                  style={{background: '#fdf2f8'}}
+                                  variant={getProgressColor(section.progress)} 
+                                  now={section.progress} 
+                                  className="tw-h-3 tw-rounded-full tw-shadow-inner"
+                                  style={{background: '#f3f4f6'}}
                                 />
-                                {section.bonusProgress === 100 && (
-                                  <div className="tw-flex tw-items-center tw-gap-1 tw-mt-1">
-                                    <CheckCircle2 size={14} className="tw-text-green-500" />
-                                    <span className="tw-text-xs tw-text-green-600 tw-font-medium">
-                                      Semua materi bonus selesai!
-                                    </span>
-                                  </div>
-                                )}
                               </div>
-                            )}
-                          </div>
+
+                              {section.totalBonus > 0 && (
+                                <div>
+                                  <div className="tw-flex tw-items-center tw-justify-between tw-mb-1">
+                                    <div className="tw-flex tw-items-center tw-gap-2">
+                                      <Gift size={14} className="tw-text-pink-500" />
+                                      <span className="tw-text-sm tw-font-medium tw-text-pink-700">Materi Bonus</span>
+                                    </div>
+                                    <div className="tw-flex tw-items-center tw-gap-2">
+                                      <span className="tw-text-sm tw-font-bold tw-text-pink-700">
+                                        {section.bonus}/{section.totalBonus}
+                                      </span>
+                                      <span className="tw-text-xs tw-text-pink-600">
+                                        ({section.bonusProgress}%)
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <ProgressBar 
+                                    variant={getBonusProgressColor(section.bonusProgress)} 
+                                    now={section.bonusProgress} 
+                                    className="tw-h-2 tw-rounded-full tw-shadow-inner"
+                                    style={{background: '#fdf2f8'}}
+                                  />
+                                  {section.bonusProgress === 100 && (
+                                    <div className="tw-flex tw-items-center tw-gap-1 tw-mt-1">
+                                      <CheckCircle2 size={14} className="tw-text-green-500" />
+                                      <span className="tw-text-xs tw-text-green-600 tw-font-medium">
+                                        Semua materi bonus selesai!
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div className="tw-ml-4 tw-flex tw-items-center tw-gap-2">
                           <div className="tw-bg-purple-100 tw-group-hover:tw-bg-purple-200 tw-p-2 tw-rounded-full tw-transition-colors">
@@ -446,12 +642,34 @@ const CoursePage: React.FC = () => {
                     </Link>
                   ))}
                 </div>
+
+                {!courseData.isEntitled && courseProducts.length > 0 && (
+                  <div className="tw-mt-8 tw-text-center tw-bg-gradient-to-r tw-from-purple-50 tw-to-pink-50 tw-border-2 tw-border-purple-300 tw-rounded-xl tw-p-6">
+                    <h4 className="tw-font-bold tw-text-purple-800 tw-mb-3">
+                      Tertarik untuk belajar lebih dalam?
+                    </h4>
+                    <p className="tw-text-gray-700 tw-mb-4">
+                      Dapatkan akses penuh ke semua materi dan mulai perjalanan belajarmu sekarang!
+                    </p>
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      onClick={handleBuyCourse}
+                      className="tw-bg-gradient-to-r tw-from-purple-600 tw-to-pink-600 tw-border-0 tw-shadow-lg hover:tw-scale-105 tw-transition-transform tw-duration-300 tw-font-bold tw-px-8"
+                    >
+                      <ShoppingCart className="tw-inline tw-mr-2" size={20} />
+                      Beli Kursus Sekarang
+                    </Button>
+                  </div>
+                )}
               </Card.Body>
             </Card>
           </Col>
         </Row>
       </Container>
     </div>
+    </>
+    
   );
 };
 

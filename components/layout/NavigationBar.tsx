@@ -79,7 +79,7 @@ const NavigationBar = () => {
         expand="lg" 
         expanded={expanded}
         className={`tw-bg-gradient-to-r tw-from-purple-950 tw-to-purple-800 tw-shadow-xl tw-py-0 tw-fixed tw-top-0 tw-w-full tw-z-40 tw-transition-all tw-duration-300 ${scrolled ? 'tw-shadow-2xl' : 'tw-shadow-lg'}`}
-        style={{ minHeight: '60px', maxHeight: scrolled ? '56px' : '60px' }}
+        style={{ minHeight: '60px', maxHeight: scrolled ? '56px' : '64px' }}
       >
         <Container fluid className="tw-p-0">
           <Link href="/" passHref legacyBehavior>

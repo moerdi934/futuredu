@@ -5,6 +5,7 @@ import React from 'react';
 import { Table } from 'react-bootstrap';
 import { List, Plus, Download, ArrowRight } from 'lucide-react';
 import { ReportSuiteModal, ModalButton } from '../../../../../components/modal/ModalTemplate';
+import NavigationBar from '@/ components/layout/NavigationBar';
 
 interface CreateBulkModalProps {
   show: boolean;
@@ -75,6 +76,10 @@ const CreateBulkModal: React.FC<CreateBulkModalProps> = ({
   ];
 
   return (
+    <>
+        <NavigationBar>
+
+    </NavigationBar>
     <ReportSuiteModal
       show={show}
       onHide={onHide}
@@ -163,6 +168,8 @@ const CreateBulkModal: React.FC<CreateBulkModalProps> = ({
         </div>
       </div>
     </ReportSuiteModal>
+    </>
+
   );
 };
 
