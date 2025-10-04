@@ -1,7 +1,7 @@
-// pages/panel/courses/classes-page/EditClassModal.tsx
+// pages/panel/courses/classes-page/EditClassModal.tsx - Updated with Class Mode Selection
 
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Alert, Badge, Button as BootstrapButton, ButtonGroup, Button } from 'react-bootstrap';
+import { Row, Col, Alert, Badge, Button as BootstrapButton } from 'react-bootstrap';
 import { BookOpen, Users, Calendar, Clock, UserCheck, Video, MapPin } from 'lucide-react';
 import { LearningModal } from '../../../../components/modal/ModalTemplate';
 import { ButtonGradient } from '../../../../components/button/ButtonTemplate';
@@ -700,31 +700,42 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ isOpen, onClose, onSave
 
         {/* Class Mode Selection */}
         <div className="tw-space-y-3">
-          <label className="tw-font-semibold tw-text-purple-700 tw-mb-3 tw-block">Mode Kelas:</label>
-          <ButtonGroup className="tw-w-full">
-            <Button
-              variant={formData.class_mode === 'offline' ? 'primary' : 'outline-primary'}
+          <label className="tw-font-semibold tw-text-purple-700 tw-mb-3 tw-block">
+            Mode Kelas: <span className="tw-text-red-500">*</span>
+          </label>
+          <div className="tw-flex tw-gap-3">
+            <ButtonGradient
+              action={formData.class_mode === 'offline' ? 'done' : 'custom'}
+              size="md"
+              customText="Offline"
+              customIcon={<MapPin className="tw-w-4 tw-h-4" />}
               onClick={() => setFormData(prev => ({ ...prev, class_mode: 'offline', meeting_url: '' }))}
-              className="tw-flex tw-items-center tw-justify-center tw-gap-2"
-            >
-              <MapPin size={16} />
-              Offline
-            </Button>
-            <Button
-              variant={formData.class_mode === 'online' ? 'primary' : 'outline-primary'}
+              disabled={isLoading}
+              className={`tw-flex-1 ${formData.class_mode === 'offline' ? '' : 'tw-opacity-60'}`}
+            />
+            <ButtonGradient
+              action={formData.class_mode === 'online' ? 'done' : 'custom'}
+              size="md"
+              customText="Online"
+              customIcon={<Video className="tw-w-4 tw-h-4" />}
               onClick={() => setFormData(prev => ({ ...prev, class_mode: 'online' }))}
-              className="tw-flex tw-items-center tw-justify-center tw-gap-2"
-            >
-              <Video size={16} />
-              Online
-            </Button>
-          </ButtonGroup>
+              disabled={isLoading}
+              className={`tw-flex-1 ${formData.class_mode === 'online' ? '' : 'tw-opacity-60'}`}
+            />
+          </div>
+          <small className="tw-text-gray-500 tw-text-sm">
+            {formData.class_mode === 'online' 
+              ? 'Kelas online dapat di-Go Live dan memerlukan URL meeting' 
+              : 'Kelas offline tidak dapat di-Go Live'}
+          </small>
         </div>
 
         {/* Meeting URL Input - Only for online classes */}
         {formData.class_mode === 'online' && (
           <div className="tw-space-y-2">
-            <label className="tw-font-semibold tw-text-purple-700">URL Meeting *</label>
+            <label className="tw-font-semibold tw-text-purple-700">
+              URL Meeting <span className="tw-text-red-500">*</span>
+            </label>
             <input
               type="url"
               value={formData.meeting_url}
@@ -734,7 +745,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ isOpen, onClose, onSave
               required
               className="tw-w-full tw-p-3 tw-border-0 tw-rounded-xl tw-shadow-sm tw-bg-white/95 tw-backdrop-blur-sm tw-text-gray-800"
             />
-            <small className="tw-text-gray-500">
+            <small className="tw-text-gray-500 tw-text-sm">
               URL meeting untuk kelas online (Zoom, Google Meet, Microsoft Teams, dll.)
             </small>
           </div>
@@ -884,7 +895,20 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ isOpen, onClose, onSave
             {selectedCourse && (
               <div><span className="tw-font-medium">Mata Pelajaran:</span> {selectedCourse.label}</div>
             )}
-            <div><span className="tw-font-medium">Mode:</span> {formData.class_mode === 'online' ? 'Online' : 'Offline'}</div>
+            <div>
+              <span className="tw-font-medium">Mode:</span> 
+              <span className={`tw-ml-1 tw-px-2 tw-py-1 tw-rounded tw-text-xs ${
+                formData.class_mode === 'online' 
+                  ? 'tw-bg-blue-100 tw-text-blue-800' 
+                  : 'tw-bg-green-100 tw-text-green-800'
+              }`}>
+                {formData.class_mode === 'online' ? (
+                  <><Video size={12} className="tw-inline tw-mr-1" />Online</>
+                ) : (
+                  <><MapPin size={12} className="tw-inline tw-mr-1" />Offline</>
+                )}
+              </span>
+            </div>
             {formData.class_mode === 'online' && formData.meeting_url && (
               <div><span className="tw-font-medium">URL Meeting:</span> {formData.meeting_url}</div>
             )}

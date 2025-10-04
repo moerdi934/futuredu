@@ -1,8 +1,8 @@
-// pages/panel/courses/classes-page/AddClassModal.tsx
+// pages/panel/courses/classes-page/AddClassModal.tsx - Updated with Class Mode Selection
 
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Alert, Badge, Button as BootstrapButton } from 'react-bootstrap';
-import { BookOpen, Users, Calendar, Clock, UserCheck } from 'lucide-react';
+import { BookOpen, Users, Calendar, Clock, UserCheck, Video, MapPin } from 'lucide-react';
 import { LearningModal } from '../../../../components/modal/ModalTemplate';
 import { ButtonGradient } from '../../../../components/button/ButtonTemplate';
 import { 
@@ -56,7 +56,8 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSave }
     student_list_names: [] as string[],
     start_date: '',
     end_date: '',
-    class_mode: 'offline'
+    class_mode: 'offline' as 'online' | 'offline',
+    meeting_url: ''
   });
 
   // Form field states for form components
@@ -345,6 +346,10 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSave }
     setFormData(prev => ({ ...prev, end_date: e.target.value }));
   };
 
+  const handleMeetingUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({ ...prev, meeting_url: e.target.value }));
+  };
+
   // Handle course selection
   const handleCourseChange = (newValue: any) => {
     setSelectedCourse(newValue);
@@ -556,6 +561,18 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSave }
         throw new Error('Waktu selesai harus lebih besar dari waktu mulai');
       }
 
+      // Validate meeting URL for online classes
+      if (formData.class_mode === 'online' && !formData.meeting_url.trim()) {
+        throw new Error('URL meeting diperlukan untuk kelas online');
+      }
+
+      if (formData.class_mode === 'online' && formData.meeting_url.trim()) {
+        const urlPattern = /^https?:\/\/.+/;
+        if (!urlPattern.test(formData.meeting_url.trim())) {
+          throw new Error('Format URL meeting tidak valid. Harus dimulai dengan http:// atau https://');
+        }
+      }
+
       // Prepare class data based on user role
       const classData = {
         name: formData.name,
@@ -565,7 +582,8 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSave }
         student_list: formData.student_list_ids.map(id => parseInt(id)),
         start_date: new Date(formData.start_date),
         end_date: new Date(formData.end_date),
-        class_mode: formData.class_mode
+        class_mode: formData.class_mode,
+        meeting_url: formData.class_mode === 'online' ? formData.meeting_url.trim() : null
       };
 
       const response = await fetch(`${API_URL}/classes`, {
@@ -615,7 +633,8 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSave }
       student_list_names: [],
       start_date: '',
       end_date: '',
-      class_mode: 'offline'
+      class_mode: 'offline',
+      meeting_url: ''
     });
     
     // Reset form field states
@@ -740,6 +759,59 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSave }
           onChange={handleDescriptionChange}
           loading={isLoading}
         />
+
+        {/* Class Mode Selection */}
+        <div className="tw-space-y-3">
+          <label className="tw-font-semibold tw-text-purple-700 tw-mb-3 tw-block">
+            Mode Kelas: <span className="tw-text-red-500">*</span>
+          </label>
+          <div className="tw-flex tw-gap-3">
+            <ButtonGradient
+              action={formData.class_mode === 'offline' ? 'done' : 'custom'}
+              size="md"
+              customText="Offline"
+              customIcon={<MapPin className="tw-w-4 tw-h-4" />}
+              onClick={() => setFormData(prev => ({ ...prev, class_mode: 'offline', meeting_url: '' }))}
+              disabled={isLoading}
+              className={`tw-flex-1 ${formData.class_mode === 'offline' ? '' : 'tw-opacity-60'}`}
+            />
+            <ButtonGradient
+              action={formData.class_mode === 'online' ? 'done' : 'custom'}
+              size="md"
+              customText="Online"
+              customIcon={<Video className="tw-w-4 tw-h-4" />}
+              onClick={() => setFormData(prev => ({ ...prev, class_mode: 'online' }))}
+              disabled={isLoading}
+              className={`tw-flex-1 ${formData.class_mode === 'online' ? '' : 'tw-opacity-60'}`}
+            />
+          </div>
+          <small className="tw-text-gray-500 tw-text-sm">
+            {formData.class_mode === 'online' 
+              ? 'Kelas online dapat di-Go Live dan memerlukan URL meeting' 
+              : 'Kelas offline tidak dapat di-Go Live'}
+          </small>
+        </div>
+
+        {/* Meeting URL Input - Only for online classes */}
+        {formData.class_mode === 'online' && (
+          <div className="tw-space-y-2">
+            <label className="tw-font-semibold tw-text-purple-700">
+              URL Meeting <span className="tw-text-red-500">*</span>
+            </label>
+            <input
+              type="url"
+              value={formData.meeting_url}
+              onChange={handleMeetingUrlChange}
+              placeholder="https://zoom.us/j/... atau https://meet.google.com/..."
+              disabled={isLoading}
+              required
+              className="tw-w-full tw-p-3 tw-border-0 tw-rounded-xl tw-shadow-sm tw-bg-white/95 tw-backdrop-blur-sm tw-text-gray-800"
+            />
+            <small className="tw-text-gray-500 tw-text-sm">
+              URL meeting untuk kelas online (Zoom, Google Meet, Microsoft Teams, dll.)
+            </small>
+          </div>
+        )}
 
         {/* Teacher Selection - Only for admin */}
         {userRole === 'admin' && (
@@ -919,6 +991,23 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ isOpen, onClose, onSave }
               )}
               {selectedCourse && (
                 <div><span className="tw-font-medium">Mata Pelajaran:</span> {selectedCourse.label}</div>
+              )}
+              <div>
+                <span className="tw-font-medium">Mode:</span> 
+                <span className={`tw-ml-1 tw-px-2 tw-py-1 tw-rounded tw-text-xs ${
+                  formData.class_mode === 'online' 
+                    ? 'tw-bg-blue-100 tw-text-blue-800' 
+                    : 'tw-bg-green-100 tw-text-green-800'
+                }`}>
+                  {formData.class_mode === 'online' ? (
+                    <><Video size={12} className="tw-inline tw-mr-1" />Online</>
+                  ) : (
+                    <><MapPin size={12} className="tw-inline tw-mr-1" />Offline</>
+                  )}
+                </span>
+              </div>
+              {formData.class_mode === 'online' && formData.meeting_url && (
+                <div><span className="tw-font-medium">URL Meeting:</span> {formData.meeting_url}</div>
               )}
               {userRole === 'admin' && selectedTeacher && (
                 <div><span className="tw-font-medium">Guru:</span> {selectedTeacher.label}</div>

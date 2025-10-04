@@ -1,6 +1,7 @@
 // pages/panel/exam/ranking/index.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import Head from 'next/head';
 import { FaEye, FaTrophy, FaUsers, FaStar, FaMapMarkerAlt, FaClock, FaChartBar } from 'react-icons/fa';
 import { Award, BarChart3, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -10,6 +11,30 @@ import { ReportConfig, ColumnConfig } from '../../../../types/report';
 
 const UserRankingPage: React.FC = () => {
   const router = useRouter();
+  const [isMobile, setIsMobile] = useState<boolean | null>(null); // null = belum initialized
+
+  // Detect screen size untuk mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768; // 768px adalah breakpoint untuk tablet/mobile
+      console.log('🔍 Screen width:', window.innerWidth, 'isMobile:', mobile);
+      setIsMobile(mobile);
+    };
+
+    // Check on mount
+    checkMobile();
+
+    // Add event listener untuk resize
+    window.addEventListener('resize', checkMobile);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Log setiap kali isMobile berubah
+  useEffect(() => {
+    console.log('📱 isMobile state changed:', isMobile);
+  }, [isMobile]);
 
   // Custom formatters untuk kolom-kolom tertentu
   const formatRankPosition = (value: string) => {
@@ -179,7 +204,7 @@ const UserRankingPage: React.FC = () => {
 
   // Handler functions
   const handleViewDetail = (row: any) => {
-    console.log('View ranking detail:', row);
+    console.log('👁️ View ranking detail:', row);
     const examType = encodeURIComponent(row.exam_type || '');
     const examScheduleId = encodeURIComponent(row.exam_schedule_id || '');
     const examScheduleName = encodeURIComponent(row.exam_schedule_name || '');
@@ -189,13 +214,13 @@ const UserRankingPage: React.FC = () => {
   };
 
   const handleRefreshData = () => {
-    console.log('Refresh ranking data');
+    console.log('🔄 Refresh ranking data');
     // The ReportLayout will handle refresh through its refresh function
     window.location.reload();
   };
 
   const handleAnalysisRanking = () => {
-    console.log('Open ranking analysis');
+    console.log('📊 Open ranking analysis');
     // TODO: Implement ranking analysis modal or navigate to analysis page
     router.push('/panel/exam/ranking/analysis');
   };
@@ -275,172 +300,208 @@ const UserRankingPage: React.FC = () => {
     }
   ];
 
-  // Konfigurasi report dengan sistem batch filtering
-  const reportConfig: ReportConfig = {
-    title: 'Ranking Pengguna Ujian (User Ranking)',
-    showDebugInfo: false, // Hide debug info
-    columns,
-    colGroups: [
-      {
-        key: 'basic',
-        label: 'Informasi Dasar',
-        columns: ['no']
-      },
-      {
-        key: 'ranking',
-        label: 'Peringkat',
-        columns: ['rank']
-      },
-      {
-        key: 'exam_info',
-        label: 'Informasi Ujian',
-        columns: ['exam_schedule_name', 'exam_type']
-      },
-      {
-        key: 'participants',
-        label: 'Peserta',
-        columns: ['peserta']
-      },
-      {
-        key: 'scores',
-        label: 'Nilai',
-        columns: ['skor_total', 'avg_skor']
-      },
-      {
-        key: 'time',
-        label: 'Waktu',
-        columns: ['waktu']
-      },
-      {
-        key: 'location',
-        label: 'Lokasi',
-        columns: ['location']
-      }
-    ],
-    filters: [
-      {
-        key: 'exam_schedule_name',
-        type: 'text',
-        label: 'Nama Ujian'
-      },
-      {
-        key: 'exam_type',
-        type: 'select',
-        label: 'Tipe Ujian',
-        apiEndpoint: '/ranking/exam-types',
-        debounceMs: 300
-      },
-      {
-        key: 'rank',
-        type: 'number',
-        label: 'Ranking (Maksimal)'
-      },
-      {
-        key: 'peserta',
-        type: 'number',
-        label: 'Minimal Peserta'
-      },
-      {
-        key: 'skor_total',
-        type: 'number',
-        label: 'Skor Total (Minimal)'
-      },
-      {
-        key: 'avg_skor',
-        type: 'number',
-        label: 'Skor Rata-rata (Minimal)'
-      },
-      {
-        key: 'kota',
-        type: 'select',
-        label: 'Kota',
-        apiEndpoint: '/ranking/cities',
-        debounceMs: 300
-      },
-      {
-        key: 'provinsi',
-        type: 'select',
-        label: 'Provinsi',
-        apiEndpoint: '/ranking/provinces',
-        debounceMs: 300
-      },
-      {
-        key: 'waktu',
-        type: 'date',
-        label: 'Tanggal Ujian (Dari)'
-      },
-      {
-        key: 'waktu_sampai',
-        type: 'date',
-        label: 'Tanggal Ujian (Sampai)'
-      }
-    ],
-    defaultSort: [
-      { key: 'rank', direction: 'asc' }
-    ],
-    defaultVisibleColumns: [
-      'rank', 
-      'exam_schedule_name', 
-      'exam_type', 
-      'peserta',
-      'skor_total',
-      'avg_skor',
-      'waktu',
-      'location'
-    ],
-    defaultFreezeColumn: 'rank',
-    showIcon: true,
-    showRowNumber: true,
-    pageSize: 10,
-    rowHeight: 90, // Increased height untuk accommodating location info
-    exportConfig: {
-      enabled: true,
-      filename: 'user_ranking',
-      formats: ['excel', 'csv', 'pdf']
-    },
-    actionColumn: {
-      enabled: true,
-      label: 'Aksi',
-      width: 150,
-      sticky: false,
-      buttons: [
+  // Menggunakan useMemo untuk menghitung reportConfig agar hanya berubah saat isMobile berubah
+  const reportConfig: ReportConfig = useMemo(() => {
+    // Tentukan freeze column berdasarkan isMobile
+    const freezeColumn = isMobile === true ? undefined : 'rank';
+    
+    console.log('⚙️ Creating reportConfig with freezeColumn:', freezeColumn, '(isMobile:', isMobile, ')');
+    
+    return {
+      title: 'Ranking Pengguna Ujian (User Ranking)',
+      showDebugInfo: false, // Hide debug info
+      columns,
+      colGroups: [
         {
-          label: 'Detail',
-          icon: React.createElement(FaEye),
-          variant: 'outline-info',
-          size: 'sm',
-          onClick: handleViewDetail
+          key: 'basic',
+          label: 'Informasi Dasar',
+          columns: ['no']
+        },
+        {
+          key: 'ranking',
+          label: 'Peringkat',
+          columns: ['rank']
+        },
+        {
+          key: 'exam_info',
+          label: 'Informasi Ujian',
+          columns: ['exam_schedule_name', 'exam_type']
+        },
+        {
+          key: 'participants',
+          label: 'Peserta',
+          columns: ['peserta']
+        },
+        {
+          key: 'scores',
+          label: 'Nilai',
+          columns: ['skor_total', 'avg_skor']
+        },
+        {
+          key: 'time',
+          label: 'Waktu',
+          columns: ['waktu']
+        },
+        {
+          key: 'location',
+          label: 'Lokasi',
+          columns: ['location']
+        }
+      ],
+      filters: [
+        {
+          key: 'exam_schedule_name',
+          type: 'text',
+          label: 'Nama Ujian'
+        },
+        {
+          key: 'exam_type',
+          type: 'select',
+          label: 'Tipe Ujian',
+          apiEndpoint: '/ranking/exam-types',
+          debounceMs: 300
+        },
+        {
+          key: 'rank',
+          type: 'number',
+          label: 'Ranking (Maksimal)'
+        },
+        {
+          key: 'peserta',
+          type: 'number',
+          label: 'Minimal Peserta'
+        },
+        {
+          key: 'skor_total',
+          type: 'number',
+          label: 'Skor Total (Minimal)'
+        },
+        {
+          key: 'avg_skor',
+          type: 'number',
+          label: 'Skor Rata-rata (Minimal)'
+        },
+        {
+          key: 'kota',
+          type: 'select',
+          label: 'Kota',
+          apiEndpoint: '/ranking/cities',
+          debounceMs: 300
+        },
+        {
+          key: 'provinsi',
+          type: 'select',
+          label: 'Provinsi',
+          apiEndpoint: '/ranking/provinces',
+          debounceMs: 300
+        },
+        {
+          key: 'waktu',
+          type: 'date',
+          label: 'Tanggal Ujian (Dari)'
+        },
+        {
+          key: 'waktu_sampai',
+          type: 'date',
+          label: 'Tanggal Ujian (Sampai)'
+        }
+      ],
+      defaultSort: [
+        { key: 'rank', direction: 'asc' }
+      ],
+      defaultVisibleColumns: [
+        'rank', 
+        'exam_schedule_name', 
+        'exam_type', 
+        'peserta',
+        'skor_total',
+        'avg_skor',
+        'waktu',
+        'location'
+      ],
+      // PENTING: Tidak ada freeze column untuk layar mobile (< 768px)
+      // Hanya freeze untuk layar yang lebih besar
+      defaultFreezeColumn: freezeColumn,
+      showIcon: true,
+      showRowNumber: true,
+      pageSize: 10,
+      rowHeight: 90, // Increased height untuk accommodating location info
+      exportConfig: {
+        enabled: true,
+        filename: 'user_ranking',
+        formats: ['excel', 'csv', 'pdf']
+      },
+      actionColumn: {
+        enabled: true,
+        label: 'Aksi',
+        width: 150,
+        sticky: false,
+        buttons: [
+          {
+            label: 'Detail',
+            icon: React.createElement(FaEye),
+            variant: 'outline-info',
+            size: 'sm',
+            onClick: handleViewDetail
+          }
+        ]
+      },
+      actionButtons: [
+        {
+          label: 'Analisis Ranking',
+          icon: React.createElement(BarChart3),
+          variant: 'info',
+          onClick: handleAnalysisRanking
+        },
+        {
+          label: 'Refresh Data',
+          icon: React.createElement(RefreshCw),
+          variant: 'secondary',
+          onClick: handleRefreshData
         }
       ]
-    },
-    actionButtons: [
-      {
-        label: 'Analisis Ranking',
-        icon: React.createElement(BarChart3),
-        variant: 'info',
-        onClick: handleAnalysisRanking
-      },
-      {
-        label: 'Refresh Data',
-        icon: React.createElement(RefreshCw),
-        variant: 'secondary',
-        onClick: handleRefreshData
-      }
-    ]
-  };
+    };
+  }, [isMobile]); // Dependency hanya pada isMobile
+
+  // Jangan render component sampai isMobile sudah terdeteksi
+  if (isMobile === null) {
+    console.log('⏳ Waiting for mobile detection...');
+    return (
+      <>
+        <Head>
+          <title>Ranking Ujian</title>
+        </Head>
+        <MainLayout>
+          <div className="tw-min-h-screen tw-bg-gradient-to-br tw-from-blue-50 tw-via-white tw-to-blue-50 tw-flex tw-items-center tw-justify-center">
+            <div className="tw-text-center">
+              <div className="tw-animate-spin tw-rounded-full tw-h-12 tw-w-12 tw-border-b-2 tw-border-blue-600 tw-mx-auto"></div>
+              <p className="tw-mt-4 tw-text-gray-600">Loading...</p>
+            </div>
+          </div>
+        </MainLayout>
+      </>
+    );
+  }
+
+  console.log('✅ Rendering UserRankingPage with isMobile:', isMobile);
 
   return (
-    <MainLayout>
-      <div className="tw-min-h-screen tw-bg-gradient-to-br tw-from-blue-50 tw-via-white tw-to-blue-50">
-        {/* Main Report Layout */}
-        <ReportLayout
-          config={reportConfig}
-          apiEndpoint="/ranking/user-exam-rankings"
-          fetchOnMount={true}
-          searchMode="server"
-        />
-      </div>
-    </MainLayout>
+    <>
+      <Head>
+        <title>Ranking Ujian | Futuredu</title>
+      </Head>
+      <MainLayout>
+        <div className="tw-min-h-screen tw-bg-gradient-to-br tw-from-blue-50 tw-via-white tw-to-blue-50">
+          {/* Main Report Layout */}
+          <ReportLayout
+            config={reportConfig}
+            apiEndpoint="/ranking/user-exam-rankings"
+            fetchOnMount={true}
+            searchMode="server"
+          />
+        </div>
+      </MainLayout>
+    </>
   );
 };
 

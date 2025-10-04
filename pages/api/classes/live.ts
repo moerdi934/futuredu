@@ -1,4 +1,4 @@
-// pages/api/classes/live.ts - Get Live Classes API (FIXED)
+// pages/api/classes/live.ts - IMPROVED VERSION
 import { NextApiRequest, NextApiResponse } from 'next';
 import pool from '../../../lib/db';
 
@@ -39,6 +39,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
+  // ⭐ Use explicit client for better connection management
+  const client = await pool.connect();
+  
   try {
     const {
       search = '',
@@ -53,7 +56,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
     
-    // Base query for live classes (not started yet)
     let query = `
       WITH live_classes AS (
         SELECT 
@@ -75,12 +77,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           p.product_id,
           p.name as product_name,
           p.stock,
-          -- Use aggregate function for JSON field to avoid GROUP BY issues
           (ARRAY_AGG(p.features))[1] as features,
           p.classtype,
           pc.max_students,
           array_length(c.student_list, 1) as current_students,
-          -- Get current price with promo info
           ph.price,
           ph.is_promo,
           ph.no_promo_price,
@@ -122,13 +122,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         LEFT JOIN user_account sa ON sa.user_id = s.user_id
         WHERE c.approval_status = 'approved'
           AND (c.is_deleted IS NULL OR c.is_deleted = false)
-          AND c.real_start_datetime IS NULL  -- Class hasn't started yet
-          AND p.type = 13  -- Class product type
-          AND p.stock > 0  -- Still has available slots
+          AND c.real_start_datetime IS NULL
+          AND p.type = 13
+          AND p.stock > 0
           AND (
             ph.effective_start <= NOW()
             AND (ph.effective_end IS NULL OR ph.effective_end > NOW())
-          )  -- Price is currently active
+          )
         GROUP BY 
           c.id, c.name, c.description, c.teacher_id, t.user_code, ta.nama_lengkap,
           c.student_list, c.start_date, c.end_date, c.class_mode, c.meeting_url,
@@ -144,25 +144,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const params: any[] = [];
     
-    // Search filter
     if (search) {
       params.push(`%${search}%`);
       query += ` AND (name ILIKE $${params.length} OR description ILIKE $${params.length} OR product_name ILIKE $${params.length} OR teacher_name ILIKE $${params.length})`;
     }
 
-    // Classtype filter
     if (classtype !== 'all') {
       params.push(classtype);
       query += ` AND classtype = $${params.length}`;
     }
 
-    // Class mode filter
     if (class_mode !== 'all') {
       params.push(class_mode);
       query += ` AND class_mode = $${params.length}`;
     }
 
-    // Price filter
     if (minPrice) {
       params.push(parseInt(minPrice as string));
       query += ` AND price >= $${params.length}`;
@@ -172,7 +168,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       query += ` AND price <= $${params.length}`;
     }
 
-    // Sorting
     switch (sortBy) {
       case 'newest':
         query += ` ORDER BY create_date DESC`;
@@ -202,11 +197,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         query += ` ORDER BY create_date DESC`;
     }
 
-    // Pagination
     params.push(parseInt(limit as string), offset);
     query += ` LIMIT $${params.length - 1} OFFSET $${params.length}`;
 
-    const result = await pool.query(query, params);
+    const result = await client.query(query, params);
     
     const classes: LiveClass[] = result.rows.map(row => ({
       id: row.id,
@@ -255,11 +249,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get Live Classes Error:', error);
+    
+    // ⭐ Better error responses
+    if (error.code === '53300') {
+      return res.status(503).json({ 
+        success: false,
+        message: 'Database connection limit reached. Please try again.',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+    
     res.status(500).json({ 
+      success: false,
       message: 'Server Error',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  } finally {
+    // ⭐ CRITICAL: Always release the client
+    client.release();
   }
 }

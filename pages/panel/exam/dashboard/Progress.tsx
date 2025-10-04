@@ -1,3 +1,4 @@
+// pages/panel/exam/dashboard/Progress.tsx
 'use client';
 
 import React from 'react';

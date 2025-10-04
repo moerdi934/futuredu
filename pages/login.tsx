@@ -41,9 +41,6 @@ interface LoginForm {
 const Login: React.FC = () => {
   const router = useRouter();
   const { login, isAuthenticated } = useAuth();
-console.log('API URL from env:', process.env.NEXT_PUBLIC_API_URL);
-console.log('Final API URL:', apiUrl);
-console.log('Full login URL:', `${apiUrl}/users/login`);
   /* ----- state ----- */
   const [form, setForm] = useState<LoginForm>({
     username: '',
@@ -57,7 +54,7 @@ console.log('Full login URL:', `${apiUrl}/users/login`);
 
   /* ----- redirect jika sudah login ----- */
   useEffect(() => {
-    if (isAuthenticated) router.replace('/');
+    if (isAuthenticated) router.replace('/panel');
   }, [isAuthenticated, router]);
 
   /* ----- input handler ----- */
@@ -108,7 +105,7 @@ console.log('Full login URL:', `${apiUrl}/users/login`);
   /* ----- modal close handler ----- */
   const handleSuccessClose = () => {
     setShowSuccessModal(false);
-    router.replace('/');
+    router.replace('/panel');
   };
   const handleFailureClose = () => setShowFailureModal(false);
 

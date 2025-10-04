@@ -1,3 +1,4 @@
+// pages/panel/exam/dashboard/index.tsx
 'use client';
 
 import { useState, useEffect } from 'react';

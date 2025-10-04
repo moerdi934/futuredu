@@ -5,23 +5,24 @@
   import { AuthenticatedRequest } from '../lib/middleware/auth';
 
   // Types
-  export interface ClassQueryParams {
-    sortField?: string;
-    sortOrder?: string;
-    search?: string;
-    searchDate?: string;
-    page?: string;
-    limit?: string;
-    status?: string;
-    courseId?: string;
-    teacherId?: string;
-    studentId?: string;
-    startDate?: string;
-    endDate?: string;
-    includeDeleted?: string;
-    approvalStatus?: string;
-  }
-
+export interface ClassQueryParams {
+  sortField?: string;
+  sortOrder?: string;
+  search?: string;
+  searchDate?: string;
+  page?: string;
+  limit?: string;
+  status?: string;
+  courseId?: string;
+  teacherId?: string;
+  studentId?: string;
+  startDate?: string;
+  endDate?: string;
+  includeDeleted?: string;
+  approvalStatus?: string;
+  liveStatus?: string;
+  classModeFilter?: string; // NEW: Class mode filter
+}
   export interface ProcessedClass {
     id: number;
     event_id: number;
@@ -120,96 +121,99 @@
   };
 
   // Fungsi untuk mendapatkan semua kelas dengan role-based filtering
-  export const getAllClasses = async (req: AuthenticatedRequest, res: NextApiResponse) => {
-    try {
-      const query = req.query as ClassQueryParams;
-      const userRole = req.user?.role;
-      const userId = req.user?.id;
+export const getAllClasses = async (req: AuthenticatedRequest, res: NextApiResponse) => {
+  try {
+    const query = req.query as ClassQueryParams;
+    const userRole = req.user?.role;
+    const userId = req.user?.id;
 
-      const params = {
-        sortField: query.sortField || 'id',
-        sortOrder: query.sortOrder || 'asc',
-        search: query.search || '',
-        searchDate: query.searchDate || '',
-        page: parseInt(query.page || '1'),
-        limit: parseInt(query.limit || '10'),
-        status: query.status || '',
-        courseId: query.courseId || '',
-        teacherId: query.teacherId || '',
-        studentId: query.studentId || '',
-        startDate: query.startDate || '',
-        endDate: query.endDate || '',
-        includeDeleted: query.includeDeleted || 'false',
-        approvalStatus: query.approvalStatus || 'all',
-        // Role-based filtering
-        userRole: userRole,
-        userId: userId
-      };
-      
-      console.log('Classes query params:', params);
-      const { classes, total } = await ClassModel.getClasses(params);
-      
-      const processedClasses: ProcessedClass[] = classes.map((cls) => ({
-        id: cls.id,
-        event_id: cls.event_id,
-        starter_user_id: cls.starter_user_id, 
-        is_started: cls.is_started,
-        name: cls.name,
-        course_name: cls.course_name,
-        course_id: cls.course_id,
-        teacher_id: cls.teacher_id,
-        description: cls.description,
-        teacher_name: cls.teacher_name || 'Belum Ditentukan',
-        student_list_ids: cls.student_list,
-        student_list_names: cls.student_list_names,
-        students_display:
-          cls.student_list_names.join(', ').length > 20
-            ? cls.student_list_names.join(', ').slice(0, 20) + '...'
-            : cls.student_list_names.join(', '),
-        date: new Date(cls.start_date).toLocaleDateString('id-ID', {
-          weekday: 'long',
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-        }),
-        start_time: new Date(cls.start_date).toLocaleTimeString('id-ID', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-        end_time: new Date(cls.end_date).toLocaleTimeString('id-ID', {
-          hour: '2-digit',  
-          minute: '2-digit',
-        }),
-        real_start_datetime: cls.real_start_datetime,
-        real_end_datetime: cls.real_end_datetime,
-        creator: cls.creator_name,
-        create_user_id: cls.create_user_id,
-        create_date: cls.create_date,
-        edit_user_id: cls.edit_user_id,
-        edit_date: cls.edit_date,
-        status: cls.status,
-        is_deleted: cls.is_deleted,
-        delete_reason: cls.delete_reason,
-        // New fields
-        approval_status: cls.approval_status,
-        approve_user_id: cls.approve_user_id,
-        approve_date: cls.approve_date,
-        approver_name: cls.approver_name,
-        class_mode: cls.class_mode,
-        meeting_url: cls.meeting_url
-      }));
+    const params = {
+      sortField: query.sortField || 'id',
+      sortOrder: query.sortOrder || 'asc',
+      search: query.search || '',
+      searchDate: query.searchDate || '',
+      page: parseInt(query.page || '1'),
+      limit: parseInt(query.limit || '10'),
+      status: query.status || '',
+      courseId: query.courseId || '',
+      teacherId: query.teacherId || '',
+      studentId: query.studentId || '',
+      startDate: query.startDate || '',
+      endDate: query.endDate || '',
+      includeDeleted: query.includeDeleted || 'false',
+      approvalStatus: query.approvalStatus || 'all',
+      liveStatus: query.liveStatus || 'all',
+      classModeFilter: query.classModeFilter || 'all', // NEW: Class mode filter
+      // Role-based filtering
+      userRole: userRole,
+      userId: userId
+    };
+    
+    console.log('Classes query params:', params);
+    const { classes, total } = await ClassModel.getClasses(params);
+    
+    const processedClasses: ProcessedClass[] = classes.map((cls) => ({
+      id: cls.id,
+      event_id: cls.event_id,
+      starter_user_id: cls.starter_user_id, 
+      is_started: cls.is_started,
+      name: cls.name,
+      course_name: cls.course_name,
+      course_id: cls.course_id,
+      teacher_id: cls.teacher_id,
+      description: cls.description,
+      teacher_name: cls.teacher_name || 'Belum Ditentukan',
+      student_list_ids: cls.student_list,
+      student_list_names: cls.student_list_names,
+      students_display:
+        cls.student_list_names.join(', ').length > 20
+          ? cls.student_list_names.join(', ').slice(0, 20) + '...'
+          : cls.student_list_names.join(', '),
+      date: new Date(cls.start_date).toLocaleDateString('id-ID', {
+        weekday: 'long',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }),
+      start_time: new Date(cls.start_date).toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      end_time: new Date(cls.end_date).toLocaleTimeString('id-ID', {
+        hour: '2-digit',  
+        minute: '2-digit',
+      }),
+      real_start_datetime: cls.real_start_datetime,
+      real_end_datetime: cls.real_end_datetime,
+      creator: cls.creator_name,
+      create_user_id: cls.create_user_id,
+      create_date: cls.create_date,
+      edit_user_id: cls.edit_user_id,
+      edit_date: cls.edit_date,
+      status: cls.status,
+      is_deleted: cls.is_deleted,
+      delete_reason: cls.delete_reason,
+      approval_status: cls.approval_status,
+      approve_user_id: cls.approve_user_id,
+      approve_date: cls.approve_date,
+      approver_name: cls.approver_name,
+      class_mode: cls.class_mode,
+      meeting_url: cls.meeting_url,
+      is_live: cls.is_live || false, // NEW: Include is_live status
+      live_since: cls.live_since // NEW: Include live_since date
+    }));
 
-      res.json({
-        data: processedClasses,
-        total,
-        page: params.page,
-        totalPages: Math.ceil(total / params.limit)
-      });
-    } catch (error) {
-      console.error('Get All Classes Error:', error);
-      res.status(500).json({ message: 'Server Error' });
-    }
-  }; 
+    res.json({
+      data: processedClasses,
+      total,
+      page: params.page,
+      totalPages: Math.ceil(total / params.limit)
+    });
+  } catch (error) {
+    console.error('Get All Classes Error:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
 
   // Fungsi untuk mendapatkan kelas berdasarkan ID
   export const getClassById = async (req: AuthenticatedRequest, res: NextApiResponse) => {

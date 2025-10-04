@@ -1,6 +1,6 @@
-// pages/panel/courses/classes-page/index.tsx - Updated with Go Live functionality
+// pages/panel/courses/classes-page/index.tsx - Updated with Responsive Fixed Columns
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaPlus, FaEye, FaEdit, FaTrash, FaCalendar, FaClock, FaUsers, FaPlay, FaStop, FaCheckCircle, FaUndo, FaInfo, FaCheck, FaTimes, FaVideo, FaMapMarkerAlt, FaQrcode, FaRocket } from 'react-icons/fa';
 import { BookOpen, GraduationCap, Video, MapPin, UserCheck, Clock } from 'lucide-react';
 import MainLayout from '../../../../components/layout/DashboardLayout';
@@ -13,7 +13,7 @@ import DetailClassModal from './DetailClassModal';
 import StartFinishClassModal from './StartFinishClassModal';
 import ApprovalModal from './ApprovalModal';
 import StudentAttendanceModal from './StudentAttendanceModal';
-import GoLiveClassModal from './GoLiveClassModal'; // NEW: Import Go Live Modal
+import GoLiveClassModal from './GoLiveClassModal';
 
 const ClassesPage: React.FC = () => {
   const { id: currentUserId, role: userRole } = useAuth();
@@ -25,12 +25,31 @@ const ClassesPage: React.FC = () => {
   const [showStartFinishModal, setShowStartFinishModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
-  const [showGoLiveModal, setShowGoLiveModal] = useState(false); // NEW: Go Live modal state
+  const [showGoLiveModal, setShowGoLiveModal] = useState(false);
   const [editingClass, setEditingClass] = useState(null);
   const [selectedClass, setSelectedClass] = useState(null);
   
-  // IMPORTANT: State untuk menyimpan refresh function dari useReport
+  // State untuk menyimpan refresh function dari useReport
   const [refreshFunction, setRefreshFunction] = useState<(() => void) | null>(null);
+
+  // State untuk tracking screen size
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Effect untuk detect screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // 768px adalah breakpoint md di Tailwind
+    };
+
+    // Check initial
+    checkMobile();
+
+    // Add listener
+    window.addEventListener('resize', checkMobile);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Custom formatters untuk kolom-kolom tertentu
   const formatStudentsDisplay = (value: string, row: any) => {
@@ -192,21 +211,28 @@ const ClassesPage: React.FC = () => {
     );
   };
 
-  // NEW: Format Go Live Status
+  // Format Go Live Status
   const formatGoLiveStatus = (value: any, row: any) => {
-    // Check if class is live by looking for is_live field or checking for product relationship
-    const isLive = row.is_live || false; // This should come from API response
+    const isLive = row.is_live || false;
+    const isOnline = row.class_mode === 'online';
     
     return (
       <div className="tw-text-center">
         <span className={`tw-px-3 tw-py-2 tw-rounded-full tw-text-xs tw-font-medium tw-flex tw-items-center tw-justify-center tw-gap-2 ${
-          isLive 
-            ? 'tw-bg-orange-100 tw-text-orange-800' 
-            : 'tw-bg-gray-100 tw-text-gray-600'
+          !isOnline 
+            ? 'tw-bg-gray-100 tw-text-gray-600' // Offline class
+            : isLive 
+              ? 'tw-bg-orange-100 tw-text-orange-800' // Online and live
+              : 'tw-bg-blue-100 tw-text-blue-600' // Online but not live
         }`}>
           <FaRocket size={12} />
-          {isLive ? 'Live' : 'Not Live'}
+          {!isOnline ? 'N/A' : isLive ? 'Live' : 'Not Live'}
         </span>
+        {isOnline && !isLive && (
+          <div className="tw-text-xs tw-text-gray-500 tw-mt-1">
+            Online Class
+          </div>
+        )}
         {isLive && row.live_since && (
           <div className="tw-text-xs tw-text-gray-500 tw-mt-1">
             sejak {new Date(row.live_since).toLocaleDateString('id-ID')}
@@ -275,13 +301,14 @@ const ClassesPage: React.FC = () => {
     return false;
   };
 
-  // NEW: Check if class can go live
+  // Check if class can go live - MUST be online class
   const canGoLive = (row: any) => {
     return userRole === 'admin' && 
            row.approval_status === 'approved' && 
            !row.is_deleted &&
            !row.real_start_datetime && // Class hasn't started yet
-           !row.is_live; // Not already live
+           !row.is_live && // Not already live
+           row.class_mode === 'online'; // MUST be online class
   };
 
   // Check if user is student in this class
@@ -289,32 +316,27 @@ const ClassesPage: React.FC = () => {
     return row.student_list_ids?.includes(currentUserId) || false;
   };
 
-  // FIXED: Handler functions - removed window.location.reload(), use refresh function instead
+  // Handler functions
   const handleAddSave = (classData: any) => {
     console.log('Class saved:', classData);
-    // Call refresh function to update table data only
     refreshFunction?.();
   };
 
   const handleEditSave = (classData: any) => {
     console.log('Class updated:', classData);
     setEditingClass(null);
-    // Call refresh function to update table data only
     refreshFunction?.();
   };
 
   const handleApprovalSave = () => {
     setShowApprovalModal(false);
     setSelectedClass(null);
-    // Call refresh function to update table data only
     refreshFunction?.();
   };
 
-  // NEW: Handle Go Live Save
   const handleGoLiveSave = () => {
     setShowGoLiveModal(false);
     setSelectedClass(null);
-    // Call refresh function to update table data only
     refreshFunction?.();
   };
 
@@ -333,15 +355,17 @@ const ClassesPage: React.FC = () => {
     setShowApprovalModal(true);
   };
 
-  // NEW: Handle Go Live
   const handleGoLive = (row: any) => {
+    // Double check that the class is online before opening modal
+    if (row.class_mode !== 'online') {
+      alert('Hanya kelas online yang dapat di-Go Live!');
+      return;
+    }
     setSelectedClass(row);
     setShowGoLiveModal(true);
   };
 
-  // Updated handleStartFinish with correct data transformation
   const handleStartFinish = (row: any) => {
-    // Transform data to match StartFinishClassModal interface with correct types
     const transformedData = {
       id: row.id,
       event_id: row.event_id,
@@ -376,11 +400,10 @@ const ClassesPage: React.FC = () => {
     setShowAttendanceModal(true);
   };
 
-  // FIXED: handleDelete - use refresh function instead of window.location.reload()
   const handleDelete = async (row: any) => {
     const reason = window.prompt(`Apakah Anda yakin ingin menghapus kelas "${row.name}"?\n\nMasukkan alasan penghapusan (opsional):`);
     
-    if (reason !== null) { // User didn't cancel
+    if (reason !== null) {
       try {
         const response = await fetch(`/classes/${row.id}`, {
           method: 'DELETE',
@@ -395,7 +418,6 @@ const ClassesPage: React.FC = () => {
 
         if (response.ok) {
           alert('Kelas berhasil dihapus');
-          // Call refresh function to update table data only
           refreshFunction?.();
         } else {
           const error = await response.json();
@@ -408,7 +430,6 @@ const ClassesPage: React.FC = () => {
     }
   };
 
-  // FIXED: handleRestore - use refresh function instead of window.location.reload()
   const handleRestore = async (row: any) => {
     if (window.confirm(`Apakah Anda yakin ingin mengembalikan kelas "${row.name}"?`)) {
       try {
@@ -422,7 +443,6 @@ const ClassesPage: React.FC = () => {
 
         if (response.ok) {
           alert('Kelas berhasil dikembalikan');
-          // Call refresh function to update table data only
           refreshFunction?.();
         } else {
           const error = await response.json();
@@ -435,136 +455,130 @@ const ClassesPage: React.FC = () => {
     }
   };
 
-  // FIXED: handleStatusChange - use refresh function instead of window.location.reload()
   const handleStatusChange = () => {
-    // Refresh data after status change - only refresh table data
     refreshFunction?.();
   };
 
   // Dynamic action buttons based on user role and class status
-const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
-  const buttons: ActionColumnButton[] = [];
+  const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
+    const buttons: ActionColumnButton[] = [];
 
-  // Detail button - always available
-  buttons.push({
-    label: 'Detail',
-    icon: React.createElement(FaEye),
-    variant: 'outline-info',
-    size: 'sm',
-    onClick: () => handleDetail(row)
-  });
-
-  // NEW: Go Live button - only for admin on approved classes that are not live yet and haven't started
-  if (canGoLive(row)) {
+    // Detail button - always available
     buttons.push({
-      label: 'Go Live',
-      icon: React.createElement(FaRocket),
-      variant: 'outline-success',
+      label: 'Detail',
+      icon: React.createElement(FaEye),
+      variant: 'outline-info',
       size: 'sm',
-      onClick: () => handleGoLive(row)
+      onClick: () => handleDetail(row)
     });
-  }
 
-  // Student attendance button - show for Started and Finished classes
-  if (userRole === 'student' && isStudentInClass(row) && (row.status === 'Started' || row.status === 'Finished')) {
-    buttons.push({
-      label: row.status === 'Started' ? 'Presensi' : 'Riwayat Presensi',
-      icon: React.createElement(FaQrcode),
-      variant: row.status === 'Started' ? 'outline-primary' : 'outline-info',
-      size: 'sm',
-      onClick: () => handleAttendance(row)
-    });
-  }
-
-  // Approval button
-  if ((row.approval_status === 'need_approve') && canApproveClass(row)) {
-    buttons.push({
-      label: 'Setujui',
-      icon: React.createElement(FaCheck),
-      variant: 'outline-primary',
-      size: 'sm',
-      onClick: () => handleApprove(row)
-    });
-  }
-
-  // Correct logic for start/manage/finish buttons based on real datetime
-  if (canUserManageClass(row) && !row.is_deleted && row.approval_status === 'approved') {
-    // Use the corrected status from database (based on real datetime fields)
-    const currentStatus = row.status;
-    
-    if (currentStatus === 'Finished') {
-      // Class is finished - only show review button
+    // Go Live button - only for admin on approved ONLINE classes that are not live yet and haven't started
+    if (canGoLive(row)) {
       buttons.push({
-        label: 'Review',
-        icon: React.createElement(FaEye),
-        variant: 'outline-info',
-        size: 'sm',
-        onClick: () => handleStartFinish(row)
-      });
-    } else if (currentStatus === 'Started') {
-      // Class is started but not finished - show finish button
-      buttons.push({
-        label: 'Selesaikan',
-        icon: React.createElement(FaStop),
-        variant: 'outline-warning',
-        size: 'sm',
-        onClick: () => handleStartFinish(row)
-      });
-    } else if (currentStatus === 'Not Start') {
-      // Class not started - show start button
-      buttons.push({
-        label: 'Mulai',
-        icon: React.createElement(FaPlay),
+        label: 'Go Live',
+        icon: React.createElement(FaRocket),
         variant: 'outline-success',
         size: 'sm',
-        onClick: () => handleStartFinish(row)
+        onClick: () => handleGoLive(row)
       });
     }
-  }
 
-  // Edit button
-  if (canUserManageClass(row) && !row.is_deleted) {
-    const canEdit = userRole === 'admin' || 
-                   userRole === 'teacher' || 
-                   (userRole === 'student' && row.create_user_id === currentUserId && row.approval_status === 'need_approve');
-    
-    if (canEdit) {
+    // Student attendance button - show for Started and Finished classes
+    if (userRole === 'student' && isStudentInClass(row) && (row.status === 'Started' || row.status === 'Finished')) {
       buttons.push({
-        label: 'Edit',
-        icon: React.createElement(FaEdit),
-        variant: 'outline-warning',
+        label: row.status === 'Started' ? 'Presensi' : 'Riwayat Presensi',
+        icon: React.createElement(FaQrcode),
+        variant: row.status === 'Started' ? 'outline-primary' : 'outline-info',
         size: 'sm',
-        onClick: () => handleEdit(row)
+        onClick: () => handleAttendance(row)
       });
     }
-  }
 
-  // Delete button
-  if (canUserManageClass(row) && !row.is_deleted) {
-    buttons.push({
-      label: 'Delete',
-      icon: React.createElement(FaTrash),
-      variant: 'outline-danger',
-      size: 'sm',
-      onClick: () => handleDelete(row)
-    });
-  }
+    // Approval button
+    if ((row.approval_status === 'need_approve') && canApproveClass(row)) {
+      buttons.push({
+        label: 'Setujui',
+        icon: React.createElement(FaCheck),
+        variant: 'outline-primary',
+        size: 'sm',
+        onClick: () => handleApprove(row)
+      });
+    }
 
-  // Restore button
-  if (canUserManageClass(row) && row.is_deleted) {
-    buttons.push({
-      label: 'Restore',
-      icon: React.createElement(FaUndo),
-      variant: 'outline-success',
-      size: 'sm',
-      onClick: () => handleRestore(row)
-    });
-  }
+    // Start/Finish buttons
+    if (canUserManageClass(row) && !row.is_deleted && row.approval_status === 'approved') {
+      const currentStatus = row.status;
+      
+      if (currentStatus === 'Finished') {
+        buttons.push({
+          label: 'Review',
+          icon: React.createElement(FaEye),
+          variant: 'outline-info',
+          size: 'sm',
+          onClick: () => handleStartFinish(row)
+        });
+      } else if (currentStatus === 'Started') {
+        buttons.push({
+          label: 'Selesaikan',
+          icon: React.createElement(FaStop),
+          variant: 'outline-warning',
+          size: 'sm',
+          onClick: () => handleStartFinish(row)
+        });
+      } else if (currentStatus === 'Not Start') {
+        buttons.push({
+          label: 'Mulai',
+          icon: React.createElement(FaPlay),
+          variant: 'outline-success',
+          size: 'sm',
+          onClick: () => handleStartFinish(row)
+        });
+      }
+    }
 
-  return buttons;
-};
+    // Edit button
+    if (canUserManageClass(row) && !row.is_deleted) {
+      const canEdit = userRole === 'admin' || 
+                     userRole === 'teacher' || 
+                     (userRole === 'student' && row.create_user_id === currentUserId && row.approval_status === 'need_approve');
+      
+      if (canEdit) {
+        buttons.push({
+          label: 'Edit',
+          icon: React.createElement(FaEdit),
+          variant: 'outline-warning',
+          size: 'sm',
+          onClick: () => handleEdit(row)
+        });
+      }
+    }
 
-  // Definisi kolom-kolom lengkap berdasarkan response API
+    // Delete button
+    if (canUserManageClass(row) && !row.is_deleted) {
+      buttons.push({
+        label: 'Delete',
+        icon: React.createElement(FaTrash),
+        variant: 'outline-danger',
+        size: 'sm',
+        onClick: () => handleDelete(row)
+      });
+    }
+
+    // Restore button
+    if (canUserManageClass(row) && row.is_deleted) {
+      buttons.push({
+        label: 'Restore',
+        icon: React.createElement(FaUndo),
+        variant: 'outline-success',
+        size: 'sm',
+        onClick: () => handleRestore(row)
+      });
+    }
+
+    return buttons;
+  };
+
+  // Column definitions
   const columns: ColumnConfig[] = [
     {
       key: 'id',
@@ -582,7 +596,6 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
       formatter: (value, row) => (
         <div className={`tw-font-semibold tw-leading-tight ${row.is_deleted ? 'tw-text-gray-400 tw-line-through' : 'tw-text-gray-800'}`}>
           {value || '-'}
-          {/* NEW: Show live indicator */}
           {row.is_live && (
             <span className="tw-ml-2 tw-inline-flex tw-items-center tw-gap-1 tw-px-2 tw-py-1 tw-bg-orange-100 tw-text-orange-800 tw-text-xs tw-rounded-full">
               <FaRocket size={10} />
@@ -703,7 +716,6 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
       colGroup: 'status',
       formatter: formatApprovalStatus
     },
-    // NEW: Go Live Status Column
     {
       key: 'is_live',
       label: 'Status Go Live',
@@ -902,7 +914,7 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
     }
   ];
 
-  // Updated filters with new options
+  // Filters with Go Live status
   const filters = [
     {
       key: 'name',
@@ -955,7 +967,6 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
         { value: 'rejected', label: 'Ditolak' }
       ]
     },
-    // NEW: Go Live Status Filter
     {
       key: 'liveStatus',
       type: 'select',
@@ -964,6 +975,16 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
         { value: 'all', label: 'Semua' },
         { value: 'live', label: 'Sudah Live' },
         { value: 'not_live', label: 'Belum Live' }
+      ]
+    },
+    {
+      key: 'classModeFilter',
+      type: 'select',
+      label: 'Mode Kelas',
+      options: [
+        { value: 'all', label: 'Semua' },
+        { value: 'online', label: 'Online' },
+        { value: 'offline', label: 'Offline' }
       ]
     },
     {
@@ -993,7 +1014,7 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
     }
   ];
 
-  // Konfigurasi report dengan sistem batch filtering
+  // Report configuration with responsive freeze column
   const reportConfig: ReportConfig = {
     title: 'Manajemen Kelas (Classes)',
     columns,
@@ -1011,7 +1032,7 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
       {
         key: 'status',
         label: 'Status',
-        columns: ['status', 'approval_status', 'is_live', 'class_mode', 'meeting_url', 'is_started', 'is_deleted'] // Updated to include is_live
+        columns: ['status', 'approval_status', 'is_live', 'class_mode', 'meeting_url', 'is_started', 'is_deleted']
       },
       {
         key: 'schedule',
@@ -1051,14 +1072,15 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
       'students_display',
       'status',
       'approval_status',
-      'is_live', // NEW: Include go live status in default visible columns
+      'is_live',
       'class_mode',
       'date',
       'start_time',
       'end_time',
       'creator'
     ],
-    defaultFreezeColumn: 'name',
+    // RESPONSIVE FREEZE COLUMN: null for mobile (only row number), 'name' for larger screens
+    defaultFreezeColumn: isMobile ? null : 'name',
     showIcon: true,
     showRowNumber: true,
     pageSize: 10,
@@ -1071,9 +1093,9 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
     actionColumn: {
       enabled: true,
       label: 'Actions',
-      width: 450, // Increased width to accommodate Go Live button
+      width: 450,
       sticky: false,
-      buttons: getActionButtons // Dynamic buttons function
+      buttons: getActionButtons
     },
     actionButtons: [
       {
@@ -1097,7 +1119,6 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
     ]
   };
 
-  // NEW: Custom ReportLayout with refresh function extraction
   const ReportLayoutWithRefresh: React.FC = () => {
     return (
       <ReportLayout
@@ -1105,7 +1126,7 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
         apiEndpoint="/classes"
         fetchOnMount={true}
         searchMode="server"
-        onRefreshFunctionReady={setRefreshFunction} // Pass callback to get refresh function
+        onRefreshFunctionReady={setRefreshFunction}
       />
     );
   };
@@ -1116,14 +1137,13 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
         <ReportLayoutWithRefresh />
       </div>
 
-      {/* Modal Buat Kelas */}
+      {/* Modals */}
       <AddClassModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSave={handleAddSave}
       />
 
-      {/* Modal Edit Kelas */}
       <EditClassModal
         isOpen={showEditModal}
         onClose={() => {
@@ -1134,7 +1154,6 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
         editingData={editingClass}
       />
 
-      {/* Modal Detail Kelas */}
       <DetailClassModal
         isOpen={showDetailModal}
         onClose={() => {
@@ -1144,7 +1163,6 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
         classData={selectedClass}
       />
 
-      {/* Modal Start/Finish Kelas */}
       {selectedClass && (
         <StartFinishClassModal
           show={showStartFinishModal}
@@ -1157,7 +1175,6 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
         />
       )}
 
-      {/* Modal Approval Kelas */}
       {selectedClass && (
         <ApprovalModal
           show={showApprovalModal}
@@ -1170,7 +1187,6 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
         />
       )}
 
-      {/* NEW: Modal Go Live Kelas */}
       <GoLiveClassModal
         isOpen={showGoLiveModal}
         onClose={() => {
@@ -1181,7 +1197,6 @@ const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
         classData={selectedClass}
       />
 
-      {/* Modal Student Attendance */}
       {selectedClass && (
         <StudentAttendanceModal
           show={showAttendanceModal}

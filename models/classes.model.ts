@@ -15,11 +15,12 @@ export interface ClassGetOptions {
   studentId?: string;
   startDate?: string;
   endDate?: string;
-  includeDeleted?: string; // 'false' | 'true' | 'only_deleted'
-  // New role-based filtering
+  includeDeleted?: string;
   userRole?: string;
   userId?: string;
-  approvalStatus?: string; // 'need_approve' | 'approved' | 'rejected' | 'all'
+  approvalStatus?: string;
+  liveStatus?: string;
+  classModeFilter?: string; // NEW: Class mode filter
 }
 
 export interface ClassData {
@@ -139,71 +140,83 @@ export const getClasses = async (options: ClassGetOptions = {}): Promise<Classes
     includeDeleted = 'false',
     userRole = 'admin',
     userId = '',
-    approvalStatus = 'all'
+    approvalStatus = 'all',
+    liveStatus = 'all',
+    classModeFilter = 'all' // NEW: Class mode filter parameter
   } = options;
 
   const offset = (page - 1) * limit;
-let query = ` 
-  WITH filtered_classes AS (
-    SELECT 
-      c.id,
-      c.name,
-      c.course_id,
-      co.title AS course_name,
-      c.description,
-      c.teacher_id,
-      u.user_code || '-' ||ua.nama_lengkap AS teacher_name,
-      c.student_list,
-      COALESCE(ARRAY_AGG(s.user_code || '-' ||ua3.nama_lengkap) FILTER (WHERE ua3.nama_lengkap IS NOT NULL), '{}') AS student_list_names,
-      c.start_date,
-      c.end_date,
-      c.real_start_datetime,
-      c.real_end_datetime,
-      cu.user_code || '-' ||ua2.nama_lengkap AS creator_name,
-      c.create_user_id,
-      c.create_date,
-      c.edit_user_id,
-      c.edit_date,
-      e.id event_id,
-      e.starter_user_id,
-      e.is_started,
-      c.is_deleted,
-      c.delete_reason,
-      c.delete_user_id,
-      c.delete_date,
-      COALESCE(c.approval_status, 'approved') as approval_status,
-      c.approve_user_id,
-      c.approve_date,
-      au.user_code || '-' || ua4.nama_lengkap AS approver_name,
-      COALESCE(c.class_mode, 'offline') as class_mode,
-      c.meeting_url,
-      c.rejection_reason,
-      -- CORRECTED: Status HANYA berdasarkan real datetime fields
-      case
-        when c.is_deleted = true then 'Deleted'
-        when COALESCE(c.approval_status, 'approved') = 'need_approve' then 'Need Approve'
-        when COALESCE(c.approval_status, 'approved') = 'rejected' then 'Rejected'
-        -- FINISHED: Ada real_start_datetime DAN real_end_datetime
-        when c.real_start_datetime IS NOT NULL AND c.real_end_datetime IS NOT NULL then 'Finished'
-        -- STARTED: Ada real_start_datetime tapi TIDAK ada real_end_datetime
-        when c.real_start_datetime IS NOT NULL AND c.real_end_datetime IS NULL then 'Started'
-        -- NOT START: Tidak ada real_start_datetime (bisa dimulai kapan saja jika approved)
-        when c.real_start_datetime IS NULL then 'Not Start'
-        else 'Not Start'
-      end status
-    FROM classes c
-    LEFT JOIN courses co ON c.course_id = co.id
-    LEFT JOIN users u ON c.teacher_id = u.id
-    LEFT JOIN user_account ua ON ua.user_id = u.user_id
-    LEFT JOIN users cu ON c.create_user_id = cu.id
-    LEFT JOIN user_account ua2 ON ua2.user_id = cu.user_id
-    LEFT JOIN users au ON c.approve_user_id = au.id
-    LEFT JOIN user_account ua4 ON ua4.user_id = au.user_id
-    LEFT JOIN users s ON s.id = ANY(c.student_list)
-    LEFT JOIN user_account ua3 ON ua3.user_id = s.user_id
-    LEFT JOIN events e ON e.master_id = c.id AND e.event_type = 1
-    WHERE 1=1
-  `;
+  
+  let query = ` 
+    WITH filtered_classes AS (
+      SELECT 
+        c.id,
+        c.name,
+        c.course_id,
+        co.title AS course_name,
+        c.description,
+        c.teacher_id,
+        u.user_code || '-' ||ua.nama_lengkap AS teacher_name,
+        c.student_list,
+        COALESCE(ARRAY_AGG(s.user_code || '-' ||ua3.nama_lengkap) FILTER (WHERE ua3.nama_lengkap IS NOT NULL), '{}') AS student_list_names,
+        c.start_date,
+        c.end_date,
+        c.real_start_datetime,
+        c.real_end_datetime,
+        cu.user_code || '-' ||ua2.nama_lengkap AS creator_name,
+        c.create_user_id,
+        c.create_date,
+        c.edit_user_id,
+        c.edit_date,
+        e.id event_id,
+        e.starter_user_id,
+        e.is_started,
+        c.is_deleted,
+        c.delete_reason,
+        c.delete_user_id,
+        c.delete_date,
+        COALESCE(c.approval_status, 'approved') as approval_status,
+        c.approve_user_id,
+        c.approve_date,
+        au.user_code || '-' || ua4.nama_lengkap AS approver_name,
+        COALESCE(c.class_mode, 'offline') as class_mode,
+        c.meeting_url,
+        c.rejection_reason,
+        -- Check if class is live (has product relationship)
+        CASE WHEN pc.product_id IS NOT NULL THEN true ELSE false END as is_live,
+        pc.live_since,
+        -- Status based on real datetime fields
+        case
+          when c.is_deleted = true then 'Deleted'
+          when COALESCE(c.approval_status, 'approved') = 'need_approve' then 'Need Approve'
+          when COALESCE(c.approval_status, 'approved') = 'rejected' then 'Rejected'
+          when c.real_start_datetime IS NOT NULL AND c.real_end_datetime IS NOT NULL then 'Finished'
+          when c.real_start_datetime IS NOT NULL AND c.real_end_datetime IS NULL then 'Started'
+          when c.real_start_datetime IS NULL then 'Not Start'
+          else 'Not Start'
+        end status
+      FROM classes c
+      LEFT JOIN courses co ON c.course_id = co.id
+      LEFT JOIN users u ON c.teacher_id = u.id
+      LEFT JOIN user_account ua ON ua.user_id = u.user_id
+      LEFT JOIN users cu ON c.create_user_id = cu.id
+      LEFT JOIN user_account ua2 ON ua2.user_id = cu.user_id
+      LEFT JOIN users au ON c.approve_user_id = au.id
+      LEFT JOIN user_account ua4 ON ua4.user_id = au.user_id
+      LEFT JOIN users s ON s.id = ANY(c.student_list)
+      LEFT JOIN user_account ua3 ON ua3.user_id = s.user_id
+      LEFT JOIN events e ON e.master_id = c.id AND e.event_type = 1
+      LEFT JOIN (
+        SELECT 
+          pc.class_id, 
+          pc.product_id,
+          p.created_at as live_since
+        FROM product_classes pc
+        JOIN products p ON pc.product_id = p.product_id
+        WHERE p.type = 13
+      ) pc ON pc.class_id = c.id
+      WHERE 1=1
+    `;
 
   const values: any[] = [];
   const conditions: string[] = [];
@@ -229,7 +242,22 @@ let query = `
     conditions.push(`AND COALESCE(c.approval_status, 'approved') = $${values.length}`);
   }
 
-  // Filter by status (ignore if "All")
+  // NEW: Filter by class mode
+  if (classModeFilter && classModeFilter !== 'all') {
+    values.push(classModeFilter);
+    conditions.push(`AND COALESCE(c.class_mode, 'offline') = $${values.length}`);
+  }
+
+  // NEW: Filter by live status
+  if (liveStatus && liveStatus !== 'all') {
+    if (liveStatus === 'live') {
+      conditions.push('AND pc.product_id IS NOT NULL');
+    } else if (liveStatus === 'not_live') {
+      conditions.push('AND pc.product_id IS NULL');
+    }
+  }
+
+  // Filter by status
   if (status && status !== 'All') {
     values.push(status);
     conditions.push(`
@@ -245,7 +273,7 @@ let query = `
     `);
   }
   
-  // Add other filters (courseId, teacherId, etc.) - same as before
+  // Other filters (courseId, teacherId, etc.) - same as before
   if (courseId && courseId !== 'All') {
     values.push(courseId);
     conditions.push(`AND c.course_id = $${values.length}`);
@@ -288,7 +316,7 @@ let query = `
     query += `${conditions.join(' ')}`;
   }
  
-  // Group by clause
+  // Group by clause - UPDATED to include new fields
   query += `
     GROUP BY 
       c.course_id,
@@ -324,7 +352,9 @@ let query = `
       c.rejection_reason,
       e.id, 
       e.starter_user_id,
-      e.is_started
+      e.is_started,
+      pc.product_id,
+      pc.live_since
   )
   SELECT 
     *, 
@@ -333,7 +363,7 @@ let query = `
   `;
 
   // Sorting
-  const validSortFields = ['id', 'name', 'course_name', 'description', 'teacher_name', 'start_date', 'end_date', 'creator_name', 'delete_date', 'approval_status', 'approve_date'];
+  const validSortFields = ['id', 'name', 'course_name', 'description', 'teacher_name', 'start_date', 'end_date', 'creator_name', 'delete_date', 'approval_status', 'approve_date', 'class_mode'];
   if (validSortFields.includes(sortField.toLowerCase()) && ['asc', 'desc'].includes(sortOrder.toLowerCase())) {
     query += ` ORDER BY ${sortField} ${sortOrder.toUpperCase()}`;
   } else {
@@ -341,7 +371,7 @@ let query = `
   }
 
   query += ` LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
-  console.log(query)
+  
   const result = await pool.query(query, [...values, limit, offset]);
   return {
     classes: result.rows,

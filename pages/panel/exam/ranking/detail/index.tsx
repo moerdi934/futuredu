@@ -1,5 +1,5 @@
 // pages/panel/exam/ranking/detail/index.tsx
-
+import Head from 'next/head';
 import React, { useState, useEffect } from 'react';
 import { FaEye, FaTrophy, FaUser, FaSchool, FaMapMarkerAlt, FaArrowLeft, FaChartBar } from 'react-icons/fa';
 import { Award, ArrowLeft, User } from 'lucide-react';
@@ -372,7 +372,11 @@ const RankingDetailPage: React.FC = () => {
   };
 
   return (
-    <MainLayout>
+    <>
+          <Head>
+        <title>Detail Ranking Ujian | Futuredu</title>
+      </Head>
+          <MainLayout>
       <div className="tw-min-h-screen tw-bg-gradient-to-br tw-from-purple-50 tw-via-white tw-to-purple-50">
         {/* Back Navigation */}
         <div className="tw-mb-4 tw-mx-2 sm:tw-mx-0">
@@ -411,6 +415,8 @@ const RankingDetailPage: React.FC = () => {
         />
       </div>
     </MainLayout>
+    </>
+
   );
 };
 
