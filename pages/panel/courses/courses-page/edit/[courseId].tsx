@@ -692,89 +692,90 @@ const EditCourse: React.FC = () => {
     return true;
   };
 
-  const saveCourse = async (): Promise<void> => {
-    if (!validateCourseData()) {
+const saveCourse = async (): Promise<void> => {
+  if (!validateCourseData()) {
+    return;
+  }
+
+  setIsSaving(true);
+
+  try {
+    // Prepare data as JSON object dengan handling null/undefined values
+    const courseData = {
+      title: courseTitle.trim(),
+      description: courseDescription.trim(),
+      imageUrl: courseImageUrl.trim(),
+      learningPoint: learningPoints.filter(point => point.trim().length > 0),
+      sections: sections.map(section => ({
+        id: section.id,
+        title: section.title.trim(),
+        description: section.description.trim(),
+        durasi: section.duration,
+        topics: section.topics.map(topic => ({
+          id: topic.id,
+          title: topic.title.trim(),
+          materials: topic.materials.map(material => ({
+            id: material.id,
+            title: material.title.trim(),
+            isMandatory: material.isMandatory,
+            hasVideo: material.hasVideo,
+            videoType: material.videoType,
+            // Handle null/undefined videoUrl - hanya trim jika ada value
+            videoUrl: material.videoUrl ? material.videoUrl.trim() : null,
+            content: material.content,
+            videoFileName: material.videoFile ? material.videoFile.name : material.videoFileName
+          })),
+          quiz: {
+            examId: topic.quiz.examId || null,
+            questions: topic.quiz.questions || []
+          },
+          drill: {
+            examId: topic.drill.examId || null,
+            questions: topic.drill.questions || []
+          }
+        }))
+      }))
+    };
+    
+    console.log('=== SENDING EDIT COURSE DATA ===');
+    console.log('Course ID:', courseId);
+    console.log('Course Data:', JSON.stringify(courseData, null, 2));
+    
+    const authToken = localStorage.getItem('authToken');
+    
+    if (!authToken) {
+      alert('Token autentikasi tidak ditemukan. Silakan login ulang.');
       return;
     }
 
-    setIsSaving(true);
-
-    try {
-      // Prepare data as JSON object
-      const courseData = {
-        title: courseTitle.trim(),
-        description: courseDescription.trim(),
-        imageUrl: courseImageUrl.trim(),
-        learningPoint: learningPoints.filter(point => point.trim().length > 0),
-        sections: sections.map(section => ({
-          id: section.id,
-          title: section.title.trim(),
-          description: section.description.trim(),
-          durasi: section.duration,
-          topics: section.topics.map(topic => ({
-            id: topic.id,
-            title: topic.title.trim(),
-            materials: topic.materials.map(material => ({
-              id: material.id,
-              title: material.title.trim(),
-              isMandatory: material.isMandatory,
-              hasVideo: material.hasVideo,
-              videoType: material.videoType,
-              videoUrl: material.videoUrl.trim(),
-              content: material.content,
-              videoFileName: material.videoFile ? material.videoFile.name : material.videoFileName
-            })),
-            quiz: {
-              examId: topic.quiz.examId || null,
-              questions: topic.quiz.questions || []
-            },
-            drill: {
-              examId: topic.drill.examId || null,
-              questions: topic.drill.questions || []
-            }
-          }))
-        }))
-      };
-      
-      console.log('=== SENDING EDIT COURSE DATA ===');
-      console.log('Course ID:', courseId);
-      console.log('Course Data:', JSON.stringify(courseData, null, 2));
-      
-      const authToken = localStorage.getItem('authToken');
-      
-      if (!authToken) {
-        alert('Token autentikasi tidak ditemukan. Silakan login ulang.');
-        return;
+    const response = await axios.put(`${API_URL}/courses/detail/${courseId}`, courseData, {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
       }
+    });
 
-      const response = await axios.put(`${API_URL}/courses/detail/${courseId}`, courseData, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      alert('Course berhasil diperbarui!');
-      console.log('Course updated:', response.data);
-      
-      // Clear autosave after successful save
-      await courseDB.deleteAutosave(AUTOSAVE_KEY);
-      setLastSaved(null);
-      setHasUnsavedChanges(false);
-      
-    } catch (error: any) {
-      console.error('=== ERROR UPDATING COURSE ===');
-      console.error('Full Error:', error);
-      console.error('Response Data:', error.response?.data);
-      console.error('Response Status:', error.response?.status);
-      console.error('Request Config:', error.config);
-      
-      const errorMessage = error.response?.data?.message || error.message || 'Gagal memperbarui course';
-      alert(`Gagal memperbarui course: ${errorMessage}`);
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    alert('Course berhasil diperbarui!');
+    console.log('Course updated:', response.data);
+    
+    // Clear autosave after successful save
+    await courseDB.deleteAutosave(AUTOSAVE_KEY);
+    setLastSaved(null);
+    setHasUnsavedChanges(false);
+    
+  } catch (error: any) {
+    console.error('=== ERROR UPDATING COURSE ===');
+    console.error('Full Error:', error);
+    console.error('Response Data:', error.response?.data);
+    console.error('Response Status:', error.response?.status);
+    console.error('Request Config:', error.config);
+    
+    const errorMessage = error.response?.data?.message || error.message || 'Gagal memperbarui course';
+    alert(`Gagal memperbarui course: ${errorMessage}`);
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   // Global timeout variables declaration
   declare global {
@@ -1276,7 +1277,7 @@ const EditCourse: React.FC = () => {
                                                         <SuperEditor
                                                           key={`${topic.id}-${material.id}`}
                                                           onChange={handleEditorChange(section.id, topic.id, material.id)}
-                                                          initialValue={material.content}
+                                                          initialValue="<p>Mulai mengetik pembahasan disini...</p>"
                                                         />
                                                       </div>
 

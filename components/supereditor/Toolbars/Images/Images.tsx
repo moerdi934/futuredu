@@ -1,3 +1,4 @@
+// components/supereditor/Toolbars/Images/Images.tsx
 'use client';
 
 import React, { useRef, useState, useEffect, RefObject } from 'react';
@@ -487,114 +488,172 @@ export const setupImageResizeHandlers = (
 ): void => {
   if (!editorRef.current) return;
   
-  // Remove any existing alignment floaters
-  const existingFloaters = editorRef.current.querySelectorAll('.image-alignment-floater');
-  existingFloaters.forEach((floater) => floater.remove());
+  // Clear existing observers
+  if ((editorRef.current as any)._imageObserver) {
+    (editorRef.current as any)._imageObserver.disconnect();
+  }
   
-  // Find all images in the editor
-  const images = editorRef.current.querySelectorAll('img.resizable-image') as NodeListOf<HTMLImageElement>;
-
-  // Setup resize functionality for each image
-  images.forEach((img) => {
-    // Skip if this image already has resize handlers
-    if (img.dataset.resizable === 'true') return;
-    
-    img.dataset.resizable = 'true';
-    
-    // Add wrapper div around the image for better positioning of handles
-    const wrapper = document.createElement('div');
-    wrapper.className = 'image-resize-wrapper';
-    wrapper.style.position = 'relative';
-    wrapper.style.display = 'inline-block';
-    wrapper.style.maxWidth = '100%';
-    
-    // Replace the image with the wrapper containing the image
-    if (img.parentNode) {
-      img.parentNode.insertBefore(wrapper, img);
-      wrapper.appendChild(img);
+  // Function to wrap and setup a single image
+  const setupSingleImage = (img: HTMLImageElement) => {
+    // Skip if already properly wrapped and has click handler
+    if (img.closest('.image-resize-wrapper') && (img.parentElement as any)._hasClickHandler) {
+      return;
     }
     
-    // Reset some image properties
-    img.style.border = '1px solid transparent';
-    img.style.boxSizing = 'border-box';
-    img.style.maxWidth = '100%';
+    // Add resizable class
+    if (!img.classList.contains('resizable-image')) {
+      img.classList.add('resizable-image');
+    }
     
-    // Add click handler to select the image
-    wrapper.addEventListener('click', (e: Event) => {
+    // Check if already wrapped
+    let wrapper = img.closest('.image-resize-wrapper') as HTMLElement;
+    
+    // Create wrapper if needed
+    if (!wrapper) {
+      wrapper = document.createElement('div');
+      wrapper.className = 'image-resize-wrapper';
+      Object.assign(wrapper.style, {
+        position: 'relative',
+        display: 'inline-block',
+        maxWidth: '100%',
+        cursor: 'pointer',
+        userSelect: 'none'
+      });
+      
+      if (img.parentNode) {
+        img.parentNode.insertBefore(wrapper, img);
+        wrapper.appendChild(img);
+      }
+    }
+    
+    // Ensure wrapper has pointer events
+    wrapper.style.pointerEvents = 'auto';
+    
+    // Reset image styles
+    Object.assign(img.style, {
+      border: '1px solid transparent',
+      boxSizing: 'border-box',
+      maxWidth: '100%',
+      display: 'block',
+      pointerEvents: 'auto'
+    });
+    
+    // Remove old click handler if exists
+    if ((wrapper as any)._clickHandler) {
+      wrapper.removeEventListener('click', (wrapper as any)._clickHandler);
+    }
+    
+    // Create new click handler
+    const clickHandler = (e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
       
-      // Check if we clicked on the image or wrapper
-      if (e.target === img || e.target === wrapper) {
-        // Remove any existing alignment floaters
-        const existingFloaters = editorRef.current!.querySelectorAll('.image-alignment-floater');
-        existingFloaters.forEach((floater) => floater.remove());
-        
-        // Deselect any previously selected images
-        const selectedWrappers = editorRef.current!.querySelectorAll('.image-wrapper-selected');
-        selectedWrappers.forEach((selectedWrapper) => {
-          selectedWrapper.classList.remove('image-wrapper-selected');
-          const selectedImg = selectedWrapper.querySelector('img') as HTMLImageElement;
-          if (selectedImg) selectedImg.style.border = '1px solid transparent';
-          
-          // Remove resize handles
-          const handles = selectedWrapper.querySelectorAll('.resize-handle');
-          handles.forEach((handle) => handle.remove());
-        });
-        
-        // Select this image
-        wrapper.classList.add('image-wrapper-selected');
-        img.style.border = '2px solid #800080';
-        
-        // Create resize handles
-        createResizeHandles(wrapper, img, handleChange);
-        
-        // Create alignment floater with improved positioning and event handling
-        createAlignmentFloater(wrapper, img, editorRef, handleChange);
-      }
-    });
-  });
-  
-  // Add click handler to the editor to deselect images when clicking elsewhere
-  const deselect = (e: Event) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const target = e.target as HTMLElement;
-    
-    // Check if we clicked on floater or its children
-    const isFloaterClick = target.closest('.image-alignment-floater');
-    
-    // If we clicked on the editor but not on an image, handle, or floater
-    if (!isFloaterClick &&
-        target !== editorRef.current && 
-        !target.classList.contains('resize-handle') && 
-        !target.classList.contains('resizable-image') && 
-        !target.classList.contains('image-resize-wrapper')) {
-      
-      // Remove alignment floaters
+      // Remove existing floaters and selections
       const existingFloaters = editorRef.current!.querySelectorAll('.image-alignment-floater');
-      existingFloaters.forEach((floater) => floater.remove());
+      existingFloaters.forEach(f => f.remove());
       
-      // Deselect all selected wrappers
       const selectedWrappers = editorRef.current!.querySelectorAll('.image-wrapper-selected');
-      selectedWrappers.forEach((selectedWrapper) => {
-        selectedWrapper.classList.remove('image-wrapper-selected');
-        const selectedImg = selectedWrapper.querySelector('img') as HTMLImageElement;
-        if (selectedImg) selectedImg.style.border = '1px solid transparent';
-        
-        // Remove resize handles
-        const handles = selectedWrapper.querySelectorAll('.resize-handle');
-        handles.forEach((handle) => handle.remove());
+      selectedWrappers.forEach((sw) => {
+        sw.classList.remove('image-wrapper-selected');
+        const si = sw.querySelector('img') as HTMLImageElement;
+        if (si) si.style.border = '1px solid transparent';
+        sw.querySelectorAll('.resize-handle').forEach(h => h.remove());
       });
-    }
+      
+      // Select this image
+      wrapper.classList.add('image-wrapper-selected');
+      img.style.border = '2px solid #800080';
+      
+      createResizeHandles(wrapper, img, handleChange);
+      createAlignmentFloater(wrapper, img, editorRef, handleChange);
+    };
+    
+    wrapper.addEventListener('click', clickHandler);
+    (wrapper as any)._clickHandler = clickHandler;
+    (wrapper as any)._hasClickHandler = true;
   };
   
-  // Remove any existing event listener to prevent duplicates
-  editorRef.current.removeEventListener('click', deselect);
-  editorRef.current.addEventListener('click', deselect);
+  // Setup all existing images
+  const setupAllImages = () => {
+    const images = editorRef.current!.querySelectorAll('img') as NodeListOf<HTMLImageElement>;
+    images.forEach(setupSingleImage);
+  };
+  
+  // Initial setup
+  setupAllImages();
+  
+  // Create MutationObserver to watch for DOM changes
+  const observer = new MutationObserver((mutations) => {
+    let needsSetup = false;
+    
+    mutations.forEach((mutation) => {
+      // Check for added nodes
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeName === 'IMG') {
+          needsSetup = true;
+        } else if (node instanceof HTMLElement) {
+          if (node.querySelector('img')) {
+            needsSetup = true;
+          }
+        }
+      });
+      
+      // Check for removed nodes (wrappers might be removed)
+      mutation.removedNodes.forEach((node) => {
+        if (node instanceof HTMLElement && node.classList.contains('image-resize-wrapper')) {
+          needsSetup = true;
+        }
+      });
+      
+      // Check for attribute changes on images
+      if (mutation.type === 'attributes' && mutation.target.nodeName === 'IMG') {
+        needsSetup = true;
+      }
+    });
+    
+    if (needsSetup) {
+      // Small delay to let DOM settle
+      setTimeout(setupAllImages, 10);
+    }
+  });
+  
+  // Start observing
+  observer.observe(editorRef.current, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['src', 'style']
+  });
+  
+  // Store observer reference for cleanup
+  (editorRef.current as any)._imageObserver = observer;
+  
+  // Setup deselect handler
+  const deselectHandler = (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    
+    if (target.closest('.image-alignment-floater') ||
+        target.classList.contains('resize-handle') ||
+        target.classList.contains('resizable-image') ||
+        target.classList.contains('image-resize-wrapper')) {
+      return;
+    }
+    
+    const existingFloaters = editorRef.current!.querySelectorAll('.image-alignment-floater');
+    existingFloaters.forEach(f => f.remove());
+    
+    const selectedWrappers = editorRef.current!.querySelectorAll('.image-wrapper-selected');
+    selectedWrappers.forEach((sw) => {
+      sw.classList.remove('image-wrapper-selected');
+      const si = sw.querySelector('img') as HTMLImageElement;
+      if (si) si.style.border = '1px solid transparent';
+      sw.querySelectorAll('.resize-handle').forEach(h => h.remove());
+    });
+  };
+  
+  editorRef.current.removeEventListener('mousedown', deselectHandler as EventListener);
+  editorRef.current.addEventListener('mousedown', deselectHandler as EventListener);
 };
-
 // Create alignment floater - FIXED VERSION
 const createAlignmentFloater = (
   wrapper: HTMLElement, 

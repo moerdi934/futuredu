@@ -151,6 +151,10 @@ const canUserModifyCourse = (courseData: any, userRole: string, userId: number):
   }
   return false;
 };
+const isNewId = (id: any): boolean => {
+  return typeof id === 'number' && id.toString().length === 13;
+};
+
 
 // Get all courses with role-based filtering and approval system
 export const getAllCoursesWithApproval = async (req: AuthenticatedRequest, res: NextApiResponse) => {
@@ -1108,91 +1112,6 @@ export const createCourseDetail = async (req: AuthenticatedRequest, res: NextApi
   }
 };
 
-// Update detailed course (updateCourseDetail) - keep the same logic but add approval checks
-export const updateCourseDetail = async (req: AuthenticatedRequest, res: NextApiResponse) => {
-  // Implementation similar to createCourseDetail but for updates
-  // Include approval status checks and permission validations
-  // This would be a very long function, similar to the classes implementation
-  // For brevity, I'm indicating that this follows the same pattern as the create function
-  // but with update logic and proper approval workflow
-  
-  const client = await pool.connect();
-  const { courseId } = req.query;
-  const userId = req.user?.id;
-  const userRole = req.user?.role;
-  
-  try {
-    // Check permissions and approval status before allowing updates
-    const existingCourse = await Course.getCourseById(parseInt(courseId as string), false, userRole, userId?.toString());
-    
-    if (!existingCourse) {
-      return res.status(404).json({ message: 'Kursus tidak ditemukan atau akses ditolak' });
-    }
-
-    if (!canUserModifyCourse(existingCourse, userRole, userId)) {
-      return res.status(403).json({ 
-        message: 'Anda tidak memiliki hak untuk mengubah kursus ini' 
-      });
-    }
-
-    if (userRole === 'teacher' && existingCourse.approval_status !== 'need_approve') {
-      return res.status(403).json({ 
-        message: 'Kursus yang sudah disetujui tidak dapat diubah' 
-      });
-    }
-    
-    // Continue with update logic similar to classes updateCourseDetail
-    // ... (implementation details would follow the same pattern as the existing updateCourseDetail)
-    
-    res.status(200).json({
-      message: 'Course updated successfully',
-      data: { course_id: courseId }
-    });
-  } catch (error: any) {
-    await client.query('ROLLBACK');
-    console.error('Error updating course:', error);
-    res.status(500).json({ 
-      message: 'Failed to update course', 
-      error: error.message 
-    });
-  } finally {
-    client.release();
-  }
-};
-
-// Keep other existing functions unchanged
-export const createCourse = async (req: AuthenticatedRequest, res: NextApiResponse) => {
-  try {
-    const courseData = {
-      ...req.body,
-      create_user_id: req.user?.id || null,
-      user_role: req.user?.role // Pass user role for auto-approval logic
-    };
-    const course = await Course.createCourse(courseData);
-    res.status(201).json(course);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-export const updateCourse = async (req: AuthenticatedRequest, res: NextApiResponse) => {
-  try {
-    const courseData = {
-      id: parseInt(req.query.id as string),
-      ...req.body,
-      edit_user_id: req.user?.id || null
-    };
-    const course = await Course.updateCourse(courseData);
-    
-    if (!course) {
-      return res.status(404).json({ message: 'Course not found' });
-    }
-
-    res.json(course);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-};
 
 export const deleteCourse = async (req: NextApiRequest, res: NextApiResponse) => {
   try {
@@ -1255,5 +1174,557 @@ export const getUserCourseProgressByCourseId = async (req: AuthenticatedRequest,
       message: 'Failed to retrieve user course progress', 
       error: error.message 
     });
+  }
+};
+
+export const updateCourseDetail = async (req: AuthenticatedRequest, res: NextApiResponse) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+
+    // Extract parameters
+    const { courseId } = req.query;
+    const { title, description, sections, imageUrl, learningPoint } = req.body;
+    const userId = req.user?.id || 20;
+    const userRole = req.user?.role;
+
+    // Validasi input dasar
+    if (!courseId || !title || !description || !sections) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        message: 'Course ID, title, description, dan sections wajib diisi' 
+      });
+    }
+
+    // Check permissions and approval status before allowing updates
+    const existingCourse = await Course.getCourseById(
+      parseInt(courseId as string), 
+      false, 
+      userRole, 
+      userId?.toString()
+    );
+
+    if (!existingCourse) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ 
+        message: 'Kursus tidak ditemukan atau akses ditolak' 
+      });
+    }
+
+    if (!canUserModifyCourse(existingCourse, userRole, userId)) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ 
+        message: 'Anda tidak memiliki hak untuk mengubah kursus ini' 
+      });
+    }
+
+    if (userRole === 'teacher' && existingCourse.approval_status !== 'need_approve') {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ 
+        message: 'Kursus yang sudah disetujui tidak dapat diubah' 
+      });
+    }
+
+    // Parse sections JSON
+    let sectionsData;
+    try {
+      sectionsData = typeof sections === 'string' ? JSON.parse(sections) : sections;
+    } catch (parseError) {
+      console.error('Error parsing sections:', parseError);
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: 'Invalid sections data' });
+    }
+
+    // Parse learningPoint JSON with safety check
+    let learningPointData = [];
+    if (learningPoint) {
+      try {
+        learningPointData = typeof learningPoint === 'string' 
+          ? JSON.parse(learningPoint) 
+          : learningPoint;
+      } catch (parseError) {
+        console.error('Error parsing learningPoint:', parseError);
+        await client.query('ROLLBACK');
+        return res.status(400).json({ message: 'Invalid learning point data' });
+      }
+    }
+
+    // Validasi sections tidak kosong
+    if (!Array.isArray(sectionsData) || sectionsData.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: 'Sections tidak boleh kosong' });
+    }
+
+    // Query existing data structure
+    const existingDataQuery = `
+      SELECT 
+        c.id as course_id,
+        s.id as section_id,
+        t.id as topic_id,
+        t.quiz_id,
+        t.drill_id,
+        m.id as material_id
+      FROM courses c 
+      LEFT JOIN sections s ON s.course_id = c.id 
+      LEFT JOIN topics t ON t.section_id = s.id 
+      LEFT JOIN materials m ON m.topic_id = t.id 
+      WHERE c.id = $1
+      ORDER BY s.position, t.position, m.position
+    `;
+
+    const existingDataResult = await client.query(existingDataQuery, [courseId]);
+
+    // Extract existing IDs
+    const existingSectionIds = new Set<number>();
+    const existingTopicIds = new Set<number>();
+    const existingMaterialIds = new Set<number>();
+
+    existingDataResult.rows.forEach(row => {
+      if (row.section_id) existingSectionIds.add(row.section_id);
+      if (row.topic_id) existingTopicIds.add(row.topic_id);
+      if (row.material_id) existingMaterialIds.add(row.material_id);
+    });
+
+    // Extract payload IDs
+    const payloadSectionIds = new Set<number>();
+    const payloadTopicIds = new Set<number>();
+    const payloadMaterialIds = new Set<number>();
+
+    sectionsData.forEach((section: any) => {
+      if (section.id && !isNewId(section.id)) {
+        payloadSectionIds.add(section.id);
+      }
+      if (section.topics && Array.isArray(section.topics)) {
+        section.topics.forEach((topic: any) => {
+          if (topic.id && !isNewId(topic.id)) {
+            payloadTopicIds.add(topic.id);
+          }
+          if (topic.materials && Array.isArray(topic.materials)) {
+            topic.materials.forEach((material: any) => {
+              if (material.id && !isNewId(material.id)) {
+                payloadMaterialIds.add(material.id);
+              }
+            });
+          }
+        });
+      }
+    });
+
+    // Delete sections not in payload
+    const sectionsToDelete = Array.from(existingSectionIds)
+      .filter(id => !payloadSectionIds.has(id));
+    
+    if (sectionsToDelete.length > 0) {
+      console.log('Deleting sections:', sectionsToDelete);
+      
+      // Get quiz and drill IDs to delete from topics in these sections
+      const quizDrillToDeleteResult = await client.query(
+        'SELECT quiz_id, drill_id FROM topics WHERE section_id = ANY($1)',
+        [sectionsToDelete]
+      );
+      
+      const quizIdsToDelete = quizDrillToDeleteResult.rows
+        .map(row => row.quiz_id)
+        .filter(id => id !== null);
+      const drillIdsToDelete = quizDrillToDeleteResult.rows
+        .map(row => row.drill_id)
+        .filter(id => id !== null);
+
+      // Delete exam schedules and exams
+      if (quizIdsToDelete.length > 0) {
+        await client.query('DELETE FROM exam_schedule WHERE id = ANY($1)', [quizIdsToDelete]);
+      }
+      if (drillIdsToDelete.length > 0) {
+        await client.query('DELETE FROM exam_schedule WHERE id = ANY($1)', [drillIdsToDelete]);
+      }
+
+      // Delete cascade will handle materials, topics
+      await client.query('DELETE FROM sections WHERE id = ANY($1)', [sectionsToDelete]);
+    }
+
+    // Delete topics not in payload (but section exists)
+    const topicsToDelete = Array.from(existingTopicIds)
+      .filter(id => !payloadTopicIds.has(id));
+    
+    if (topicsToDelete.length > 0) {
+      console.log('Deleting topics:', topicsToDelete);
+      
+      // Get quiz and drill IDs to delete
+      const quizDrillToDeleteResult = await client.query(
+        'SELECT quiz_id, drill_id FROM topics WHERE id = ANY($1)',
+        [topicsToDelete]
+      );
+      
+      const quizIdsToDelete = quizDrillToDeleteResult.rows
+        .map(row => row.quiz_id)
+        .filter(id => id !== null);
+      const drillIdsToDelete = quizDrillToDeleteResult.rows
+        .map(row => row.drill_id)
+        .filter(id => id !== null);
+
+      // Delete exam schedules
+      if (quizIdsToDelete.length > 0) {
+        await client.query('DELETE FROM exam_schedule WHERE id = ANY($1)', [quizIdsToDelete]);
+      }
+      if (drillIdsToDelete.length > 0) {
+        await client.query('DELETE FROM exam_schedule WHERE id = ANY($1)', [drillIdsToDelete]);
+      }
+
+      await client.query('DELETE FROM topics WHERE id = ANY($1)', [topicsToDelete]);
+    }
+
+    // Delete materials not in payload
+    const materialsToDelete = Array.from(existingMaterialIds)
+      .filter(id => !payloadMaterialIds.has(id));
+    
+    if (materialsToDelete.length > 0) {
+      console.log('Deleting materials:', materialsToDelete);
+      await client.query('DELETE FROM materials WHERE id = ANY($1)', [materialsToDelete]);
+    }
+
+    // Update course
+    await client.query(
+      `UPDATE courses SET 
+       title = $1, 
+       description = $2, 
+       imageurl = $3, 
+       learning_point = $4,
+       edit_date = NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta'
+       WHERE id = $5`,
+      [title, description, imageUrl, learningPointData, courseId]
+    );
+
+    // Create video directory if it doesn't exist
+    const videoDir = path.join(process.cwd(), 'public', 'assets', 'video', 'materi');
+    if (!fs.existsSync(videoDir)) {
+      fs.mkdirSync(videoDir, { recursive: true });
+    }
+
+    // Process sections
+    const processedSections = [];
+
+    for (let sectionIndex = 0; sectionIndex < sectionsData.length; sectionIndex++) {
+      const sectionData = sectionsData[sectionIndex];
+      
+      // Validasi section data
+      if (!sectionData.title) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ 
+          message: `Section ke-${sectionIndex + 1} harus memiliki title` 
+        });
+      }
+
+      let section;
+      
+      // Insert or Update section
+      if (isNewId(sectionData.id)) {
+        // Insert new section
+        const sectionResult = await client.query(
+          `INSERT INTO sections (course_id, title, position, create_date, create_user_id, description, time)
+           VALUES ($1, $2, $3, NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta', $4, $5, $6)
+           RETURNING *`,  
+          [courseId, sectionData.title, sectionIndex + 1, userId, sectionData.description, sectionData.durasi]
+        );
+        section = sectionResult.rows[0];
+        console.log('Created new section:', section.id);
+      } else {
+        // Update existing section
+        const sectionResult = await client.query(
+          `UPDATE sections SET 
+           title = $1, 
+           position = $2, 
+           description = $3, 
+           time = $4,
+           update_date = NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta'
+           WHERE id = $5
+           RETURNING *`,
+          [sectionData.title, sectionIndex + 1, sectionData.description, sectionData.durasi, sectionData.id]
+        );
+        section = sectionResult.rows[0];
+        console.log('Updated section:', section.id);
+      }
+
+      const processedTopics = [];
+
+      // Process topics untuk section ini
+      if (sectionData.topics && Array.isArray(sectionData.topics)) {
+        for (let topicIndex = 0; topicIndex < sectionData.topics.length; topicIndex++) {
+          const topicData = sectionData.topics[topicIndex];
+          
+          // Validasi topic data
+          if (!topicData.title) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ 
+              message: `Topic ke-${topicIndex + 1} di section "${sectionData.title}" harus memiliki title` 
+            });
+          }
+
+          let topic;
+          let existingQuizId = null;
+          let existingDrillId = null;
+
+          // Insert or Update topic
+          if (isNewId(topicData.id)) {
+            // Insert new topic
+            const topicResult = await client.query(
+              `INSERT INTO topics (section_id, title, position, create_date, create_user_id)
+               VALUES ($1, $2, $3, NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta', $4)
+               RETURNING *`,
+              [section.id, topicData.title, topicIndex + 1, userId]
+            );
+            topic = topicResult.rows[0];
+            console.log('Created new topic:', topic.id);
+          } else {
+            // Get existing quiz and drill IDs before update
+            const existingTopicResult = await client.query(
+              'SELECT quiz_id, drill_id FROM topics WHERE id = $1',
+              [topicData.id]
+            );
+            
+            if (existingTopicResult.rows.length > 0) {
+              existingQuizId = existingTopicResult.rows[0].quiz_id;
+              existingDrillId = existingTopicResult.rows[0].drill_id;
+            }
+
+            // Update existing topic
+            const topicResult = await client.query(
+              `UPDATE topics SET 
+               title = $1, 
+               position = $2,
+               update_date = NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta'
+               WHERE id = $3
+               RETURNING *`,
+              [topicData.title, topicIndex + 1, topicData.id]
+            );
+            topic = topicResult.rows[0];
+            console.log('Updated topic:', topic.id);
+          }
+
+          const processedMaterials = [];
+
+          // Process materials untuk topic ini
+          if (topicData.materials && Array.isArray(topicData.materials)) {
+            for (let materialIndex = 0; materialIndex < topicData.materials.length; materialIndex++) {
+              const material = topicData.materials[materialIndex];
+              
+              let materialData = {
+                topic_id: topic.id,
+                title: material.title || `Material ${materialIndex + 1}`,
+                content: material.content || '',
+                isMandatory: material.isMandatory || false,
+                hasVideo: material.hasVideo || false,
+                videoType: material.videoType || null,
+                video_url: material.videoUrl || null,
+                video_file_name: material.videoFileName || null,
+                order_index: materialIndex + 1,
+              };
+
+              let materialResult;
+              
+              // Insert or Update material
+              if (isNewId(material.id)) {
+                // Insert new material
+                materialResult = await client.query(
+                  `INSERT INTO materials (topic_id, title, content, is_mandatory, video_url, video_file_name, position, create_date, create_user_id, has_video, video_type)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta', $8, $9, $10)
+                   RETURNING *`,
+                  [
+                    materialData.topic_id, 
+                    materialData.title, 
+                    materialData.content, 
+                    materialData.isMandatory, 
+                    materialData.video_url, 
+                    materialData.video_file_name, 
+                    materialData.order_index, 
+                    userId,
+                    materialData.hasVideo,
+                    materialData.videoType
+                  ]
+                );
+                console.log('Created new material:', materialResult.rows[0].id);
+              } else {
+                // Update existing material
+                materialResult = await client.query(
+                  `UPDATE materials SET 
+                   title = $1, 
+                   content = $2, 
+                   is_mandatory = $3, 
+                   video_url = $4, 
+                   video_file_name = $5, 
+                   position = $6,
+                   has_video = $7,
+                   video_type = $8,
+                   update_date = NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Jakarta'
+                   WHERE id = $9
+                   RETURNING *`,
+                  [
+                    materialData.title, 
+                    materialData.content, 
+                    materialData.isMandatory, 
+                    materialData.video_url, 
+                    materialData.video_file_name, 
+                    materialData.order_index,
+                    materialData.hasVideo,
+                    materialData.videoType,
+                    material.id
+                  ]
+                );
+                console.log('Updated material:', material.id);
+              }
+              
+              processedMaterials.push(materialResult.rows[0]);
+            }
+          }
+
+          // Handle Quiz dan Drill
+          let quizId = null;
+          let drillId = null;
+
+          // Extract question IDs dari topicData.quiz dan topicData.drill
+          let quizQuestionIds: number[] = [];
+          let drillQuestionIds: number[] = [];
+
+          if (topicData.quiz && topicData.quiz.questions && Array.isArray(topicData.quiz.questions)) {
+            quizQuestionIds = topicData.quiz.questions.map((q: any) => q.id);
+          }
+
+          if (topicData.drill && topicData.drill.questions && Array.isArray(topicData.drill.questions)) {
+            drillQuestionIds = topicData.drill.questions.map((q: any) => q.id);
+          }
+
+          // Handle Quiz
+          if (quizQuestionIds.length > 0) {
+            try {
+              if (existingQuizId) {
+                // Update existing quiz - delete old and create new
+                await client.query('DELETE FROM exam_schedule WHERE id = $1', [existingQuizId]);
+              }
+              
+              // Create new quiz
+              const quizExam = await examModel.createExam({
+                name: `Quiz ${topicData.title}`,
+                duration: 30,
+                exam_group: 1,
+                question_id_list: quizQuestionIds
+              }, userId);
+
+              const quizSchedule = await examScheduleModel.createExamSchedule(
+                `Quiz ${topicData.title}`,
+                `AUTOCREATE Quiz untuk topik ${topicData.title}`,
+                [quizExam.id],
+                new Date('1970-01-01T00:00:00Z'),
+                new Date('1970-01-01T00:00:00Z'),
+                true,
+                true,
+                userId,
+                1
+              );
+
+              quizId = quizSchedule.id;
+              console.log(`Quiz ${existingQuizId ? 'updated' : 'created'} for topic: ${topicData.title} with ID: ${quizId}`);
+            } catch (examError: any) {
+              console.error(`Error handling quiz for topic ${topicData.title}:`, examError);
+              await client.query('ROLLBACK');
+              return res.status(500).json({ 
+                message: `Failed to handle quiz for topic: ${topicData.title}`,
+                error: examError.message 
+              });
+            }
+          } else if (existingQuizId) {
+            // Delete existing quiz if no questions provided
+            await client.query('DELETE FROM exam_schedule WHERE id = $1', [existingQuizId]);
+            console.log(`Quiz deleted for topic: ${topicData.title}`);
+          }
+
+          // Handle Drill
+          if (drillQuestionIds.length > 0) {
+            try {
+              if (existingDrillId) {
+                // Update existing drill - delete old and create new
+                await client.query('DELETE FROM exam_schedule WHERE id = $1', [existingDrillId]);
+              }
+              
+              // Create new drill
+              const drillExam = await examModel.createExam({
+                name: `Drill ${topicData.title}`,
+                duration: 0, 
+                exam_group: 6,
+                question_id_list: drillQuestionIds
+              }, userId);
+
+              const drillSchedule = await examScheduleModel.createExamSchedule(
+                `Drill ${topicData.title}`,
+                `AUTOCREATE Drill untuk topik ${topicData.title}`,
+                [drillExam.id],
+                new Date('1970-01-01T00:00:00Z'),
+                new Date('1970-01-01T00:00:00Z'),
+                true,
+                true,
+                userId,
+                6
+              );
+
+              drillId = drillSchedule.id;
+              console.log(`Drill ${existingDrillId ? 'updated' : 'created'} for topic: ${topicData.title} with ID: ${drillId}`);
+            } catch (examError: any) {
+              console.error(`Error handling drill for topic ${topicData.title}:`, examError);
+              await client.query('ROLLBACK');
+              return res.status(500).json({ 
+                message: `Failed to handle drill for topic: ${topicData.title}`,
+                error: examError.message 
+              });
+            }
+          } else if (existingDrillId) {
+            // Delete existing drill if no questions provided
+            await client.query('DELETE FROM exam_schedule WHERE id = $1', [existingDrillId]);
+            console.log(`Drill deleted for topic: ${topicData.title}`);
+          }
+
+          // Update topic dengan quiz_id dan drill_id
+          await client.query(
+            `UPDATE topics SET quiz_id = $1, drill_id = $2 WHERE id = $3`,
+            [quizId, drillId, topic.id]
+          );
+
+          processedTopics.push({
+            ...topic,
+            materials: processedMaterials,
+            quiz_id: quizId,
+            drill_id: drillId,
+            quiz_questions: quizQuestionIds,
+            drill_questions: drillQuestionIds
+          });
+        }
+      }
+      
+      processedSections.push({
+        ...section,
+        topics: processedTopics
+      });
+    }
+
+    // Commit transaction jika semua berhasil
+    await client.query('COMMIT');
+
+    console.log('Course updated successfully with ID:', courseId);
+    console.log('Total sections processed:', processedSections.length);
+
+    res.status(200).json({
+      message: 'Course updated successfully',
+      data: { 
+        course_id: courseId,
+        sections: processedSections 
+      }
+    });
+  } catch (error: any) {
+    await client.query('ROLLBACK');
+    console.error('Error updating course:', error);
+    res.status(500).json({ 
+      message: 'Failed to update course', 
+      error: error.message 
+    });
+  } finally {
+    client.release();
   }
 };

@@ -156,9 +156,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Collapse Toggle Button - Fixed Position */}
       <button
         onClick={toggleCollapse}
-        className={`tw-fixed tw-top-4 tw-z-[60] tw-bg-purple-600 hover:tw-bg-purple-700 tw-text-white tw-p-3 tw-rounded-l-lg tw-shadow-lg tw-transition-all tw-duration-300 tw-ease-in-out tw-border-none tw-hidden lg:tw-block ${
+        className={`tw-fixed tw-z-[60] tw-bg-purple-600 hover:tw-bg-purple-700 tw-text-white tw-p-3 tw-rounded-l-lg tw-shadow-lg tw-transition-all tw-duration-300 tw-ease-in-out tw-border-none tw-hidden lg:tw-block ${
           isCollapsed ? 'tw-right-0' : 'tw-right-80'
         }`}
+        style={{ top: '68px' }}
         title={isCollapsed ? 'Tampilkan Sidebar' : 'Sembunyikan Sidebar'}
       >
         {isCollapsed ? (
@@ -169,11 +170,11 @@ const Sidebar: React.FC<SidebarProps> = ({
       </button>
 
       {/* Sidebar Container */}
-      <div className={`tw-fixed tw-top-0 tw-right-0 tw-w-80 tw-z-50 tw-transform tw-transition-all tw-duration-300 tw-ease-in-out lg:tw-block ${
+      <div className={`tw-fixed tw-right-0 tw-w-80 tw-z-50 tw-transform tw-transition-all tw-duration-300 tw-ease-in-out lg:tw-block ${
         sidebarOpen ? 'tw-translate-x-0' : 'tw-translate-x-full'
       } ${
         isCollapsed ? 'lg:tw-translate-x-full' : 'lg:tw-translate-x-0'
-      }`} style={{ height: '125vh' }}>
+      }`} style={{ top: '64px', height: 'calc(100vh - 64px)' }}>
         
         <div className="tw-h-full tw-bg-gradient-to-br tw-from-purple-50 tw-to-purple-100 tw-backdrop-blur-sm tw-border-l tw-border-purple-200 tw-shadow-2xl">
           

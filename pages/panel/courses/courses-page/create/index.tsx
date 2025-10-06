@@ -424,32 +424,32 @@ const CreateCourse: React.FC = () => {
     setExpandedMaterials(newExpanded);
   };
 
-  const addMaterial = (sectionId: number, topicId: number): void => {
-    setSections(sections.map(section => 
-      section.id === sectionId 
-        ? {
-            ...section,
-            topics: section.topics.map(topic => 
-              topic.id === topicId 
-                ? { 
-                    ...topic, 
-                    materials: [...topic.materials, {
-                      id: Date.now(),
-                      title: '',
-                      isMandatory: false,
-                      hasVideo: false,
-                      videoType: 'upload',
-                      videoFile: null,
-                      videoUrl: '',
-                      content: '<p>Mulai menulis konten materi...</p>'
-                    }]
-                  }
-                : topic
-            )
-          }
-        : section
-    ));
-  };
+const addMaterial = (sectionId: number, topicId: number): void => {
+  setSections(sections.map(section => 
+    section.id === sectionId 
+      ? {
+          ...section,
+          topics: section.topics.map(topic => 
+            topic.id === topicId 
+              ? { 
+                  ...topic, 
+                  materials: [...topic.materials, {
+                    id: Date.now(),
+                    title: '',
+                    isMandatory: false,
+                    hasVideo: false,
+                    videoType: 'upload',
+                    videoFile: null,
+                    videoUrl: '',
+                    content: '<p>Mulai menulis konten materi...</p>'  // ← INI SUDAH ADA
+                  }]
+                }
+              : topic
+          )
+        }
+      : section
+  ));
+};
 
   const deleteMaterial = (sectionId: number, topicId: number, materialId: number): void => {
     setSections(sections.map(section => 
@@ -854,15 +854,16 @@ const CreateCourse: React.FC = () => {
             />
           )}
 
-          {previewMode ? (
-            <PreviewComponent
-              courseTitle={courseTitle}
-              courseDescription={courseDescription}
-              courseImageUrl={courseImageUrl}
-              learningPoints={learningPoints}
-              sections={sections}
-            />
-          ) : (
+            <div style={{ display: previewMode ? 'block' : 'none' }}>
+              <PreviewComponent
+                courseTitle={courseTitle}
+                courseDescription={courseDescription}
+                courseImageUrl={courseImageUrl}
+                learningPoints={learningPoints}
+                sections={sections}
+              />
+            </div>
+            <div style={{ display: previewMode ? 'none' : 'block' }}>
             <div className="tw-space-y-6">
               {/* Course Information Section */}
               <div className="tw-border tw-border-purple-300 tw-rounded-lg tw-shadow-lg">
@@ -986,8 +987,9 @@ const CreateCourse: React.FC = () => {
                             {expandedSections.has(section.id) ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                           </div>
                           
-                          {expandedSections.has(section.id) && (
-                            <div className="tw-p-4 tw-border-t tw-border-purple-200">
+
+                            <div className="tw-p-4 tw-border-t tw-border-purple-200"
+                              style={{ display: expandedSections.has(section.id) ? 'block' : 'none' }}>
                               <div className="tw-space-y-4">
                                 <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-12 tw-gap-4 tw-items-end">
                                   <div className="md:tw-col-span-8">
@@ -1066,8 +1068,9 @@ const CreateCourse: React.FC = () => {
                                         {expandedTopics.has(topic.id) ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                       </div>
                                       
-                                      {expandedTopics.has(topic.id) && (
-                                        <div className="tw-p-4 tw-border-t tw-border-purple-200">
+
+                                        <div className="tw-p-4 tw-border-t tw-border-purple-200"
+                                          style={{ display: expandedTopics.has(topic.id) ? 'block' : 'none' }}>
                                           <div className="tw-space-y-4">
                                             <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-12 tw-gap-4 tw-items-end">
                                               <div className="md:tw-col-span-10">
@@ -1138,8 +1141,9 @@ const CreateCourse: React.FC = () => {
                                                     </div>
                                                   </div>
                                                   
-                                                  {expandedMaterials.has(material.id) && (
-                                                    <div className="tw-p-4 tw-border-t tw-border-purple-200">
+
+                                                    <div className="tw-p-4 tw-border-t tw-border-purple-200"
+                                                      style={{ display: expandedMaterials.has(material.id) ? 'block' : 'none' }}>
                                                       <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-8 tw-gap-4 tw-mb-3">
                                                         <div className="md:tw-col-span-5">
                                                           <label className="tw-block tw-text-sm tw-text-purple-700 tw-mb-1">
@@ -1229,7 +1233,7 @@ const CreateCourse: React.FC = () => {
                                                         <SuperEditor
                                                           key={`${topic.id}-${material.id}`}
                                                           onChange={handleEditorChange(section.id, topic.id, material.id)}
-                                                          initialValue={material.content}
+                                                          initialValue="<p>Mulai mengetik pembahasan disini...</p>"
                                                         />
                                                       </div>
 
@@ -1241,7 +1245,6 @@ const CreateCourse: React.FC = () => {
                                                         />
                                                       </div>
                                                     </div>
-                                                  )}
                                                 </div>
                                               ))}
                                             </div>
@@ -1410,13 +1413,13 @@ const CreateCourse: React.FC = () => {
                                             </div>
                                           </div>
                                         </div>
-                                      )}
+
                                     </div>
                                   ))}
                                 </div>
                               </div>
                             </div>
-                          )}
+
                         </div>
                       ))}
                     </div>
@@ -1443,7 +1446,7 @@ const CreateCourse: React.FC = () => {
                 />
               </div>
             </div>
-          )}
+            </div>
         </div>
       </div>
     </MainLayout>

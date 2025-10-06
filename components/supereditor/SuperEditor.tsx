@@ -309,35 +309,45 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
   }, []);
 
   // Debounced change handler
-  const debouncedHandleChange = useMemo(() => {
-    let timeoutId: NodeJS.Timeout;
-    return () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        if (editorRef.current) {
-          const newContent = editorRef.current.innerHTML;
-          setContent(newContent);
-          if (onChange) onChange(newContent);
-          
-          // Refresh code highlighting and table handlers if available
-          if (componentsLoaded.code && helpersRef.current.refreshAllCodeBlockHighlighting) {
-            try {
-              helpersRef.current.refreshAllCodeBlockHighlighting(editorRef);
-            } catch (error) {
-              console.warn('Error refreshing code highlighting:', error);
-            }
-          }
-          if (componentsLoaded.table && helpersRef.current.setupTableHandlers) {
-            try {
-              helpersRef.current.setupTableHandlers(editorRef);
-            } catch (error) {
-              console.warn('Error setting up table handlers:', error);
-            }
+// In the handleChange callback, add this after the debounce:
+const debouncedHandleChange = useMemo(() => {
+  let timeoutId: NodeJS.Timeout;
+  return () => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      if (editorRef.current) {
+        const newContent = editorRef.current.innerHTML;
+        setContent(newContent);
+        if (onChange) onChange(newContent);
+        
+        // ALWAYS re-setup image handlers after any change
+        if (componentsLoaded.imageModal && helpersRef.current.setupImageResizeHandlers) {
+          try {
+            helpersRef.current.setupImageResizeHandlers(editorRef, handleChange);
+          } catch (error) {
+            console.warn('Error re-setting up image handlers:', error);
           }
         }
-      }, 50);
-    };
-  }, [onChange, componentsLoaded.code, componentsLoaded.table]);
+        
+        // Refresh other handlers...
+        if (componentsLoaded.code && helpersRef.current.refreshAllCodeBlockHighlighting) {
+          try {
+            helpersRef.current.refreshAllCodeBlockHighlighting(editorRef);
+          } catch (error) {
+            console.warn('Error refreshing code highlighting:', error);
+          }
+        }
+        if (componentsLoaded.table && helpersRef.current.setupTableHandlers) {
+          try {
+            helpersRef.current.setupTableHandlers(editorRef);
+          } catch (error) {
+            console.warn('Error setting up table handlers:', error);
+          }
+        }
+      }
+    }, 50);
+  };
+}, [onChange, componentsLoaded]);
 
   const handleChange = useCallback(() => {
     debouncedHandleChange();
@@ -920,6 +930,10 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
     editorRef.current.addEventListener('editTable', handleEditTable as EventListener);
     
     return () => {
+          if (editorRef.current && (editorRef.current as any)._imageObserver) {
+      (editorRef.current as any)._imageObserver.disconnect();
+    }
+    
       if (editorRef.current) {
         editorRef.current.removeEventListener('editTable', handleEditTable as EventListener);
       }

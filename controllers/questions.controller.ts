@@ -774,3 +774,39 @@ export const verifyCsv = async (req: NextApiRequest, res: NextApiResponse) => {
     });
   }
 };
+
+// Add these functions to your existing questions.controller.ts
+export const getQuestionWithAnswer = async (req: NextApiRequest, res: NextApiResponse) => {
+  const id = parseInt(req.query.id as string);
+  try {
+    const question = await questionModel.getQuestionWithAnswerById(id);
+    if (!question) {
+      return res.status(404).json({ error: 'Question not found' });
+    }
+    res.status(200).json(question);
+  } catch (error) {
+    console.error('[getQuestionWithAnswer] Error:', error);
+    res.status(500).json({ error: 'Failed to fetch question with answer' });
+  }
+};
+
+
+// controllers/questions.controller.ts - Update searchQuestionsForPractice
+export const searchQuestionsForPractice = async (req: NextApiRequest, res: NextApiResponse) => {
+  const { search, limit = 20 } = req.query;
+
+  try {
+    const results = await questionModel.searchQuestionsForPracticeByCode(
+      search as string, 
+      parseInt(limit.toString())
+    );
+    
+    return res.status(200).json({
+      message: 'Questions retrieved successfully',
+      data: results,
+    });
+  } catch (error: any) {
+    console.error('[searchQuestionsForPractice] Error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+};

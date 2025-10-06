@@ -190,6 +190,7 @@ export interface BooleanFieldProps {
 export interface EnhancedSearchSingleProps extends SearchSingleProps {
   preserveExistingParams?: boolean;
   customSearchParam?: string;
+  transformResponse?: (response: any) => SelectOption[];s
 }
 
 // Custom hook for debouncing
@@ -400,6 +401,7 @@ export const SearchSingleField: React.FC<EnhancedSearchSingleProps> = ({
   debounceMs = 300,
   preserveExistingParams = false,
   customSearchParam = 'search',
+  transformResponse,
   icon,
   onRefresh,
   onClear
@@ -471,22 +473,32 @@ export const SearchSingleField: React.FC<EnhancedSearchSingleProps> = ({
     }
   };
 
-  const fetchOptions = async (searchValue: string) => {
+ const fetchOptions = async (searchValue: string) => {
     if (!apiEndpoint) return;
     
     setIsLoading(true);
     try {
       const endpoint = buildApiEndpoint(apiEndpoint, searchValue);
-      const data = await apiClient.get(endpoint);
-      setOptions(data);
+      const response = await apiClient.get(endpoint);
+      
+      // Gunakan transformResponse jika ada, otherwise handle nested data
+      let optionsData;
+      if (transformResponse) {
+        optionsData = transformResponse(response);
+      } else {
+        // Default transformation untuk nested response
+        optionsData = response?.data || response?.items || response?.results || response;
+      }
+      
+      setOptions(Array.isArray(optionsData) ? optionsData : []);
     } catch (error) {
       console.error('Failed to search options:', error);
-      setOptions(initialOptions);
+      setOptions([]);
     } finally {
       setIsLoading(false);
     }
   };
-
+  
   useEffect(() => {
     if (debouncedSearchTerm !== '' || !apiEndpoint) {
       fetchOptions(debouncedSearchTerm);

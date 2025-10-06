@@ -1,3 +1,4 @@
+// pages/exam/TrueFalse.tsx
 'use client';
 export async function getServerSideProps() {
   return { props: {} };      // lewati SSG, hanya SSR/CSR

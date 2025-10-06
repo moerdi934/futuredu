@@ -695,6 +695,7 @@ export const ButtonGradient = forwardRef<HTMLButtonElement, ButtonTemplateProps>
         focusRingColor: colors.primary + '50',
       }}
       aria-label={text}
+       type="button"
     >
       <div className="tw-absolute tw-inset-0 tw-bg-gradient-to-r tw-from-white tw-to-transparent tw-opacity-0 group-hover:tw-opacity-20 tw-transition tw-duration-300"></div>
       
@@ -909,6 +910,7 @@ export const ButtonProfessional = forwardRef<HTMLButtonElement, ButtonTemplatePr
         focusRingColor: colors.primary + '50',
       }}
       aria-label={text}
+       type="button"
     >
       {children ? (
         <div className="tw-flex tw-items-center tw-justify-center">

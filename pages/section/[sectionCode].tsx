@@ -31,10 +31,10 @@ import {
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
+import Script from 'next/script';
 import ExamModal from '../try-out/ExamModal';
 import DrillModal from '../drill/DrillModal';
-import NavigationBar from '@/ components/layout/NavigationBar';
-
+import NavigationBar from '../../components/layout/NavigationBar';
 
 interface Material {
   id: number;
@@ -220,6 +220,9 @@ const SectionPage: React.FC = () => {
   const [cartSuccess, setCartSuccess] = useState(false);
   const [cartError, setCartError] = useState<string | null>(null);
 
+  // State untuk practice question handler loaded
+  const [practiceHandlerLoaded, setPracticeHandlerLoaded] = useState(false);
+
   // Tracking state via refs
   const trackingRef = useRef<{
     materialId: number | null;
@@ -242,6 +245,9 @@ const SectionPage: React.FC = () => {
   const [examId, setExamId] = useState<number | null>(null);
   const [currentTopicId, setCurrentTopicId] = useState<number | null>(null);
 
+  // Ref untuk content area agar bisa reinitialize practice questions
+  const contentRef = useRef<HTMLDivElement>(null);
+
   // Cek resolusi untuk sidebar
   useEffect(() => {
     const checkMobile = () => {
@@ -256,6 +262,18 @@ const SectionPage: React.FC = () => {
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Reinitialize practice questions ketika content berubah
+  useEffect(() => {
+    if (practiceHandlerLoaded && materialDetail?.content) {
+      // Delay sedikit untuk memastikan DOM sudah terupdate
+      setTimeout(() => {
+        if (window.PracticeQuestionHandler) {
+          window.PracticeQuestionHandler.init();
+        }
+      }, 100);
+    }
+  }, [materialDetail?.content, practiceHandlerLoaded]);
 
   // Fetch detail materi saat selectedMaterialId berubah
   useEffect(() => {
@@ -483,7 +501,6 @@ const SectionPage: React.FC = () => {
     topicId: number,
     materialId?: number
   ) => {
-    // Check entitlement first
     if (!selectedSection?.isEntitled) {
       setShowCartModal(true);
       return;
@@ -561,7 +578,7 @@ const SectionPage: React.FC = () => {
     }
   };
 
-  // Function untuk tambah ke keranjang (tanpa refresh)
+  // Function untuk tambah ke keranjang
   const handleAddToCart = async () => {
     if (!selectedSection) return;
 
@@ -575,12 +592,10 @@ const SectionPage: React.FC = () => {
         throw new Error('Anda harus login terlebih dahulu');
       }
 
-      // API call untuk tambah ke keranjang
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/cart/add`,
         {
           course_string: selectedSection.courseString,
-          // tambahkan field lain sesuai kebutuhan API
         },
         {
           headers: {
@@ -661,7 +676,6 @@ const SectionPage: React.FC = () => {
 
   // Navigasi ke konten berikutnya
   const handleNext = () => {
-    // Check entitlement
     if (!selectedSection?.isEntitled) {
       setShowCartModal(true);
       return;
@@ -787,7 +801,6 @@ const SectionPage: React.FC = () => {
 
   // Mulai quiz atau drill
   const startQuizOrDrill = (type: 'quiz' | 'drill', id: number, topicId: number) => {
-    // Check entitlement
     if (!selectedSection?.isEntitled) {
       setShowCartModal(true);
       return;
@@ -824,7 +837,6 @@ const SectionPage: React.FC = () => {
         start_time: startTime.toISOString(),
         elapsed_time: elapsedTime
       };
-      console.log('Final session:', record);
 
       const authToken = localStorage.getItem('authToken');
       if (authToken) {
@@ -977,1004 +989,1021 @@ const SectionPage: React.FC = () => {
   }
 
   return (
-    <div className="tw-bg-gradient-to-br tw-from-purple-100 tw-via-pink-50 tw-to-indigo-100 tw-min-h-[125vh]">
-      <NavigationBar></NavigationBar>
-      <Container fluid className="tw-px-0 md:tw-px-4 md:tw-py-10 tw-min-h-screen">
-        <div className="tw-relative">
-          {markingSuccess && (
-            <Alert variant="success" className="tw-fixed tw-top-4 tw-right-4 tw-z-50 tw-shadow-lg tw-animate-fadeIn">
-              <div className="tw-flex tw-items-center tw-gap-2">
-                <Check className="tw-text-success" size={20} />
-                <span>Berhasil ditandai selesai!</span>
-              </div>
-            </Alert>
-          )}
+    <>
+      {/* Load Practice Question Handler Script */}
+      <Script 
+        src="/practiceQuestionHandler.js" 
+        strategy="afterInteractive"
+        onLoad={() => {
+          console.log('Practice Question Handler loaded');
+          setPracticeHandlerLoaded(true);
+        }}
+        onError={(e) => {
+          console.error('Failed to load Practice Question Handler:', e);
+        }}
+      />
 
-          {markingError && (
-            <Alert variant="danger" className="tw-fixed tw-top-4 tw-right-4 tw-z-50 tw-shadow-lg tw-animate-fadeIn">
-              <div className="tw-flex tw-items-center tw-gap-2">
-                <X className="tw-text-danger" size={20} />
-                <span>{markingError}</span>
-              </div>
-            </Alert>
-          )}
-
-          {/* Alert untuk isEntitled false */}
-          {!selectedSection.isEntitled && (
-            <Alert variant="warning" className="tw-mb-6 tw-border-2 tw-border-yellow-400 tw-shadow-lg">
-              <div className="tw-flex tw-items-center tw-gap-3">
-                <Lock className="tw-text-yellow-700" size={24} />
-                <div className="tw-flex-1">
-                  <h5 className="tw-text-yellow-800 tw-font-bold tw-mb-1">
-                    Preview Mode - Akses Terbatas
-                  </h5>
-                  <p className="tw-text-yellow-700 tw-mb-0">
-                    Anda dapat melihat preview materi, tetapi tidak dapat menandai selesai atau melanjutkan. 
-                    Beli course ini untuk akses penuh!
-                  </p>
+      <div className="tw-bg-gradient-to-br tw-from-purple-100 tw-via-pink-50 tw-to-indigo-100 tw-min-h-[125vh]">
+        <NavigationBar />
+        <Container fluid className="tw-px-0 md:tw-px-4 md:tw-py-10 tw-min-h-screen">
+          <div className="tw-relative">
+            {markingSuccess && (
+              <Alert variant="success" className="tw-fixed tw-top-4 tw-right-4 tw-z-50 tw-shadow-lg tw-animate-fadeIn">
+                <div className="tw-flex tw-items-center tw-gap-2">
+                  <Check className="tw-text-success" size={20} />
+                  <span>Berhasil ditandai selesai!</span>
                 </div>
-              </div>
-            </Alert>
-          )}
-          
-          <Row>
-            <Col 
-              xs={12} 
-              lg={sidebarCollapsed ? 1 : 4} 
-              className={`tw-mb-4 lg:tw-mb-0 tw-transition-all tw-duration-300 ${
-                isMobile ? 'tw-fixed tw-top-0 tw-left-0 tw-w-full tw-z-50' : ''
-              } ${isMobile && sidebarCollapsed ? 'tw-hidden' : ''}`}
-            >
-              {isMobile && !sidebarCollapsed && (
-                <div 
-                  className="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-z-40"
-                  onClick={() => setSidebarCollapsed(true)}
-                />
-              )}
-              <Card className={`tw-border-0 tw-shadow-2xl tw-bg-white tw-rounded-2xl tw-overflow-hidden tw-relative tw-z-50 ${
-                isMobile ? 'tw-m-4 tw-max-h-[90vh]' : 'tw-sticky'
-              }`} style={!isMobile ? {top: '20px', maxHeight: 'calc(125vh - 40px)', height: 'fit-content'} : {}}>
-                <Card.Header className="tw-bg-gradient-to-r tw-from-purple-600 tw-via-purple-700 tw-to-indigo-600 tw-text-white tw-p-4 tw-relative tw-overflow-hidden">
-                  <div className="tw-absolute tw-top-0 tw-left-0 tw-w-20 tw-h-20 tw-bg-white tw-opacity-10 tw-rounded-full tw--ml-10 tw--mt-10"></div>
-                  <div className="tw-flex tw-justify-between tw-items-center tw-relative tw-z-10">
-                    {!sidebarCollapsed && (
-                      <div className="tw-flex-1 tw-mr-3">
-                        <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
-                          <BookOpen className="tw-text-white" size={20} />
-                          <h3 className="tw-text-xs sm:tw-text-sm md:tw-text-lg tw-font-bold tw-mb-0 tw-truncate">
-                            {selectedSection.title}
-                          </h3>
-                        </div>
-                        <div className="tw-flex tw-items-center tw-gap-3 tw-flex-wrap">
-                          <Badge bg="light" text="dark" className="tw-text-xs tw-flex tw-items-center tw-gap-1">
-                            <Clock size={10} />
-                            {formatDuration(selectedSection.duration)}
-                          </Badge>
-                          <Badge bg="light" text="dark" className="tw-text-xs">
-                            Bagian {selectedSection.sectionPosition}
-                          </Badge>
-                          {!selectedSection.isEntitled && (
-                            <Badge bg="warning" className="tw-text-xs tw-flex tw-items-center tw-gap-1">
-                              <Lock size={10} />
-                              Preview
+              </Alert>
+            )}
+
+            {markingError && (
+              <Alert variant="danger" className="tw-fixed tw-top-4 tw-right-4 tw-z-50 tw-shadow-lg tw-animate-fadeIn">
+                <div className="tw-flex tw-items-center tw-gap-2">
+                  <X className="tw-text-danger" size={20} />
+                  <span>{markingError}</span>
+                </div>
+              </Alert>
+            )}
+
+            {!selectedSection.isEntitled && (
+              <Alert variant="warning" className="tw-mb-6 tw-border-2 tw-border-yellow-400 tw-shadow-lg">
+                <div className="tw-flex tw-items-center tw-gap-3">
+                  <Lock className="tw-text-yellow-700" size={24} />
+                  <div className="tw-flex-1">
+                    <h5 className="tw-text-yellow-800 tw-font-bold tw-mb-1">
+                      Preview Mode - Akses Terbatas
+                    </h5>
+                    <p className="tw-text-yellow-700 tw-mb-0">
+                      Anda dapat melihat preview materi, tetapi tidak dapat menandai selesai atau melanjutkan. 
+                      Beli course ini untuk akses penuh!
+                    </p>
+                  </div>
+                </div>
+              </Alert>
+            )}
+            
+            <Row>
+              <Col 
+                xs={12} 
+                lg={sidebarCollapsed ? 1 : 4} 
+                className={`tw-mb-4 lg:tw-mb-0 tw-transition-all tw-duration-300 ${
+                  isMobile ? 'tw-fixed tw-top-0 tw-left-0 tw-w-full tw-z-50' : ''
+                } ${isMobile && sidebarCollapsed ? 'tw-hidden' : ''}`}
+              >
+                {isMobile && !sidebarCollapsed && (
+                  <div 
+                    className="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-z-40"
+                    onClick={() => setSidebarCollapsed(true)}
+                  />
+                )}
+                <Card className={`tw-border-0 tw-shadow-2xl tw-bg-white tw-rounded-2xl tw-overflow-hidden tw-relative tw-z-50 ${
+                  isMobile ? 'tw-m-4 tw-max-h-[90vh]' : 'tw-sticky'
+                }`} style={!isMobile ? {top: '20px', maxHeight: 'calc(125vh - 40px)', height: 'fit-content'} : {}}>
+                  <Card.Header className="tw-bg-gradient-to-r tw-from-purple-600 tw-via-purple-700 tw-to-indigo-600 tw-text-white tw-p-4 tw-relative tw-overflow-hidden">
+                    <div className="tw-absolute tw-top-0 tw-left-0 tw-w-20 tw-h-20 tw-bg-white tw-opacity-10 tw-rounded-full tw--ml-10 tw--mt-10"></div>
+                    <div className="tw-flex tw-justify-between tw-items-center tw-relative tw-z-10">
+                      {!sidebarCollapsed && (
+                        <div className="tw-flex-1 tw-mr-3">
+                          <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
+                            <BookOpen className="tw-text-white" size={20} />
+                            <h3 className="tw-text-xs sm:tw-text-sm md:tw-text-lg tw-font-bold tw-mb-0 tw-truncate">
+                              {selectedSection.title}
+                            </h3>
+                          </div>
+                          <div className="tw-flex tw-items-center tw-gap-3 tw-flex-wrap">
+                            <Badge bg="light" text="dark" className="tw-text-xs tw-flex tw-items-center tw-gap-1">
+                              <Clock size={10} />
+                              {formatDuration(selectedSection.duration)}
                             </Badge>
-                          )}
+                            <Badge bg="light" text="dark" className="tw-text-xs">
+                              Bagian {selectedSection.sectionPosition}
+                            </Badge>
+                            {!selectedSection.isEntitled && (
+                              <Badge bg="warning" className="tw-text-xs tw-flex tw-items-center tw-gap-1">
+                                <Lock size={10} />
+                                Preview
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    <div className="tw-flex tw-items-center tw-gap-2">
-                      <Button
-                        variant="outline-light"
-                        size="sm"
-                        className="tw-border-2 tw-p-2 tw-rounded-lg tw-hover:tw-bg-white tw-hover:tw-text-purple-600 tw-transition-colors"
-                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                      >
-                        {sidebarCollapsed ? <Menu size={16} /> : <X size={16} />}
-                      </Button>
-                      {(!sidebarCollapsed || !isMobile) && (
+                      )}
+                      <div className="tw-flex tw-items-center tw-gap-2">
                         <Button
                           variant="outline-light"
                           size="sm"
-                          className="tw-border-2 tw-rounded-lg tw-hover:tw-bg-white tw-hover:tw-text-purple-600 tw-transition-colors tw-px-2 sm:tw-px-3"
-                          as={Link}
-                          href={`/course/${selectedSection.courseString}`}
+                          className="tw-border-2 tw-p-2 tw-rounded-lg tw-hover:tw-bg-white tw-hover:tw-text-purple-600 tw-transition-colors"
+                          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                         >
-                          <ChevronsLeft size={16} />
-                          <span className="tw-hidden sm:tw-inline tw-ml-1">Course</span>
+                          {sidebarCollapsed ? <Menu size={16} /> : <X size={16} />}
                         </Button>
-                      )}
-                    </div>
-                  </div>
-                </Card.Header>
-                {!sidebarCollapsed && (
-                <Card.Body className={`tw-p-0 tw-overflow-y-auto tw-scrollbar-thin tw-scrollbar-thumb-purple-300 tw-scrollbar-track-purple-100 ${
-                  isMobile ? 'tw-max-h-[60vh]' : ''
-                }`} style={!isMobile ? {maxHeight: 'calc(125vh - 280px)'} : {}}>
-                  <div className="tw-p-4 tw-bg-gradient-to-r tw-from-purple-50 tw-to-pink-50">
-                    <h4 className="tw-text-purple-800 tw-font-bold tw-text-sm tw-mb-3">{selectedSection.courseTitle}</h4>
-                    <p className="tw-text-gray-600 tw-text-sm">{selectedSection.description}</p>
-                  </div>
-                  
-                  {selectedSection.topics.map((topic, topicIndex) => {
-                    const topicProgress = calculateTopicProgress(topic);
-                    const extraProgress = calculateExtraProgress(topic);
-                    return (
-                      <div key={topic.id} className="tw-border-b tw-border-purple-100 last:tw-border-b-0">
-                        <div
-                          className="tw-p-4 tw-cursor-pointer tw-hover:tw-bg-gradient-to-r tw-hover:tw-from-purple-50 tw-hover:tw-to-pink-50 tw-transition-all tw-duration-200"
-                          onClick={() => toggleTopic(topic.id)}
-                        >
-                          <div className="tw-flex tw-justify-between tw-items-center">
-                            <div className="tw-flex-1">
-                              <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2 tw-flex-wrap">
-                                <div className="tw-bg-gradient-to-r tw-from-purple-400 tw-to-pink-400 tw-text-white tw-rounded-full tw-w-6 tw-h-6 tw-flex tw-items-center tw-justify-center tw-text-xs tw-font-bold">
-                                  {topicIndex + 1}
-                                </div>
-                                <Badge bg={topicProgress === 100 ? 'success' : 'secondary'} className="tw-text-xs tw-flex tw-items-center tw-gap-1">
-                                  {topicProgress === 100 && <Check size={10} />}
-                                  {topicProgress}% 
-                                </Badge>
-                                {extraProgress > 0 && (
-                                  <Badge bg={getExtraProgressColor(extraProgress)} className="tw-text-xs tw-flex tw-items-center tw-gap-1">
-                                    <Star size={10} />
-                                    +{extraProgress}% Ekstra
-                                  </Badge>
-                                )}
-                                <span className="tw-text-purple-800 tw-font-semibold tw-text-xs md:tw-text-sm tw-break-words">
-                                  {topic.title}
-                                </span>
-                              </div>
-                              <ProgressBar 
-                                variant={getProgressColor(topicProgress)} 
-                                now={topicProgress} 
-                                className="tw-h-2 tw-rounded-full"
-                              />
-                            </div>
-                            <div className="tw-ml-3">
-                              <div className="tw-bg-purple-100 tw-p-1 tw-rounded-full">
-                                {expandedTopics.has(topic.id) ? (
-                                  <ChevronUp className="tw-text-purple-600" size={18} />
-                                ) : (
-                                  <ChevronDown className="tw-text-purple-600" size={18} />
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        {expandedTopics.has(topic.id) && (
-                          <div className="tw-bg-gradient-to-r tw-from-purple-25 tw-to-pink-25 tw-border-t tw-border-purple-100">
-                            {topic.materials.map(material => (
-                              <div
-                                key={material.id}
-                                className={`tw-px-6 tw-py-3 tw-cursor-pointer tw-border-b tw-border-purple-50 tw-transition-colors
-                                  ${!material.isAccessible ? 'tw-bg-gray-100 tw-cursor-not-allowed' : 'tw-hover:tw-bg-purple-100'}`}
-                                onClick={() => {
-                                  if (!material.isAccessible) return;
-                                  selectContent(topic.id, 'material', material.id);
-                                }}
-                              >
-                                <div className="tw-flex tw-items-center tw-gap-2">
-                                  <BookOpen className="tw-text-purple-600" size={14} />
-                                  <span className="tw-flex-1 tw-truncate">{material.title}</span>
-                                  {completedMaterials.has(material.id) && (
-                                    <Badge bg="success" className="tw-text-xs">
-                                      <Check size={10} />
-                                    </Badge>
-                                  )}
-                                  {!material.isAccessible && (
-                                    <span className="tw-ml-2 tw-text-red-500">
-                                      <Lock size={12} />
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-
-                            {topic.quiz.quiz_question_count > 0 && (
-                              <div
-                                className={`tw-px-6 tw-py-3 tw-cursor-pointer tw-border-b tw-border-purple-50 tw-transition-colors
-                                  ${!topic.quizAccessible ? 'tw-bg-gray-100 tw-cursor-not-allowed' : 'tw-hover:tw-bg-purple-100'}`}
-                                onClick={() => {
-                                  if (!topic.quizAccessible) return;
-                                  selectContent(topic.id, 'quiz');
-                                }}
-                              >
-                                <div className="tw-flex tw-items-center tw-gap-2">
-                                  <FileText className="tw-text-purple-600" size={14} />
-                                  <span className="tw-flex-1">Quiz ({topic.quiz.quiz_question_count} soal)</span>
-                                  {completedQuizzes.has(topic.id) && (
-                                    <Badge bg="success" className="tw-text-xs">
-                                      <Check size={10} />
-                                    </Badge>
-                                  )}
-                                  {!topic.quizAccessible && (
-                                    <span className="tw-ml-2 tw-text-red-500">
-                                      <Lock size={12} />
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {topic.drill.drill_question_count > 0 && (
-                              <div
-                                className={`tw-px-6 tw-py-3 tw-cursor-pointer tw-transition-colors
-                                  ${!topic.drillAccessible ? 'tw-bg-gray-100 tw-cursor-not-allowed' : 'tw-hover:tw-bg-purple-100'}`}
-                                onClick={() => {
-                                  if (!topic.drillAccessible) return;
-                                  selectContent(topic.id, 'drill');
-                                }}
-                              >
-                                <div className="tw-flex tw-items-center tw-gap-2">
-                                  <CheckSquare className="tw-text-purple-600" size={14} />
-                                  <span className="tw-flex-1">Drill ({topic.drill.drill_question_count} latihan)</span>
-                                  {completedDrills.has(topic.id) && (
-                                    <Badge bg="success" className="tw-text-xs">
-                                      <Check size={10} />
-                                    </Badge>
-                                  )}
-                                  {!topic.drillAccessible && (
-                                    <span className="tw-ml-2 tw-text-red-500">
-                                      <Lock size={12} />
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                        {(!sidebarCollapsed || !isMobile) && (
+                          <Button
+                            variant="outline-light"
+                            size="sm"
+                            className="tw-border-2 tw-rounded-lg tw-hover:tw-bg-white tw-hover:tw-text-purple-600 tw-transition-colors tw-px-2 sm:tw-px-3"
+                            as={Link}
+                            href={`/course/${selectedSection.courseString}`}
+                          >
+                            <ChevronsLeft size={16} />
+                            <span className="tw-hidden sm:tw-inline tw-ml-1">Course</span>
+                          </Button>
                         )}
                       </div>
-                    );
-                  })}
-                </Card.Body>
-              )}
-              </Card>
-            </Col>
-
-            <Col xs={12} lg={sidebarCollapsed ? 11 : 8} className={`${isMobile && !sidebarCollapsed ? 'tw-blur-sm tw-pointer-events-none' : ''}`}>
-              <div className="tw-space-y-6 tw-mx-2">
-                {isMobile && sidebarCollapsed && (
-                  <div className="tw-sticky tw-top-0 tw-z-40 tw-flex tw-justify-between tw-items-center tw-bg-white tw-p-4 tw-rounded-xl tw-shadow-lg tw-border tw-border-purple-200 tw-mb-6">
-                    <div className="tw-flex tw-items-center tw-gap-3">
-                      <div className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-pink-500 tw-p-2 tw-rounded-full">
-                        <BookOpen className="tw-text-white" size={16} />
-                      </div>
-                      <span className="tw-text-purple-800 tw-font-bold tw-text-sm tw-truncate">
-                        {selectedSection.title}
-                      </span>
-                      {!selectedSection.isEntitled && (
-                        <Badge bg="warning" className="tw-text-xs tw-flex tw-items-center tw-gap-1">
-                          <Lock size={10} />
-                          Preview
-                        </Badge>
-                      )}
                     </div>
-                    <Button
-                      variant="outline-primary"
-                      size="sm"
-                      className="tw-rounded-lg tw-flex-shrink-0"
-                      onClick={() => setSidebarCollapsed(false)}
-                    >
-                      <Menu size={16} />
-                    </Button>
-                  </div>
-                )}
-
-                {!selectedTopicId ? (
-                  <Card className="tw-border-0 tw-shadow-2xl tw-bg-white tw-rounded-2xl tw-overflow-hidden">
-                    <Card.Header className="tw-bg-gradient-to-r tw-from-purple-500 tw-via-purple-600 tw-to-indigo-600 tw-text-white tw-p-6 tw-relative tw-overflow-hidden">
-                      <div className="tw-absolute tw-top-0 tw-right-0 tw-w-32 tw-h-32 tw-bg-white tw-opacity-10 tw-rounded-full tw--mr-16 tw--mt-16"></div>
-                      <div className="tw-flex tw-items-center tw-justify-center tw-gap-3 tw-relative tw-z-10">
-                        <div className="tw-bg-white tw-bg-opacity-20 tw-p-3 tw-rounded-full tw-animate-pulse">
-                          <Target className="tw-text-white" size={28} />
-                        </div>
-                        <h2 className="tw-text-xl md:tw-text-2xl tw-font-bold tw-mb-0 tw-text-center">
-                          Pilih Topik yang Ingin Dipelajari!
-                        </h2>
-                      </div>
-                    </Card.Header>
-                    <Card.Body className="tw-p-6 tw-bg-gradient-to-br tw-from-purple-50 tw-to-pink-50">
-                      <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-6">
-                        {selectedSection.topics.map((topic, topicIndex) => {
-                          const topicProgress = calculateTopicProgress(topic);
-                          const extraProgress = calculateExtraProgress(topic);
-                          return (
-                            <div
-                              key={topic.id}
-                              className="tw-group tw-cursor-pointer tw-bg-white tw-border-2 tw-border-purple-200 tw-rounded-xl tw-p-6 tw-hover:tw-shadow-xl tw-hover:tw-border-purple-400 tw-transition-all tw-duration-300 tw-hover:tw-scale-105 tw-hover:tw-bg-gradient-to-br tw-hover:tw-from-purple-50 tw-hover:tw-to-pink-50"
-                              onClick={() => {
-                                if (topic.materials.length > 0) {
-                                  selectContent(topic.id, 'material', topic.materials[0].id);
-                                } else if (topic.quiz.quiz_question_count > 0) {
-                                  selectContent(topic.id, 'quiz');
-                                } else if (topic.drill.drill_question_count > 0) {
-                                  selectContent(topic.id, 'drill');
-                                }
-                              }}
-                            >
-                              <div className="tw-flex tw-items-start tw-justify-between tw-mb-4">
-                                <div className="tw-flex tw-items-center tw-gap-3">
-                                  <div className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-pink-500 tw-text-white tw-rounded-full tw-w-10 tw-h-10 tw-flex tw-items-center tw-justify-center tw-font-bold tw-text-lg tw-shadow-lg">
+                  </Card.Header>
+                  {!sidebarCollapsed && (
+                  <Card.Body className={`tw-p-0 tw-overflow-y-auto tw-scrollbar-thin tw-scrollbar-thumb-purple-300 tw-scrollbar-track-purple-100 ${
+                    isMobile ? 'tw-max-h-[60vh]' : ''
+                  }`} style={!isMobile ? {maxHeight: 'calc(125vh - 280px)'} : {}}>
+                    <div className="tw-p-4 tw-bg-gradient-to-r tw-from-purple-50 tw-to-pink-50">
+                      <h4 className="tw-text-purple-800 tw-font-bold tw-text-sm tw-mb-3">{selectedSection.courseTitle}</h4>
+                      <p className="tw-text-gray-600 tw-text-sm">{selectedSection.description}</p>
+                    </div>
+                    
+                    {selectedSection.topics.map((topic, topicIndex) => {
+                      const topicProgress = calculateTopicProgress(topic);
+                      const extraProgress = calculateExtraProgress(topic);
+                      return (
+                        <div key={topic.id} className="tw-border-b tw-border-purple-100 last:tw-border-b-0">
+                          <div
+                            className="tw-p-4 tw-cursor-pointer tw-hover:tw-bg-gradient-to-r tw-hover:tw-from-purple-50 tw-hover:tw-to-pink-50 tw-transition-all tw-duration-200"
+                            onClick={() => toggleTopic(topic.id)}
+                          >
+                            <div className="tw-flex tw-justify-between tw-items-center">
+                              <div className="tw-flex-1">
+                                <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2 tw-flex-wrap">
+                                  <div className="tw-bg-gradient-to-r tw-from-purple-400 tw-to-pink-400 tw-text-white tw-rounded-full tw-w-6 tw-h-6 tw-flex tw-items-center tw-justify-center tw-text-xs tw-font-bold">
                                     {topicIndex + 1}
                                   </div>
-                                  <div>
-                                    <h3 className="tw-text-purple-800 tw-font-bold tw-text-lg tw-mb-1">
-                                      {topic.title}
-                                    </h3>
-                                    <div className="tw-flex tw-gap-2 tw-flex-wrap">
-                                      <Badge bg={topicProgress === 100 ? 'success' : topicProgress >= 50 ? 'warning' : 'secondary'} className="tw-flex tw-items-center tw-gap-1 tw-text-sm">
-                                        {topicProgress === 100 && <Trophy size={12} />}
-                                        Progress: {topicProgress}%
-                                      </Badge>
-                                      {extraProgress > 0 && (
-                                        <Badge bg={getExtraProgressColor(extraProgress)} className="tw-flex tw-items-center tw-gap-1 tw-text-sm">
-                                          <Star size={12} />
-                                          Ekstra: {extraProgress}%
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </div>
+                                  <Badge bg={topicProgress === 100 ? 'success' : 'secondary'} className="tw-text-xs tw-flex tw-items-center tw-gap-1">
+                                    {topicProgress === 100 && <Check size={10} />}
+                                    {topicProgress}% 
+                                  </Badge>
+                                  {extraProgress > 0 && (
+                                    <Badge bg={getExtraProgressColor(extraProgress)} className="tw-text-xs tw-flex tw-items-center tw-gap-1">
+                                      <Star size={10} />
+                                      +{extraProgress}% Ekstra
+                                    </Badge>
+                                  )}
+                                  <span className="tw-text-purple-800 tw-font-semibold tw-text-xs md:tw-text-sm tw-break-words">
+                                    {topic.title}
+                                  </span>
                                 </div>
-                                <div className="tw-bg-purple-100 tw-group-hover:tw-bg-purple-200 tw-p-2 tw-rounded-full tw-transition-colors">
-                                  <ChevronRight className="tw-text-purple-600 tw-group-hover:tw-text-purple-800" size={20} />
-                                </div>
-                              </div>
-
-                              <div className="tw-mb-4">
                                 <ProgressBar 
                                   variant={getProgressColor(topicProgress)} 
                                   now={topicProgress} 
-                                  className="tw-h-3 tw-rounded-full tw-shadow-inner"
+                                  className="tw-h-2 tw-rounded-full"
                                 />
-                                {extraProgress > 0 && (
-                                  <ProgressBar 
-                                    variant={getExtraProgressColor(extraProgress)} 
-                                    now={extraProgress} 
-                                    className="tw-h-2 tw-rounded-full tw-mt-1 tw-bg-opacity-50"
-                                  />
-                                )}
                               </div>
-
-                              <div className="tw-space-y-3">
-                                <div className="tw-flex tw-items-center tw-gap-2 tw-text-sm">
-                                  <BookOpen className="tw-text-purple-600" size={16} />
-                                  <span className="tw-text-purple-700 tw-font-medium">
-                                    {topic.materials.length} Materi Pembelajaran
-                                  </span>
-                                </div>
-                                {topic.quiz.quiz_question_count > 0 && (
-                                  <div className="tw-flex tw-items-center tw-gap-2 tw-text-sm">
-                                    <FileText className="tw-text-pink-600" size={16} />
-                                    <span className="tw-text-pink-700 tw-font-medium">
-                                      Quiz dengan {topic.quiz.quiz_question_count} Soal
-                                    </span>
-                                  </div>
-                                )}
-                                {topic.drill.drill_question_count > 0 && (
-                                  <div className="tw-flex tw-items-center tw-gap-2 tw-text-sm">
-                                    <CheckSquare className="tw-text-indigo-600" size={16} />
-                                    <span className="tw-text-indigo-700 tw-font-medium">
-                                      Drill dengan {topic.drill.drill_question_count} Latihan
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-
-                              {topic.materials.some(m => m.isMandatory) && (
-                                <div className="tw-mt-4 tw-pt-3 tw-border-t tw-border-purple-200">
-                                  <Badge bg="danger" className="tw-text-xs tw-animate-pulse">
-                                    Ada Materi Wajib
-                                  </Badge>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div className="tw-mt-8 tw-text-center tw-bg-white tw-p-6 tw-rounded-xl tw-border-2 tw-border-purple-200 tw-shadow-lg">
-                        <div className="tw-flex tw-items-center tw-justify-center tw-gap-3 tw-mb-3">
-                          <Heart className="tw-text-pink-500 tw-animate-bounce" size={24} />
-                          <span className="tw-text-purple-700 tw-font-bold tw-text-lg">
-                            Semangat Belajar! 
-                          </span>
-                          <Star className="tw-text-yellow-500 tw-animate-pulse" size={24} />
-                        </div>
-                        <p className="tw-text-gray-600 tw-text-sm">
-                          Pilih topik di atas untuk memulai perjalanan belajar yang seru dan menyenangkan!
-                        </p>
-                      </div>
-                    </Card.Body>
-                  </Card>
-                ) : (
-                  <div className="tw-space-y-6">
-                    {selectedContentType === 'material' && selectedMaterial && (
-                      <Card className="tw-border-0 tw-shadow-2xl tw-bg-white tw-rounded-2xl tw-overflow-hidden">
-                        <Card.Header className="tw-bg-gradient-to-r tw-from-purple-500 tw-via-purple-600 tw-to-indigo-600 tw-text-white tw-p-6 tw-relative tw-overflow-hidden">
-                          <div className="tw-absolute tw-top-0 tw-left-0 tw-w-20 tw-h-20 tw-bg-white tw-opacity-10 tw-rounded-full tw--ml-10 tw--mt-10"></div>
-                          <div className="tw-flex tw-flex-col md:tw-flex-row tw-items-start md:tw-items-center tw-justify-between tw-gap-4 tw-relative tw-z-10">
-                            <div className="tw-flex tw-items-center tw-gap-3 tw-flex-1">
-                              <div className="tw-bg-white tw-bg-opacity-20 tw-p-3 tw-rounded-full">
-                                <BookOpen className="tw-text-white" size={24} />
-                              </div>
-                              <div>
-                                <h3 className="tw-text-lg md:tw-text-xl tw-font-bold tw-mb-1">
-                                  {selectedMaterial.title}
-                                </h3>
-                                <div className="tw-flex tw-items-center tw-gap-2 tw-flex-wrap">
-                                  {selectedMaterial.isMandatory && (
-                                    <Badge bg="warning" className="tw-text-xs tw-animate-pulse">
-                                      Wajib Dipelajari
-                                    </Badge>
-                                  )}
-                                  {selectedMaterial.hasVideo && (
-                                    <Badge bg="info" className="tw-text-xs tw-flex tw-items-center tw-gap-1">
-                                      <Play size={10} />
-                                      Ada Video
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <Button
-                              variant={completedMaterials.has(selectedMaterial.id) ? "success" : "light"}
-                              className="tw-px-4 tw-py-2 tw-rounded-lg tw-font-bold tw-transition-all tw-duration-300 tw-hover:tw-scale-105"
-                              onClick={() => markMaterialComplete(selectedMaterial.id, selectedTopic!.id)}
-                              disabled={markingLoading || completedMaterials.has(selectedMaterial.id) || !selectedSection.isEntitled}
-                            >
-                              {!selectedSection.isEntitled ? (
-                                <div className="tw-flex tw-items-center tw-gap-2">
-                                  <Lock size={16} />
-                                  Terkunci
-                                </div>
-                              ) : markingLoading ? (
-                                <div className="tw-flex tw-items-center tw-gap-2">
-                                  <Spinner animation="border" size="sm" />
-                                  Menandai...
-                                </div>
-                              ) : completedMaterials.has(selectedMaterial.id) ? (
-                                <div className="tw-flex tw-items-center tw-gap-2">
-                                  <Check size={16} />
-                                  Selesai!
-                                </div>
-                              ) : (
-                                <div className="tw-flex tw-items-center tw-gap-2">
-                                  <CheckSquare size={16} />
-                                  Tandai Selesai
-                                </div>
-                              )}
-                            </Button>
-                          </div>
-                        </Card.Header>
-                        <Card.Body className="tw-p-6 tw-bg-gradient-to-br tw-from-purple-25 tw-to-pink-25">
-                          {loadingMaterial ? (
-                            <div className="tw-text-center tw-py-12">
-                              <Spinner animation="border" variant="primary" className="tw-mb-4" />
-                              <h4 className="tw-text-purple-800 tw-font-bold tw-text-xl tw-mb-2">
-                                Memuat Konten Pembelajaran...
-                              </h4>
-                              <p className="tw-text-gray-600">
-                                Mohon tunggu sebentar, kami sedang memuat materi untuk Anda.
-                              </p>
-                            </div>
-                          ) : materialError ? (
-                            <div className="tw-text-center tw-py-12 tw-bg-white tw-rounded-xl tw-shadow-lg tw-border tw-border-red-200">
-                              <div className="tw-inline-block tw-bg-gradient-to-r tw-from-red-600 tw-to-pink-600 tw-text-white tw-p-4 tw-rounded-full tw-mb-4">
-                                <X size={48} />
-                              </div>
-                              <h4 className="tw-text-red-800 tw-font-bold tw-text-xl tw-mb-2">
-                                Gagal Memuat Materi
-                              </h4>
-                              <p className="tw-text-gray-600 tw-mb-6">
-                                {materialError}
-                              </p>
-                              <Button 
-                                variant="danger"
-                                onClick={() => setSelectedMaterialId(selectedMaterialId)}
-                                className="tw-bg-gradient-to-r tw-from-red-600 tw-to-pink-600 tw-border-0"
-                              >
-                                Coba Lagi
-                              </Button>
-                            </div>
-                          ) : materialDetail ? (
-                            <>
-                              {materialDetail.has_video && (
-                                <div className="tw-mb-6 tw-bg-white tw-p-4 tw-rounded-xl tw-shadow-lg tw-border tw-border-purple-200">
-                                  <div className="tw-flex tw-items-center tw-gap-3 tw-mb-4">
-                                    <div className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-pink-500 tw-p-2 tw-rounded-full">
-                                      <Play className="tw-text-white" size={20} />
-                                    </div>
-                                    <h4 className="tw-text-purple-800 tw-font-bold tw-text-lg tw-mb-0">
-                                      Video Pembelajaran
-                                    </h4>
-                                  </div>
-                                  {materialDetail.video_url ? (
-                                    <div className="tw-aspect-video tw-bg-gray-100 tw-rounded-lg tw-overflow-hidden tw-shadow-inner">
-                                      <iframe
-                                        src={materialDetail.video_url}
-                                        className="tw-w-full tw-h-full tw-border-0"
-                                        allowFullScreen
-                                        title="Video Pembelajaran"
-                                      />
-                                    </div>
+                              <div className="tw-ml-3">
+                                <div className="tw-bg-purple-100 tw-p-1 tw-rounded-full">
+                                  {expandedTopics.has(topic.id) ? (
+                                    <ChevronUp className="tw-text-purple-600" size={18} />
                                   ) : (
-                                    <div className="tw-aspect-video tw-bg-gradient-to-br tw-from-purple-100 tw-to-pink-100 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-border-2 tw-border-dashed tw-border-purple-300">
-                                      <div className="tw-text-center">
-                                        <Play className="tw-text-purple-400 tw-mx-auto tw-mb-2" size={48} />
-                                        <p className="tw-text-purple-600 tw-font-medium">
-                                          Video akan muncul di sini
-                                        </p>
+                                    <ChevronDown className="tw-text-purple-600" size={18} />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          {expandedTopics.has(topic.id) && (
+                            <div className="tw-bg-gradient-to-r tw-from-purple-25 tw-to-pink-25 tw-border-t tw-border-purple-100">
+                              {topic.materials.map(material => (
+                                <div
+                                  key={material.id}
+                                  className={`tw-px-6 tw-py-3 tw-cursor-pointer tw-border-b tw-border-purple-50 tw-transition-colors
+                                    ${!material.isAccessible ? 'tw-bg-gray-100 tw-cursor-not-allowed' : 'tw-hover:tw-bg-purple-100'}`}
+                                  onClick={() => {
+                                    if (!material.isAccessible) return;
+                                    selectContent(topic.id, 'material', material.id);
+                                  }}
+                                >
+                                  <div className="tw-flex tw-items-center tw-gap-2">
+                                    <BookOpen className="tw-text-purple-600" size={14} />
+                                    <span className="tw-flex-1 tw-truncate">{material.title}</span>
+                                    {completedMaterials.has(material.id) && (
+                                      <Badge bg="success" className="tw-text-xs">
+                                        <Check size={10} />
+                                      </Badge>
+                                    )}
+                                    {!material.isAccessible && (
+                                      <span className="tw-ml-2 tw-text-red-500">
+                                        <Lock size={12} />
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+
+                              {topic.quiz.quiz_question_count > 0 && (
+                                <div
+                                  className={`tw-px-6 tw-py-3 tw-cursor-pointer tw-border-b tw-border-purple-50 tw-transition-colors
+                                    ${!topic.quizAccessible ? 'tw-bg-gray-100 tw-cursor-not-allowed' : 'tw-hover:tw-bg-purple-100'}`}
+                                  onClick={() => {
+                                    if (!topic.quizAccessible) return;
+                                    selectContent(topic.id, 'quiz');
+                                  }}
+                                >
+                                  <div className="tw-flex tw-items-center tw-gap-2">
+                                    <FileText className="tw-text-purple-600" size={14} />
+                                    <span className="tw-flex-1">Quiz ({topic.quiz.quiz_question_count} soal)</span>
+                                    {completedQuizzes.has(topic.id) && (
+                                      <Badge bg="success" className="tw-text-xs">
+                                        <Check size={10} />
+                                      </Badge>
+                                    )}
+                                    {!topic.quizAccessible && (
+                                      <span className="tw-ml-2 tw-text-red-500">
+                                        <Lock size={12} />
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {topic.drill.drill_question_count > 0 && (
+                                <div
+                                  className={`tw-px-6 tw-py-3 tw-cursor-pointer tw-transition-colors
+                                    ${!topic.drillAccessible ? 'tw-bg-gray-100 tw-cursor-not-allowed' : 'tw-hover:tw-bg-purple-100'}`}
+                                  onClick={() => {
+                                    if (!topic.drillAccessible) return;
+                                    selectContent(topic.id, 'drill');
+                                  }}
+                                >
+                                  <div className="tw-flex tw-items-center tw-gap-2">
+                                    <CheckSquare className="tw-text-purple-600" size={14} />
+                                    <span className="tw-flex-1">Drill ({topic.drill.drill_question_count} latihan)</span>
+                                    {completedDrills.has(topic.id) && (
+                                      <Badge bg="success" className="tw-text-xs">
+                                        <Check size={10} />
+                                      </Badge>
+                                    )}
+                                    {!topic.drillAccessible && (
+                                      <span className="tw-ml-2 tw-text-red-500">
+                                        <Lock size={12} />
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </Card.Body>
+                )}
+                </Card>
+              </Col>
+
+              <Col xs={12} lg={sidebarCollapsed ? 11 : 8} className={`${isMobile && !sidebarCollapsed ? 'tw-blur-sm tw-pointer-events-none' : ''}`}>
+                <div className="tw-space-y-6 tw-mx-2">
+                  {isMobile && sidebarCollapsed && (
+                    <div className="tw-sticky tw-top-0 tw-z-40 tw-flex tw-justify-between tw-items-center tw-bg-white tw-p-4 tw-rounded-xl tw-shadow-lg tw-border tw-border-purple-200 tw-mb-6">
+                      <div className="tw-flex tw-items-center tw-gap-3">
+                        <div className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-pink-500 tw-p-2 tw-rounded-full">
+                          <BookOpen className="tw-text-white" size={16} />
+                        </div>
+                        <span className="tw-text-purple-800 tw-font-bold tw-text-sm tw-truncate">
+                          {selectedSection.title}
+                        </span>
+                        {!selectedSection.isEntitled && (
+                          <Badge bg="warning" className="tw-text-xs tw-flex tw-items-center tw-gap-1">
+                            <Lock size={10} />
+                            Preview
+                          </Badge>
+                        )}
+                      </div>
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        className="tw-rounded-lg tw-flex-shrink-0"
+                        onClick={() => setSidebarCollapsed(false)}
+                      >
+                        <Menu size={16} />
+                      </Button>
+                    </div>
+                  )}
+
+                  {!selectedTopicId ? (
+                    <Card className="tw-border-0 tw-shadow-2xl tw-bg-white tw-rounded-2xl tw-overflow-hidden">
+                      <Card.Header className="tw-bg-gradient-to-r tw-from-purple-500 tw-via-purple-600 tw-to-indigo-600 tw-text-white tw-p-6 tw-relative tw-overflow-hidden">
+                        <div className="tw-absolute tw-top-0 tw-right-0 tw-w-32 tw-h-32 tw-bg-white tw-opacity-10 tw-rounded-full tw--mr-16 tw--mt-16"></div>
+                        <div className="tw-flex tw-items-center tw-justify-center tw-gap-3 tw-relative tw-z-10">
+                          <div className="tw-bg-white tw-bg-opacity-20 tw-p-3 tw-rounded-full tw-animate-pulse">
+                            <Target className="tw-text-white" size={28} />
+                          </div>
+                          <h2 className="tw-text-xl md:tw-text-2xl tw-font-bold tw-mb-0 tw-text-center">
+                            Pilih Topik yang Ingin Dipelajari!
+                          </h2>
+                        </div>
+                      </Card.Header>
+                      <Card.Body className="tw-p-6 tw-bg-gradient-to-br tw-from-purple-50 tw-to-pink-50">
+                        <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-6">
+                          {selectedSection.topics.map((topic, topicIndex) => {
+                            const topicProgress = calculateTopicProgress(topic);
+                            const extraProgress = calculateExtraProgress(topic);
+                            return (
+                              <div
+                                key={topic.id}
+                                className="tw-group tw-cursor-pointer tw-bg-white tw-border-2 tw-border-purple-200 tw-rounded-xl tw-p-6 tw-hover:tw-shadow-xl tw-hover:tw-border-purple-400 tw-transition-all tw-duration-300 tw-hover:tw-scale-105 tw-hover:tw-bg-gradient-to-br tw-hover:tw-from-purple-50 tw-hover:tw-to-pink-50"
+                                onClick={() => {
+                                  if (topic.materials.length > 0) {
+                                    selectContent(topic.id, 'material', topic.materials[0].id);
+                                  } else if (topic.quiz.quiz_question_count > 0) {
+                                    selectContent(topic.id, 'quiz');
+                                  } else if (topic.drill.drill_question_count > 0) {
+                                    selectContent(topic.id, 'drill');
+                                  }
+                                }}
+                              >
+                                <div className="tw-flex tw-items-start tw-justify-between tw-mb-4">
+                                  <div className="tw-flex tw-items-center tw-gap-3">
+                                    <div className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-pink-500 tw-text-white tw-rounded-full tw-w-10 tw-h-10 tw-flex tw-items-center tw-justify-center tw-font-bold tw-text-lg tw-shadow-lg">
+                                      {topicIndex + 1}
+                                    </div>
+                                    <div>
+                                      <h3 className="tw-text-purple-800 tw-font-bold tw-text-lg tw-mb-1">
+                                        {topic.title}
+                                      </h3>
+                                      <div className="tw-flex tw-gap-2 tw-flex-wrap">
+                                        <Badge bg={topicProgress === 100 ? 'success' : topicProgress >= 50 ? 'warning' : 'secondary'} className="tw-flex tw-items-center tw-gap-1 tw-text-sm">
+                                          {topicProgress === 100 && <Trophy size={12} />}
+                                          Progress: {topicProgress}%
+                                        </Badge>
+                                        {extraProgress > 0 && (
+                                          <Badge bg={getExtraProgressColor(extraProgress)} className="tw-flex tw-items-center tw-gap-1 tw-text-sm">
+                                            <Star size={12} />
+                                            Ekstra: {extraProgress}%
+                                          </Badge>
+                                        )}
                                       </div>
                                     </div>
+                                  </div>
+                                  <div className="tw-bg-purple-100 tw-group-hover:tw-bg-purple-200 tw-p-2 tw-rounded-full tw-transition-colors">
+                                    <ChevronRight className="tw-text-purple-600 tw-group-hover:tw-text-purple-800" size={20} />
+                                  </div>
+                                </div>
+
+                                <div className="tw-mb-4">
+                                  <ProgressBar 
+                                    variant={getProgressColor(topicProgress)} 
+                                    now={topicProgress} 
+                                    className="tw-h-3 tw-rounded-full tw-shadow-inner"
+                                  />
+                                  {extraProgress > 0 && (
+                                    <ProgressBar 
+                                      variant={getExtraProgressColor(extraProgress)} 
+                                      now={extraProgress} 
+                                      className="tw-h-2 tw-rounded-full tw-mt-1 tw-bg-opacity-50"
+                                    />
                                   )}
                                 </div>
-                              )}
 
-                              <div className="tw-bg-white tw-p-6 tw-rounded-xl tw-shadow-lg tw-border tw-border-purple-200">
-                                <div className="tw-flex tw-items-center tw-gap-3 tw-mb-4">
-                                  <div className="tw-bg-gradient-to-r tw-from-indigo-500 tw-to-purple-500 tw-p-2 tw-rounded-full">
-                                    <FileText className="tw-text-white" size={20} />
+                                <div className="tw-space-y-3">
+                                  <div className="tw-flex tw-items-center tw-gap-2 tw-text-sm">
+                                    <BookOpen className="tw-text-purple-600" size={16} />
+                                    <span className="tw-text-purple-700 tw-font-medium">
+                                      {topic.materials.length} Materi Pembelajaran
+                                    </span>
                                   </div>
-                                  <h4 className="tw-text-purple-800 tw-font-bold tw-text-lg tw-mb-0">
-                                    Materi Pembelajaran
-                                  </h4>
+                                  {topic.quiz.quiz_question_count > 0 && (
+                                    <div className="tw-flex tw-items-center tw-gap-2 tw-text-sm">
+                                      <FileText className="tw-text-pink-600" size={16} />
+                                      <span className="tw-text-pink-700 tw-font-medium">
+                                        Quiz dengan {topic.quiz.quiz_question_count} Soal
+                                      </span>
+                                    </div>
+                                  )}
+                                  {topic.drill.drill_question_count > 0 && (
+                                    <div className="tw-flex tw-items-center tw-gap-2 tw-text-sm">
+                                      <CheckSquare className="tw-text-indigo-600" size={16} />
+                                      <span className="tw-text-indigo-700 tw-font-medium">
+                                        Drill dengan {topic.drill.drill_question_count} Latihan
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="tw-prose tw-max-w-none tw-text-gray-700 tw-leading-relaxed">
-                                  {materialDetail.content ? (
-                                    <div dangerouslySetInnerHTML={{ __html: materialDetail.content }} />
+
+                                {topic.materials.some(m => m.isMandatory) && (
+                                  <div className="tw-mt-4 tw-pt-3 tw-border-t tw-border-purple-200">
+                                    <Badge bg="danger" className="tw-text-xs tw-animate-pulse">
+                                      Ada Materi Wajib
+                                    </Badge>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="tw-mt-8 tw-text-center tw-bg-white tw-p-6 tw-rounded-xl tw-border-2 tw-border-purple-200 tw-shadow-lg">
+                          <div className="tw-flex tw-items-center tw-justify-center tw-gap-3 tw-mb-3">
+                            <Heart className="tw-text-pink-500 tw-animate-bounce" size={24} />
+                            <span className="tw-text-purple-700 tw-font-bold tw-text-lg">
+                              Semangat Belajar! 
+                            </span>
+                            <Star className="tw-text-yellow-500 tw-animate-pulse" size={24} />
+                          </div>
+                          <p className="tw-text-gray-600 tw-text-sm">
+                            Pilih topik di atas untuk memulai perjalanan belajar yang seru dan menyenangkan!
+                          </p>
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  ) : (
+                    <div className="tw-space-y-6" ref={contentRef}>
+                      {selectedContentType === 'material' && selectedMaterial && (
+                        <Card className="tw-border-0 tw-shadow-2xl tw-bg-white tw-rounded-2xl tw-overflow-hidden">
+                          <Card.Header className="tw-bg-gradient-to-r tw-from-purple-500 tw-via-purple-600 tw-to-indigo-600 tw-text-white tw-p-6 tw-relative tw-overflow-hidden">
+                            <div className="tw-absolute tw-top-0 tw-left-0 tw-w-20 tw-h-20 tw-bg-white tw-opacity-10 tw-rounded-full tw--ml-10 tw--mt-10"></div>
+                            <div className="tw-flex tw-flex-col md:tw-flex-row tw-items-start md:tw-items-center tw-justify-between tw-gap-4 tw-relative tw-z-10">
+                              <div className="tw-flex tw-items-center tw-gap-3 tw-flex-1">
+                                <div className="tw-bg-white tw-bg-opacity-20 tw-p-3 tw-rounded-full">
+                                  <BookOpen className="tw-text-white" size={24} />
+                                </div>
+                                <div>
+                                  <h3 className="tw-text-lg md:tw-text-xl tw-font-bold tw-mb-1">
+                                    {selectedMaterial.title}
+                                  </h3>
+                                  <div className="tw-flex tw-items-center tw-gap-2 tw-flex-wrap">
+                                    {selectedMaterial.isMandatory && (
+                                      <Badge bg="warning" className="tw-text-xs tw-animate-pulse">
+                                        Wajib Dipelajari
+                                      </Badge>
+                                    )}
+                                    {selectedMaterial.hasVideo && (
+                                      <Badge bg="info" className="tw-text-xs tw-flex tw-items-center tw-gap-1">
+                                        <Play size={10} />
+                                        Ada Video
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <Button
+                                variant={completedMaterials.has(selectedMaterial.id) ? "success" : "light"}
+                                className="tw-px-4 tw-py-2 tw-rounded-lg tw-font-bold tw-transition-all tw-duration-300 tw-hover:tw-scale-105"
+                                onClick={() => markMaterialComplete(selectedMaterial.id, selectedTopic!.id)}
+                                disabled={markingLoading || completedMaterials.has(selectedMaterial.id) || !selectedSection.isEntitled}
+                              >
+                                {!selectedSection.isEntitled ? (
+                                  <div className="tw-flex tw-items-center tw-gap-2">
+                                    <Lock size={16} />
+                                    Terkunci
+                                  </div>
+                                ) : markingLoading ? (
+                                  <div className="tw-flex tw-items-center tw-gap-2">
+                                    <Spinner animation="border" size="sm" />
+                                    Menandai...
+                                  </div>
+                                ) : completedMaterials.has(selectedMaterial.id) ? (
+                                  <div className="tw-flex tw-items-center tw-gap-2">
+                                    <Check size={16} />
+                                    Selesai!
+                                  </div>
+                                ) : (
+                                  <div className="tw-flex tw-items-center tw-gap-2">
+                                    <CheckSquare size={16} />
+                                    Tandai Selesai
+                                  </div>
+                                )}
+                              </Button>
+                            </div>
+                          </Card.Header>
+                          <Card.Body className="tw-p-6 tw-bg-gradient-to-br tw-from-purple-25 tw-to-pink-25">
+                            {loadingMaterial ? (
+                              <div className="tw-text-center tw-py-12">
+                                <Spinner animation="border" variant="primary" className="tw-mb-4" />
+                                <h4 className="tw-text-purple-800 tw-font-bold tw-text-xl tw-mb-2">
+                                  Memuat Konten Pembelajaran...
+                                </h4>
+                                <p className="tw-text-gray-600">
+                                  Mohon tunggu sebentar, kami sedang memuat materi untuk Anda.
+                                </p>
+                              </div>
+                            ) : materialError ? (
+                              <div className="tw-text-center tw-py-12 tw-bg-white tw-rounded-xl tw-shadow-lg tw-border tw-border-red-200">
+                                <div className="tw-inline-block tw-bg-gradient-to-r tw-from-red-600 tw-to-pink-600 tw-text-white tw-p-4 tw-rounded-full tw-mb-4">
+                                  <X size={48} />
+                                </div>
+                                <h4 className="tw-text-red-800 tw-font-bold tw-text-xl tw-mb-2">
+                                  Gagal Memuat Materi
+                                </h4>
+                                <p className="tw-text-gray-600 tw-mb-6">
+                                  {materialError}
+                                </p>
+                                <Button 
+                                  variant="danger"
+                                  onClick={() => setSelectedMaterialId(selectedMaterialId)}
+                                  className="tw-bg-gradient-to-r tw-from-red-600 tw-to-pink-600 tw-border-0"
+                                >
+                                  Coba Lagi
+                                </Button>
+                              </div>
+                            ) : materialDetail ? (
+                              <>
+                                {materialDetail.has_video && (
+                                  <div className="tw-mb-6 tw-bg-white tw-p-4 tw-rounded-xl tw-shadow-lg tw-border tw-border-purple-200">
+                                    <div className="tw-flex tw-items-center tw-gap-3 tw-mb-4">
+                                      <div className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-pink-500 tw-p-2 tw-rounded-full">
+                                        <Play className="tw-text-white" size={20} />
+                                      </div>
+                                      <h4 className="tw-text-purple-800 tw-font-bold tw-text-lg tw-mb-0">
+                                        Video Pembelajaran
+                                      </h4>
+                                    </div>
+                                    {materialDetail.video_url ? (
+                                      <div className="tw-aspect-video tw-bg-gray-100 tw-rounded-lg tw-overflow-hidden tw-shadow-inner">
+                                        <iframe
+                                          src={materialDetail.video_url}
+                                          className="tw-w-full tw-h-full tw-border-0"
+                                          allowFullScreen
+                                          title="Video Pembelajaran"
+                                        />
+                                      </div>
+                                    ) : (
+                                      <div className="tw-aspect-video tw-bg-gradient-to-br tw-from-purple-100 tw-to-pink-100 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-border-2 tw-border-dashed tw-border-purple-300">
+                                        <div className="tw-text-center">
+                                          <Play className="tw-text-purple-400 tw-mx-auto tw-mb-2" size={48} />
+                                          <p className="tw-text-purple-600 tw-font-medium">
+                                            Video akan muncul di sini
+                                          </p>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                <div className="tw-bg-white tw-p-6 tw-rounded-xl tw-shadow-lg tw-border tw-border-purple-200">
+                                  <div className="tw-flex tw-items-center tw-gap-3 tw-mb-4">
+                                    <div className="tw-bg-gradient-to-r tw-from-indigo-500 tw-to-purple-500 tw-p-2 tw-rounded-full">
+                                      <FileText className="tw-text-white" size={20} />
+                                    </div>
+                                    <h4 className="tw-text-purple-800 tw-font-bold tw-text-lg tw-mb-0">
+                                      Materi Pembelajaran
+                                    </h4>
+                                  </div>
+                                  <div className="tw-prose tw-max-w-none tw-text-gray-700 tw-leading-relaxed">
+                                    {materialDetail.content ? (
+                                      <div 
+                                        dangerouslySetInnerHTML={{ __html: materialDetail.content }}
+                                        className="practice-content-area"
+                                      />
+                                    ) : (
+                                      <div className="tw-text-center tw-py-12 tw-bg-gradient-to-br tw-from-purple-50 tw-to-pink-50 tw-rounded-lg tw-border-2 tw-border-dashed tw-border-purple-300">
+                                        <BookOpen className="tw-text-purple-400 tw-mx-auto tw-mb-4" size={64} />
+                                        <h3 className="tw-text-purple-600 tw-font-bold tw-text-xl tw-mb-2">
+                                          Materi Pembelajaran Menarik! 
+                                        </h3>
+                                        <p className="tw-text-purple-500 tw-text-lg">
+                                          Konten edukatif yang seru akan ditampilkan di sini!
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="tw-text-center tw-py-12 tw-bg-white tw-rounded-xl tw-shadow-lg tw-border tw-border-purple-200">
+                                <BookOpen className="tw-text-purple-400 tw-mx-auto tw-mb-4" size={64} />
+                                <h4 className="tw-text-purple-600 tw-font-bold tw-text-xl tw-mb-2">
+                                  Materi Belum Tersedia
+                                </h4>
+                                <p className="tw-text-gray-600">
+                                  Maaf, materi ini sedang dalam persiapan.
+                                </p>
+                              </div>
+                            )}
+                          </Card.Body>
+                          <Card.Footer className="tw-bg-white tw-border-t tw-border-purple-200 tw-p-4">
+                            <div className="tw-flex tw-justify-between">
+                              <Button
+                                variant="outline-primary"
+                                disabled={isFirstContent()}
+                                onClick={handlePrev}
+                                className="tw-flex tw-items-center tw-gap-2"
+                              >
+                                <ChevronLeft size={16} />
+                                Sebelumnya
+                              </Button>
+                              
+                              <Button
+                                variant="primary"
+                                onClick={handleNext}
+                                disabled={!selectedSection.isEntitled}
+                                className="tw-flex tw-items-center tw-gap-2 tw-bg-gradient-to-r tw-from-purple-600 tw-to-pink-600 tw-border-0"
+                              >
+                                {!selectedSection.isEntitled ? (
+                                  <>
+                                    <Lock size={16} />
+                                    Terkunci
+                                  </>
+                                ) : (
+                                  <>
+                                    {isLastContent() ? "Selesai" : "Selanjutnya"}
+                                    <ChevronRight size={16} />
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </Card.Footer>
+                        </Card>
+                      )}
+
+                      {selectedContentType === 'quiz' && selectedTopic && (
+                        <Card className="tw-border-0 tw-shadow-2xl tw-bg-white tw-rounded-2xl tw-overflow-hidden">
+                          <Card.Header className="tw-bg-gradient-to-r tw-from-pink-500 tw-via-purple-600 tw-to-indigo-600 tw-text-white tw-p-6 tw-relative tw-overflow-hidden">
+                            <div className="tw-absolute tw-top-0 tw-right-0 tw-w-24 tw-h-24 tw-bg-white tw-opacity-10 tw-rounded-full tw--mr-12 tw--mt-12"></div>
+                            <div className="tw-flex tw-flex-col md:tw-flex-row tw-items-start md:tw-items-center tw-justify-between tw-gap-4 tw-relative tw-z-10">
+                              <div className="tw-flex tw-items-center tw-gap-3 tw-flex-1">
+                                <div className="tw-bg-white tw-bg-opacity-20 tw-p-3 tw-rounded-full tw-animate-pulse">
+                                  <FileText className="tw-text-white" size={24} />
+                                </div>
+                                <div>
+                                  <h3 className="tw-text-lg md:tw-text-xl tw-font-bold tw-mb-1">
+                                    {selectedTopic.quiz.title}
+                                  </h3>
+                                  <div className="tw-flex tw-items-center tw-gap-2">
+                                    <Badge bg="light" text="dark" className="tw-text-xs">
+                                      {selectedTopic.quiz.quiz_question_count} Soal
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                              <Button
+                                variant={completedQuizzes.has(selectedTopic.id) ? "success" : "warning"}
+                                className="tw-px-4 tw-py-2 tw-rounded-lg tw-font-bold tw-transition-all tw-duration-300 tw-hover:tw-scale-105"
+                                onClick={() => startQuizOrDrill('quiz', selectedTopic.quiz.quiz_id, selectedTopic.id)}
+                                disabled={markingLoading || completedQuizzes.has(selectedTopic.id) || !selectedSection.isEntitled}
+                              >
+                                {!selectedSection.isEntitled ? (
+                                  <div className="tw-flex tw-items-center tw-gap-2">
+                                    <Lock size={16} />
+                                    Terkunci
+                                  </div>
+                                ) : markingLoading ? (
+                                  <div className="tw-flex tw-items-center tw-gap-2">
+                                    <Spinner animation="border" size="sm" />
+                                    Memproses...
+                                  </div>
+                                ) : completedQuizzes.has(selectedTopic.id) ? (
+                                  <div className="tw-flex tw-items-center tw-gap-2">
+                                    <Trophy size={16} />
+                                    Quiz Selesai!
+                                  </div>
+                                ) : (
+                                  <div className="tw-flex tw-items-center tw-gap-2">
+                                    <Target size={16} />
+                                    Mulai Quiz
+                                  </div>
+                                )}
+                              </Button>
+                            </div>
+                          </Card.Header>
+                          <Card.Body className="tw-p-6 tw-bg-gradient-to-br tw-from-pink-25 tw-to-purple-25">
+                            {selectedTopic.quiz.quiz_question_count > 0 ? (
+                              <div className="tw-space-y-4">
+                                <div className="tw-bg-white tw-p-6 tw-rounded-xl tw-shadow-lg tw-border tw-border-pink-200">
+                                  <div className="tw-text-center tw-mb-6">
+                                    <h4 className="tw-text-purple-800 tw-font-bold tw-text-xl tw-mb-2">
+                                      Siap untuk Tantangan Quiz?
+                                    </h4>
+                                    <p className="tw-text-gray-600">
+                                      Quiz ini berisi {selectedTopic.quiz.quiz_question_count} soal yang akan menguji pemahamanmu!
+                                    </p>
+                                  </div>
+                                  
+                                  {!completedQuizzes.has(selectedTopic.id) ? (
+                                    <div className="tw-text-center">
+                                      <Button
+                                        variant="primary"
+                                        size="lg"
+                                        className="tw-px-8 tw-py-3 tw-rounded-xl tw-font-bold tw-bg-gradient-to-r tw-from-purple-600 tw-to-pink-600 tw-border-0 tw-shadow-lg tw-hover:tw-scale-105 tw-transition-all tw-duration-300"
+                                        onClick={() => startQuizOrDrill('quiz', selectedTopic.quiz.quiz_id, selectedTopic.id)}
+                                        disabled={markingLoading || !selectedSection.isEntitled}
+                                      >
+                                        {!selectedSection.isEntitled ? (
+                                          <div className="tw-flex tw-items-center tw-gap-3">
+                                            <Lock size={20} />
+                                            Beli Course untuk Akses
+                                          </div>
+                                        ) : (
+                                          <div className="tw-flex tw-items-center tw-gap-3">
+                                            <Play size={20} />
+                                            Mulai Quiz Sekarang!
+                                          </div>
+                                        )}
+                                      </Button>
+                                    </div>
                                   ) : (
-                                    <div className="tw-text-center tw-py-12 tw-bg-gradient-to-br tw-from-purple-50 tw-to-pink-50 tw-rounded-lg tw-border-2 tw-border-dashed tw-border-purple-300">
-                                      <BookOpen className="tw-text-purple-400 tw-mx-auto tw-mb-4" size={64} />
-                                      <h3 className="tw-text-purple-600 tw-font-bold tw-text-xl tw-mb-2">
-                                        Materi Pembelajaran Menarik! 
-                                      </h3>
-                                      <p className="tw-text-purple-500 tw-text-lg">
-                                        Konten edukatif yang seru akan ditampilkan di sini!
+                                    <div className="tw-text-center tw-bg-gradient-to-r tw-from-green-100 tw-to-emerald-100 tw-p-6 tw-rounded-xl tw-border-2 tw-border-green-300">
+                                      <Trophy className="tw-text-green-600 tw-mx-auto tw-mb-3 tw-animate-bounce" size={48} />
+                                      <h4 className="tw-text-green-800 tw-font-bold tw-text-xl tw-mb-2">
+                                        Selamat! Quiz Sudah Selesai!
+                                      </h4>
+                                      <p className="tw-text-green-700">
+                                        Kamu telah menyelesaikan quiz ini dengan baik!
                                       </p>
                                     </div>
                                   )}
                                 </div>
                               </div>
-                            </>
-                          ) : (
-                            <div className="tw-text-center tw-py-12 tw-bg-white tw-rounded-xl tw-shadow-lg tw-border tw-border-purple-200">
-                              <BookOpen className="tw-text-purple-400 tw-mx-auto tw-mb-4" size={64} />
-                              <h4 className="tw-text-purple-600 tw-font-bold tw-text-xl tw-mb-2">
-                                Materi Belum Tersedia
-                              </h4>
-                              <p className="tw-text-gray-600">
-                                Maaf, materi ini sedang dalam persiapan.
-                              </p>
+                            ) : (
+                              <div className="tw-text-center tw-py-12">
+                                <FileText className="tw-text-pink-400 tw-mx-auto tw-mb-4" size={64} />
+                                <h3 className="tw-text-pink-600 tw-font-bold tw-text-xl tw-mb-2">
+                                  Quiz Sedang Disiapkan!
+                                </h3>
+                              </div>
+                            )}
+                          </Card.Body>
+                          <Card.Footer className="tw-bg-white tw-border-t tw-border-pink-200 tw-p-4">
+                            <div className="tw-flex tw-justify-between">
+                              <Button
+                                variant="outline-primary"
+                                onClick={handlePrev}
+                                className="tw-flex tw-items-center tw-gap-2"
+                              >
+                                <ChevronLeft size={16} />
+                                Sebelumnya
+                              </Button>
+                              
+                              <Button
+                                variant="primary"
+                                onClick={handleNext}
+                                disabled={!completedQuizzes.has(selectedTopic.id) || !selectedSection.isEntitled}
+                                className="tw-flex tw-items-center tw-gap-2 tw-bg-gradient-to-r tw-from-pink-600 tw-to-purple-600 tw-border-0"
+                              >
+                                {!selectedSection.isEntitled ? (
+                                  <>
+                                    <Lock size={16} />
+                                    Terkunci
+                                  </>
+                                ) : (
+                                  <>
+                                    {selectedTopic.drill.drill_question_count > 0 ? "Lanjut ke Drill" : "Selesai"}
+                                    <ChevronRight size={16} />
+                                  </>
+                                )}
+                              </Button>
                             </div>
-                          )}
-                        </Card.Body>
-                        <Card.Footer className="tw-bg-white tw-border-t tw-border-purple-200 tw-p-4">
-                          <div className="tw-flex tw-justify-between">
-                            <Button
-                              variant="outline-primary"
-                              disabled={isFirstContent()}
-                              onClick={handlePrev}
-                              className="tw-flex tw-items-center tw-gap-2"
-                            >
-                              <ChevronLeft size={16} />
-                              Sebelumnya
-                            </Button>
-                            
-                            <Button
-                              variant="primary"
-                              onClick={handleNext}
-                              disabled={!selectedSection.isEntitled}
-                              className="tw-flex tw-items-center tw-gap-2 tw-bg-gradient-to-r tw-from-purple-600 tw-to-pink-600 tw-border-0"
-                            >
-                              {!selectedSection.isEntitled ? (
-                                <>
-                                  <Lock size={16} />
-                                  Terkunci
-                                </>
-                              ) : (
-                                <>
-                                  {isLastContent() ? "Selesai" : "Selanjutnya"}
-                                  <ChevronRight size={16} />
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </Card.Footer>
-                      </Card>
-                    )}
+                          </Card.Footer>
+                        </Card>
+                      )}
 
-                    {selectedContentType === 'quiz' && selectedTopic && (
-                      <Card className="tw-border-0 tw-shadow-2xl tw-bg-white tw-rounded-2xl tw-overflow-hidden">
-                        <Card.Header className="tw-bg-gradient-to-r tw-from-pink-500 tw-via-purple-600 tw-to-indigo-600 tw-text-white tw-p-6 tw-relative tw-overflow-hidden">
-                          <div className="tw-absolute tw-top-0 tw-right-0 tw-w-24 tw-h-24 tw-bg-white tw-opacity-10 tw-rounded-full tw--mr-12 tw--mt-12"></div>
-                          <div className="tw-flex tw-flex-col md:tw-flex-row tw-items-start md:tw-items-center tw-justify-between tw-gap-4 tw-relative tw-z-10">
-                            <div className="tw-flex tw-items-center tw-gap-3 tw-flex-1">
+                      {selectedContentType === 'drill' && selectedTopic && (
+                        <Card className="tw-border-0 tw-shadow-2xl tw-bg-white tw-rounded-2xl tw-overflow-hidden">
+                          <Card.Header className="tw-bg-gradient-to-r tw-from-indigo-500 tw-via-purple-600 tw-to-pink-600 tw-text-white tw-p-6 tw-relative tw-overflow-hidden">
+                            <div className="tw-absolute tw-top-0 tw-left-0 tw-w-20 tw-h-20 tw-bg-white tw-opacity-10 tw-rounded-full tw--ml-10 tw--mt-10"></div>
+                            <div className="tw-flex tw-items-center tw-gap-3 tw-relative tw-z-10">
                               <div className="tw-bg-white tw-bg-opacity-20 tw-p-3 tw-rounded-full tw-animate-pulse">
-                                <FileText className="tw-text-white" size={24} />
+                                <CheckSquare className="tw-text-white" size={24} />
                               </div>
                               <div>
                                 <h3 className="tw-text-lg md:tw-text-xl tw-font-bold tw-mb-1">
-                                  {selectedTopic.quiz.title}
+                                  {selectedTopic.drill.title}
                                 </h3>
-                                <div className="tw-flex tw-items-center tw-gap-2">
-                                  <Badge bg="light" text="dark" className="tw-text-xs">
-                                    {selectedTopic.quiz.quiz_question_count} Soal
-                                  </Badge>
-                                </div>
+                                <Badge bg="light" text="dark" className="tw-text-xs">
+                                  {selectedTopic.drill.drill_question_count} Latihan
+                                </Badge>
                               </div>
                             </div>
-                            <Button
-                              variant={completedQuizzes.has(selectedTopic.id) ? "success" : "warning"}
-                              className="tw-px-4 tw-py-2 tw-rounded-lg tw-font-bold tw-transition-all tw-duration-300 tw-hover:tw-scale-105"
-                              onClick={() => startQuizOrDrill('quiz', selectedTopic.quiz.quiz_id, selectedTopic.id)}
-                              disabled={markingLoading || completedQuizzes.has(selectedTopic.id) || !selectedSection.isEntitled}
-                            >
-                              {!selectedSection.isEntitled ? (
-                                <div className="tw-flex tw-items-center tw-gap-2">
-                                  <Lock size={16} />
-                                  Terkunci
-                                </div>
-                              ) : markingLoading ? (
-                                <div className="tw-flex tw-items-center tw-gap-2">
-                                  <Spinner animation="border" size="sm" />
-                                  Memproses...
-                                </div>
-                              ) : completedQuizzes.has(selectedTopic.id) ? (
-                                <div className="tw-flex tw-items-center tw-gap-2">
-                                  <Trophy size={16} />
-                                  Quiz Selesai!
-                                </div>
-                              ) : (
-                                <div className="tw-flex tw-items-center tw-gap-2">
-                                  <Target size={16} />
-                                  Mulai Quiz
-                                </div>
-                              )}
-                            </Button>
-                          </div>
-                        </Card.Header>
-                        <Card.Body className="tw-p-6 tw-bg-gradient-to-br tw-from-pink-25 tw-to-purple-25">
-                          {selectedTopic.quiz.quiz_question_count > 0 ? (
-                            <div className="tw-space-y-4">
-                              <div className="tw-bg-white tw-p-6 tw-rounded-xl tw-shadow-lg tw-border tw-border-pink-200">
-                                <div className="tw-text-center tw-mb-6">
-                                  <h4 className="tw-text-purple-800 tw-font-bold tw-text-xl tw-mb-2">
-                                    Siap untuk Tantangan Quiz?
-                                  </h4>
-                                  <p className="tw-text-gray-600">
-                                    Quiz ini berisi {selectedTopic.quiz.quiz_question_count} soal yang akan menguji pemahamanmu!
-                                  </p>
-                                </div>
-                                
-                                {!completedQuizzes.has(selectedTopic.id) ? (
-                                  <div className="tw-text-center">
-                                    <Button
-                                      variant="primary"
-                                      size="lg"
-                                      className="tw-px-8 tw-py-3 tw-rounded-xl tw-font-bold tw-bg-gradient-to-r tw-from-purple-600 tw-to-pink-600 tw-border-0 tw-shadow-lg tw-hover:tw-scale-105 tw-transition-all tw-duration-300"
-                                      onClick={() => startQuizOrDrill('quiz', selectedTopic.quiz.quiz_id, selectedTopic.id)}
-                                      disabled={markingLoading || !selectedSection.isEntitled}
-                                    >
-                                      {!selectedSection.isEntitled ? (
-                                        <div className="tw-flex tw-items-center tw-gap-3">
-                                          <Lock size={20} />
-                                          Beli Course untuk Akses
-                                        </div>
-                                      ) : (
-                                        <div className="tw-flex tw-items-center tw-gap-3">
-                                          <Play size={20} />
-                                          Mulai Quiz Sekarang!
-                                        </div>
-                                      )}
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <div className="tw-text-center tw-bg-gradient-to-r tw-from-green-100 tw-to-emerald-100 tw-p-6 tw-rounded-xl tw-border-2 tw-border-green-300">
-                                    <Trophy className="tw-text-green-600 tw-mx-auto tw-mb-3 tw-animate-bounce" size={48} />
-                                    <h4 className="tw-text-green-800 tw-font-bold tw-text-xl tw-mb-2">
-                                      Selamat! Quiz Sudah Selesai!
+                          </Card.Header>
+                          <Card.Body className="tw-p-6 tw-bg-gradient-to-br tw-from-indigo-25 tw-to-purple-25">
+                            {completedQuizzes.has(selectedTopic.id) ? (
+                              <div className="tw-space-y-4">
+                                <div className="tw-bg-white tw-p-6 tw-rounded-xl tw-shadow-lg tw-border tw-border-indigo-200">
+                                  <div className="tw-text-center tw-mb-6">
+                                    <h4 className="tw-text-indigo-800 tw-font-bold tw-text-xl tw-mb-2">
+                                      Siap untuk Latihan Drill?
                                     </h4>
-                                    <p className="tw-text-green-700">
-                                      Kamu telah menyelesaikan quiz ini dengan baik!
+                                    <p className="tw-text-gray-600">
+                                      Drill ini berisi {selectedTopic.drill.drill_question_count} latihan!
                                     </p>
                                   </div>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="tw-text-center tw-py-12">
-                              <FileText className="tw-text-pink-400 tw-mx-auto tw-mb-4" size={64} />
-                              <h3 className="tw-text-pink-600 tw-font-bold tw-text-xl tw-mb-2">
-                                Quiz Sedang Disiapkan!
-                              </h3>
-                            </div>
-                          )}
-                        </Card.Body>
-                        <Card.Footer className="tw-bg-white tw-border-t tw-border-pink-200 tw-p-4">
-                          <div className="tw-flex tw-justify-between">
-                            <Button
-                              variant="outline-primary"
-                              onClick={handlePrev}
-                              className="tw-flex tw-items-center tw-gap-2"
-                            >
-                              <ChevronLeft size={16} />
-                              Sebelumnya
-                            </Button>
-                            
-                            <Button
-                              variant="primary"
-                              onClick={handleNext}
-                              disabled={!completedQuizzes.has(selectedTopic.id) || !selectedSection.isEntitled}
-                              className="tw-flex tw-items-center tw-gap-2 tw-bg-gradient-to-r tw-from-pink-600 tw-to-purple-600 tw-border-0"
-                            >
-                              {!selectedSection.isEntitled ? (
-                                <>
-                                  <Lock size={16} />
-                                  Terkunci
-                                </>
-                              ) : (
-                                <>
-                                  {selectedTopic.drill.drill_question_count > 0 ? "Lanjut ke Drill" : "Selesai"}
-                                  <ChevronRight size={16} />
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </Card.Footer>
-                      </Card>
-                    )}
-
-                    {selectedContentType === 'drill' && selectedTopic && (
-                      <Card className="tw-border-0 tw-shadow-2xl tw-bg-white tw-rounded-2xl tw-overflow-hidden">
-                        <Card.Header className="tw-bg-gradient-to-r tw-from-indigo-500 tw-via-purple-600 tw-to-pink-600 tw-text-white tw-p-6 tw-relative tw-overflow-hidden">
-                          <div className="tw-absolute tw-top-0 tw-left-0 tw-w-20 tw-h-20 tw-bg-white tw-opacity-10 tw-rounded-full tw--ml-10 tw--mt-10"></div>
-                          <div className="tw-flex tw-items-center tw-gap-3 tw-relative tw-z-10">
-                            <div className="tw-bg-white tw-bg-opacity-20 tw-p-3 tw-rounded-full tw-animate-pulse">
-                              <CheckSquare className="tw-text-white" size={24} />
-                            </div>
-                            <div>
-                              <h3 className="tw-text-lg md:tw-text-xl tw-font-bold tw-mb-1">
-                                {selectedTopic.drill.title}
-                              </h3>
-                              <Badge bg="light" text="dark" className="tw-text-xs">
-                                {selectedTopic.drill.drill_question_count} Latihan
-                              </Badge>
-                            </div>
-                          </div>
-                        </Card.Header>
-                        <Card.Body className="tw-p-6 tw-bg-gradient-to-br tw-from-indigo-25 tw-to-purple-25">
-                          {completedQuizzes.has(selectedTopic.id) ? (
-                            <div className="tw-space-y-4">
-                              <div className="tw-bg-white tw-p-6 tw-rounded-xl tw-shadow-lg tw-border tw-border-indigo-200">
-                                <div className="tw-text-center tw-mb-6">
-                                  <h4 className="tw-text-indigo-800 tw-font-bold tw-text-xl tw-mb-2">
-                                    Siap untuk Latihan Drill?
-                                  </h4>
-                                  <p className="tw-text-gray-600">
-                                    Drill ini berisi {selectedTopic.drill.drill_question_count} latihan!
-                                  </p>
+                                  
+                                  {!completedDrills.has(selectedTopic.id) ? (
+                                    <div className="tw-text-center">
+                                      <Button
+                                        variant="primary"
+                                        size="lg"
+                                        className="tw-px-8 tw-py-3 tw-rounded-xl tw-font-bold tw-bg-gradient-to-r tw-from-indigo-600 tw-to-purple-600 tw-border-0 tw-shadow-lg tw-hover:tw-scale-105 tw-transition-all tw-duration-300"
+                                        onClick={() => startQuizOrDrill('drill', selectedTopic.drill.drill_id, selectedTopic.id)}
+                                        disabled={markingLoading || !selectedSection.isEntitled}
+                                      >
+                                        {!selectedSection.isEntitled ? (
+                                          <div className="tw-flex tw-items-center tw-gap-3">
+                                            <Lock size={20} />
+                                            Beli Course untuk Akses
+                                          </div>
+                                        ) : (
+                                          <div className="tw-flex tw-items-center tw-gap-3">
+                                            <Zap size={20} />
+                                            Mulai Drill Sekarang!
+                                          </div>
+                                        )}
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <div className="tw-text-center tw-bg-gradient-to-r tw-from-green-100 tw-to-emerald-100 tw-p-6 tw-rounded-xl tw-border-2 tw-border-green-300">
+                                      <Trophy className="tw-text-green-600 tw-mx-auto tw-mb-3 tw-animate-bounce" size={48} />
+                                      <h4 className="tw-text-green-800 tw-font-bold tw-text-xl tw-mb-2">
+                                        Selamat! Drill Sudah Selesai!
+                                      </h4>
+                                    </div>
+                                  )}
                                 </div>
-                                
-                                {!completedDrills.has(selectedTopic.id) ? (
-                                  <div className="tw-text-center">
-                                    <Button
-                                      variant="primary"
-                                      size="lg"
-                                      className="tw-px-8 tw-py-3 tw-rounded-xl tw-font-bold tw-bg-gradient-to-r tw-from-indigo-600 tw-to-purple-600 tw-border-0 tw-shadow-lg tw-hover:tw-scale-105 tw-transition-all tw-duration-300"
-                                      onClick={() => startQuizOrDrill('drill', selectedTopic.drill.drill_id, selectedTopic.id)}
-                                      disabled={markingLoading || !selectedSection.isEntitled}
-                                    >
-                                      {!selectedSection.isEntitled ? (
-                                        <div className="tw-flex tw-items-center tw-gap-3">
-                                          <Lock size={20} />
-                                          Beli Course untuk Akses
-                                        </div>
-                                      ) : (
-                                        <div className="tw-flex tw-items-center tw-gap-3">
-                                          <Zap size={20} />
-                                          Mulai Drill Sekarang!
-                                        </div>
-                                      )}
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <div className="tw-text-center tw-bg-gradient-to-r tw-from-green-100 tw-to-emerald-100 tw-p-6 tw-rounded-xl tw-border-2 tw-border-green-300">
-                                    <Trophy className="tw-text-green-600 tw-mx-auto tw-mb-3 tw-animate-bounce" size={48} />
-                                    <h4 className="tw-text-green-800 tw-font-bold tw-text-xl tw-mb-2">
-                                      Selamat! Drill Sudah Selesai!
-                                    </h4>
-                                  </div>
-                                )}
                               </div>
-                            </div>
-                          ) : (
-                            <div className="tw-text-center tw-py-12 tw-bg-white tw-rounded-xl tw-shadow-lg">
-                              <AlertCircle className="tw-text-yellow-500 tw-mx-auto tw-mb-4" size={64} />
-                              <h3 className="tw-text-yellow-600 tw-font-bold tw-text-xl tw-mb-2">
-                                Selesaikan Quiz Dulu!
-                              </h3>
+                            ) : (
+                              <div className="tw-text-center tw-py-12 tw-bg-white tw-rounded-xl tw-shadow-lg">
+                                <AlertCircle className="tw-text-yellow-500 tw-mx-auto tw-mb-4" size={64} />
+                                <h3 className="tw-text-yellow-600 tw-font-bold tw-text-xl tw-mb-2">
+                                  Selesaikan Quiz Dulu!
+                                </h3>
+                                <Button
+                                  variant="primary"
+                                  onClick={() => selectContent(selectedTopic.id, 'quiz')}
+                                  className="tw-mt-4"
+                                >
+                                  Kembali ke Quiz
+                                </Button>
+                              </div>
+                            )}
+                          </Card.Body>
+                          <Card.Footer className="tw-bg-white tw-border-t tw-border-indigo-200 tw-p-4">
+                            <div className="tw-flex tw-justify-between">
+                              <Button
+                                variant="outline-primary"
+                                onClick={handlePrev}
+                                className="tw-flex tw-items-center tw-gap-2"
+                              >
+                                <ChevronLeft size={16} />
+                                Sebelumnya
+                              </Button>
+                              
                               <Button
                                 variant="primary"
-                                onClick={() => selectContent(selectedTopic.id, 'quiz')}
-                                className="tw-mt-4"
+                                onClick={() => {
+                                  setSelectedTopicId(null);
+                                  setSelectedContentType(null);
+                                }}
+                                disabled={!selectedSection.isEntitled}
+                                className="tw-flex tw-items-center tw-gap-2 tw-bg-gradient-to-r tw-from-indigo-600 tw-to-purple-600 tw-border-0"
                               >
-                                Kembali ke Quiz
+                                {!selectedSection.isEntitled ? (
+                                  <>
+                                    <Lock size={16} />
+                                    Terkunci
+                                  </>
+                                ) : (
+                                  <>
+                                    Selesai
+                                    <Check size={16} />
+                                  </>
+                                )}
                               </Button>
                             </div>
-                          )}
-                        </Card.Body>
-                        <Card.Footer className="tw-bg-white tw-border-t tw-border-indigo-200 tw-p-4">
-                          <div className="tw-flex tw-justify-between">
-                            <Button
-                              variant="outline-primary"
-                              onClick={handlePrev}
-                              className="tw-flex tw-items-center tw-gap-2"
-                            >
-                              <ChevronLeft size={16} />
-                              Sebelumnya
-                            </Button>
-                            
-                            <Button
-                              variant="primary"
-                              onClick={() => {
-                                setSelectedTopicId(null);
-                                setSelectedContentType(null);
-                              }}
-                              disabled={!selectedSection.isEntitled}
-                              className="tw-flex tw-items-center tw-gap-2 tw-bg-gradient-to-r tw-from-indigo-600 tw-to-purple-600 tw-border-0"
-                            >
-                              {!selectedSection.isEntitled ? (
-                                <>
-                                  <Lock size={16} />
-                                  Terkunci
-                                </>
-                              ) : (
-                                <>
-                                  Selesai
-                                  <Check size={16} />
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </Card.Footer>
-                      </Card>
-                    )}
-                  </div>
-                )}
-              </div>
-            </Col>
-          </Row>
-        </div>
-      </Container>
-
-      {/* Modal untuk Entitlement - Tambah ke Keranjang */}
-      <Modal show={showCartModal} onHide={() => setShowCartModal(false)} centered>
-        <Modal.Header closeButton className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-pink-500 tw-text-white tw-border-0">
-          <Modal.Title className="tw-flex tw-items-center tw-gap-2">
-            <Lock size={24} />
-            <span>Akses Terbatas</span>
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="tw-p-6">
-          {cartSuccess ? (
-            <div className="tw-text-center tw-py-4">
-              <div className="tw-inline-block tw-bg-green-100 tw-p-4 tw-rounded-full tw-mb-4">
-                <Check className="tw-text-green-600" size={48} />
-              </div>
-              <h4 className="tw-text-green-800 tw-font-bold tw-text-xl tw-mb-2">
-                Berhasil Ditambahkan!
-              </h4>
-              <p className="tw-text-gray-600">
-                Course telah ditambahkan ke keranjang Anda
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="tw-text-center tw-mb-6">
-                <div className="tw-inline-block tw-bg-yellow-100 tw-p-4 tw-rounded-full tw-mb-4">
-                  <AlertCircle className="tw-text-yellow-600" size={48} />
+                          </Card.Footer>
+                        </Card>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <h4 className="tw-text-purple-800 tw-font-bold tw-text-xl tw-mb-3">
-                  Beli Course untuk Akses Penuh
+              </Col>
+            </Row>
+          </div>
+        </Container>
+
+        {/* Modal untuk Entitlement - Tambah ke Keranjang */}
+        <Modal show={showCartModal} onHide={() => setShowCartModal(false)} centered>
+          <Modal.Header closeButton className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-pink-500 tw-text-white tw-border-0">
+            <Modal.Title className="tw-flex tw-items-center tw-gap-2">
+              <Lock size={24} />
+              <span>Akses Terbatas</span>
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body className="tw-p-6">
+            {cartSuccess ? (
+              <div className="tw-text-center tw-py-4">
+                <div className="tw-inline-block tw-bg-green-100 tw-p-4 tw-rounded-full tw-mb-4">
+                  <Check className="tw-text-green-600" size={48} />
+                </div>
+                <h4 className="tw-text-green-800 tw-font-bold tw-text-xl tw-mb-2">
+                  Berhasil Ditambahkan!
                 </h4>
-                <p className="tw-text-gray-600 tw-mb-4">
-                  Anda sedang dalam mode preview. Untuk dapat menandai selesai, mengerjakan quiz/drill, dan melanjutkan pembelajaran, Anda perlu membeli course ini terlebih dahulu.
+                <p className="tw-text-gray-600">
+                  Course telah ditambahkan ke keranjang Anda
                 </p>
               </div>
-
-              <div className="tw-bg-gradient-to-r tw-from-purple-50 tw-to-pink-50 tw-p-4 tw-rounded-xl tw-mb-4">
-                <h5 className="tw-text-purple-800 tw-font-bold tw-mb-3">
-                  Dengan membeli course ini, Anda akan mendapat:
-                </h5>
-                <ul className="tw-space-y-2 tw-text-gray-700">
-                  <li className="tw-flex tw-items-center tw-gap-2">
-                    <Check className="tw-text-green-600 tw-flex-shrink-0" size={18} />
-                    <span>Akses penuh ke semua materi pembelajaran</span>
-                  </li>
-                  <li className="tw-flex tw-items-center tw-gap-2">
-                    <Check className="tw-text-green-600 tw-flex-shrink-0" size={18} />
-                    <span>Dapat menandai materi sebagai selesai</span>
-                  </li>
-                  <li className="tw-flex tw-items-center tw-gap-2">
-                    <Check className="tw-text-green-600 tw-flex-shrink-0" size={18} />
-                    <span>Akses ke quiz dan drill untuk latihan</span>
-                  </li>
-                  <li className="tw-flex tw-items-center tw-gap-2">
-                    <Check className="tw-text-green-600 tw-flex-shrink-0" size={18} />
-                    <span>Tracking progress pembelajaran Anda</span>
-                  </li>
-                  <li className="tw-flex tw-items-center tw-gap-2">
-                    <Check className="tw-text-green-600 tw-flex-shrink-0" size={18} />
-                    <span>Sertifikat setelah menyelesaikan course</span>
-                  </li>
-                </ul>
-              </div>
-
-              {cartError && (
-                <Alert variant="danger" className="tw-mb-4">
-                  <div className="tw-flex tw-items-center tw-gap-2">
-                    <X size={18} />
-                    <span>{cartError}</span>
+            ) : (
+              <>
+                <div className="tw-text-center tw-mb-6">
+                  <div className="tw-inline-block tw-bg-yellow-100 tw-p-4 tw-rounded-full tw-mb-4">
+                    <AlertCircle className="tw-text-yellow-600" size={48} />
                   </div>
-                </Alert>
-              )}
-            </>
+                  <h4 className="tw-text-purple-800 tw-font-bold tw-text-xl tw-mb-3">
+                    Beli Course untuk Akses Penuh
+                  </h4>
+                  <p className="tw-text-gray-600 tw-mb-4">
+                    Anda sedang dalam mode preview. Untuk dapat menandai selesai, mengerjakan quiz/drill, dan melanjutkan pembelajaran, Anda perlu membeli course ini terlebih dahulu.
+                  </p>
+                </div>
+
+                <div className="tw-bg-gradient-to-r tw-from-purple-50 tw-to-pink-50 tw-p-4 tw-rounded-xl tw-mb-4">
+                  <h5 className="tw-text-purple-800 tw-font-bold tw-mb-3">
+                    Dengan membeli course ini, Anda akan mendapat:
+                  </h5>
+                  <ul className="tw-space-y-2 tw-text-gray-700">
+                    <li className="tw-flex tw-items-center tw-gap-2">
+                      <Check className="tw-text-green-600 tw-flex-shrink-0" size={18} />
+                      <span>Akses penuh ke semua materi pembelajaran</span>
+                    </li>
+                    <li className="tw-flex tw-items-center tw-gap-2">
+                      <Check className="tw-text-green-600 tw-flex-shrink-0" size={18} />
+                      <span>Dapat menandai materi sebagai selesai</span>
+                    </li>
+                    <li className="tw-flex tw-items-center tw-gap-2">
+                      <Check className="tw-text-green-600 tw-flex-shrink-0" size={18} />
+                      <span>Akses ke quiz dan drill untuk latihan</span>
+                    </li>
+                    <li className="tw-flex tw-items-center tw-gap-2">
+                      <Check className="tw-text-green-600 tw-flex-shrink-0" size={18} />
+                      <span>Tracking progress pembelajaran Anda</span>
+                    </li>
+                    <li className="tw-flex tw-items-center tw-gap-2">
+                      <Check className="tw-text-green-600 tw-flex-shrink-0" size={18} />
+                      <span>Sertifikat setelah menyelesaikan course</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {cartError && (
+                  <Alert variant="danger" className="tw-mb-4">
+                    <div className="tw-flex tw-items-center tw-gap-2">
+                      <X size={18} />
+                      <span>{cartError}</span>
+                    </div>
+                  </Alert>
+                )}
+              </>
+            )}
+          </Modal.Body>
+          {!cartSuccess && (
+            <Modal.Footer className="tw-border-0 tw-flex tw-gap-3 tw-justify-end">
+              <Button
+                variant="outline-secondary"
+                onClick={() => setShowCartModal(false)}
+                disabled={addingToCart}
+              >
+                Nanti Saja
+              </Button>
+              <Button
+                variant="primary"
+                className="tw-bg-gradient-to-r tw-from-purple-600 tw-to-pink-600 tw-border-0 tw-flex tw-items-center tw-gap-2"
+                onClick={handleAddToCart}
+                disabled={addingToCart}
+              >
+                {addingToCart ? (
+                  <>
+                    <Spinner animation="border" size="sm" />
+                    <span>Menambahkan...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart size={18} />
+                    <span>Tambah ke Keranjang</span>
+                  </>
+                )}
+              </Button>
+            </Modal.Footer>
           )}
-        </Modal.Body>
-        {!cartSuccess && (
-          <Modal.Footer className="tw-border-0 tw-flex tw-gap-3 tw-justify-end">
-            <Button
-              variant="outline-secondary"
-              onClick={() => setShowCartModal(false)}
-              disabled={addingToCart}
-            >
-              Nanti Saja
-            </Button>
-            <Button
-              variant="primary"
-              className="tw-bg-gradient-to-r tw-from-purple-600 tw-to-pink-600 tw-border-0 tw-flex tw-items-center tw-gap-2"
-              onClick={handleAddToCart}
-              disabled={addingToCart}
-            >
-              {addingToCart ? (
-                <>
-                  <Spinner animation="border" size="sm" />
-                  <span>Menambahkan...</span>
-                </>
-              ) : (
-                <>
-                  <ShoppingCart size={18} />
-                  <span>Tambah ke Keranjang</span>
-                </>
-              )}
-            </Button>
-          </Modal.Footer>
+        </Modal>
+
+        {/* Exam Modal untuk Quiz */}
+        {showExamModal && examType === 'quiz' && examId && (
+          <ExamModal 
+            show={showExamModal} 
+            onClose={handleExamModalClose}
+            examType={examType}
+            scheduleId={examId}
+            topicId={currentTopicId}
+          />
         )}
-      </Modal>
 
-      {/* Exam Modal untuk Quiz */}
-      {showExamModal && examType === 'quiz' && examId && (
-        <ExamModal 
-          show={showExamModal} 
-          onClose={handleExamModalClose}
-          examType={examType}
-          scheduleId={examId}
-          topicId={currentTopicId}
-        />
-      )}
-
-      {/* Drill Modal */}
-      {showDrillModal && selectedTopic && (
-        <DrillModal
-          show={showDrillModal}
-          onClose={() => setShowDrillModal(false)}
-          onContinue={handleNext}
-          drillId={selectedTopic.drill.drill_id}
-          topicId={selectedTopicId}
-          title={selectedTopic.drill.title}
-        />
-      )}
-    </div>
+        {/* Drill Modal */}
+        {showDrillModal && selectedTopic && (
+          <DrillModal
+            show={showDrillModal}
+            onClose={() => setShowDrillModal(false)}
+            onContinue={handleNext}
+            drillId={selectedTopic.drill.drill_id}
+            topicId={selectedTopicId}
+            title={selectedTopic.drill.title}
+          />
+        )}
+      </div>
+    </>
   );
 };
 

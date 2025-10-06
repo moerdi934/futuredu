@@ -1,6 +1,7 @@
 import type { AppProps } from 'next/app';
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Script from 'next/script'; // Import Script component
 import NProgress from 'nprogress';
 import { AuthProvider } from '../context/AuthContext';
 import { StatusProvider } from '../context/StatusContext';
@@ -151,25 +152,32 @@ function MyApp({ Component, pageProps }: AppProps) {
   }, []);
 
   return (
-    <DrillProvider>
-      <ExamProvider>
-        <AuthProvider>
-          <StatusProvider>
-            {/* 
-              Global providers tanpa props = timer tidak aktif
-              Timer hanya aktif di exam page dengan props yang sesuai
-            */}
-            <UserPurchaseProvider>
-              <AllProductProvider>
-                <ActiveUserProvider>
-                  <Component {...pageProps} />
-                </ActiveUserProvider>
-              </AllProductProvider>
-            </UserPurchaseProvider>
-          </StatusProvider>
-        </AuthProvider>
-      </ExamProvider>
-    </DrillProvider>
+    <>
+      {/* Load Practice Question Handler */}
+      <Script 
+        src="/practiceQuestionHandler.js" 
+        strategy="lazyOnload"
+        onLoad={() => {
+          console.log('Practice Question Handler loaded');
+        }}
+      />
+
+      <DrillProvider>
+        <ExamProvider>
+          <AuthProvider>
+            <StatusProvider>
+              <UserPurchaseProvider>
+                <AllProductProvider>
+                  <ActiveUserProvider>
+                    <Component {...pageProps} />
+                  </ActiveUserProvider>
+                </AllProductProvider>
+              </UserPurchaseProvider>
+            </StatusProvider>
+          </AuthProvider>
+        </ExamProvider>
+      </DrillProvider>
+    </>
   );
 }
 

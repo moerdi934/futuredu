@@ -517,7 +517,7 @@ export const getQuestionsByExamId = async (examId: number) => {
   try {
     // Modified query to include passage data
     const query = `
-      SELECT q.*, 
+      SELECT q.id, q.question_type, q.question_text, q.options, q.statements, q.level, 
              p.id as passage_id, 
              p.title as passage_title, 
              p.passage as passage_content
@@ -931,5 +931,95 @@ export const verifyIdCodePairs = async (pairs: VerificationPair[]): Promise<Veri
     throw error;
   } finally {
     client.release();
+  }
+};
+
+// Add this function to your existing questions.model.ts
+export const getQuestionWithAnswerById = async (id: number) => {
+  try {
+    const query = `
+      SELECT 
+        q.id, 
+        q.code,
+        q.question_type, 
+        q.question_text, 
+        q.options, 
+        q.statements, 
+        q.level,
+        q.correct_answer,
+        q.pembahasan,
+        p.id as passage_id, 
+        p.title as passage_title, 
+        p.passage as passage_content
+      FROM questions q
+      LEFT JOIN question_passages p ON q.passage_id = p.id
+      WHERE q.id = $1
+    `;
+
+    const result = await pool.query(query, [id]);
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const question = result.rows[0];
+    return {
+      id: question.id,
+      code: question.code,
+      type: question.question_type,
+      question: question.question_text,
+      options: question.options,
+      statements: question.statements,
+      correct_answer: question.correct_answer,
+      pembahasan: question.pembahasan,
+      level: question.level,
+      passage: question.passage_id ? {
+        id: question.passage_id,
+        title: question.passage_title,
+        content: question.passage_content
+      } : null
+    };
+  } catch (error) {
+    console.error('Error fetching question with answer:', error);
+    throw error;
+  }
+};
+
+export const searchQuestionsForPracticeByCode = async (search?: string, limit: number = 20): Promise<any[]> => {
+  try {
+    const query = `
+      SELECT 
+        q.id, 
+        q.code,
+        q.question_type,
+        et.name question_topic_type,
+        level
+      FROM questions q
+      left join exam_types et on et.id = q.question_topic_type
+      WHERE ($1::text IS NULL OR $1 = '' OR q.code ILIKE $1)
+      ORDER BY 
+        CASE 
+          WHEN q.code ILIKE $1 THEN 0
+          ELSE 1
+        END,
+        id DESC
+      LIMIT $2;
+    `;
+    
+    const searchPattern = search ? `%${search}%` : '';
+    const result = await pool.query(query, [searchPattern, limit]);
+
+      console.log(result.rows)
+    return result.rows.map(row => ({
+      value: row.id,
+      label: `${row.code}${
+        row.question_topic_type ? ` - ${row.question_topic_type.substring(0, 80)}` : ''
+      } - ${row.question_type.substring(0, 80)}`,
+      type: row.question_type,
+      level: row.level
+    }));
+  } catch (error) {
+    console.error('Error searching questions for practice by code:', error);
+    throw error;
   }
 };

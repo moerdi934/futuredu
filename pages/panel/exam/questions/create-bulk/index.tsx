@@ -172,11 +172,11 @@ const CustomAccordionItem: React.FC<{
           overflow: isOpen ? 'visible' : 'hidden'
         }}
       >
-        {isOpen && (
           <div 
             className="tw-bg-gray-50 tw-p-2 sm:tw-p-4 tw-rounded-b-lg"
             style={{
               // Create stacking context but allow overflow
+              display: isOpen ? 'block' : 'none',
               position: 'relative',
               zIndex: 10,
               overflow: 'visible'
@@ -184,7 +184,6 @@ const CustomAccordionItem: React.FC<{
           >
             {children}
           </div>
-        )}
       </div>
     </div>
   );
