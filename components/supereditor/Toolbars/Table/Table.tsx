@@ -543,6 +543,10 @@ const TableButton: React.FC<TableButtonProps> = ({ onClick }) => {
         gradient2: '#A855F7',
         text: '#FFFFFF'
       }}
+      tooltip="Insert Table (Ctrl+Shift+T)" // Added
+      tooltipPosition="top" // Added
+      tooltipPortal={false} // Added
+      className="tw-w-8 tw-h-8 tw-relative" // Added tw-relative and adjusted size
     />
   );
 };

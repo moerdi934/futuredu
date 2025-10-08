@@ -356,18 +356,18 @@ const applyBulletList = (style: BulletStyle, editorRef: RefObject<HTMLElement>, 
   
   editorRef.current.focus();
   
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) {
-    // No selection, create a new list at cursor position
-    const range = document.createRange();
-    const sel = window.getSelection();
-    if (sel) {
-      range.setStart(editorRef.current, editorRef.current.childNodes.length);
-      range.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(range);
-    }
-  }
+  // const selection = window.getSelection();
+  // if (!selection || selection.rangeCount === 0) {
+  //   // No selection, create a new list at cursor position
+  //   const range = document.createRange();
+  //   const sel = window.getSelection();
+  //   if (sel) {
+  //     range.setStart(editorRef.current, editorRef.current.childNodes.length);
+  //     range.collapse(true);
+  //     sel.removeAllRanges();
+  //     sel.addRange(range);
+  //   }
+  // }
   
   // Insert unordered list
   document.execCommand('insertUnorderedList', false, null);
@@ -417,18 +417,18 @@ const applyNumberedList = (style: NumberedStyle, editorRef: RefObject<HTMLElemen
   
   editorRef.current.focus();
   
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) {
-    // No selection, create a new list at cursor position
-    const range = document.createRange();
-    const sel = window.getSelection();
-    if (sel) {
-      range.setStart(editorRef.current, editorRef.current.childNodes.length);
-      range.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(range);
-    }
-  }
+  // const selection = window.getSelection();
+  // if (!selection || selection.rangeCount === 0) {
+  //   // No selection, create a new list at cursor position
+  //   const range = document.createRange();
+  //   const sel = window.getSelection();
+  //   if (sel) {
+  //     range.setStart(editorRef.current, editorRef.current.childNodes.length);
+  //     range.collapse(true);
+  //     sel.removeAllRanges();
+  //     sel.addRange(range);
+  //   }
+  // }
   
   // Insert ordered list
   document.execCommand('insertOrderedList', false, null);
@@ -523,7 +523,7 @@ const applyMultilevelList = (style: MultilevelStyle, editorRef: RefObject<HTMLEl
 export const BulletListButton = React.forwardRef<any, ListButtonProps>(({ editorRef, handleChange, dropdownStates, setDropdownStates }, ref) => {
   const [currentBulletStyle, setCurrentBulletStyle] = useState('disc');
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const savedSelectionRef = useRef<Selection | null>(null);
+  const savedRangeRef = useRef<Range | null>(null);
   
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -533,9 +533,10 @@ export const BulletListButton = React.forwardRef<any, ListButtonProps>(({ editor
     }
     
     if (dropdownStates.bulletList) {
+      // UBAH: simpan Range yang sebenarnya
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
-        savedSelectionRef.current = selection;
+        savedRangeRef.current = selection.getRangeAt(0).cloneRange();
       }
       document.addEventListener('mousedown', handleClickOutside);
     }
@@ -546,17 +547,22 @@ export const BulletListButton = React.forwardRef<any, ListButtonProps>(({ editor
   }, [dropdownStates.bulletList, setDropdownStates]);
   
   const handleBulletSelect = (style: BulletStyle) => {
-    if (savedSelectionRef.current) {
+    // UBAH: restore Range sebelum apply list
+    if (savedRangeRef.current && editorRef.current) {
+      editorRef.current.focus();
       const selection = window.getSelection();
       if (selection) {
         selection.removeAllRanges();
-        savedSelectionRef.current = null;
+        selection.addRange(savedRangeRef.current);
       }
     }
     
     applyBulletList(style, editorRef, handleChange);
     setCurrentBulletStyle(style.value);
     setDropdownStates(prev => ({ ...prev, bulletList: false }));
+    
+    // Clear saved range
+    savedRangeRef.current = null;
   };
   
   const handleToggle = () => {
@@ -576,7 +582,9 @@ export const BulletListButton = React.forwardRef<any, ListButtonProps>(({ editor
         size="md"
         showText={false}
         tooltip={`Bullet List: ${currentBulletStyle} (Ctrl+Shift+Q)`}
-        className="tw-w-8 tw-h-8"
+        tooltipPosition="top" // Added
+        tooltipPortal={false} // Added
+        className="tw-w-8 tw-h-8 tw-relative" // Added tw-relative
       >
         <div className="tw-flex tw-items-center tw-gap-1">
           <List className="tw-w-4 tw-h-4" />
@@ -622,7 +630,7 @@ BulletListButton.displayName = 'BulletListButton';
 export const NumberedListButton = React.forwardRef<any, ListButtonProps>(({ editorRef, handleChange, dropdownStates, setDropdownStates }, ref) => {
   const [currentNumberedStyle, setCurrentNumberedStyle] = useState('decimal');
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const savedSelectionRef = useRef<Selection | null>(null);
+  const savedRangeRef = useRef<Range | null>(null);
   
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -632,9 +640,10 @@ export const NumberedListButton = React.forwardRef<any, ListButtonProps>(({ edit
     }
     
     if (dropdownStates.numberedList) {
+      // UBAH: simpan Range
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
-        savedSelectionRef.current = selection;
+        savedRangeRef.current = selection.getRangeAt(0).cloneRange();
       }
       document.addEventListener('mousedown', handleClickOutside);
     }
@@ -645,17 +654,21 @@ export const NumberedListButton = React.forwardRef<any, ListButtonProps>(({ edit
   }, [dropdownStates.numberedList, setDropdownStates]);
   
   const handleNumberedSelect = (style: NumberedStyle) => {
-    if (savedSelectionRef.current) {
+    // UBAH: restore Range
+    if (savedRangeRef.current && editorRef.current) {
+      editorRef.current.focus();
       const selection = window.getSelection();
       if (selection) {
         selection.removeAllRanges();
-        savedSelectionRef.current = null;
+        selection.addRange(savedRangeRef.current);
       }
     }
     
     applyNumberedList(style, editorRef, handleChange);
     setCurrentNumberedStyle(style.value);
     setDropdownStates(prev => ({ ...prev, numberedList: false }));
+    
+    savedRangeRef.current = null;
   };
   
   const handleToggle = () => {
@@ -680,7 +693,9 @@ export const NumberedListButton = React.forwardRef<any, ListButtonProps>(({ edit
         size="md"
         showText={false}
         tooltip={`Numbered List: ${getCurrentSample()} (Ctrl+Shift+E)`}
-        className="tw-w-8 tw-h-8"
+        tooltipPosition="top" // Added
+        tooltipPortal={false} // Added
+        className="tw-w-8 tw-h-8 tw-relative" // Added tw-relative
       >
         <div className="tw-flex tw-items-center tw-gap-1">
           <ListOrdered className="tw-w-4 tw-h-4" />
@@ -726,7 +741,7 @@ NumberedListButton.displayName = 'NumberedListButton';
 export const MultilevelListButton = React.forwardRef<any, ListButtonProps>(({ editorRef, handleChange, dropdownStates, setDropdownStates }, ref) => {
   const [currentMultilevelStyle, setCurrentMultilevelStyle] = useState('Standard');
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const savedSelectionRef = useRef<Selection | null>(null);
+  const savedRangeRef = useRef<Range | null>(null);
   
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -736,9 +751,10 @@ export const MultilevelListButton = React.forwardRef<any, ListButtonProps>(({ ed
     }
     
     if (dropdownStates.multilevelList) {
+      // UBAH: simpan Range
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
-        savedSelectionRef.current = selection;
+        savedRangeRef.current = selection.getRangeAt(0).cloneRange();
       }
       document.addEventListener('mousedown', handleClickOutside);
     }
@@ -749,17 +765,21 @@ export const MultilevelListButton = React.forwardRef<any, ListButtonProps>(({ ed
   }, [dropdownStates.multilevelList, setDropdownStates]);
   
   const handleMultilevelSelect = (style: MultilevelStyle) => {
-    if (savedSelectionRef.current) {
+    // UBAH: restore Range
+    if (savedRangeRef.current && editorRef.current) {
+      editorRef.current.focus();
       const selection = window.getSelection();
       if (selection) {
         selection.removeAllRanges();
-        savedSelectionRef.current = null;
+        selection.addRange(savedRangeRef.current);
       }
     }
     
     applyMultilevelList(style, editorRef, handleChange);
     setCurrentMultilevelStyle(style.name);
     setDropdownStates(prev => ({ ...prev, multilevelList: false }));
+    
+    savedRangeRef.current = null;
   };
   
   const handleToggle = () => {
@@ -779,7 +799,9 @@ export const MultilevelListButton = React.forwardRef<any, ListButtonProps>(({ ed
         size="md"
         showText={false}
         tooltip={`Multilevel List: ${currentMultilevelStyle} (Ctrl+Shift+M)`}
-        className="tw-w-8 tw-h-8"
+        tooltipPosition="top" // Added
+        tooltipPortal={false} // Added
+        className="tw-w-8 tw-h-8 tw-relative" // Added tw-relative
       >
         <div className="tw-flex tw-items-center tw-gap-1">
           <Network className="tw-w-4 tw-h-4" />

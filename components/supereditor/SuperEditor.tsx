@@ -86,8 +86,11 @@ const ImageGradientButton: React.FC<{ onClick: () => void }> = ({ onClick }) => 
         gradient2: '#34D399',
         text: '#FFFFFF'
       }}
-      className="tw-flex tw-items-center tw-gap-2"
-      tabIndex={-1} // Remove from tab sequence
+     tooltip="Insert Image"
+      tooltipPosition="top"
+      tooltipPortal={false}
+      className="tw-w-8 tw-h-8 tw-relative"
+      tabIndex={-1}
     />
   );
 };
@@ -107,8 +110,11 @@ const EquationGradientButton: React.FC<{ onClick: () => void }> = ({ onClick }) 
         gradient2: '#FBBF24',
         text: '#FFFFFF'
       }}
-      className="tw-flex tw-items-center tw-gap-2"
-      tabIndex={-1} // Remove from tab sequence
+      tooltip="Insert Equation (Ctrl+Shift+E)"
+      tooltipPosition="top"
+      tooltipPortal={false}
+      className="tw-w-8 tw-h-8 tw-relative"
+      tabIndex={-1}
     />
   );
 };

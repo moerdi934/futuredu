@@ -789,7 +789,10 @@ export const TextColorButton = forwardRef<HTMLButtonElement, any>(({
         gradient2: '#A855F7',
         text: '#FFFFFF'
       }}
-      className={`tw-flex tw-items-center tw-gap-2 ${className}`}
+      tooltip="Text Color (Ctrl+Shift+F)"
+      tooltipPosition="top"
+      tooltipPortal={false}
+      className="tw-w-8 tw-h-8 tw-relative" // ← ganti className agar konsisten
     />
   );
 });
@@ -826,7 +829,10 @@ export const BackgroundColorButton = forwardRef<HTMLButtonElement, any>(({
         gradient2: '#0891B2',
         text: '#FFFFFF'
       }}
-      className={`tw-flex tw-items-center tw-gap-2 ${className}`}
+      tooltip="Highlight Color (Ctrl+Shift+H)"
+      tooltipPosition="top"
+      tooltipPortal={false}
+      className="tw-w-8 tw-h-8 tw-relative" // ← ganti className agar konsisten
     />
   );
 });

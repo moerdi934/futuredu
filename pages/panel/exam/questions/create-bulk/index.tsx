@@ -6,15 +6,8 @@ import React, {
   useEffect,
   useCallback,
   useRef,
-  useContext,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Form,
-  Row,
-  Col,
-  Card,
-} from 'react-bootstrap';
 import MainLayout from '../../../../../components/layout/DashboardLayout';
 import {
   Plus,
@@ -27,12 +20,10 @@ import {
   ChevronDown,
   ChevronUp,
   Download,
-  Save,
   RotateCcw,
   Zap,
   Target,
   Award,
-  Menu
 } from 'lucide-react';
 import axios from 'axios';
 import debounce from 'lodash/debounce';
@@ -148,8 +139,7 @@ const CustomAccordionItem: React.FC<{
   };
 
   return (
-    <div className="tw-bg-white tw-rounded-xl tw-shadow-lg tw-border-2 tw-border-purple-200 tw-overflow-visible">
-      {/* Header */}
+    <div className="tw-bg-white tw-rounded-xl tw-shadow-lg tw-border-2 tw-border-purple-200" style={{ overflow: 'visible' }}>
       <div 
         className="tw-cursor-pointer tw-select-none"
         onClick={handleToggle}
@@ -157,7 +147,7 @@ const CustomAccordionItem: React.FC<{
         {header}
       </div>
       
-      {/* Body - Custom implementation without Accordion.Body */}
+      {/* UBAH INI - Jangan pakai conditional rendering */}
       <div 
         className={`tw-transition-all tw-duration-300 tw-ease-in-out ${
           isOpen 
@@ -165,25 +155,22 @@ const CustomAccordionItem: React.FC<{
             : 'tw-max-h-0 tw-opacity-0 tw-overflow-hidden'
         }`}
         style={{
-          // Ensure high z-index for dropdowns
+          overflow: isOpen ? 'visible' : 'hidden',
           position: 'relative',
-          zIndex: isOpen ? 10 : 1,
-          // NO overflow hidden here - this was the main issue
-          overflow: isOpen ? 'visible' : 'hidden'
+          zIndex: isOpen ? 10 : 1
         }}
       >
-          <div 
-            className="tw-bg-gray-50 tw-p-2 sm:tw-p-4 tw-rounded-b-lg"
-            style={{
-              // Create stacking context but allow overflow
-              display: isOpen ? 'block' : 'none',
-              position: 'relative',
-              zIndex: 10,
-              overflow: 'visible'
-            }}
-          >
-            {children}
-          </div>
+        <div 
+          className="tw-bg-gray-50 tw-p-2 sm:tw-p-4 tw-rounded-b-lg"
+          style={{
+            display: isOpen ? 'block' : 'none', // Tetap di DOM tapi hidden
+            overflow: 'visible',
+            position: 'relative',
+            zIndex: 10
+          }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -428,7 +415,6 @@ const BulkQuestionItem: React.FC<{
     }
   };
 
-  // Modal buttons for passage creation
   const passageModalButtons: ModalButton[] = [
     {
       action: 'cancel',
@@ -452,7 +438,6 @@ const BulkQuestionItem: React.FC<{
     }
   ];
 
-  // Header Component
   const headerContent = (
     <div className="tw-relative">
       <div className="tw-pr-12 sm:tw-pr-20 md:tw-pr-24 tw-p-4 tw-bg-gradient-to-r tw-from-purple-50 tw-to-indigo-50 tw-border-b tw-border-purple-200">
@@ -468,9 +453,7 @@ const BulkQuestionItem: React.FC<{
         </div>
       </div>
       
-      {/* Responsive delete button */}
       <div className="tw-absolute tw-right-2 sm:tw-right-4 tw-top-1/2 tw-transform -tw-translate-y-1/2 tw-z-20">
-        {/* Mobile version - icon only */}
         <div className="sm:tw-hidden">
           <ButtonGradient
             action="delete"
@@ -485,7 +468,6 @@ const BulkQuestionItem: React.FC<{
           />
         </div>
         
-        {/* Desktop version - with text */}
         <div className="tw-hidden sm:tw-block">
           <ButtonGradient
             action="delete"
@@ -510,17 +492,15 @@ const BulkQuestionItem: React.FC<{
         onToggle={() => onToggle()}
         header={headerContent}
       >
-        {/* Content with proper z-index and overflow handling */}
         <div 
           className="tw-space-y-4"
           style={{
-            // Ensure this container can show dropdowns
             position: 'relative',
             zIndex: 100,
             overflow: 'visible'
           }}
         >
-          {/* Fully responsive grid with proper spacing */}
+          {/* Grid fields */}
           <div className="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 lg:tw-grid-cols-3 tw-gap-3 sm:tw-gap-4 tw-mb-4 sm:tw-mb-6">
             <div 
               className="tw-w-full tw-min-w-0"
@@ -627,10 +607,9 @@ const BulkQuestionItem: React.FC<{
             />
           </div>
 
-          {/* Fixed YesNoField for mobile */}
           <div 
-            className="tw-mb-4 sm:tw-mb-6 tw-w-full tw-overflow-visible"
-            style={{ position: 'relative', zIndex: 100 }}
+            className="tw-mb-4 sm:tw-mb-6 tw-w-full"
+            style={{ position: 'relative', zIndex: 100, overflow: 'visible' }}
           >
             <div className="tw-w-full tw-min-w-0">
               <YesNoField
@@ -660,9 +639,8 @@ const BulkQuestionItem: React.FC<{
               <div 
                 className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-3 sm:tw-p-4 tw-shadow-sm tw-mt-2 tw-w-full"
                 style={{
-                  // This is the critical container for the passage dropdown
                   position: 'relative',
-                  zIndex: 1000, // Very high z-index
+                  zIndex: 1000,
                   overflow: 'visible'
                 }}
               >
@@ -701,7 +679,6 @@ const BulkQuestionItem: React.FC<{
                   <div 
                     className="tw-space-y-3 tw-w-full tw-min-w-0"
                     style={{
-                      // Container for SearchSingleField - SUPER HIGH z-index
                       position: 'relative',
                       zIndex: 9999,
                       overflow: 'visible'
@@ -730,7 +707,7 @@ const BulkQuestionItem: React.FC<{
                       required
                     />
                     {data.passage && (
-                      <div className="tw-mt-4 tw-w-full tw-overflow-hidden">
+                      <div className="tw-mt-4 tw-w-full">
                         <div className="tw-text-purple-700 tw-font-medium tw-mb-2 tw-text-sm sm:tw-text-base">
                           Isi Bacaan:
                         </div>
@@ -770,119 +747,115 @@ const BulkQuestionItem: React.FC<{
           </div>
 
           <div className="tw-mb-4 sm:tw-mb-6 tw-w-full tw-min-w-0">
-            <Form.Group>
-              <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-3 tw-flex tw-items-center tw-space-x-2 tw-text-sm sm:tw-text-base">
-                <BookOpen className="tw-w-4 tw-h-4" />
-                <span>
-                  Teks Soal <span className="tw-text-red-500">*</span>
-                </span>
-              </Form.Label>
-              <div className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-shadow-sm tw-w-full tw-overflow-hidden">
-                <SuperEditor
-                  onChange={(html) => {
-                    const updated = { ...data, questionText: html };
-                    onChange(index, updated);
-                  }}
-                  initialValue="<p>Mulai mengetik soal di sini...</p>"
-                  height="120px"
-                />
-              </div>
-            </Form.Group>
+            <label className="tw-text-purple-700 tw-font-semibold tw-mb-3 tw-flex tw-items-center tw-space-x-2 tw-text-sm sm:tw-text-base">
+              <BookOpen className="tw-w-4 tw-h-4" />
+              <span>
+                Teks Soal <span className="tw-text-red-500">*</span>
+              </span>
+            </label>
+            <div className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-shadow-sm tw-w-full">
+              <SuperEditor
+                onChange={(html) => {
+                  const updated = { ...data, questionText: html };
+                  onChange(index, updated);
+                }}
+                initialValue="<p>Mulai mengetik soal di sini...</p>"
+                height="120px"
+              />
+            </div>
           </div>
 
           {(data.questionType === 'single-choice' ||
             data.questionType === 'multiple-choice') && (
-            <div className="tw-mb-4 sm:tw-mb-6 tw-w-full tw-overflow-hidden">
-              <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-4 tw-flex tw-items-center tw-space-x-2 tw-text-sm sm:tw-text-base">
+            <div className="tw-mb-4 sm:tw-mb-6 tw-w-full">
+              <label className="tw-text-purple-700 tw-font-semibold tw-mb-4 tw-flex tw-items-center tw-space-x-2 tw-text-sm sm:tw-text-base">
                 <div className="tw-bg-purple-100 tw-p-1 tw-rounded">
                   <Check className="tw-w-4 tw-h-4 tw-text-purple-600" />
                 </div>
                 <span>Opsi Jawaban</span>
-              </Form.Label>
-              <Row className="tw-g-2 sm:tw-g-4">
+              </label>
+              <div className="tw-grid tw-grid-cols-1 lg:tw-grid-cols-2 tw-gap-2 sm:tw-gap-4">
                 {data.options.map((option: string, idx: number) => (
-                  <Col xs={12} lg={6} key={idx} className="tw-mb-3 sm:tw-mb-4">
-                    <Card className="tw-border-2 tw-border-purple-200 tw-rounded-lg tw-shadow-sm hover:tw-shadow-md tw-transition-all tw-duration-200">
-                      <Card.Body className="tw-p-3 sm:tw-p-4">
-                        <div className="tw-flex tw-items-center tw-justify-between tw-mb-3 tw-flex-wrap tw-gap-2">
-                          <div className="tw-flex tw-items-center tw-space-x-2">
-                            <div className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-indigo-500 tw-text-white tw-w-6 tw-h-6 sm:tw-w-8 sm:tw-h-8 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-font-bold tw-text-xs sm:tw-text-sm">
-                              {optionLabels[idx]}
-                            </div>
-                            <span className="tw-text-purple-700 tw-font-medium tw-text-xs sm:tw-text-sm">
-                              Opsi {optionLabels[idx]}
-                            </span>
+                  <div key={idx} className="tw-mb-3 sm:tw-mb-4">
+                    <div className="tw-border-2 tw-border-purple-200 tw-rounded-lg tw-shadow-sm hover:tw-shadow-md tw-transition-all tw-duration-200 tw-p-3 sm:tw-p-4">
+                      <div className="tw-flex tw-items-center tw-justify-between tw-mb-3 tw-flex-wrap tw-gap-2">
+                        <div className="tw-flex tw-items-center tw-space-x-2">
+                          <div className="tw-bg-gradient-to-r tw-from-purple-500 tw-to-indigo-500 tw-text-white tw-w-6 tw-h-6 sm:tw-w-8 sm:tw-h-8 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-font-bold tw-text-xs sm:tw-text-sm">
+                            {optionLabels[idx]}
                           </div>
-                          <div className="tw-flex-shrink-0">
-                            <ButtonGradient
-                              action="custom"
-                              customText={
-                                Array.isArray(data.correctAnswer) &&
-                                data.correctAnswer.includes(idx)
-                                  ? 'Benar'
-                                  : 'Tandai'
-                              }
-                              customIcon={
-                                Array.isArray(data.correctAnswer) &&
-                                data.correctAnswer.includes(idx) ? <Check className="tw-w-3 tw-h-3 sm:tw-w-4 sm:tw-h-4" /> : undefined
-                              }
-                              customColors={
-                                Array.isArray(data.correctAnswer) &&
-                                data.correctAnswer.includes(idx) ? {
-                                  primary: '#10B981',
-                                  secondary: '#059669',
-                                  gradient1: '#10B981',
-                                  gradient2: '#34D399',
-                                  text: '#FFFFFF'
-                                } : {
-                                  primary: '#6B7280',
-                                  secondary: '#4B5563',
-                                  gradient1: '#6B7280',
-                                  gradient2: '#9CA3AF',
-                                  text: '#FFFFFF'
-                                }
-                              }
-                              size="sm"
-                              onClick={() => {
-                                let updatedCorrect;
-                                if (data.questionType === 'single-choice') {
-                                  updatedCorrect = [idx];
-                                } else {
-                                  if (
-                                    Array.isArray(data.correctAnswer) &&
-                                    data.correctAnswer.includes(idx)
-                                  ) {
-                                    updatedCorrect = (data.correctAnswer as number[]).filter(
-                                      (ans) => ans !== idx
-                                    );
-                                  } else {
-                                    updatedCorrect = [...(data.correctAnswer as number[]), idx];
-                                  }
-                                }
-                                const updated = { ...data, correctAnswer: updatedCorrect };
-                                onChange(index, updated);
-                              }}
-                            />
-                          </div>
+                          <span className="tw-text-purple-700 tw-font-medium tw-text-xs sm:tw-text-sm">
+                            Opsi {optionLabels[idx]}
+                          </span>
                         </div>
-                        <div className="tw-bg-gray-50 tw-rounded-lg tw-border tw-border-gray-200 tw-w-full tw-overflow-hidden">
-                          <SuperEditor
-                            onChange={(html) => {
-                              const newOptions = [...data.options];
-                              newOptions[idx] = html;
-                              const updated = { ...data, options: newOptions };
+                        <div className="tw-flex-shrink-0">
+                          <ButtonGradient
+                            action="custom"
+                            customText={
+                              Array.isArray(data.correctAnswer) &&
+                              data.correctAnswer.includes(idx)
+                                ? 'Benar'
+                                : 'Tandai'
+                            }
+                            customIcon={
+                              Array.isArray(data.correctAnswer) &&
+                              data.correctAnswer.includes(idx) ? <Check className="tw-w-3 tw-h-3 sm:tw-w-4 sm:tw-h-4" /> : undefined
+                            }
+                            customColors={
+                              Array.isArray(data.correctAnswer) &&
+                              data.correctAnswer.includes(idx) ? {
+                                primary: '#10B981',
+                                secondary: '#059669',
+                                gradient1: '#10B981',
+                                gradient2: '#34D399',
+                                text: '#FFFFFF'
+                              } : {
+                                primary: '#6B7280',
+                                secondary: '#4B5563',
+                                gradient1: '#6B7280',
+                                gradient2: '#9CA3AF',
+                                text: '#FFFFFF'
+                              }
+                            }
+                            size="sm"
+                            onClick={() => {
+                              let updatedCorrect;
+                              if (data.questionType === 'single-choice') {
+                                updatedCorrect = [idx];
+                              } else {
+                                if (
+                                  Array.isArray(data.correctAnswer) &&
+                                  data.correctAnswer.includes(idx)
+                                ) {
+                                  updatedCorrect = (data.correctAnswer as number[]).filter(
+                                    (ans) => ans !== idx
+                                  );
+                                } else {
+                                  updatedCorrect = [...(data.correctAnswer as number[]), idx];
+                                }
+                              }
+                              const updated = { ...data, correctAnswer: updatedCorrect };
                               onChange(index, updated);
                             }}
-                            initialValue="<p>Masukkan teks opsi...</p>"
-                            height="80px"
                           />
                         </div>
-                      </Card.Body>
-                    </Card>
-                  </Col>
+                      </div>
+                      <div className="tw-bg-gray-50 tw-rounded-lg tw-border tw-border-gray-200 tw-w-full">
+                        <SuperEditor
+                          onChange={(html) => {
+                            const newOptions = [...data.options];
+                            newOptions[idx] = html;
+                            const updated = { ...data, options: newOptions };
+                            onChange(index, updated);
+                          }}
+                          initialValue="<p>Masukkan teks opsi...</p>"
+                          height="80px"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </Row>
-              <div className="tw-w-full tw-overflow-hidden">
+              </div>
+              <div className="tw-w-full tw-mt-4">
                 <ButtonGradient
                   action="add"
                   customText="Tambah Opsi"
@@ -898,16 +871,16 @@ const BulkQuestionItem: React.FC<{
           )}
 
           {data.questionType === 'true-false' && (
-            <div className="tw-mb-4 sm:tw-mb-6 tw-w-full tw-overflow-hidden">
-              <Form.Label className="tw-text-purple-700 tw-font-semibold tw-mb-4 tw-flex tw-items-center tw-space-x-2 tw-text-sm sm:tw-text-base">
+            <div className="tw-mb-4 sm:tw-mb-6 tw-w-full">
+              <label className="tw-text-purple-700 tw-font-semibold tw-mb-4 tw-flex tw-items-center tw-space-x-2 tw-text-sm sm:tw-text-base">
                 <BookOpen className="tw-w-4 tw-h-4" />
                 <span>Pernyataan</span>
-              </Form.Label>
+              </label>
               <div className="tw-space-y-3 sm:tw-space-y-4">
                 {data.statements.map((statement: string, idx: number) => (
                   <div
                     key={idx}
-                    className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-3 sm:tw-p-4 tw-shadow-sm tw-w-full tw-overflow-hidden"
+                    className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-3 sm:tw-p-4 tw-shadow-sm tw-w-full"
                   >
                     <div className="tw-flex tw-flex-col lg:tw-flex-row tw-gap-3 lg:tw-items-center">
                       <div className="tw-flex-1 tw-min-w-0">
@@ -988,7 +961,7 @@ const BulkQuestionItem: React.FC<{
                   </div>
                 ))}
               </div>
-              <div className="tw-mt-4 sm:tw-mt-6 tw-w-full tw-overflow-hidden">
+              <div className="tw-mt-4 sm:tw-mt-6 tw-w-full">
                 <ButtonGradient
                   action="add"
                   customText="Tambah Pernyataan"
@@ -1020,8 +993,7 @@ const BulkQuestionItem: React.FC<{
             </div>
           )}
 
-          {/* Fixed YesNoField for explanation */}
-          <div className="tw-mb-4 sm:tw-mb-6 tw-w-full tw-overflow-hidden">
+          <div className="tw-mb-4 sm:tw-mb-6 tw-w-full">
             <div className="tw-w-full tw-min-w-0">
               <YesNoField
                 label="Ada Pembahasan"
@@ -1041,29 +1013,29 @@ const BulkQuestionItem: React.FC<{
             </div>
             
             {data.hasExplanation && (
-              <div className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-3 sm:tw-p-4 tw-shadow-sm tw-mt-2 tw-w-full tw-overflow-hidden">
-                <Form.Group>
-                  <Form.Label className="tw-text-purple-700 tw-font-medium tw-text-sm sm:tw-text-base">
-                    Isi Pembahasan <span className="tw-text-red-500">*</span>
-                  </Form.Label>
-                  <div className="tw-bg-gray-50 tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-w-full tw-overflow-hidden">
-                    <SuperEditor
-                      onChange={(html) => {
-                        const updated = { ...data, explanationContent: html };
-                        onChange(index, updated);
-                      }}
-                      initialValue="<p>Mulai mengetik pembahasan di sini...</p>"
-                      height="100px"
-                    />
-                  </div>
-                </Form.Group>
+              <div className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-3 sm:tw-p-4 tw-shadow-sm tw-mt-2 tw-w-full">
+                <label className="tw-text-purple-700 tw-font-medium tw-text-sm sm:tw-text-base tw-mb-2 tw-block">
+                  Isi Pembahasan <span className="tw-text-red-500">*</span>
+                </label>
+                <div className="tw-bg-gray-50 tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-w-full">
+                  <SuperEditor
+                    onChange={(html) => {
+                      const updated = { ...data, explanationContent: html };
+                      onChange(index, updated);
+                    }}
+                    initialValue="<p>Mulai mengetik pembahasan di sini...</p>"
+                    height="100px"
+                  />
+                </div>
               </div>
             )}
           </div>
+
+          {/* Spacer for dropdown space */}
+          <div className="tw-h-64" aria-hidden="true" />
         </div>
       </CustomAccordionItem>
 
-      {/* Mobile-optimized Modal */}
       <LearningModal
         show={data.showPassageModal}
         onHide={() => {
@@ -1084,7 +1056,7 @@ const BulkQuestionItem: React.FC<{
         bottomButtons={passageModalButtons}
         preventCloseOnOutsideClick={false}
       >
-        <div className="tw-space-y-3 sm:tw-space-y-4 tw-w-full tw-overflow-hidden">
+        <div className="tw-space-y-3 sm:tw-space-y-4 tw-w-full">
           <div className="tw-w-full tw-min-w-0">
             <ShortFormField
               label="Judul Bacaan"
@@ -1100,11 +1072,11 @@ const BulkQuestionItem: React.FC<{
             />
           </div>
           
-          <Form.Group className="tw-w-full tw-min-w-0">
-            <Form.Label className="tw-text-purple-700 tw-font-medium tw-text-sm sm:tw-text-base">
+          <div className="tw-w-full tw-min-w-0">
+            <label className="tw-text-purple-700 tw-font-medium tw-text-sm sm:tw-text-base tw-mb-2 tw-block">
               Isi Bacaan <span className="tw-text-red-500">*</span>
-            </Form.Label>
-            <div className="tw-bg-gray-50 tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-shadow-sm tw-w-full tw-overflow-hidden">
+            </label>
+            <div className="tw-bg-gray-50 tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-shadow-sm tw-w-full">
               <SuperEditor
                 onChange={(html) => {
                   const updated = { ...data, newPassageContent: html };
@@ -1114,7 +1086,7 @@ const BulkQuestionItem: React.FC<{
                 height="300px"
               />
             </div>
-          </Form.Group>
+          </div>
         </div>
       </LearningModal>
     </>
@@ -1128,12 +1100,12 @@ const CreateQuestionBulk: React.FC = () => {
   const [successData, setSuccessData] = useState<any[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [autoExport, setAutoExport] = useState(false);
-  const [openIndex, setOpenIndex] = useState<number | null>(0); // Track which accordion is open
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   const addQuestion = () => {
     const newIndex = questions.length;
     setQuestions((prev) => [...prev, { ...initialQuestionData }]);
-    setOpenIndex(newIndex); // Open the new question
+    setOpenIndex(newIndex);
   };
 
   const updateQuestion = (idx: number, data: QuestionData) => {
@@ -1145,7 +1117,6 @@ const CreateQuestionBulk: React.FC = () => {
   const removeQuestion = (idx: number) => {
     const updated = questions.filter((_, i) => i !== idx);
     setQuestions(updated);
-    // Adjust open index if needed
     if (openIndex === idx) {
       setOpenIndex(updated.length > 0 ? 0 : null);
     } else if (openIndex !== null && openIndex > idx) {
@@ -1175,9 +1146,7 @@ const CreateQuestionBulk: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  // Fixed validation and payload preparation
   const handleSubmit = async () => {
-    // Validate questions before submitting
     const invalidQuestions = questions.filter((q, idx) => {
       if (!q.subTopik?.value) {
         alert(`Pertanyaan ${idx + 1}: Sub Topik harus dipilih`);
@@ -1216,7 +1185,6 @@ const CreateQuestionBulk: React.FC = () => {
       }
 
       return {
-        // Use question_topic_type instead of exam_type_id
         question_topic_type: q.subTopik?.value || null,
         question_text: q.questionText,
         question_type: q.questionType,
@@ -1269,13 +1237,13 @@ const CreateQuestionBulk: React.FC = () => {
 
   return (
     <MainLayout>
-      {/* Fixed container with proper overflow handling */}
       <div className="tw-min-h-screen tw-w-full tw-overflow-x-hidden">
         <div className="tw-p-3 sm:tw-p-6 tw-bg-gradient-to-br tw-from-purple-50 tw-via-white tw-to-indigo-50">
-          <div className="tw-max-w-full tw-mx-auto tw-overflow-hidden">
-            {/* Mobile-optimized Header Card */}
-            <Card className="tw-bg-gradient-to-r tw-from-purple-600 tw-to-indigo-600 tw-text-white tw-rounded-xl sm:tw-rounded-2xl tw-shadow-xl sm:tw-shadow-2xl tw-border-0 tw-mb-4 sm:tw-mb-6 tw-w-full tw-overflow-hidden">
-              <Card.Body className="tw-p-4 sm:tw-p-6">
+          <div className="tw-max-w-full tw-mx-auto" style={{ overflow: 'visible' }}>
+            
+            {/* Header Card */}
+            <div className="tw-bg-gradient-to-r tw-from-purple-600 tw-to-indigo-600 tw-text-white tw-rounded-xl sm:tw-rounded-2xl tw-shadow-xl sm:tw-shadow-2xl tw-border-0 tw-mb-4 sm:tw-mb-6 tw-w-full">
+              <div className="tw-p-4 sm:tw-p-6">
                 <div className="tw-flex tw-flex-col sm:tw-flex-row tw-justify-between tw-items-start sm:tw-items-center tw-gap-3 sm:tw-gap-4">
                   <div className="tw-flex tw-items-center tw-space-x-3 sm:tw-space-x-4 tw-min-w-0 tw-flex-1">
                     <div className="tw-bg-white/20 tw-p-2 sm:tw-p-3 tw-rounded-lg sm:tw-rounded-xl tw-flex-shrink-0">
@@ -1305,12 +1273,12 @@ const CreateQuestionBulk: React.FC = () => {
                     />
                   </div>
                 </div>
-              </Card.Body>
-            </Card>
+              </div>
+            </div>
 
-            {/* Mobile-optimized Stats & Controls Card */}
-            <Card className="tw-bg-white tw-rounded-lg sm:tw-rounded-xl tw-shadow-lg tw-border-2 tw-border-purple-200 tw-mb-4 sm:tw-mb-6 tw-w-full tw-overflow-hidden">
-              <Card.Body className="tw-p-4 sm:tw-p-6">
+            {/* Stats Card */}
+            <div className="tw-bg-white tw-rounded-lg sm:tw-rounded-xl tw-shadow-lg tw-border-2 tw-border-purple-200 tw-mb-4 sm:tw-mb-6 tw-w-full">
+              <div className="tw-p-4 sm:tw-p-6">
                 <div className="tw-flex tw-flex-col lg:tw-flex-row tw-justify-between tw-items-start lg:tw-items-center tw-gap-4">
                   <div className="tw-flex tw-items-center tw-gap-4 sm:tw-gap-6">
                     <div className="tw-bg-purple-100 tw-rounded-lg tw-p-3 sm:tw-p-4 tw-flex-shrink-0">
@@ -1319,9 +1287,8 @@ const CreateQuestionBulk: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Fixed auto-export section for mobile */}
                   <div className="tw-w-full lg:tw-w-auto lg:tw-flex-1 lg:tw-justify-end lg:tw-flex">
-                    <div className="tw-bg-gradient-to-r tw-from-blue-50 tw-to-indigo-50 tw-border-2 tw-border-blue-200 tw-rounded-lg sm:tw-rounded-xl tw-p-3 sm:tw-p-4 tw-w-full lg:tw-min-w-[300px] lg:tw-max-w-[350px] tw-overflow-hidden">
+                    <div className="tw-bg-gradient-to-r tw-from-blue-50 tw-to-indigo-50 tw-border-2 tw-border-blue-200 tw-rounded-lg sm:tw-rounded-xl tw-p-3 sm:tw-p-4 tw-w-full lg:tw-min-w-[300px] lg:tw-max-w-[350px]">
                       <div className="tw-w-full tw-min-w-0">
                         <YesNoField
                           label="Auto-export data soal"
@@ -1339,12 +1306,12 @@ const CreateQuestionBulk: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </Card.Body>
-            </Card>
+              </div>
+            </div>
 
-            {/* Mobile-optimized Questions Container */}
-            <Card className="tw-bg-white tw-rounded-lg sm:tw-rounded-xl tw-shadow-lg tw-border-2 tw-border-purple-200 tw-w-full tw-overflow-visible">
-              <Card.Body className="tw-p-3 sm:tw-p-6">
+            {/* Questions Container */}
+            <div className="tw-bg-white tw-rounded-lg sm:tw-rounded-xl tw-shadow-lg tw-border-2 tw-border-purple-200 tw-w-full" style={{ overflow: 'visible' }}>
+              <div className="tw-p-3 sm:tw-p-6" style={{ overflow: 'visible' }}>
                 <div className="tw-flex tw-flex-col sm:tw-flex-row tw-justify-between tw-items-start sm:tw-items-center tw-mb-4 sm:tw-mb-6 tw-gap-3 sm:tw-gap-0">
                   <div className="tw-flex tw-items-center tw-gap-2 sm:tw-gap-3 tw-min-w-0 tw-flex-1">
                     <div className="tw-bg-purple-100 tw-p-2 tw-rounded-lg tw-flex-shrink-0">
@@ -1381,11 +1348,9 @@ const CreateQuestionBulk: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Custom Accordion Implementation with proper overflow */}
                 <div 
                   className="tw-space-y-3 sm:tw-space-y-4 tw-w-full"
                   style={{
-                    // Container must allow overflow for dropdowns
                     overflow: 'visible',
                     position: 'relative',
                     zIndex: 1
@@ -1424,13 +1389,13 @@ const CreateQuestionBulk: React.FC = () => {
                     />
                   </div>
                 )}
-              </Card.Body>
-            </Card>
+              </div>
+            </div>
 
-            {/* Mobile-optimized Submit Section */}
+            {/* Submit Section */}
             {questions.length > 0 && (
-              <Card className="tw-bg-gradient-to-r tw-from-green-50 tw-to-emerald-50 tw-border-2 tw-border-green-200 tw-rounded-lg sm:tw-rounded-xl tw-shadow-lg tw-mt-4 sm:tw-mt-6 tw-w-full tw-overflow-hidden">
-                <Card.Body className="tw-p-4 sm:tw-p-6">
+              <div className="tw-bg-gradient-to-r tw-from-green-50 tw-to-emerald-50 tw-border-2 tw-border-green-200 tw-rounded-lg sm:tw-rounded-xl tw-shadow-lg tw-mt-4 sm:tw-mt-6 tw-w-full">
+                <div className="tw-p-4 sm:tw-p-6">
                   <div className="tw-flex tw-flex-col sm:tw-flex-row tw-justify-between tw-items-start sm:tw-items-center tw-gap-4">
                     <div className="tw-flex tw-items-center tw-gap-3 sm:tw-gap-4 tw-min-w-0 tw-flex-1">
                       <div className="tw-bg-green-100 tw-p-2 sm:tw-p-3 tw-rounded-lg sm:tw-rounded-xl tw-flex-shrink-0">
@@ -1482,8 +1447,8 @@ const CreateQuestionBulk: React.FC = () => {
                       />
                     </div>
                   </div>
-                </Card.Body>
-              </Card>
+                </div>
+              </div>
             )}
           </div>
         </div>

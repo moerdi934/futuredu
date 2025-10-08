@@ -1,4 +1,4 @@
-// [sectionCode].tsx
+// pages/section/[sectionCode].tsx
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -213,15 +213,13 @@ const SectionPage: React.FC = () => {
   const [materialDetail, setMaterialDetail] = useState<MaterialDetail | null>(null);
   const [loadingMaterial, setLoadingMaterial] = useState<boolean>(false);
   const [materialError, setMaterialError] = useState<string | null>(null);
+  const [codeHandlerLoaded, setCodeHandlerLoaded] = useState(false);
   
   // State untuk cart
   const [showCartModal, setShowCartModal] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartSuccess, setCartSuccess] = useState(false);
   const [cartError, setCartError] = useState<string | null>(null);
-
-  // State untuk practice question handler loaded
-  const [practiceHandlerLoaded, setPracticeHandlerLoaded] = useState(false);
 
   // Tracking state via refs
   const trackingRef = useRef<{
@@ -264,16 +262,17 @@ const SectionPage: React.FC = () => {
   }, []);
 
   // Reinitialize practice questions ketika content berubah
-  useEffect(() => {
-    if (practiceHandlerLoaded && materialDetail?.content) {
-      // Delay sedikit untuk memastikan DOM sudah terupdate
-      setTimeout(() => {
-        if (window.PracticeQuestionHandler) {
-          window.PracticeQuestionHandler.init();
-        }
-      }, 100);
-    }
-  }, [materialDetail?.content, practiceHandlerLoaded]);
+useEffect(() => {
+  if (codeHandlerLoaded && materialDetail?.content) {
+    // Delay sedikit untuk memastikan DOM sudah terupdate
+    setTimeout(() => {
+      if (window.CodeCloseOpenHandler) {
+        console.log('Reinitializing CodeCloseOpenHandler...');
+        window.CodeCloseOpenHandler.reinit(contentRef.current);
+      }
+    }, 100);
+  }
+}, [materialDetail?.content, codeHandlerLoaded]);
 
   // Fetch detail materi saat selectedMaterialId berubah
   useEffect(() => {
@@ -991,18 +990,51 @@ const SectionPage: React.FC = () => {
   return (
     <>
       {/* Load Practice Question Handler Script */}
-      <Script 
-        src="/practiceQuestionHandler.js" 
+<Script 
+        src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"
         strategy="afterInteractive"
         onLoad={() => {
-          console.log('Practice Question Handler loaded');
-          setPracticeHandlerLoaded(true);
-        }}
-        onError={(e) => {
-          console.error('Failed to load Practice Question Handler:', e);
+          console.log('Highlight.js loaded');
         }}
       />
-
+      
+      {/* Load Highlight.js Theme - Same as SuperEditor (felipec) */}
+      <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/felipec.min.css"
+      />
+      
+      {/* Load Practice Question Handler Script */}
+      <Script 
+        src="/CodeCloseOpen.js" 
+        strategy="afterInteractive"
+        onLoad={() => {
+          console.log('Code Close/Open Handler loaded');
+          setCodeHandlerLoaded(true);
+          
+          // Wait for highlight.js to be available
+          const initializeCodeBlocks = () => {
+            if (window.hljs && window.CodeCloseOpenHandler) {
+              // First, highlight all code blocks
+              document.querySelectorAll('pre code.cte-code-block').forEach((block) => {
+                window.hljs.highlightElement(block);
+              });
+              
+              // Then initialize collapse/expand handlers
+              window.CodeCloseOpenHandler.init();
+              console.log('Code blocks highlighted and handlers initialized');
+            } else {
+              // Retry after a short delay if hljs not ready yet
+              setTimeout(initializeCodeBlocks, 100);
+            }
+          };
+          
+          initializeCodeBlocks();
+        }}
+        onError={(e) => {
+          console.error('Failed to load Code Close/Open Handler:', e);
+        }}
+      />
       <div className="tw-bg-gradient-to-br tw-from-purple-100 tw-via-pink-50 tw-to-indigo-100 tw-min-h-[125vh]">
         <NavigationBar />
         <Container fluid className="tw-px-0 md:tw-px-4 md:tw-py-10 tw-min-h-screen">

@@ -279,7 +279,10 @@ const CodeButton: React.FC<CodeButtonProps> = ({ onClick }) => {
         gradient2: '#A855F7',
         text: '#FFFFFF'
       }}
-      className="tw-flex tw-items-center tw-gap-2"
+      tooltip="Insert Code Block (Ctrl+Shift+C)"
+      tooltipPosition="top"
+      tooltipPortal={false}
+      className="tw-w-8 tw-h-8 tw-relative"
     />
   );
 };

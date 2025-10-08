@@ -1,7 +1,6 @@
-'use client';
-
+// components/supereditor/Toolbars/Font/Font.tsx - With Tooltip Support
 import React, { useState, useRef, useEffect } from 'react';
-import { Bold, Italic, Underline, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, Strikethrough, Subscript, Superscript, Link, Heading, ChevronDown } from 'lucide-react';
+import { Bold, Italic, Underline, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, Strikethrough, Subscript, Superscript, Link, Heading } from 'lucide-react';
 import { ButtonGradient } from '../../../button/ButtonTemplate';
 
 // Custom execCommand functions for semantic elements
@@ -17,10 +16,7 @@ const execStrongCommand = (editorRef, handleChange) => {
     strong.textContent = selectedText;
     range.deleteContents();
     range.insertNode(strong);
-    
-    // Clear selection
     selection.removeAllRanges();
-    
     if (handleChange) handleChange();
   }
 };
@@ -37,15 +33,12 @@ const execEmCommand = (editorRef, handleChange) => {
     em.textContent = selectedText;
     range.deleteContents();
     range.insertNode(em);
-    
-    // Clear selection
     selection.removeAllRanges();
-    
     if (handleChange) handleChange();
   }
 };
 
-// Font style buttons using ButtonGradient with tooltips (ICON-ONLY)
+// Font style buttons with tooltips (ICON-ONLY)
 export const BoldButton = ({ onClick, editorRef, handleChange }) => (
   <ButtonGradient
     action="edit"
@@ -60,7 +53,9 @@ export const BoldButton = ({ onClick, editorRef, handleChange }) => (
     size="md"
     showText={false}
     tooltip="Bold (Ctrl+B)"
-    className="tw-w-8 tw-h-8"
+    tooltipPosition="top"
+    tooltipPortal={false}  // ← RENDER LOCALLY instead of portal to body
+    className="tw-w-8 tw-h-8 tw-relative"  // ← Add relative positioning for absolute tooltip
   />
 );
 
@@ -78,7 +73,9 @@ export const ItalicButton = ({ onClick, editorRef, handleChange }) => (
     size="md"
     showText={false}
     tooltip="Italic (Ctrl+I)"
-    className="tw-w-8 tw-h-8"
+    tooltipPosition="top"
+    tooltipPortal={false}  // ← LOCAL TOOLTIP
+    className="tw-w-8 tw-h-8 tw-relative"
   />
 );
 
@@ -90,7 +87,9 @@ export const UnderlineButton = ({ onClick }) => (
     size="md"
     showText={false}
     tooltip="Underline (Ctrl+U)"
-    className="tw-w-8 tw-h-8"
+    tooltipPosition="top"
+    tooltipPortal={false}  // ← LOCAL TOOLTIP
+    className="tw-w-8 tw-h-8 tw-relative"
   />
 );
 
@@ -101,8 +100,10 @@ export const StrikethroughButton = ({ onClick }) => (
     onClick={onClick}
     size="md"
     showText={false}
-    tooltip="Strikethrough (Ctrl+Shift+X)"
-    className="tw-w-8 tw-h-8"
+    tooltip="Strikethrough (Ctrl+D)"
+    tooltipPosition="top"
+    tooltipPortal={false}  // ← LOCAL TOOLTIP
+    className="tw-w-8 tw-h-8 tw-relative"
   />
 );
 
@@ -113,8 +114,10 @@ export const SubscriptButton = ({ onClick }) => (
     onClick={onClick}
     size="md"
     showText={false}
-    tooltip="Subscript (Ctrl+,)"
-    className="tw-w-8 tw-h-8"
+    tooltip="Subscript (Ctrl+Shift+_)"
+    tooltipPosition="top"
+    tooltipPortal={false}  // ← Tambahkan ini
+    className="tw-w-8 tw-h-8 tw-relative"  // ← Tambahkan tw-relative
   />
 );
 
@@ -125,8 +128,10 @@ export const SuperscriptButton = ({ onClick }) => (
     onClick={onClick}
     size="md"
     showText={false}
-    tooltip="Superscript (Ctrl+.)"
-    className="tw-w-8 tw-h-8"
+    tooltip="Superscript (Ctrl+Shift++)"
+    tooltipPosition="top"
+    tooltipPortal={false}  // ← Tambahkan ini
+    className="tw-w-8 tw-h-8 tw-relative"  // ← Tambahkan tw-relative
   />
 );
 
@@ -137,12 +142,14 @@ export const HyperlinkButton = ({ onClick }) => (
     onClick={onClick}
     size="md"
     showText={false}
-    tooltip="Insert Link (Ctrl+K)"
-    className="tw-w-8 tw-h-8"
+    tooltip="Insert Link (Ctrl+Shift+L)"
+    tooltipPosition="top"
+    tooltipPortal={false}  // ← Tambahkan ini
+    className="tw-w-8 tw-h-8 tw-relative"  // ← Tambahkan tw-relative
   />
 );
 
-// Font size dropdown with tooltip (WIDER for better text display)
+// Font size dropdown with tooltip
 export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen }, ref) => {
   const [showFontSizeDropdown, setShowFontSizeDropdown] = useState(false);
   const [currentFontSize, setCurrentFontSize] = useState('3');
@@ -257,8 +264,10 @@ export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen 
         onClick={handleToggle}
         size="md"
         showText={false}
-        tooltip={`Font Size: ${currentFontSize} (Ctrl+Shift+>/<)`}
-        className="tw-w-16 tw-h-8"
+        tooltip={`Font Size: ${currentFontSize} (Ctrl+Shift+S or Ctrl++/-)`}
+        tooltipPosition="top"
+        tooltipPortal={false}  // ← LOCAL TOOLTIP
+        className="tw-w-16 tw-h-8 tw-relative"
       >
         <div className="tw-flex tw-items-center tw-gap-1">
           <Type className="tw-w-3 tw-h-3" />
@@ -299,7 +308,7 @@ export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen 
 
 FontSizeButton.displayName = 'FontSizeButton';
 
-// Font name dropdown with tooltip (WIDER for font names)
+// Font name dropdown with tooltip
 export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
   const [showFontNameDropdown, setShowFontNameDropdown] = useState(false);
   const [currentFontName, setCurrentFontName] = useState('Arial');
@@ -406,8 +415,10 @@ export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
         onClick={handleToggle}
         size="md"
         showText={false}
-        tooltip={`Font: ${currentFontName}`}
-        className="tw-w-20 tw-h-8"
+        tooltip={`Font: ${currentFontName} (Ctrl+Shift+Z)`}
+        tooltipPosition="top"
+        tooltipPortal={false}  // ← LOCAL TOOLTIP
+        className="tw-w-16 tw-h-8 tw-relative"
       >
         <div className="tw-flex tw-items-center tw-gap-1">
           <Type className="tw-w-3 tw-h-3" />
@@ -447,7 +458,7 @@ export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
   );
 };
 
-// Text alignment dropdown with tooltip (ICON-ONLY)
+// Text alignment dropdown with tooltip
 export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen }, ref) => {
   const [showAlignmentDropdown, setShowAlignmentDropdown] = useState(false);
   const [currentAlignment, setCurrentAlignment] = useState('left');
@@ -572,8 +583,10 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
         onClick={handleToggle}
         size="md"
         showText={false}
-        tooltip={`Align ${getCurrentLabel()} (Ctrl+Shift+L/E/R/J)`}
-        className="tw-w-8 tw-h-8"
+        tooltip={`Align ${getCurrentLabel()} (Ctrl+Shift+A or ↑/↓)`}
+        tooltipPosition="top"
+        tooltipPortal={false}  // ← Tambahkan ini
+      className="tw-w-8 tw-h-8 tw-relative"  // ← Tambahkan tw-relative
       />
       
       {showAlignmentDropdown && (
@@ -619,7 +632,7 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
 
 AlignmentButton.displayName = 'AlignmentButton';
 
-// Heading dropdown with tooltip (WIDER for heading text)
+// Heading dropdown with tooltip
 export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }, ref) => {
   const [showHeadingDropdown, setShowHeadingDropdown] = useState(false);
   const [currentHeading, setCurrentHeading] = useState('normal');
@@ -743,8 +756,10 @@ export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }
         onClick={handleToggle}
         size="md"
         showText={false}
-        tooltip={`${getCurrentLabel()} (Ctrl+1-4)`}
-        className="tw-w-14 tw-h-8"
+        tooltip={`${getCurrentLabel()} (Ctrl+Shift+G or Ctrl+Shift+1-4)`}
+        tooltipPosition="top"
+        tooltipPortal={false}  // ← Tambahkan ini
+    className="tw-w-8 tw-h-8 tw-relative"  // ← Tambahkan tw-relative
       >
         <div className="tw-flex tw-items-center tw-gap-1">
           <Heading className="tw-w-3 tw-h-3" />
@@ -797,7 +812,7 @@ export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }
 
 HeadingButton.displayName = 'HeadingButton';
 
-// Common buttons group using ButtonGradient with icon-only design
+// Common buttons group using ButtonGradient with icon-only design and tooltips
 export const FontButtons = ({ 
   execCommand, 
   editorRef, 

@@ -2,6 +2,7 @@
 
 import React, { RefObject } from 'react';
 import { Lightbulb } from 'lucide-react';
+import { ButtonGradient } from '../../../button/ButtonTemplate';
 
 interface KeyConceptButtonProps {
   onClick: (e: React.MouseEvent) => void;
@@ -20,13 +21,17 @@ const KeyConceptButton: React.FC<KeyConceptButtonProps> = ({ onClick }) => {
   };
 
   return (
-    <button 
-      className="tw-bg-white tw-text-purple-700 tw-border tw-border-purple-300 tw-rounded tw-px-2 tw-py-2 tw-text-sm tw-hover:tw-bg-purple-50 tw-transition-colors tw-flex tw-items-center tw-justify-center tw-h-8 tw-min-w-[32px]"
+    <ButtonGradient
+      action="create"
+      customIcon={<Lightbulb className="tw-w-4 tw-h-4" />}
       onClick={handleClick}
-      title="Insert Key Concept (Ctrl+Shift+K)"
-    >
-      <Lightbulb size={16} />
-    </button>
+      size="md"
+      showText={false}
+      tooltip="Insert Key Concept (Ctrl+Shift+K)"
+      tooltipPosition="top"
+      tooltipPortal={false}
+      className="tw-w-8 tw-h-8 tw-relative"
+    />
   );
 };
 
