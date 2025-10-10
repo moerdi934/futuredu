@@ -6,6 +6,7 @@
  * 1. Include this script in your HTML: <script src="/CodeCloseOpen.js"></script>
  * 2. Call window.CodeCloseOpenHandler.init() after content is loaded
  * 3. Code blocks must have class 'cte-code-wrapper'
+ * 4. Call window.CodeCloseOpenHandler.removeFloaters() before saving to database
  */
 
 (function() {
@@ -17,6 +18,48 @@
   const LANGUAGE_SELECT_CLASS = 'cte-language-select';
   const CODE_CONTENT_CLASS = 'cte-code-content';
   const COLLAPSE_BUTTON_CLASS = 'cte-collapse-button';
+  const CODE_FLOATER_CLASS = 'cte-code-floater';
+
+  /**
+   * Remove all floater elements from code blocks
+   * Should be called before saving content to database
+   */
+  function removeFloaters(container) {
+    if (!container) {
+      container = document;
+    }
+
+    const floaters = container.querySelectorAll(`.${CODE_FLOATER_CLASS}`);
+    let removedCount = 0;
+
+    floaters.forEach(floater => {
+      floater.remove();
+      removedCount++;
+    });
+
+    console.log(`[CodeCloseOpen] Removed ${removedCount} floater(s)`);
+    return removedCount;
+  }
+
+  /**
+   * Get clean HTML content without floaters
+   * Useful for getting content before saving to database
+   */
+  function getCleanContent(container) {
+    if (!container) {
+      console.error('[CodeCloseOpen] Container is required for getCleanContent');
+      return '';
+    }
+
+    // Clone the container to avoid modifying the original
+    const clone = container.cloneNode(true);
+    
+    // Remove all floaters from the clone
+    const floaters = clone.querySelectorAll(`.${CODE_FLOATER_CLASS}`);
+    floaters.forEach(floater => floater.remove());
+
+    return clone.innerHTML;
+  }
 
   /**
    * Toggle collapse/expand state of code block with smooth animation
@@ -132,6 +175,7 @@
         border: 1px solid #e9d5ff;
         display: block;
         background: white;
+        position: relative;
       }
       
       .${LANGUAGE_SELECT_CLASS} {
@@ -217,6 +261,11 @@
         margin-top: 1rem;
       }
 
+      /* Hide floaters - they should not be visible in read-only view */
+      .${CODE_FLOATER_CLASS} {
+        display: none !important;
+      }
+
       /* Responsive adjustments */
       @media (max-width: 768px) {
         .${CODE_WRAPPER_CLASS} pre {
@@ -240,6 +289,9 @@
   function init(container) {
     console.log('[CodeCloseOpen] Initializing...');
     
+    // First, remove any floaters that might have been saved
+    removeFloaters(container);
+    
     // Inject styles
     injectStyles();
     
@@ -254,6 +306,11 @@
    */
   function reinit(container) {
     console.log('[CodeCloseOpen] Reinitializing...');
+    
+    // Remove floaters first
+    removeFloaters(container);
+    
+    // Reinitialize buttons
     initializeCollapseButtons(container);
   }
 
@@ -273,7 +330,9 @@
     init: init,
     reinit: reinit,
     cleanup: cleanup,
-    version: '1.0.0'
+    removeFloaters: removeFloaters,
+    getCleanContent: getCleanContent,
+    version: '1.0.1'
   };
 
   // Auto-initialize on DOMContentLoaded if not already initialized
@@ -283,8 +342,6 @@
       init();
     });
   } else {
-    // DOM already loaded
-    console.log('[CodeCloseOpen] DOM already loaded, initializing immediately');
     init();
   }
 
