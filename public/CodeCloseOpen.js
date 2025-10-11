@@ -342,6 +342,8 @@
       init();
     });
   } else {
+    // DOM already loaded
+    console.log('[CodeCloseOpen] DOM already loaded, initializing immediately');
     init();
   }
 

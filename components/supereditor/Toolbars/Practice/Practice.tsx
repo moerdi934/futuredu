@@ -31,12 +31,12 @@ interface Question {
   statements?: string[];
   correct_answer: any;
   pembahasan: string;
-  level?: string;
+  level?: string | number;
   passage?: {
     id: number;
     title: string;
     content: string;
-  };
+  } | null;
 }
 
 export const PracticeButton: React.FC<PracticeButtonProps> = ({ onClick, tabIndex = -1 }) => {
@@ -117,7 +117,9 @@ export const PracticeModal: React.FC<PracticeModalProps> = ({ isOpen, onClose, o
     
     switch (question.type) {
       case 'single-choice':
-        return question.correct_answer;
+        return Array.isArray(question.correct_answer) 
+          ? question.correct_answer[0] 
+          : question.correct_answer;
       case 'multiple-choice':
         return Array.isArray(question.correct_answer) 
           ? question.correct_answer.join(', ') 
@@ -125,10 +127,18 @@ export const PracticeModal: React.FC<PracticeModalProps> = ({ isOpen, onClose, o
       case 'true-false':
         if (Array.isArray(question.correct_answer)) {
           return question.statements?.map((stmt: string, idx: number) => 
-            `${idx + 1}. ${question.correct_answer[idx] ? 'Benar' : 'Salah'}`
+            `${idx + 1}. ${question.correct_answer[idx] === 'true' || question.correct_answer[idx] === true ? 'Benar' : 'Salah'}`
           ).join(', ') || '';
         }
         return '';
+      case 'text':
+        return Array.isArray(question.correct_answer) 
+          ? question.correct_answer[0] 
+          : question.correct_answer;
+      case 'number':
+        return Array.isArray(question.correct_answer) 
+          ? question.correct_answer[0] 
+          : question.correct_answer;
       default:
         return String(question.correct_answer);
     }
@@ -206,13 +216,13 @@ export const PracticeModal: React.FC<PracticeModalProps> = ({ isOpen, onClose, o
               />
             </div>
 
-            {questionData.options && (
+            {questionData.options && questionData.options.length > 0 && (
               <div className="tw-mb-3">
                 <span className="tw-font-semibold tw-text-gray-700">Options:</span>
                 <ul className="tw-list-none tw-pl-0 tw-mt-1">
                   {questionData.options.map((option, idx) => (
                     <li key={idx} className="tw-mb-1">
-                      <span className="tw-font-medium">{optionLabels[idx]}.</span>{' '}
+                      <span className="tw-font-bold tw-text-purple-600">{optionLabels[idx]}.</span>{' '}
                       <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(option) }} />
                     </li>
                   ))}
@@ -220,7 +230,7 @@ export const PracticeModal: React.FC<PracticeModalProps> = ({ isOpen, onClose, o
               </div>
             )}
 
-            {questionData.statements && (
+            {questionData.statements && questionData.statements.length > 0 && (
               <div className="tw-mb-3">
                 <span className="tw-font-semibold tw-text-gray-700">Statements:</span>
                 <ul className="tw-list-decimal tw-pl-5 tw-mt-1">
@@ -286,7 +296,7 @@ export const insertPracticeQuestion = ({ editorRef, handleChange, questionData }
   const encodedCorrectAnswer = encodeURIComponent(JSON.stringify(questionData.correct_answer));
   const encodedExplanation = encodeURIComponent(questionData.pembahasan || 'Tidak ada pembahasan.');
 
-  // Generate input fields based on question type - UPDATED: Using data attributes
+  // Generate input fields based on question type
   const getInputHTML = () => {
     switch (questionData.type) {
       case 'single-choice':
@@ -345,14 +355,14 @@ export const insertPracticeQuestion = ({ editorRef, handleChange, questionData }
           </table>
         `;
 
-      case 'text-input':
+      case 'text':
         return `
           <input type="text" 
                  class="practice-text-input tw-w-full tw-p-3 tw-border tw-border-purple-300 tw-rounded-lg" 
                  placeholder="Type your answer here...">
         `;
 
-      case 'number-input':
+      case 'number':
         return `
           <input type="number" 
                  class="practice-number-input tw-w-full tw-p-3 tw-border tw-border-purple-300 tw-rounded-lg" 
@@ -364,7 +374,7 @@ export const insertPracticeQuestion = ({ editorRef, handleChange, questionData }
     }
   };
 
-  // Practice question HTML - UPDATED: No inline onclick handlers
+  // Practice question HTML
   const practiceQuestionHtml = `
     <div class="cte-practice-question-block tw-my-4 tw-relative tw-overflow-hidden" 
          data-practice-id="${uniqueId}"
@@ -474,8 +484,6 @@ export const insertPracticeQuestion = ({ editorRef, handleChange, questionData }
   handleChange();
 };
 
-// REMOVED: setupPracticeInteractions() - Now handled by practiceQuestionHandler.js
-
 // Export styles for practice questions
 export const getPracticeQuestionStyles = (): string => `
   .cte-practice-question-block {
@@ -501,7 +509,6 @@ export const getPracticeQuestionStyles = (): string => `
     opacity: 1;
   }
 
-  /* Hide editor-only elements when not in editor */
   body:not(.editor-mode) .practice-editor-only,
   :not([contenteditable="true"]) .practice-editor-only {
     display: none !important;
@@ -552,6 +559,304 @@ export const getPracticeQuestionStyles = (): string => `
     }
   }
 `;
+
+/**
+ * Client-side version of isAnswerCorrect
+ */
+export const isAnswerCorrect = (userAnswer: any, correctAnswer: any, questionType: string): boolean => {
+  // Handle null or undefined userAnswer
+  if (userAnswer === null || userAnswer === undefined) {
+    return false;
+  }
+
+  try {
+    switch (questionType) {
+      case 'single-choice':
+        // For single-choice, compare strings (case-insensitive)
+        let correctSingleAnswer = Array.isArray(correctAnswer) 
+          ? correctAnswer[0] 
+          : correctAnswer;
+        return String(userAnswer).trim().toLowerCase() === String(correctSingleAnswer).trim().toLowerCase();
+        
+      case 'multiple-choice':
+        // Ensure we have arrays to compare
+        const userMultipleAnswers = Array.isArray(userAnswer) ? userAnswer : [userAnswer];
+        let correctMultipleAnswers = Array.isArray(correctAnswer) 
+          ? correctAnswer 
+          : [correctAnswer];
+        
+        // If lengths differ, they can't be equal
+        if (userMultipleAnswers.length !== correctMultipleAnswers.length) {
+          return false;
+        }
+        
+        // Sort both arrays to ignore order
+        const sortedUserAnswers = [...userMultipleAnswers].map(val => String(val).trim().toLowerCase()).sort();
+        const sortedCorrectAnswers = [...correctMultipleAnswers].map(val => String(val).trim().toLowerCase()).sort();
+        
+        // Compare each element
+        for (let i = 0; i < sortedUserAnswers.length; i++) {
+          if (sortedUserAnswers[i] !== sortedCorrectAnswers[i]) {
+            return false;
+          }
+        }
+        return true;
+        
+      case 'true-false':
+        // For true-false, compare booleans and maintain order
+        const userTrueFalse = Array.isArray(userAnswer) ? userAnswer : [userAnswer];
+        let correctTrueFalse = Array.isArray(correctAnswer) ? correctAnswer : [correctAnswer];
+        
+        // Convert correct answers to booleans (handles both "true"/"false" strings and true/false booleans)
+        correctTrueFalse = correctTrueFalse.map((val: any) => val === true || val === 'true');
+        // Convert user answers to booleans (handles both "true"/"false" strings and true/false booleans)
+        const convertedUserTrueFalse = userTrueFalse.map((val: any) => val === true || val === 'true');
+        
+        // If user provided fewer answers than expected, it's incorrect
+        if (convertedUserTrueFalse.length < correctTrueFalse.length) {
+          return false;
+        }
+        
+        // For true-false, order matters - verify each position matches
+        for (let i = 0; i < correctTrueFalse.length; i++) {
+          if (convertedUserTrueFalse[i] !== correctTrueFalse[i]) {
+            return false;
+          }
+        }
+        return true;
+        
+      case 'number':
+        // For number, compare as numbers
+        let correctNumber = Array.isArray(correctAnswer) 
+          ? correctAnswer[0] 
+          : correctAnswer;
+          
+        // Convert both to numbers, handle empty string or invalid input
+        const userNum = userAnswer === '' ? NaN : Number(userAnswer);
+        const correctNum = String(correctNumber).trim() === '' ? NaN : Number(correctNumber);
+        
+        // Handle NaN comparison (empty input or invalid number)
+        if (isNaN(userNum) || isNaN(correctNum)) {
+          return false;
+        }
+        
+        return userNum === correctNum;
+        
+      case 'text':
+        // For text, compare as trimmed, case-insensitive strings
+        let correctText = Array.isArray(correctAnswer) 
+          ? correctAnswer[0] 
+          : correctAnswer;
+          
+        // Compare trimmed strings case-insensitively
+        return String(userAnswer).trim().toLowerCase() === String(correctText).trim().toLowerCase();
+        
+      default:
+        // For any other type, do string comparison
+        return String(userAnswer).trim().toLowerCase() === String(correctAnswer).trim().toLowerCase();
+    }
+  } catch (error) {
+    console.error('Error comparing answers:', error);
+    return false; // Default to incorrect if there's an error
+  }
+};
+
+/**
+ * Client-side version of getCorrectAnswerDisplay
+ */
+export const getClientCorrectAnswerDisplay = (correctAnswer: any, questionType: string): string => {
+  if (!correctAnswer) return '';
+  
+  switch (questionType) {
+    case 'single-choice':
+      return Array.isArray(correctAnswer) ? correctAnswer[0] : correctAnswer;
+    case 'multiple-choice':
+      return Array.isArray(correctAnswer) 
+        ? correctAnswer.join(', ') 
+        : correctAnswer;
+    case 'true-false':
+      if (Array.isArray(correctAnswer)) {
+        return correctAnswer.map((val: any, idx: number) => 
+          `${idx + 1}. ${val === 'true' || val === true ? 'Benar' : 'Salah'}`
+        ).join(', ') || '';
+      }
+      return '';
+    case 'text':
+    case 'number':
+      return Array.isArray(correctAnswer) ? correctAnswer[0] : correctAnswer;
+    default:
+      return String(correctAnswer);
+  }
+};
+
+/**
+ * Function to display user's answer in a human-readable format
+ */
+export const getUserAnswerDisplay = (userAnswer: any, questionType: string): string => {
+  if (userAnswer === null || userAnswer === undefined || userAnswer === '') return 'No answer provided';
+  
+  switch (questionType) {
+    case 'single-choice':
+      return userAnswer;
+    case 'multiple-choice':
+      return Array.isArray(userAnswer) 
+        ? userAnswer.join(', ') 
+        : userAnswer;
+    case 'true-false':
+      if (Array.isArray(userAnswer)) {
+        return userAnswer.map((val: any, idx: number) => 
+          `${idx + 1}. ${val === true || val === 'true' ? 'Benar' : 'Salah'}`
+        ).join(', ') || '';
+      }
+      return '';
+    case 'text':
+    case 'number':
+      return String(userAnswer);
+    default:
+      return String(userAnswer);
+  }
+};
+
+/**
+ * Setup interactive handlers for all practice question blocks
+ */
+export const setupPracticeQuestionHandlers = (editorRef: RefObject<HTMLDivElement>): void => {
+  if (!editorRef.current) return;
+
+  const blocks = editorRef.current.querySelectorAll('.cte-practice-question-block');
+
+  blocks.forEach((block) => {
+    // Setup option clicks for single/multiple choice
+    const options = block.querySelectorAll('.practice-option');
+    options.forEach((opt) => {
+      opt.addEventListener('click', () => {
+        const input = opt.querySelector('input') as HTMLInputElement;
+        if (!input) return;
+
+        const type = opt.getAttribute('data-type');
+        if (type === 'single') {
+          // Uncheck all other radios in the block
+          block.querySelectorAll('input[type="radio"]').forEach((i: Element) => {
+            (i as HTMLInputElement).checked = false;
+          });
+          input.checked = true;
+        } else if (type === 'multiple') {
+          input.checked = !input.checked;
+        }
+      });
+    });
+
+    // Setup check answer button
+    const checkBtn = block.querySelector('.check-answer-btn') as HTMLButtonElement;
+    if (checkBtn) {
+      checkBtn.addEventListener('click', () => {
+        const type = block.getAttribute('data-question-type');
+        let userAnswer: any = null;
+        let inputExists = false;
+
+        switch (type) {
+          case 'single-choice':
+            userAnswer = (block.querySelector('input[type="radio"]:checked') as HTMLInputElement)?.value || null;
+            inputExists = !!block.querySelector('input[type="radio"]');
+            break;
+          case 'multiple-choice':
+            userAnswer = Array.from(block.querySelectorAll('input[type="checkbox"]:checked')).map((i) => (i as HTMLInputElement).value);
+            inputExists = !!block.querySelector('input[type="checkbox"]');
+            break;
+          case 'true-false':
+            const answers: boolean[] = [];
+            const rows = block.querySelectorAll('tbody tr');
+            rows.forEach((row) => {
+              const checked = row.querySelector('input[type="radio"]:checked') as HTMLInputElement;
+              if (checked) {
+                answers.push(checked.value === 'true');
+              } else {
+                answers.push(false); // Default to false if not answered
+              }
+            });
+            userAnswer = answers;
+            inputExists = !!block.querySelector('input[type="radio"]');
+            break;
+          case 'text':
+            const textInput = block.querySelector('.practice-text-input') as HTMLInputElement;
+            userAnswer = textInput?.value.trim();
+            inputExists = !!textInput;
+            break;
+          case 'number':
+            const numberInput = block.querySelector('.practice-number-input') as HTMLInputElement;
+            userAnswer = numberInput?.value.trim();
+            inputExists = !!numberInput;
+            break;
+        }
+
+        // Validate input for text and number types
+        if (!inputExists) {
+          alert('No input field available. Please check the question setup.');
+          return;
+        }
+
+        if ((type === 'text' || type === 'number') && (userAnswer === '' || userAnswer === null)) {
+          alert('Please provide an answer first.');
+          return;
+        }
+
+        if ((type === 'single-choice' || type === 'multiple-choice' || type === 'true-false') && 
+            (userAnswer === null || (Array.isArray(userAnswer) && userAnswer.length === 0))) {
+          alert('Please select an answer first.');
+          return;
+        }
+
+        const encodedCorrect = block.getAttribute('data-correct-answer') || '';
+        const correctAnswer = JSON.parse(decodeURIComponent(encodedCorrect));
+
+        const isCorrect = isAnswerCorrect(userAnswer, correctAnswer, type || '');
+
+        const resultContent = block.querySelector('.result-content') as HTMLElement;
+        if (resultContent) {
+          if (isCorrect) {
+            resultContent.innerHTML = '<span class="tw-text-green-600 tw-font-bold">Benar!</span>';
+          } else {
+            const userDisplay = getUserAnswerDisplay(userAnswer, type || '');
+            const correctDisplay = getClientCorrectAnswerDisplay(correctAnswer, type || '');
+            resultContent.innerHTML = '<span class="tw-text-red-600 tw-font-bold">Salah.</span> Jawaban kamu = ' + userDisplay + '. Jawaban benar: ' + correctDisplay;
+          }
+        }
+
+        const resultArea = block.querySelector('.result-area') as HTMLElement;
+        if (resultArea) {
+          resultArea.classList.remove('tw-hidden');
+        }
+
+        const showExpBtn = block.querySelector('.show-explanation-btn') as HTMLElement;
+        if (showExpBtn) {
+          showExpBtn.classList.remove('tw-hidden');
+        }
+      });
+    }
+
+    // Setup show explanation button
+    const showExpBtn = block.querySelector('.show-explanation-btn') as HTMLButtonElement;
+    if (showExpBtn) {
+      showExpBtn.addEventListener('click', () => {
+        const encodedExp = block.getAttribute('data-explanation') || '';
+        const exp = decodeURIComponent(encodedExp);
+
+        const expContent = block.querySelector('.explanation-content') as HTMLElement;
+        if (expContent) {
+          expContent.innerHTML = DOMPurify.sanitize(exp);
+        }
+
+        const expArea = block.querySelector('.explanation-area') as HTMLElement;
+        if (expArea) {
+          expArea.classList.remove('tw-hidden');
+        }
+
+        // Optionally hide the button after showing
+        showExpBtn.classList.add('tw-hidden');
+      });
+    }
+  });
+};
 
 export default {
   PracticeButton,

@@ -1,481 +1,532 @@
-
-// components/supereditor/Toolbars/Practice/PracticeQuestionBlock.tsx
+// components/supereditor/Toolbars/Practice/Practice.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { BookOpen, X, Check, XCircle, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect, RefObject } from 'react';
+import { BookOpen, X, Search, Loader2 } from 'lucide-react';
+import { Modal } from 'react-bootstrap';
+import { ButtonGradient } from '../../../button/ButtonTemplate';
+import { SearchSingleField, SelectOption } from '../../../form/FormComponentLayout';
+import axios from 'axios';
+import DOMPurify from 'dompurify';
 
-const optionLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-// Single Choice Component for Practice
-const PracticeSingleChoice = ({ question, options, onAnswerChange, userAnswer, correctAnswer, showResult }) => {
-  const [hoveredLabel, setHoveredLabel] = useState(null);
+interface PracticeButtonProps {
+  onClick: (e: React.MouseEvent) => void;
+  tabIndex?: number;
+}
 
-  const handleOptionClick = (label) => {
-    if (showResult) return;
-    onAnswerChange(userAnswer === label ? '' : label);
+interface PracticeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onInsert: (questionData: any) => void;
+}
+
+interface Question {
+  id: number;
+  code: string;
+  type: string;
+  question: string;
+  options?: string[];
+  statements?: string[];
+  correct_answer: any;
+  pembahasan: string;
+  level?: string;
+  passage?: {
+    id: number;
+    title: string;
+    content: string;
   };
+}
 
-  const getOptionStyle = (label) => {
-    if (showResult) {
-      if (label === correctAnswer) {
-        return 'tw-bg-green-200 tw-border-green-500';
-      }
-      if (label === userAnswer && userAnswer !== correctAnswer) {
-        return 'tw-bg-red-200 tw-border-red-500';
-      }
-    } else if (userAnswer === label) {
-      return 'tw-bg-purple-100 tw-border-purple-400';
-    } else if (hoveredLabel === label) {
-      return 'tw-bg-violet-200';
-    }
-    return 'tw-bg-white';
-  };
-
-  return (
-    <div className="tw-space-y-4">
-      <div 
-        className="tw-text-xl tw-font-semibold tw-mb-4 tw-text-black"
-        dangerouslySetInnerHTML={{ __html: question }}
-      />
-      {options?.map((option, index) => {
-        const label = optionLabels[index];
-        return (
-          <div
-            key={index}
-            onClick={() => handleOptionClick(label)}
-            className={`
-              tw-flex tw-items-start tw-justify-between tw-mb-3 tw-p-4 tw-rounded-lg 
-              tw-border tw-border-gray-300 tw-shadow-sm tw-transition-all tw-duration-300
-              ${!showResult ? 'tw-cursor-pointer' : 'tw-cursor-default'}
-              ${getOptionStyle(label)}
-              ${!showResult && 'md:hover:tw-bg-violet-300'}
-            `}
-            onMouseEnter={() => !showResult && setHoveredLabel(label)}
-            onMouseLeave={() => setHoveredLabel(null)}
-          >
-            <div className="tw-flex tw-items-start tw-gap-4 tw-w-full">
-              <span className="tw-font-medium tw-text-black">{label}.</span>
-              <div 
-                className="tw-flex-1 tw-text-black"
-                dangerouslySetInnerHTML={{ __html: option }}
-              />
-            </div>
-            {showResult && label === correctAnswer && (
-              <Check className="tw-text-green-600 tw-ml-2 tw-flex-shrink-0" size={20} />
-            )}
-            {showResult && label === userAnswer && userAnswer !== correctAnswer && (
-              <XCircle className="tw-text-red-600 tw-ml-2 tw-flex-shrink-0" size={20} />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-// Multiple Choice Component for Practice
-const PracticeMultipleChoice = ({ question, options, onAnswerChange, userAnswer = [], correctAnswer = [], showResult }) => {
-  const [hoveredLabel, setHoveredLabel] = useState(null);
-
-  const handleOptionClick = (label) => {
-    if (showResult) return;
-    const newAnswer = userAnswer.includes(label)
-      ? userAnswer.filter(val => val !== label)
-      : [...userAnswer, label];
-    onAnswerChange(newAnswer);
-  };
-
-  const getOptionStyle = (label) => {
-    if (showResult) {
-      const isCorrectOption = correctAnswer.includes(label);
-      const isUserSelected = userAnswer.includes(label);
-      
-      if (isCorrectOption && isUserSelected) {
-        return 'tw-bg-green-200 tw-border-green-500';
-      }
-      if (isCorrectOption && !isUserSelected) {
-        return 'tw-bg-yellow-100 tw-border-yellow-400';
-      }
-      if (!isCorrectOption && isUserSelected) {
-        return 'tw-bg-red-200 tw-border-red-500';
-      }
-    } else if (userAnswer.includes(label)) {
-      return 'tw-bg-purple-100 tw-border-purple-400';
-    } else if (hoveredLabel === label) {
-      return 'tw-bg-violet-200';
-    }
-    return 'tw-bg-white';
+export const PracticeButton: React.FC<PracticeButtonProps> = ({ onClick, tabIndex = -1 }) => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onClick(e);
   };
 
   return (
-    <div className="tw-space-y-4">
-      <p 
-        className="tw-text-xl tw-font-semibold tw-mb-4 tw-text-black"
-        dangerouslySetInnerHTML={{ __html: question }}
-      />
-      {options?.map((option, index) => {
-        const label = optionLabels[index];
-        const isCorrectOption = correctAnswer.includes(label);
-        const isUserSelected = userAnswer.includes(label);
-
-        return (
-          <div
-            key={index}
-            onClick={() => handleOptionClick(label)}
-            className={`
-              tw-flex tw-items-start tw-justify-between tw-mb-4 tw-p-4 tw-rounded-lg 
-              tw-border tw-border-gray-300 tw-shadow-sm tw-transition-colors tw-duration-300
-              ${!showResult ? 'tw-cursor-pointer' : 'tw-cursor-default'}
-              ${getOptionStyle(label)}
-              ${!showResult && 'md:hover:tw-bg-violet-300'}
-            `}
-            onMouseEnter={() => !showResult && setHoveredLabel(label)}
-            onMouseLeave={() => setHoveredLabel(null)}
-          >
-            <div className="tw-flex tw-items-center">
-              <span className="tw-font-bold tw-text-lg tw-mr-2 tw-text-black">{label}.</span>
-            </div>
-            <div 
-              className="tw-flex-grow tw-text-black"
-              dangerouslySetInnerHTML={{ __html: option }}
-            />
-            {showResult && (
-              <>
-                {isCorrectOption && isUserSelected && (
-                  <Check className="tw-text-green-600 tw-ml-2 tw-flex-shrink-0" size={20} />
-                )}
-                {isCorrectOption && !isUserSelected && (
-                  <div className="tw-text-yellow-600 tw-ml-2 tw-text-xs tw-flex-shrink-0">Terlewat</div>
-                )}
-                {!isCorrectOption && isUserSelected && (
-                  <XCircle className="tw-text-red-600 tw-ml-2 tw-flex-shrink-0" size={20} />
-                )}
-              </>
-            )}
-          </div>
-        );
-      })}
-    </div>
+    <ButtonGradient
+      action="custom"
+      showText={false}
+      customIcon={<BookOpen className="tw-w-4 tw-h-4" />}
+      onClick={handleClick}
+      size="sm"
+      customColors={{
+        primary: '#8B5CF6',
+        secondary: '#7C3AED',
+        gradient1: '#8B5CF6',
+        gradient2: '#A78BFA',
+        text: '#FFFFFF'
+      }}
+      className="tw-flex tw-items-center tw-gap-2"
+      tabIndex={tabIndex}
+      title="Insert Practice Question (Ctrl+Shift+P)"
+      type="button"
+    />
   );
 };
 
-// Number Input Component for Practice
-const PracticeNumberInput = ({ question, onAnswerChange, userAnswer, correctAnswer, showResult }) => {
-  const getInputStyle = () => {
-    if (showResult) {
-      if (parseFloat(userAnswer) === parseFloat(correctAnswer)) {
-        return 'tw-border-green-500 tw-bg-green-50';
-      }
-      return 'tw-border-red-500 tw-bg-red-50';
-    }
-    return 'tw-border-gray-300';
-  };
-
-  return (
-    <div className="tw-space-y-4">
-      <div 
-        className="tw-text-xl tw-font-semibold tw-mb-4 tw-text-black"
-        dangerouslySetInnerHTML={{ __html: question }}
-      />
-      <div className="tw-relative">
-        <input
-          type="number"
-          value={userAnswer || ''}
-          onChange={(e) => !showResult && onAnswerChange(parseFloat(e.target.value))}
-          className={`tw-w-full tw-p-2 tw-border tw-rounded-md ${getInputStyle()}`}
-          disabled={showResult}
-        />
-        {showResult && (
-          <div className="tw-mt-2">
-            {parseFloat(userAnswer) === parseFloat(correctAnswer) ? (
-              <div className="tw-text-green-600 tw-flex tw-items-center">
-                <Check size={16} className="tw-mr-1" /> Benar!
-              </div>
-            ) : (
-              <div className="tw-text-red-600">
-                <div className="tw-flex tw-items-center tw-mb-1">
-                  <XCircle size={16} className="tw-mr-1" /> Salah
-                </div>
-                <div className="tw-text-sm">Jawaban benar: {correctAnswer}</div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Text Input Component for Practice
-const PracticeTextInput = ({ question, onAnswerChange, userAnswer, correctAnswer, showResult }) => {
-  const isCorrect = userAnswer?.toLowerCase().trim() === correctAnswer?.toLowerCase().trim();
+export const PracticeModal: React.FC<PracticeModalProps> = ({ isOpen, onClose, onInsert }) => {
+  const [selectedQuestion, setSelectedQuestion] = useState<SelectOption | null>(null);
+  const [questionData, setQuestionData] = useState<Question | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [searchOptions, setSearchOptions] = useState<SelectOption[]>([]);
   
-  const getInputStyle = () => {
-    if (showResult) {
-      if (isCorrect) {
-        return 'tw-border-green-500 tw-bg-green-50';
-      }
-      return 'tw-border-red-500 tw-bg-red-50';
+  const fetchQuestionDetails = async (questionId: number) => {
+    setLoading(true);
+    try {
+      const authToken = localStorage.getItem('authToken');
+      const response = await axios.get(
+        `${apiUrl}/questions/practice/${questionId}`,
+        {
+          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${authToken}`
+          }
+        }
+      );
+      setQuestionData(response.data);
+    } catch (error) {
+      console.error('Error fetching question details:', error);
+    } finally {
+      setLoading(false);
     }
-    return 'tw-border-gray-300';
   };
 
-  return (
-    <div className="tw-space-y-4">
-      <div 
-        className="tw-text-xl tw-font-semibold tw-mb-4 tw-text-black"
-        dangerouslySetInnerHTML={{ __html: question }}
-      />
-      <div className="tw-relative">
-        <input
-          type="text"
-          value={userAnswer || ''}
-          onChange={(e) => !showResult && onAnswerChange(e.target.value)}
-          className={`tw-w-full tw-p-2 tw-border tw-rounded-md ${getInputStyle()}`}
-          disabled={showResult}
-        />
-        {showResult && (
-          <div className="tw-mt-2">
-            {isCorrect ? (
-              <div className="tw-text-green-600 tw-flex tw-items-center">
-                <Check size={16} className="tw-mr-1" /> Benar!
-              </div>
-            ) : (
-              <div className="tw-text-red-600">
-                <div className="tw-flex tw-items-center tw-mb-1">
-                  <XCircle size={16} className="tw-mr-1" /> Salah
-                </div>
-                <div className="tw-text-sm">Jawaban benar: {correctAnswer}</div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// True/False Component for Practice
-const PracticeTrueFalse = ({ question, statements, onAnswerChange, userAnswer = [], correctAnswer = [], showResult }) => {
-  const handleChange = (index, value) => {
-    if (showResult) return;
-    const newAnswer = [...userAnswer];
-    newAnswer[index] = value;
-    onAnswerChange(newAnswer);
-  };
-
-  const getRowStyle = (index) => {
-    if (showResult) {
-      if (userAnswer[index] === correctAnswer[index]) {
-        return 'tw-bg-green-50';
-      }
-      return 'tw-bg-red-50';
+  useEffect(() => {
+    if (selectedQuestion) {
+      fetchQuestionDetails(Number(selectedQuestion.value));
+    } else {
+      setQuestionData(null);
     }
-    return '';
+  }, [selectedQuestion]);
+
+  const handleInsert = () => {
+    if (questionData) {
+      onInsert(questionData);
+      onClose();
+      setSelectedQuestion(null);
+      setQuestionData(null);
+    }
   };
 
-  return (
-    <div className="tw-space-y-4">
-      <div 
-        className="tw-text-xl tw-font-semibold tw-mb-4 tw-text-black"
-        dangerouslySetInnerHTML={{ __html: question }}
-      />
-      <div className="tw-w-full tw-overflow-x-auto">
-        <table className="tw-w-full tw-border-collapse tw-bg-white">
-          <thead>
-            <tr>
-              <th className="tw-border-2 tw-border-gray-400 tw-bg-gray-200 tw-p-4 tw-text-left tw-font-bold tw-text-black">Pernyataan</th>
-              <th className="tw-border-2 tw-border-gray-400 tw-bg-gray-200 tw-p-4 tw-text-center tw-w-24 tw-font-bold tw-text-black">Benar</th>
-              <th className="tw-border-2 tw-border-gray-400 tw-bg-gray-200 tw-p-4 tw-text-center tw-w-24 tw-font-bold tw-text-black">Salah</th>
-            </tr>
-          </thead>
-          <tbody>
-            {statements?.map((statement, index) => (
-              <tr key={index} className={`hover:tw-bg-gray-50 ${getRowStyle(index)}`}>
-                <td className="tw-border-2 tw-border-gray-400 tw-p-4 tw-font-medium tw-text-black">
-                  {statement}
-                  {showResult && userAnswer[index] !== correctAnswer[index] && (
-                    <div className="tw-text-sm tw-text-red-600 tw-mt-1">
-                      Seharusnya: {correctAnswer[index] ? 'Benar' : 'Salah'}
-                    </div>
-                  )}
-                </td>
-                <td className="tw-border-2 tw-border-gray-400 tw-p-4 tw-text-center">
-                  <input
-                    type="radio"
-                    name={`statement-${index}`}
-                    checked={userAnswer[index] === true}
-                    onChange={() => handleChange(index, true)}
-                    className="tw-cursor-pointer tw-w-4 tw-h-4"
-                    disabled={showResult}
-                  />
-                </td>
-                <td className="tw-border-2 tw-border-gray-400 tw-p-4 tw-text-center">
-                  <input
-                    type="radio"
-                    name={`statement-${index}`}
-                    checked={userAnswer[index] === false}
-                    onChange={() => handleChange(index, false)}
-                    className="tw-cursor-pointer tw-w-4 tw-h-4"
-                    disabled={showResult}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
-
-// Main Practice Question Component
-const PracticeQuestionBlock = ({ questionData, onDelete }) => {
-  const [userAnswer, setUserAnswer] = useState(
-    questionData.type === 'true-false' ? [] : 
-    questionData.type === 'multiple-choice' ? [] : ''
-  );
-  const [showResult, setShowResult] = useState(false);
-  const [showExplanation, setShowExplanation] = useState(false);
-
-  const handleCheckAnswer = () => {
-    setShowResult(true);
-  };
-
-  const isAnswerCorrect = () => {
-    switch (questionData.type) {
+  const getCorrectAnswerDisplay = (question: Question) => {
+    if (!question.correct_answer) return '';
+    
+    switch (question.type) {
       case 'single-choice':
-        return userAnswer === questionData.correct_answer;
+        return question.correct_answer;
       case 'multiple-choice':
-        return JSON.stringify([...userAnswer].sort()) === JSON.stringify([...questionData.correct_answer].sort());
+        return Array.isArray(question.correct_answer) 
+          ? question.correct_answer.join(', ') 
+          : question.correct_answer;
       case 'true-false':
-        return JSON.stringify(userAnswer) === JSON.stringify(questionData.correct_answer);
-      case 'text-input':
-        return userAnswer?.toLowerCase().trim() === questionData.correct_answer?.toLowerCase().trim();
-      case 'number-input':
-        return parseFloat(userAnswer) === parseFloat(questionData.correct_answer);
+        if (Array.isArray(question.correct_answer)) {
+          return question.statements?.map((stmt: string, idx: number) => 
+            `${idx + 1}. ${question.correct_answer[idx] ? 'True' : 'False'}`
+          ).join(', ') || '';
+        }
+        return '';
       default:
-        return false;
-    }
-  };
-
-  const renderQuestionComponent = () => {
-    const props = {
-      question: questionData.question,
-      onAnswerChange: setUserAnswer,
-      userAnswer,
-      correctAnswer: questionData.correct_answer,
-      showResult
-    };
-
-    switch (questionData.type) {
-      case 'single-choice':
-        return <PracticeSingleChoice {...props} options={questionData.options} />;
-      case 'multiple-choice':
-        return <PracticeMultipleChoice {...props} options={questionData.options} />;
-      case 'number-input':
-        return <PracticeNumberInput {...props} />;
-      case 'text-input':
-        return <PracticeTextInput {...props} />;
-      case 'true-false':
-        return <PracticeTrueFalse {...props} statements={questionData.statements} />;
-      default:
-        return <div>Tipe soal tidak dikenali</div>;
+        return String(question.correct_answer);
     }
   };
 
   return (
-    <div className="tw-my-6 tw-border-2 tw-border-purple-300 tw-rounded-xl tw-overflow-hidden tw-bg-white tw-shadow-lg">
-      {/* Header */}
-      <div className="tw-bg-gradient-to-r tw-from-purple-600 tw-to-indigo-600 tw-text-white tw-p-4 tw-flex tw-justify-between tw-items-center">
-        <div className="tw-flex tw-items-center tw-gap-2">
-          <BookOpen className="tw-w-5 tw-h-5" />
-          <h4 className="tw-text-lg tw-font-bold tw-m-0">
-            📚 Latihan Soal - {questionData.code || `ID: ${questionData.id}`}
-          </h4>
-        </div>
+    <Modal 
+      show={isOpen} 
+      onHide={onClose} 
+      size="lg"
+      centered
+      className="tw-z-[99999]"
+      backdrop="static"
+    >
+      <Modal.Header className="tw-bg-gray-50 tw-border-b tw-border-gray-200">
+        <Modal.Title className="tw-flex tw-items-center tw-gap-2 tw-text-gray-800">
+          <BookOpen className="tw-w-5 tw-h-5 tw-text-blue-600" />
+          Insert Practice Question
+        </Modal.Title>
         <button
-          onClick={onDelete}
-          className="tw-bg-red-500 hover:tw-bg-red-600 tw-text-white tw-p-2 tw-rounded-full tw-transition-all"
-          title="Hapus Latihan"
+          onClick={onClose}
+          className="tw-text-gray-500 hover:tw-text-gray-700 tw-transition-colors"
         >
-          <X className="tw-w-4 tw-h-4" />
+          <X className="tw-w-5 tw-h-5" />
         </button>
-      </div>
+      </Modal.Header>
 
-      {/* Passage if exists */}
-      {questionData.passage && (
-        <div className="tw-bg-blue-50 tw-border-b tw-border-blue-200 tw-p-4">
-          <h5 className="tw-font-bold tw-text-blue-800 tw-mb-2">📖 Bacaan: {questionData.passage.title}</h5>
-          <div 
-            className="tw-text-blue-900 tw-text-sm" 
-            dangerouslySetInnerHTML={{ __html: questionData.passage.content }} 
+      <Modal.Body className="tw-p-4">
+        <div className="tw-mb-4">
+          <SearchSingleField
+            label="Search Question by Code"
+            value={selectedQuestion}
+            options={searchOptions}
+            onChange={(newValue) => setSelectedQuestion(newValue)}
+            apiEndpoint={`/questions/practice/search`}
+            placeholder="Search by question code..."
+            icon={<Search className="tw-w-4 tw-h-4 tw-text-gray-500" />}
+            onClear={() => setSelectedQuestion(null)}
+            transformResponse={(response) => response.data || response}
           />
         </div>
-      )}
 
-      {/* Question Content */}
-      <div className="tw-p-6">
-        {renderQuestionComponent()}
-
-        {/* Action Buttons */}
-        <div className="tw-flex tw-gap-2 tw-mt-6">
-          {!showResult && (
-            <button
-              onClick={handleCheckAnswer}
-              className="tw-bg-green-500 hover:tw-bg-green-600 tw-text-white tw-px-4 tw-py-2 tw-rounded-lg tw-font-medium tw-transition-colors tw-flex tw-items-center tw-gap-2"
-            >
-              <Check size={18} /> Cek Jawaban
-            </button>
-          )}
-          {showResult && (
-            <button
-              onClick={() => setShowExplanation(!showExplanation)}
-              className="tw-bg-yellow-500 hover:tw-bg-yellow-600 tw-text-white tw-px-4 tw-py-2 tw-rounded-lg tw-font-medium tw-transition-colors tw-flex tw-items-center tw-gap-2"
-            >
-              <Lightbulb size={18} />
-              {showExplanation ? 'Sembunyikan Pembahasan' : 'Lihat Pembahasan'}
-              {showExplanation ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </button>
-          )}
-        </div>
-
-        {/* Result Display */}
-        {showResult && (
-          <div className={`tw-mt-4 tw-p-4 tw-rounded-lg ${isAnswerCorrect() ? 'tw-bg-green-100 tw-border tw-border-green-300' : 'tw-bg-red-100 tw-border tw-border-red-300'}`}>
-            <div className="tw-flex tw-items-center tw-gap-2 tw-font-bold tw-text-lg">
-              {isAnswerCorrect() ? (
-                <>
-                  <Check className="tw-text-green-600" size={24} />
-                  <span className="tw-text-green-700">Benar! 🎉</span>
-                </>
-              ) : (
-                <>
-                  <XCircle className="tw-text-red-600" size={24} />
-                  <span className="tw-text-red-700">Belum Tepat</span>
-                </>
-              )}
-            </div>
+        {loading && (
+          <div className="tw-text-center tw-py-8">
+            <Loader2 className="tw-w-8 tw-h-8 tw-animate-spin tw-text-blue-600 tw-mx-auto tw-mb-2" />
+            <p className="tw-text-gray-600">Loading question details...</p>
           </div>
         )}
 
-        {/* Explanation */}
-        {showResult && showExplanation && (
-          <div className="tw-mt-4 tw-bg-yellow-50 tw-border tw-border-yellow-300 tw-rounded-lg tw-p-4">
-            <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
-              <Lightbulb className="tw-text-yellow-600" size={20} />
-              <h5 className="tw-font-bold tw-text-yellow-800 tw-m-0">Pembahasan:</h5>
+        {questionData && !loading && (
+          <div className="tw-border tw-border-gray-200 tw-rounded-md tw-p-4 tw-bg-gray-50">
+            <h4 className="tw-font-medium tw-text-gray-800 tw-mb-3">Preview:</h4>
+            
+            {questionData.passage && (
+              <div className="tw-mb-4 tw-p-3 tw-bg-white tw-rounded-md tw-border tw-border-gray-200">
+                <h5 className="tw-font-medium tw-text-gray-700 tw-mb-2">
+                  Passage: {questionData.passage.title}
+                </h5>
+                <div 
+                  className="tw-text-sm tw-text-gray-600"
+                  dangerouslySetInnerHTML={{ 
+                    __html: DOMPurify.sanitize(questionData.passage.content.substring(0, 200) + '...') 
+                  }}
+                />
+              </div>
+            )}
+            
+            <div className="tw-mb-3">
+              <span className="tw-font-medium tw-text-gray-700">Question:</span>
+              <div 
+                className="tw-mt-1 tw-text-gray-800"
+                dangerouslySetInnerHTML={{ 
+                  __html: DOMPurify.sanitize(questionData.question) 
+                }}
+              />
             </div>
-            <div 
-              className="tw-text-yellow-900" 
-              dangerouslySetInnerHTML={{ __html: questionData.pembahasan || 'Tidak ada pembahasan.' }} 
-            />
+
+            {questionData.options && (
+              <div className="tw-mb-3">
+                <span className="tw-font-medium tw-text-gray-700">Options:</span>
+                <ul className="tw-list-none tw-pl-0 tw-mt-1 tw-text-gray-800">
+                  {questionData.options.map((option, idx) => (
+                    <li key={idx} className="tw-mb-1">
+                      <span className="tw-font-medium">{optionLabels[idx]}.</span>{' '}
+                      <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(option) }} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {questionData.statements && (
+              <div className="tw-mb-3">
+                <span className="tw-font-medium tw-text-gray-700">Statements:</span>
+                <ul className="tw-list-decimal tw-pl-5 tw-mt-1 tw-text-gray-800">
+                  {questionData.statements.map((statement, idx) => (
+                    <li key={idx} className="tw-mb-1">{statement}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="tw-mb-3 tw-p-2 tw-bg-green-50 tw-rounded-md tw-border tw-border-green-200 tw-text-gray-800">
+              <span className="tw-font-medium tw-text-green-700">Correct Answer:</span>{' '}
+              <span className="tw-text-green-800">{getCorrectAnswerDisplay(questionData)}</span>
+            </div>
+
+            {questionData.pembahasan && (
+              <div className="tw-p-2 tw-bg-yellow-50 tw-rounded-md tw-border tw-border-yellow-200 tw-text-gray-800">
+                <span className="tw-font-medium tw-text-yellow-700">Explanation:</span>
+                <div 
+                  className="tw-mt-1 tw-text-sm tw-text-gray-700"
+                  dangerouslySetInnerHTML={{ 
+                    __html: DOMPurify.sanitize(questionData.pembahasan.substring(0, 200) + '...') 
+                  }}
+                />
+              </div>
+            )}
           </div>
         )}
-      </div>
-    </div>
+      </Modal.Body>
+
+      <Modal.Footer className="tw-border-t tw-border-gray-200">
+        <ButtonGradient
+          action="cancel"
+          size="sm"
+          onClick={onClose}
+        />
+        <ButtonGradient
+          action="add"
+          size="sm"
+          onClick={handleInsert}
+          disabled={!questionData || loading}
+        />
+      </Modal.Footer>
+    </Modal>
   );
 };
 
-export default PracticeQuestionBlock;
+interface InsertPracticeQuestionParams {
+  editorRef: RefObject<HTMLDivElement>;
+  handleChange: () => void;
+  questionData: Question;
+}
+
+export const insertPracticeQuestion = ({ editorRef, handleChange, questionData }: InsertPracticeQuestionParams): void => {
+  if (!editorRef.current) return;
+
+  const editor = editorRef.current;
+  const uniqueId = `practice-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
+  editor.focus();
+
+  // Encode correct answer and explanation for storage
+  const encodedCorrectAnswer = encodeURIComponent(JSON.stringify(questionData.correct_answer));
+  const encodedExplanation = encodeURIComponent(questionData.pembahasan || 'No explanation.');
+
+  // Generate input fields based on question type
+  const getInputHTML = () => {
+    switch (questionData.type) {
+      case 'single-choice':
+        return questionData.options?.map((option, idx) => {
+          const label = optionLabels[idx];
+          return `
+            <div class="practice-option tw-flex tw-items-center tw-mb-2 tw-p-2 tw-rounded-md tw-border tw-border-gray-200 tw-bg-white tw-cursor-pointer hover:tw-bg-gray-50" 
+                 data-label="${label}"
+                 data-type="single">
+              <input type="radio" name="practice-${uniqueId}" value="${label}" class="tw-mr-2">
+              <span class="tw-font-medium">${label}.</span> ${option}
+            </div>
+          `;
+        }).join('') || '';
+
+      case 'multiple-choice':
+        return questionData.options?.map((option, idx) => {
+          const label = optionLabels[idx];
+          return `
+            <div class="practice-option tw-flex tw-items-center tw-mb-2 tw-p-2 tw-rounded-md tw-border tw-border-gray-200 tw-bg-white tw-cursor-pointer hover:tw-bg-gray-50" 
+                 data-label="${label}"
+                 data-type="multiple">
+              <input type="checkbox" value="${label}" class="tw-mr-2">
+              <span class="tw-font-medium">${label}.</span> ${option}
+            </div>
+          `;
+        }).join('') || '';
+
+      case 'true-false':
+        return `
+          <table class="tw-w-full tw-border-collapse tw-mt-2">
+            <thead>
+              <tr class="tw-bg-gray-50">
+                <th class="tw-border tw-border-gray-200 tw-p-2 tw-text-left">Statement</th>
+                <th class="tw-border tw-border-gray-200 tw-p-2 tw-text-center tw-w-20">True</th>
+                <th class="tw-border tw-border-gray-200 tw-p-2 tw-text-center tw-w-20">False</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${questionData.statements?.map((stmt, idx) => `
+                <tr>
+                  <td class="tw-border tw-border-gray-200 tw-p-2">${stmt}</td>
+                  <td class="tw-border tw-border-gray-200 tw-p-2 tw-text-center">
+                    <input type="radio" name="practice-${uniqueId}-${idx}" value="true">
+                  </td>
+                  <td class="tw-border tw-border-gray-200 tw-p-2 tw-text-center">
+                    <input type="radio" name="practice-${uniqueId}-${idx}" value="false">
+                  </td>
+                </tr>
+              `).join('') || ''}
+            </tbody>
+          </table>
+        `;
+
+      case 'text-input':
+        return `
+          <input type="text" 
+                 class="practice-text-input tw-w-full tw-p-2 tw-border tw-border-gray-200 tw-rounded-md" 
+                 placeholder="Enter your answer...">
+        `;
+
+      case 'number-input':
+        return `
+          <input type="number" 
+                 class="practice-number-input tw-w-full tw-p-2 tw-border tw-border-gray-200 tw-rounded-md" 
+                 placeholder="Enter number...">
+        `;
+
+      default:
+        return '';
+    }
+  };
+
+  // Practice question HTML with professional design
+  const practiceQuestionHtml = `
+    <div class="cte-practice-question-block tw-my-4 tw-border tw-border-gray-200 tw-rounded-md tw-overflow-hidden tw-bg-white tw-shadow-sm tw-relative" 
+         data-practice-id="${uniqueId}"
+         data-question-type="${questionData.type}"
+         data-correct-answer="${encodedCorrectAnswer}"
+         data-explanation="${encodedExplanation}">
+      
+      <!-- Delete Button - Only visible in editor -->
+      <button class="practice-delete-btn practice-editor-only tw-absolute tw-top-2 tw-right-2 tw-bg-red-500 hover:tw-bg-red-600 tw-text-white tw-p-1 tw-rounded-full tw-transition-all tw-opacity-0 hover:tw-opacity-100" 
+              title="Delete question">
+        <svg class="tw-w-4 tw-h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+        </svg>
+      </button>
+      
+      <div class="tw-p-4">
+        <!-- Header -->
+        <div class="tw-flex tw-items-center tw-justify-between tw-mb-3 tw-border-b tw-border-gray-200 tw-pb-2">
+          <h4 class="tw-text-md tw-font-medium tw-text-gray-800 tw-m-0">
+            Practice Question - ${questionData.code || `ID: ${questionData.id}`}
+          </h4>
+          ${questionData.level ? `<span class="tw-text-sm tw-text-gray-500">Level: ${questionData.level}</span>` : ''}
+        </div>
+
+        <!-- Passage if exists -->
+        ${questionData.passage ? `
+          <div class="tw-mb-4 tw-p-3 tw-bg-gray-50 tw-rounded-md tw-border tw-border-gray-200">
+            <h5 class="tw-font-medium tw-text-gray-700 tw-mb-2">Passage: ${questionData.passage.title}</h5>
+            <div class="tw-text-sm tw-text-gray-600">
+              ${questionData.passage.content}
+            </div>
+          </div>
+        ` : ''}
+        
+        <!-- Question -->
+        <div class="tw-mb-4">
+          ${questionData.question}
+        </div>
+
+        <!-- Answer Input Area -->
+        <div class="tw-mb-4">
+          ${getInputHTML()}
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="tw-flex tw-gap-2 tw-mb-3">
+          <button class="check-answer-btn tw-bg-blue-600 hover:tw-bg-blue-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-font-medium tw-transition-colors">
+            Check Answer
+          </button>
+          <button class="show-explanation-btn tw-bg-gray-600 hover:tw-bg-gray-700 tw-text-white tw-px-4 tw-py-2 tw-rounded-md tw-font-medium tw-transition-colors tw-hidden">
+            Show Explanation
+          </button>
+        </div>
+
+        <!-- Result Area (hidden initially) -->
+        <div class="result-area tw-hidden tw-p-3 tw-rounded-md tw-bg-gray-50 tw-border tw-border-gray-200 tw-mb-3">
+          <div class="result-content"></div>
+        </div>
+
+        <!-- Explanation Area (hidden initially) -->
+        <div class="explanation-area tw-hidden tw-p-3 tw-rounded-md tw-bg-gray-50 tw-border tw-border-gray-200">
+          <h5 class="tw-font-medium tw-text-gray-700 tw-mb-2">Explanation:</h5>
+          <div class="explanation-content tw-text-sm tw-text-gray-600">
+            <!-- Explanation will be loaded from data attribute -->
+          </div>
+        </div>
+      </div>
+    </div>
+    <p><br></p>
+  `;
+
+  // Insert HTML into editor
+  const selection = window.getSelection();
+  if (selection && selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    const container = document.createElement('div');
+    container.innerHTML = practiceQuestionHtml;
+    
+    range.deleteContents();
+    
+    const fragment = document.createDocumentFragment();
+    while (container.firstChild) {
+      fragment.appendChild(container.firstChild);
+    }
+    range.insertNode(fragment);
+  } else {
+    editor.innerHTML += practiceQuestionHtml;
+  }
+  
+  // Trigger change handler
+  handleChange();
+};
+
+// Export styles for practice questions
+export const getPracticeQuestionStyles = (): string => `
+  .cte-practice-question-block {
+    position: relative;
+    margin: 1rem 0;
+    transition: all 0.2s ease;
+  }
+  
+  .cte-practice-question-block:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Hide delete button in production/when not contenteditable */
+  .cte-practice-question-block .practice-delete-btn {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  /* Show on hover in editor */
+  [contenteditable="true"] .cte-practice-question-block:hover .practice-delete-btn {
+    opacity: 1;
+  }
+
+  body:not(.editor-mode) .practice-editor-only,
+  :not([contenteditable="true"]) .practice-editor-only {
+    display: none !important;
+  }
+  
+  .cte-practice-question-block table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .cte-practice-question-block th,
+  .cte-practice-question-block td {
+    padding: 8px;
+    text-align: left;
+    border: 1px solid #e5e7eb;
+  }
+  
+  .cte-practice-question-block th {
+    background-color: #f9fafb;
+    font-weight: medium;
+    color: #374151;
+  }
+
+  .practice-option {
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .practice-option:hover {
+    background-color: #f9fafb;
+  }
+
+  .practice-option input {
+    pointer-events: none;
+  }
+  
+  @media (max-width: 768px) {
+    .cte-practice-question-block {
+      margin: 0.5rem 0;
+    }
+    
+    .cte-practice-question-block .tw-p-4 {
+      padding: 1rem;
+    }
+  }
+`;
+
+export default {
+  PracticeButton,
+  PracticeModal,
+  insertPracticeQuestion,
+  getPracticeQuestionStyles
+};

@@ -1035,6 +1035,28 @@ useEffect(() => {
           console.error('Failed to load Code Close/Open Handler:', e);
         }}
       />
+      <Script 
+  src="/PracticeHandler.js" 
+  strategy="afterInteractive"
+  onLoad={() => {
+    console.log('PracticeHandler loaded');
+    setCodeHandlerLoaded(true);
+    
+    // Wait for DOM to be fully updated
+    setTimeout(() => {
+      if (window.PracticeHandler && contentRef.current) {
+        // Initialize practice question handlers
+        window.PracticeHandler.init(contentRef.current);
+        console.log('PracticeHandler initialized');
+      } else {
+        console.warn('PracticeHandler or contentRef not available');
+      }
+    }, 100);
+  }}
+  onError={(e) => {
+    console.error('Failed to load PracticeHandler:', e);
+  }}
+/>
       <div className="tw-bg-gradient-to-br tw-from-purple-100 tw-via-pink-50 tw-to-indigo-100 tw-min-h-[125vh]">
         <NavigationBar />
         <Container fluid className="tw-px-0 md:tw-px-4 md:tw-py-10 tw-min-h-screen">

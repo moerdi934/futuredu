@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, RefObject } from 'react';
-import { Code as CodeIcon, ChevronDown, Search, BookOpen, Trash2 } from 'lucide-react';
+import { Code as CodeIcon, ChevronDown, Search, BookOpen } from 'lucide-react';
 import { LearningModal } from '../../../modal/ModalTemplate';
 import { ButtonGradient } from '../../../button/ButtonTemplate';
 import { ShortFormField, SelectCustomField, WideFormField } from '../../../form/FormComponentLayout';
@@ -54,7 +54,6 @@ const CODE_BLOCK_CLASS = 'cte-code-block';
 const LANGUAGE_SELECT_CLASS = 'cte-language-select';
 const CODE_CONTENT_CLASS = 'cte-code-content';
 const COLLAPSE_BUTTON_CLASS = 'cte-collapse-button';
-const CODE_FLOATER_CLASS = 'cte-code-floater';
 
 const CodeModal: React.FC<CodeModalProps> = ({ 
   isOpen, 
@@ -268,6 +267,7 @@ const CodeButton: React.FC<CodeButtonProps> = ({ onClick }) => {
   return (
     <ButtonGradient
       action="custom"
+      // customText="Code"
       showText={false}
       customIcon={<CodeIcon className="tw-w-4 tw-h-4" />}
       onClick={() => onClick()}
@@ -348,143 +348,34 @@ const toggleCodeBlock = (wrapper: HTMLElement, button: HTMLButtonElement): void 
   }
 };
 
-// Function to create code floater with delete button
-const createCodeFloater = (wrapper: HTMLElement, handleChange: () => void): HTMLElement => {
-  // Check if floater already exists
-  let existingFloater = wrapper.querySelector(`.${CODE_FLOATER_CLASS}`) as HTMLElement;
-  if (existingFloater) {
-    return existingFloater;
-  }
-
-  const floater = document.createElement('div');
-  floater.className = CODE_FLOATER_CLASS;
-  floater.contentEditable = 'false';
-  floater.setAttribute('contenteditable', 'false');
-
-  // Create delete button
-  const deleteButton = document.createElement('button');
-  deleteButton.type = 'button';
-  deleteButton.className = 'cte-code-delete-btn';
-  deleteButton.innerHTML = `
-    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-    </svg>
-  `;
-  deleteButton.title = 'Delete code block';
-  deleteButton.setAttribute('aria-label', 'Delete code block');
-
-  deleteButton.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (confirm('Are you sure you want to delete this code block?')) {
-      deleteCodeBlock(wrapper, handleChange);
-    }
-  });
-
-  floater.appendChild(deleteButton);
-  wrapper.appendChild(floater);
-
-  return floater;
-};
-
-// Function to delete code block
-const deleteCodeBlock = (wrapper: HTMLElement, handleChange: () => void): void => {
-  try {
-    // Create a paragraph to replace the code block
-    const newParagraph = document.createElement('p');
-    newParagraph.innerHTML = '<br>';
-    
-    // Replace code wrapper with paragraph
-    if (wrapper.parentNode) {
-      wrapper.parentNode.replaceChild(newParagraph, wrapper);
-      
-      // Set cursor to the new paragraph
-      setTimeout(() => {
-        const range = document.createRange();
-        const sel = window.getSelection();
-        
-        if (sel && newParagraph) {
-          range.setStart(newParagraph, 0);
-          range.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(range);
-        }
-      }, 0);
-      
-      // Trigger change
-      handleChange();
-    }
-  } catch (error) {
-    console.error('Error deleting code block:', error);
-  }
-};
-
-// Function to show/hide floater based on hover
-const showCodeFloater = (wrapper: HTMLElement): void => {
-  const floater = wrapper.querySelector(`.${CODE_FLOATER_CLASS}`) as HTMLElement;
-  if (floater) {
-    floater.style.opacity = '1';
-    floater.style.visibility = 'visible';
-  }
-};
-
-const hideCodeFloater = (wrapper: HTMLElement): void => {
-  const floater = wrapper.querySelector(`.${CODE_FLOATER_CLASS}`) as HTMLElement;
-  if (floater) {
-    floater.style.opacity = '0';
-    floater.style.visibility = 'hidden';
-  }
-};
-
 const setupCodeBlockHandlers = (
   editorRef: RefObject<HTMLElement>, 
   setEditingCode: (editingCode: EditingCode | null) => void, 
-  setShowCodeModal: (show: boolean) => void,
-  handleChange?: () => void
+  setShowCodeModal: (show: boolean) => void
 ): void => {
   if (!editorRef.current) return;
 
-  const codeWrappers = editorRef.current.querySelectorAll(`.${CODE_WRAPPER_CLASS}`);
+  const codeBlocks = editorRef.current.querySelectorAll(`.${CODE_BLOCK_CLASS}`);
   
-  codeWrappers.forEach(wrapper => {
-    const codeWrapper = wrapper as HTMLElement;
-    
-    // Create floater if handleChange is provided
-    if (handleChange) {
-      createCodeFloater(codeWrapper, handleChange);
-    }
-
-    // Setup hover handlers for floater
-    if (!codeWrapper.hasAttribute('data-hover-attached')) {
-      codeWrapper.setAttribute('data-hover-attached', 'true');
-      
-      codeWrapper.addEventListener('mouseenter', () => {
-        showCodeFloater(codeWrapper);
-      });
-      
-      codeWrapper.addEventListener('mouseleave', () => {
-        hideCodeFloater(codeWrapper);
-      });
-    }
-
-    // Setup double-click to edit
-    const codeBlock = codeWrapper.querySelector(`.${CODE_BLOCK_CLASS}`) as HTMLElement;
-    if (codeBlock && !codeBlock.hasAttribute('data-event-attached')) {
+  codeBlocks.forEach(codeBlock => {
+    if (!codeBlock.hasAttribute('data-event-attached')) {
       codeBlock.setAttribute('data-event-attached', 'true');
       
       codeBlock.addEventListener('dblclick', (e) => {
         e.preventDefault();
-        const language = codeWrapper.getAttribute('data-language') || 'javascript';
-        const code = codeBlock.textContent || '';
-        
-        setEditingCode({
-          element: codeWrapper,
-          code: code,
-          language: language
-        });
-        
-        setShowCodeModal(true);
+        const wrapper = codeBlock.closest(`.${CODE_WRAPPER_CLASS}`) as HTMLElement;
+        if (wrapper) {
+          const language = wrapper.getAttribute('data-language') || 'javascript';
+          const code = codeBlock.textContent || '';
+          
+          setEditingCode({
+            element: wrapper,
+            code: code,
+            language: language
+          });
+          
+          setShowCodeModal(true);
+        }
       });
     }
   });
@@ -598,9 +489,6 @@ const handleCodeInsertion = (
   // Insert the code block
   range.deleteContents();
   range.insertNode(wrapper);
-  
-  // Create floater
-  createCodeFloater(wrapper, handleChange);
   
   // Create a new paragraph after the code block with proper content
   const newParagraph = document.createElement('p');
@@ -728,7 +616,6 @@ const getCodeStyles = (): string => `
     overflow: hidden;
     border: 1px solid #e9d5ff;
     display: block;
-    position: relative;
   }
   
   .${LANGUAGE_SELECT_CLASS} {
@@ -805,54 +692,6 @@ const getCodeStyles = (): string => `
   .${CODE_WRAPPER_CLASS} {
     transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
-
-  /* Code Floater Styles */
-  .${CODE_FLOATER_CLASS} {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    display: flex;
-    gap: 4px;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
-    z-index: 10;
-    pointer-events: auto;
-  }
-
-  .${CODE_WRAPPER_CLASS}:hover .${CODE_FLOATER_CLASS} {
-    opacity: 1;
-    visibility: visible;
-  }
-
-  .cte-code-delete-btn {
-    background: #ef4444;
-    border: none;
-    border-radius: 4px;
-    padding: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .cte-code-delete-btn:hover {
-    background: #dc2626;
-    transform: scale(1.05);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
-  }
-
-  .cte-code-delete-btn:active {
-    transform: scale(0.95);
-  }
-
-  .cte-code-delete-btn svg {
-    color: white;
-    width: 16px;
-    height: 16px;
-  }
 `;
 
 export const Button = CodeButton;
@@ -866,9 +705,7 @@ const Code = {
   handleCodeInsertion,
   updateCodeBlock,
   refreshAllCodeBlockHighlighting,
-  getCodeStyles,
-  deleteCodeBlock,
-  createCodeFloater
+  getCodeStyles
 };
 
 export default Code;
@@ -879,7 +716,5 @@ export {
   handleCodeInsertion, 
   updateCodeBlock, 
   refreshAllCodeBlockHighlighting, 
-  getCodeStyles,
-  deleteCodeBlock,
-  createCodeFloater
+  getCodeStyles 
 };

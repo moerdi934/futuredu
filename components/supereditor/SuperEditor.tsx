@@ -1,8 +1,7 @@
-// components/supereditor/SuperEditor.tsx
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { List, Image, Sigma } from 'lucide-react';
+import { List, Image, Sigma, BookOpen } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { createPortal } from 'react-dom';
 
@@ -55,6 +54,9 @@ const MultilevelListButton = dynamic(() => import('./Toolbars/List/List').then(m
 
 const HelpButton = dynamic(() => import('./Toolbars/Help/Help').then(mod => ({ default: mod.HelpButton })), { ssr: false });
 const HelpModal = dynamic(() => import('./Toolbars/Help/Help').then(mod => ({ default: mod.HelpModal })), { ssr: false });
+
+const PracticeButton = dynamic(() => import('./Toolbars/Practice/Practice').then(mod => ({ default: mod.PracticeButton })), { ssr: false });
+const PracticeModal = dynamic(() => import('./Toolbars/Practice/Practice').then(mod => ({ default: mod.PracticeModal })), { ssr: false });
 
 // Portal component for high z-index elements
 const Portal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -156,6 +158,7 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
     keyConcept: boolean;
     listComponent: boolean;
     help: boolean;
+    practice: boolean;
   }>({
     equation: false,
     imageModal: false,
@@ -165,7 +168,8 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
     table: false,
     keyConcept: false,
     listComponent: false,
-    help: false
+    help: false,
+    practice: false
   });
 
   // Helper functions refs
@@ -187,6 +191,9 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
     insertKeyConceptBlock?: any;
     getKeyConceptStyles?: any;
     getListStyles?: any;
+    insertPracticeQuestion?: any;
+    getPracticeQuestionStyles?: any;
+    setupPracticeQuestionHandlers?: any;
   }>({});
   
   // Memoize unique editor ID
@@ -202,6 +209,7 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
   const [showEquationModal, setShowEquationModal] = useState<boolean>(false);
   const [showCodeModal, setShowCodeModal] = useState<boolean>(false);
   const [showTableModal, setShowTableModal] = useState<boolean>(false);
+  const [showPracticeModal, setShowPracticeModal] = useState<boolean>(false);
   const [currentTextColor, setCurrentTextColor] = useState<string>('#000000');
   const [currentBackgroundColor, setCurrentBackgroundColor] = useState<string>('#ffffff');
   const [editingEquation, setEditingEquation] = useState<any>(null);
@@ -227,7 +235,7 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
 
   // Memoize default toolbar style to prevent unnecessary re-renders
   const defaultToolbarStyle = useMemo((): React.CSSProperties => ({
-    position: 'relative',
+    position: 'position',
     top: 'auto',
     zIndex: 1,
     transform: 'none',
@@ -291,6 +299,14 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
         setComponentsLoaded(prev => ({ ...prev, listComponent: true }));
       }).catch(console.error);
 
+      // Load practice helpers
+      import('./Toolbars/Practice/Practice').then(module => {
+        helpersRef.current.insertPracticeQuestion = module.insertPracticeQuestion;
+        helpersRef.current.getPracticeQuestionStyles = module.getPracticeQuestionStyles;
+        helpersRef.current.setupPracticeQuestionHandlers = module.setupPracticeQuestionHandlers;
+        setComponentsLoaded(prev => ({ ...prev, practice: true }));
+      }).catch(console.error);
+
       // Mark font and help as loaded (they're always available)
       setComponentsLoaded(prev => ({ ...prev, font: true, help: true }));
     }
@@ -315,27 +331,26 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
   }, []);
 
   // Debounced change handler
-// In the handleChange callback, add this after the debounce:
 const debouncedHandleChange = useMemo(() => {
-  let timeoutId: NodeJS.Timeout;
-  return () => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => {
+  let timeout: NodeJS.Timeout;
+  return (onChangeCallback?: (content: string) => void) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
       if (editorRef.current) {
         const newContent = editorRef.current.innerHTML;
         setContent(newContent);
-        if (onChange) onChange(newContent);
-        
-        // ALWAYS re-setup image handlers after any change
+        if (onChangeCallback) onChangeCallback(newContent);
+
+        // Re-setup image handlers after any change
         if (componentsLoaded.imageModal && helpersRef.current.setupImageResizeHandlers) {
           try {
-            helpersRef.current.setupImageResizeHandlers(editorRef, handleChange);
+            helpersRef.current.setupImageResizeHandlers(editorRef, () => debouncedHandleChange(onChangeCallback));
           } catch (error) {
             console.warn('Error re-setting up image handlers:', error);
           }
         }
-        
-        // Refresh other handlers...
+
+        // Refresh other handlers
         if (componentsLoaded.code && helpersRef.current.refreshAllCodeBlockHighlighting) {
           try {
             helpersRef.current.refreshAllCodeBlockHighlighting(editorRef);
@@ -350,14 +365,21 @@ const debouncedHandleChange = useMemo(() => {
             console.warn('Error setting up table handlers:', error);
           }
         }
+        if (componentsLoaded.practice && helpersRef.current.setupPracticeQuestionHandlers) {
+          try {
+            helpersRef.current.setupPracticeQuestionHandlers(editorRef);
+          } catch (error) {
+            console.warn('Error setting up practice question handlers:', error);
+          }
+        }
       }
     }, 50);
   };
-}, [onChange, componentsLoaded]);
+}, [componentsLoaded]); // Removed handleChange from dependencies
 
-  const handleChange = useCallback(() => {
-    debouncedHandleChange();
-  }, [debouncedHandleChange]);
+const handleChange = useCallback(() => {
+  debouncedHandleChange(onChange);
+}, [debouncedHandleChange, onChange]);
 
   const execCommand = useCallback((command: string, value: string | null = null) => {
     if (editorRef.current && typeof document !== 'undefined') {
@@ -724,7 +746,7 @@ const debouncedHandleChange = useMemo(() => {
     } else {
       setToolbarStyle(defaultToolbarStyle);
     }
-}, [defaultToolbarStyle]);
+  }, [defaultToolbarStyle]);
 
   // Throttle scroll handler to improve performance
   const throttledUpdateToolbarPosition = useMemo(() => {
@@ -936,10 +958,10 @@ const debouncedHandleChange = useMemo(() => {
     editorRef.current.addEventListener('editTable', handleEditTable as EventListener);
     
     return () => {
-          if (editorRef.current && (editorRef.current as any)._imageObserver) {
-      (editorRef.current as any)._imageObserver.disconnect();
-    }
-    
+      if (editorRef.current && (editorRef.current as any)._imageObserver) {
+        (editorRef.current as any)._imageObserver.disconnect();
+      }
+      
       if (editorRef.current) {
         editorRef.current.removeEventListener('editTable', handleEditTable as EventListener);
       }
@@ -1147,6 +1169,16 @@ const debouncedHandleChange = useMemo(() => {
       }
     }
   }, [handleChange, componentsLoaded.keyConcept]);
+
+  const handlePracticeInsert = useCallback((questionData: any) => {
+    if (componentsLoaded.practice && helpersRef.current.insertPracticeQuestion) {
+      try {
+        helpersRef.current.insertPracticeQuestion({ editorRef, handleChange, questionData });
+      } catch (error) {
+        console.warn('Error inserting practice question:', error);
+      }
+    }
+  }, [handleChange, componentsLoaded.practice]);
 
   const handlePaste = useCallback(() => {
     setTimeout(() => {
@@ -1585,6 +1617,14 @@ const debouncedHandleChange = useMemo(() => {
       console.warn('Error getting key concept styles:', error);
     }
 
+    try {
+      if (componentsLoaded.practice && helpersRef.current.getPracticeQuestionStyles) {
+        additionalStyles += helpersRef.current.getPracticeQuestionStyles() || '';
+      }
+    } catch (error) {
+      console.warn('Error getting practice styles:', error);
+    }
+
     return baseStyles + additionalStyles;
   }, [uniqueEditorId, componentsLoaded, height]);
 
@@ -1803,6 +1843,14 @@ const debouncedHandleChange = useMemo(() => {
             onClick={handleKeyConceptInsert}
             tabIndex={-1}
           />
+          
+          <PracticeButton 
+            onClick={() => {
+              saveSelection();
+              setShowPracticeModal(true);
+            }}
+            tabIndex={-1}
+          />
         </div>
 
         {/* Tools Group */}
@@ -1933,6 +1981,14 @@ const debouncedHandleChange = useMemo(() => {
           onInsert={handleTableSubmit}
           initialTable={editingTable ? editingTable.outerHTML : null}
           isEditing={!!editingTable}
+        />
+      )}
+      
+      {showPracticeModal && (
+        <PracticeModal 
+          isOpen={showPracticeModal}
+          onClose={() => setShowPracticeModal(false)}
+          onInsert={handlePracticeInsert}
         />
       )}
       
