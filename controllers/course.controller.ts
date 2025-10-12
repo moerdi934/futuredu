@@ -157,6 +157,7 @@ const isNewId = (id: any): boolean => {
 
 
 // Get all courses with role-based filtering and approval system
+// Get all courses with role-based filtering and approval system
 export const getAllCoursesWithApproval = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   try {
     const query = req.query as CourseQueryParams;
@@ -171,6 +172,7 @@ export const getAllCoursesWithApproval = async (req: AuthenticatedRequest, res: 
       limit: parseInt(query.limit || '10'),
       approvalStatus: query.approvalStatus || 'all',
       includeDeleted: query.includeDeleted || 'false',
+      liveStatus: query.liveStatus || 'all',
       userRole: userRole,
       userId: userId?.toString()
     };
@@ -178,28 +180,69 @@ export const getAllCoursesWithApproval = async (req: AuthenticatedRequest, res: 
     console.log('Courses query params:', params);
     const { courses, total } = await Course.getAll(params);
 
-    const processedCourses: ProcessedCourse[] = courses.map((course) => ({
-      id: course.id,
-      title: course.title,
-      description: course.description,
-      imageUrl: course.imageUrl,
-      courseUrl: course.courseUrl,
-      learning_point: course.learning_point,
-      creator_name: course.creator_name || 'Unknown',
-      create_user_id: course.create_user_id,
-      create_date: course.create_date,
-      edit_user_id: course.edit_user_id,
-      edit_date: course.edit_date,
-      approval_status: course.approval_status,
-      approve_user_id: course.approve_user_id,
-      approve_date: course.approve_date,
-      approver_name: course.approver_name,
-      rejection_reason: course.rejection_reason,
-      is_deleted: course.is_deleted,
-      delete_reason: course.delete_reason,
-      delete_user_id: course.delete_user_id,
-      delete_date: course.delete_date
-    }));
+    // Process courses based on role
+    let processedCourses;
+
+    if (userRole === 'student') {
+      // For students: only show entitled courses with limited fields
+      processedCourses = courses.map((course) => ({
+        id: course.id,
+        title: course.title,
+        description: course.description,
+        imageUrl: course.imageUrl,
+        courseUrl: course.courseUrl,
+        learning_point: course.learning_point,
+        section_count: parseInt(course.section_count) || 0,
+        section_string: course.section_string || '',
+        topic_count: parseInt(course.topic_count) || 0,
+        material_count: parseInt(course.material_count) || 0,
+        mandatory_material_count: parseInt(course.mandatory_material_count) || 0,
+        optional_material_count: parseInt(course.optional_material_count) || 0,
+        total_duration_minutes: parseInt(course.total_duration_minutes) || 0,
+        // Entitlement information
+        granted_at: course.granted_at,
+        expires_at: course.expires_at,
+        entitlement_metadata: course.entitlement_metadata,
+        is_entitled_active: course.is_entitled_active
+      }));
+    } else {
+      // For admin and teacher: show all fields including management data
+      processedCourses = courses.map((course) => ({
+        id: course.id,
+        title: course.title,
+        description: course.description,
+        imageUrl: course.imageUrl,
+        courseUrl: course.courseUrl,
+        learning_point: course.learning_point,
+        creator_name: course.creator_name || 'Unknown',
+        create_user_id: course.create_user_id,
+        create_date: course.create_date,
+        edit_user_id: course.edit_user_id,
+        edit_date: course.edit_date,
+        approval_status: course.approval_status,
+        approve_user_id: course.approve_user_id,
+        approve_date: course.approve_date,
+        approver_name: course.approver_name,
+        rejection_reason: course.rejection_reason,
+        is_deleted: course.is_deleted,
+        delete_reason: course.delete_reason,
+        delete_user_id: course.delete_user_id,
+        delete_date: course.delete_date,
+        is_live: course.is_live,
+        live_since: course.live_since,
+        // Aggregated fields
+        section_count: parseInt(course.section_count) || 0,
+        section_string: course.section_string || '',
+        topic_count: parseInt(course.topic_count) || 0,
+        material_count: parseInt(course.material_count) || 0,
+        mandatory_material_count: parseInt(course.mandatory_material_count) || 0,
+        optional_material_count: parseInt(course.optional_material_count) || 0,
+        total_duration_minutes: parseInt(course.total_duration_minutes) || 0,
+        // Entitlement counts for admin/teacher
+        entitled_users_count: parseInt(course.entitled_users_count) || 0,
+        active_entitled_count: parseInt(course.active_entitled_count) || 0
+      }));
+    }
 
     res.json({
       data: processedCourses,

@@ -14,9 +14,12 @@ import {
   Square, 
   Video, 
   MapPin, 
-  Link as LinkIcon,
+  Link2,
   UserCheck,
-  AlertTriangle
+  AlertTriangle,
+  Rocket,
+  PlayCircle,
+  StopCircle
 } from 'lucide-react';
 import { LearningModal } from '../../../../components/modal/ModalTemplate';
 import { useAuth } from '../../../../context/AuthContext';
@@ -129,7 +132,6 @@ const DetailClassModal: React.FC<DetailClassModalProps> = ({ isOpen, onClose, cl
       onClick: onClose
     }
   ];
-
   return (
     <LearningModal
       show={isOpen}
@@ -221,7 +223,7 @@ const DetailClassModal: React.FC<DetailClassModalProps> = ({ isOpen, onClose, cl
                   Mata Pelajaran
                 </strong>
                 <div className="tw-text-gray-600 tw-bg-gray-50 tw-p-3 tw-rounded-lg">
-                  {classData.course_name}
+                  {classData.course_name || 'Tidak ada mata pelajaran'}
                 </div>
               </div>
               
@@ -245,25 +247,105 @@ const DetailClassModal: React.FC<DetailClassModalProps> = ({ isOpen, onClose, cl
               <div>
                 <strong className="tw-text-gray-700 tw-flex tw-items-center tw-gap-2 tw-mb-2">
                   <Calendar size={16} />
-                  Waktu Mulai
+                  Waktu Mulai (Terjadwal)
                 </strong>
                 <div className="tw-text-gray-600 tw-bg-blue-50 tw-p-3 tw-rounded-lg">
-                  {formatDate(classData.real_start_datetime)}
+                  {classData.real_start_datetime ? formatDate(classData.real_start_datetime) : `${classData.date} ${classData.start_time}`}
                 </div>
               </div>
               
               <div>
                 <strong className="tw-text-gray-700 tw-flex tw-items-center tw-gap-2 tw-mb-2">
                   <Clock size={16} />
-                  Waktu Selesai
+                  Waktu Selesai (Terjadwal)
                 </strong>
                 <div className="tw-text-gray-600 tw-bg-blue-50 tw-p-3 tw-rounded-lg">
-                  {formatDate(classData.real_end_datetime)}
+                  {classData.real_end_datetime ? formatDate(classData.real_end_datetime) : `${classData.date} ${classData.end_time}`}
                 </div>
               </div>
             </div>
           </Card.Body>
         </Card>
+
+        {/* Actual Time Information - Only show if class has started or finished */}
+        {(classData.is_started || classData.status === 'Started' || classData.status === 'Finished') && (
+          <Card className="tw-border-0 tw-shadow-sm tw-border-l-4 tw-border-l-green-500">
+            <Card.Header className="tw-bg-green-50 tw-border-0">
+              <h6 className="tw-font-semibold tw-text-green-800 tw-mb-0 tw-flex tw-items-center tw-gap-2">
+                <PlayCircle size={18} />
+                Waktu Aktual Pelaksanaan
+              </h6>
+            </Card.Header>
+            <Card.Body>
+              <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4">
+                {classData.real_start_datetime && (
+                  <div>
+                    <strong className="tw-text-gray-700 tw-flex tw-items-center tw-gap-2 tw-mb-2">
+                      <Play size={16} className="tw-text-green-600" />
+                      Dimulai Pada
+                    </strong>
+                    <div className="tw-text-gray-800 tw-bg-green-50 tw-p-3 tw-rounded-lg tw-font-medium">
+                      {formatDate(classData.real_start_datetime)}
+                    </div>
+                  </div>
+                )}
+                
+                {classData.status === 'Finished' && classData.real_end_datetime && (
+                  <div>
+                    <strong className="tw-text-gray-700 tw-flex tw-items-center tw-gap-2 tw-mb-2">
+                      <StopCircle size={16} className="tw-text-blue-600" />
+                      Selesai Pada
+                    </strong>
+                    <div className="tw-text-gray-800 tw-bg-blue-50 tw-p-3 tw-rounded-lg tw-font-medium">
+                      {formatDate(classData.real_end_datetime)}
+                    </div>
+                  </div>
+                )}
+
+                {classData.status === 'Started' && !classData.real_end_datetime && (
+                  <div>
+                    <Alert variant="info" className="tw-mb-0">
+                      <Clock className="tw-inline tw-mr-2" size={16} />
+                      Kelas sedang berlangsung
+                    </Alert>
+                  </div>
+                )}
+              </div>
+            </Card.Body>
+          </Card>
+        )}
+
+        {/* Go Live Information - Only show if class is live */}
+        {classData.is_live && (
+          <Card className="tw-border-0 tw-shadow-sm tw-border-l-4 tw-border-l-orange-500">
+            <Card.Header className="tw-bg-orange-50 tw-border-0">
+              <h6 className="tw-font-semibold tw-text-orange-800 tw-mb-0 tw-flex tw-items-center tw-gap-2">
+                <Rocket size={18} />
+                Status Go Live
+              </h6>
+            </Card.Header>
+            <Card.Body>
+              <div className="tw-flex tw-items-center tw-gap-3 tw-bg-orange-50 tw-p-4 tw-rounded-lg">
+                <div className="tw-w-12 tw-h-12 tw-bg-orange-500 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-animate-pulse">
+                  <Rocket size={24} className="tw-text-white" />
+                </div>
+                <div className="tw-flex-1">
+                  <div className="tw-font-bold tw-text-orange-800 tw-text-lg">
+                    Kelas Sedang Live! 🎉
+                  </div>
+                  {classData.live_since && (
+                    <div className="tw-text-sm tw-text-orange-600 tw-mt-1">
+                      Live sejak: {formatDate(classData.live_since)}
+                    </div>
+                  )}
+                  <div className="tw-text-xs tw-text-gray-600 tw-mt-2">
+                    Kelas ini dapat diakses oleh siswa sebelum dimulai
+                  </div>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        )}
 
         {/* Meeting URL for Online Classes */}
         {classData.class_mode === 'online' && classData.meeting_url && (
@@ -278,7 +360,7 @@ const DetailClassModal: React.FC<DetailClassModalProps> = ({ isOpen, onClose, cl
               <div className="tw-space-y-3">
                 <div>
                   <strong className="tw-text-gray-700 tw-flex tw-items-center tw-gap-2 tw-mb-2">
-                    <LinkIcon size={16} />
+                    <Link2 size={16} />
                     URL Meeting
                   </strong>
                   <div className="tw-bg-blue-50 tw-p-3 tw-rounded-lg tw-break-all">
@@ -324,9 +406,6 @@ const DetailClassModal: React.FC<DetailClassModalProps> = ({ isOpen, onClose, cl
                         <div className="tw-font-medium tw-text-green-800">
                           {classData.teacher_name || 'Belum Ditentukan'}
                         </div>
-                        <div className="tw-text-sm tw-text-green-600">
-                          ID: {classData.teacher_id || 'N/A'}
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -371,9 +450,6 @@ const DetailClassModal: React.FC<DetailClassModalProps> = ({ isOpen, onClose, cl
                         <div>
                           <div className="tw-font-medium tw-text-purple-800 tw-text-sm">
                             {student}
-                          </div>
-                          <div className="tw-text-xs tw-text-purple-600">
-                            ID: {classData.student_list_ids?.[index] || 'N/A'}
                           </div>
                         </div>
                       </div>
@@ -445,25 +521,13 @@ const DetailClassModal: React.FC<DetailClassModalProps> = ({ isOpen, onClose, cl
           </Card>
         )}
 
-        {/* System Information */}
+        {/* System Information - Removed sensitive IDs */}
         <Card className="tw-border-0 tw-shadow-sm">
           <Card.Header className="tw-bg-gray-50 tw-border-0">
             <h6 className="tw-font-semibold tw-text-gray-800 tw-mb-0">Informasi Sistem</h6>
           </Card.Header>
           <Card.Body>
             <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 lg:tw-grid-cols-3 tw-gap-4 tw-text-sm">
-              <div>
-                <strong className="tw-text-gray-600 tw-block">ID Kelas</strong>
-                <span className="tw-font-mono tw-text-gray-800">{classData.id}</span>
-              </div>
-              
-              {classData.event_id && (
-                <div>
-                  <strong className="tw-text-gray-600 tw-block">Event ID</strong>
-                  <span className="tw-font-mono tw-text-gray-800">{classData.event_id}</span>
-                </div>
-              )}
-              
               <div>
                 <strong className="tw-text-gray-600 tw-block">Tanggal Dibuat</strong>
                 <span className="tw-text-gray-800">{formatDateOnly(classData.create_date)}</span>

@@ -1,4 +1,4 @@
-// pages/api/courses/index.ts - Updated with Approval System
+// pages/api/courses/index.ts - Updated with Student Entitlement System
 import { NextApiRequest, NextApiResponse } from 'next';
 import { runMiddleware, authenticateJWT, AuthenticatedRequest } from '../../../lib/middleware/auth';
 import * as CourseController from '../../../controllers/course.controller';
@@ -10,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const authReq = req as AuthenticatedRequest;
 
     if (req.method === 'GET') {
-      // Use the new approval-aware controller
+      // Allow GET for all authenticated users (admin, teacher, student)
       return CourseController.getAllCoursesWithApproval(authReq, res);
     } else if (req.method === 'POST') {
       // Only teachers and admins can create courses

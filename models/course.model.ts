@@ -177,7 +177,7 @@ const buildRoleBasedConditions = (userRole: string, userId: string, values: any[
   return '';
 };
 
-// Updated getAll function with role-based filtering
+// Updated getAll function with correct live status detection
 export const getAll = async (options: CourseGetOptions = {}): Promise<CoursesResult> => {
   const {
     sortField = 'id',
@@ -186,6 +186,7 @@ export const getAll = async (options: CourseGetOptions = {}): Promise<CoursesRes
     page = 1,
     limit = 10,
     approvalStatus = 'all',
+    liveStatus = 'all',
     includeDeleted = 'false',
     userRole = 'admin',
     userId = ''
@@ -193,82 +194,205 @@ export const getAll = async (options: CourseGetOptions = {}): Promise<CoursesRes
 
   const offset = (page - 1) * limit;
   
-  let query = `
-    WITH filtered_courses AS (
-      SELECT 
-        c.id,
-        c.title,
-        c.description,
-        c.imageUrl,
-        c.courseUrl,
-        c.learning_point,
-        c.create_user_id,
-        c.edit_user_id,
-        c.create_date,
-        c.edit_date,
-        c.approval_status,
-        c.approve_user_id,
-        c.approve_date,
-        c.rejection_reason,
-        c.is_deleted,
-        c.delete_reason,
-        c.delete_user_id,
-        c.delete_date,
-        cu.user_code || '-' || ua.nama_lengkap AS creator_name,
-        au.user_code || '-' || ua2.nama_lengkap AS approver_name
-      FROM courses c
-      LEFT JOIN users cu ON c.create_user_id = cu.id
-      LEFT JOIN user_account ua ON ua.user_id = cu.user_id
-      LEFT JOIN users au ON c.approve_user_id = au.id
-      LEFT JOIN user_account ua2 ON ua2.user_id = au.user_id
-      WHERE 1=1
-  `;
-
+  let query = '';
   const values: any[] = [];
   const conditions: string[] = [];
 
-  // Add role-based filtering
-  if (userId && userRole !== 'admin') {
-    const roleCondition = buildRoleBasedConditions(userRole, userId, values);
-    if (roleCondition) {
-      conditions.push(roleCondition);
+  if (userRole === 'student') {
+    // Query for students: only show entitled courses
+    query = `
+      WITH course_aggregation AS (
+        SELECT 
+          c.id,
+          c.title,
+          c.description,
+          c.imageUrl,
+          c.courseUrl,
+          c.learning_point,
+          -- Entitlement information
+          ce.granted_at,
+          ce.expires_at,
+          ce.metadata as entitlement_metadata,
+          CASE 
+            WHEN ce.expires_at IS NULL THEN true
+            WHEN ce.expires_at > NOW() THEN true
+            ELSE false
+          END as is_entitled_active,
+          -- Check if course is live from product relation
+          CASE 
+            WHEN p.product_id IS NOT NULL THEN true
+            ELSE false
+          END as is_live,
+          p.updated_at as live_since,
+          -- Aggregated data
+          COUNT(DISTINCT s.id) as section_count,
+          STRING_AGG(DISTINCT s.title, ', ' ORDER BY s.title) as section_string,
+          COUNT(DISTINCT t.id) as topic_count,
+          COUNT(DISTINCT m.id) as material_count,
+          COUNT(DISTINCT CASE WHEN m.is_mandatory = true THEN m.id END) as mandatory_material_count,
+          COUNT(DISTINCT CASE WHEN m.is_mandatory = false OR m.is_mandatory IS NULL THEN m.id END) as optional_material_count,
+          COALESCE(SUM(DISTINCT s.time), 0) as total_duration_minutes
+        FROM courses c
+        INNER JOIN course_entitlements ce ON ce.course_id = c.id
+        LEFT JOIN product_courses pc ON pc.course_id = c.id
+        LEFT JOIN products p ON p.product_id = pc.product_id AND p.type = 1
+        LEFT JOIN sections s ON s.course_id = c.id 
+        LEFT JOIN topics t ON t.section_id = s.id 
+        LEFT JOIN materials m ON m.topic_id = t.id 
+        WHERE (c.is_deleted IS NULL OR c.is_deleted = false)
+          AND c.approval_status = 'approved'
+          AND p.product_id IS NOT NULL
+    `;
+
+    // Filter by student user_id
+    values.push(parseInt(userId));
+    conditions.push(`AND ce.user_id = $${values.length}`);
+
+    // Search functionality for students
+    if (search) {
+      values.push(`%${search}%`);
+      values.push(`%${search}%`);
+      conditions.push(`AND (c.title ILIKE $${values.length - 1} OR c.description ILIKE $${values.length})`);
     }
-  }
 
-  // Handle delete filter logic
-  if (includeDeleted === 'false') {
-    conditions.push('AND (c.is_deleted IS NULL OR c.is_deleted = false)');
-  } else if (includeDeleted === 'only_deleted') {
-    conditions.push('AND c.is_deleted = true');
-  }
+    if (conditions.length > 0) {
+      query += ` ${conditions.join(' ')}`;
+    }
 
-  // Filter by approval status
-  if (approvalStatus && approvalStatus !== 'all') {
-    values.push(approvalStatus);
-    conditions.push(`AND c.approval_status = $${values.length}`);
-  }
+    // GROUP BY clause for student
+    query += `
+        GROUP BY 
+          c.id, c.title, c.description, c.imageUrl, c.courseUrl, c.learning_point,
+          ce.granted_at, ce.expires_at, ce.metadata, p.product_id, p.updated_at
+      )
+      SELECT 
+        *, 
+        COUNT(*) OVER() AS total 
+      FROM course_aggregation
+    `;
 
-  // Search functionality
-  if (search) {
-    values.push(`%${search}%`);
-    values.push(`%${search}%`);
-    conditions.push(`AND (c.title ILIKE $${values.length - 1} OR c.description ILIKE $${values.length})`);
-  }
+  } else {
+    // Query for admin and teacher: show all courses with entitlement counts
+    query = `
+      WITH course_aggregation AS (
+        SELECT 
+          c.id,
+          c.title,
+          c.description,
+          c.imageUrl,
+          c.courseUrl,
+          c.learning_point,
+          c.create_user_id,
+          c.edit_user_id,
+          c.create_date,
+          c.edit_date,
+          c.approval_status,
+          c.approve_user_id,
+          c.approve_date,
+          c.rejection_reason,
+          c.is_deleted,
+          c.delete_reason,
+          c.delete_user_id,
+          c.delete_date,
+          -- Check if course is live from product relation
+          CASE 
+            WHEN p.product_id IS NOT NULL THEN true
+            ELSE false
+          END as is_live,
+          p.updated_at as live_since,
+          p.product_id,
+          p.name as product_name,
+          cu.user_code || '-' || ua.nama_lengkap AS creator_name,
+          au.user_code || '-' || ua2.nama_lengkap AS approver_name,
+          -- Aggregated data
+          COUNT(DISTINCT s.id) as section_count,
+          STRING_AGG(DISTINCT s.title, ', ' ORDER BY s.title) as section_string,
+          COUNT(DISTINCT t.id) as topic_count,
+          COUNT(DISTINCT m.id) as material_count,
+          COUNT(DISTINCT CASE WHEN m.is_mandatory = true THEN m.id END) as mandatory_material_count,
+          COUNT(DISTINCT CASE WHEN m.is_mandatory = false OR m.is_mandatory IS NULL THEN m.id END) as optional_material_count,
+          COALESCE(SUM(DISTINCT s.time), 0) as total_duration_minutes,
+          -- Entitlement counts
+          COUNT(DISTINCT ce.user_id) as entitled_users_count,
+          COUNT(DISTINCT CASE 
+            WHEN ce.expires_at IS NULL OR ce.expires_at > NOW() 
+            THEN ce.user_id 
+          END) as active_entitled_count
+        FROM courses c
+        LEFT JOIN users cu ON c.create_user_id = cu.id
+        LEFT JOIN user_account ua ON ua.user_id = cu.user_id
+        LEFT JOIN users au ON c.approve_user_id = au.id
+        LEFT JOIN user_account ua2 ON ua2.user_id = au.user_id
+        LEFT JOIN product_courses pc ON pc.course_id = c.id
+        LEFT JOIN products p ON p.product_id = pc.product_id AND p.type = 1
+        LEFT JOIN sections s ON s.course_id = c.id 
+        LEFT JOIN topics t ON t.section_id = s.id 
+        LEFT JOIN materials m ON m.topic_id = t.id 
+        LEFT JOIN course_entitlements ce ON ce.course_id = c.id
+        WHERE 1=1
+    `;
 
-  if (conditions.length > 0) {
-    query += `${conditions.join(' ')}`;
-  }
+    // Add role-based filtering for teacher
+    if (userId && userRole === 'teacher') {
+      values.push(parseInt(userId));
+      conditions.push(`AND c.create_user_id = $${values.length}`);
+    }
 
-  query += `
-    )
-    SELECT 
-      *, 
-      COUNT(*) OVER() AS total 
-    FROM filtered_courses
-  `;
+    // Handle delete filter logic
+    if (includeDeleted === 'false') {
+      conditions.push('AND (c.is_deleted IS NULL OR c.is_deleted = false)');
+    } else if (includeDeleted === 'only_deleted') {
+      conditions.push('AND c.is_deleted = true');
+    }
+
+    // Filter by approval status
+    if (approvalStatus && approvalStatus !== 'all') {
+      values.push(approvalStatus);
+      conditions.push(`AND c.approval_status = $${values.length}`);
+    }
+
+    // Filter by live status - using computed field from product relation
+    if (liveStatus && liveStatus !== 'all') {
+      if (liveStatus === 'live') {
+        conditions.push('AND p.product_id IS NOT NULL');
+      } else if (liveStatus === 'not_live') {
+        conditions.push('AND p.product_id IS NULL');
+      }
+    }
+
+    // Search functionality
+    if (search) {
+      values.push(`%${search}%`);
+      values.push(`%${search}%`);
+      conditions.push(`AND (c.title ILIKE $${values.length - 1} OR c.description ILIKE $${values.length})`);
+    }
+
+    if (conditions.length > 0) {
+      query += ` ${conditions.join(' ')}`;
+    }
+
+    // GROUP BY clause for admin/teacher
+    query += `
+        GROUP BY 
+          c.id, c.title, c.description, c.imageUrl, c.courseUrl, c.learning_point,
+          c.create_user_id, c.edit_user_id, c.create_date, c.edit_date,
+          c.approval_status, c.approve_user_id, c.approve_date, c.rejection_reason,
+          c.is_deleted, c.delete_reason, c.delete_user_id, c.delete_date,
+          p.product_id, p.updated_at, p.name,
+          cu.user_code, ua.nama_lengkap, au.user_code, ua2.nama_lengkap
+      )
+      SELECT 
+        *, 
+        COUNT(*) OVER() AS total 
+      FROM course_aggregation
+    `;
+  }
 
   // Sorting
-  const validSortFields = ['id', 'title', 'description', 'creator_name', 'create_date', 'approval_status', 'approve_date'];
+  const validSortFields = ['id', 'title', 'description', 'creator_name', 'create_date', 
+                           'approval_status', 'approve_date', 'section_count', 'topic_count', 
+                           'material_count', 'total_duration_minutes', 'granted_at', 'expires_at',
+                           'is_live', 'live_since', 'entitled_users_count', 'active_entitled_count'];
   if (validSortFields.includes(sortField.toLowerCase()) && ['asc', 'desc'].includes(sortOrder.toLowerCase())) {
     query += ` ORDER BY ${sortField} ${sortOrder.toUpperCase()}`;
   } else {
@@ -284,7 +408,6 @@ export const getAll = async (options: CourseGetOptions = {}): Promise<CoursesRes
     total: result.rows.length > 0 ? result.rows[0].total : 0
   };
 };
-
 // Updated searchAll function
 export const searchAll = async (search: string = '', userRole: string = 'admin', userId?: string): Promise<Partial<Course>[]> => {
   try {

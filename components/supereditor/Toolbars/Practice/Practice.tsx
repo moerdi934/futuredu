@@ -284,8 +284,145 @@ interface InsertPracticeQuestionParams {
   questionData: Question;
 }
 
+const PRACTICE_FLOATER_CLASS = 'cte-practice-floater';
+
+const createPracticeFloater = (wrapper: HTMLElement, handleChange: () => void): HTMLElement => {
+  // Remove existing floater if any
+  const existingFloater = wrapper.querySelector(`.${PRACTICE_FLOATER_CLASS}`);
+  if (existingFloater) {
+    existingFloater.remove();
+  }
+
+  const floater = document.createElement('div');
+  floater.className = PRACTICE_FLOATER_CLASS;
+  floater.contentEditable = 'false';
+  floater.setAttribute('contenteditable', 'false');
+  floater.style.cssText = `
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+    z-index: 10;
+    pointer-events: auto;
+  `;
+
+  // Create delete button
+  const deleteButton = document.createElement('button');
+  deleteButton.type = 'button';
+  deleteButton.className = 'cte-practice-delete-btn';
+  deleteButton.innerHTML = `
+    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+    </svg>
+  `;
+  deleteButton.title = 'Delete practice question';
+  deleteButton.setAttribute('aria-label', 'Delete practice question');
+  deleteButton.style.cssText = `
+    background: #ef4444;
+    border: none;
+    border-radius: 4px;
+    padding: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  `;
+
+  // Add hover effect
+  deleteButton.addEventListener('mouseenter', () => {
+    deleteButton.style.background = '#dc2626';
+    deleteButton.style.transform = 'scale(1.05)';
+    deleteButton.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.15)';
+  });
+
+  deleteButton.addEventListener('mouseleave', () => {
+    deleteButton.style.background = '#ef4444';
+    deleteButton.style.transform = 'scale(1)';
+    deleteButton.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+  });
+
+  deleteButton.addEventListener('mousedown', () => {
+    deleteButton.style.transform = 'scale(0.95)';
+  });
+
+  deleteButton.addEventListener('mouseup', () => {
+    deleteButton.style.transform = 'scale(1.05)';
+  });
+
+  // Add click event listener
+  deleteButton.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (confirm('Are you sure you want to delete this practice question?')) {
+      deletePracticeBlock(wrapper, handleChange);
+    }
+  });
+
+  floater.appendChild(deleteButton);
+  wrapper.appendChild(floater);
+
+  return floater;
+};
+
+const deletePracticeBlock = (wrapper: HTMLElement, handleChange: () => void): void => {
+  try {
+    // Create a paragraph to replace the practice block
+    const newParagraph = document.createElement('p');
+    newParagraph.innerHTML = '<br>';
+    
+    // Replace practice wrapper with paragraph
+    if (wrapper.parentNode) {
+      wrapper.parentNode.replaceChild(newParagraph, wrapper);
+      
+      // Set cursor to the new paragraph
+      setTimeout(() => {
+        const range = document.createRange();
+        const sel = window.getSelection();
+        
+        if (sel && newParagraph) {
+          range.setStart(newParagraph, 0);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      }, 0);
+      
+      // Trigger change
+      handleChange();
+    }
+  } catch (error) {
+    console.error('Error deleting practice block:', error);
+  }
+};
+
+const showPracticeFloater = (wrapper: HTMLElement): void => {
+  const floater = wrapper.querySelector(`.${PRACTICE_FLOATER_CLASS}`) as HTMLElement;
+  if (floater) {
+    floater.style.opacity = '1';
+    floater.style.visibility = 'visible';
+  }
+};
+
+const hidePracticeFloater = (wrapper: HTMLElement): void => {
+  const floater = wrapper.querySelector(`.${PRACTICE_FLOATER_CLASS}`) as HTMLElement;
+  if (floater) {
+    floater.style.opacity = '0';
+    floater.style.visibility = 'hidden';
+  }
+};
+
 export const insertPracticeQuestion = ({ editorRef, handleChange, questionData }: InsertPracticeQuestionParams): void => {
-  if (!editorRef.current) return;
+  if (!editorRef.current) {
+    console.error('Editor reference is null');
+    return;
+  }
 
   const editor = editorRef.current;
   const uniqueId = `practice-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -383,14 +520,6 @@ export const insertPracticeQuestion = ({ editorRef, handleChange, questionData }
          data-explanation="${encodedExplanation}">
       <div class="tw-absolute tw-inset-0 tw-bg-gradient-to-br tw-from-purple-500 tw-via-indigo-600 tw-to-blue-700 tw-rounded-2xl tw-shadow-2xl"></div>
       
-      <!-- Delete Button - Only visible in editor -->
-      <button class="practice-delete-btn practice-editor-only tw-absolute tw-top-2 tw-right-2 tw-z-20 tw-bg-red-500 hover:tw-bg-red-600 tw-text-white tw-p-2 tw-rounded-full tw-shadow-lg tw-transition-all" 
-              title="Delete Practice Question">
-        <svg class="tw-w-4 tw-h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-        </svg>
-      </button>
-      
       <div class="tw-relative tw-p-4 tw-z-10">
         <!-- Header -->
         <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
@@ -480,6 +609,24 @@ export const insertPracticeQuestion = ({ editorRef, handleChange, questionData }
     editor.innerHTML += practiceQuestionHtml;
   }
   
+  // Wait for DOM to update, then create floater
+  setTimeout(() => {
+    const wrapper = editor.querySelector(`[data-practice-id="${uniqueId}"]`) as HTMLElement;
+    if (wrapper) {
+      // Create floater
+      createPracticeFloater(wrapper, handleChange);
+
+      // Setup hover handlers
+      wrapper.addEventListener('mouseenter', () => {
+        showPracticeFloater(wrapper);
+      });
+      
+      wrapper.addEventListener('mouseleave', () => {
+        hidePracticeFloater(wrapper);
+      });
+    }
+  }, 100);
+  
   // Trigger change handler
   handleChange();
 };
@@ -489,29 +636,64 @@ export const getPracticeQuestionStyles = (): string => `
   .cte-practice-question-block {
     position: relative;
     margin: 1rem 0;
+    border-radius: 0.5rem;
+    overflow: visible;
+    border: 1px solid #e9d5ff;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   .cte-practice-question-block:hover {
-    transform: translateY(-2px) scale(1.01);
+    transform: translateY(-2px);
     box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+    border-color: #c4b5fd;
   }
 
-  /* Hide delete button in production/when not contenteditable */
-  .cte-practice-question-block .practice-delete-btn {
-    opacity: 0;
-    transition: opacity 0.3s ease;
+  /* Floater styles */
+  .${PRACTICE_FLOATER_CLASS} {
+    position: absolute !important;
+    bottom: 8px !important;
+    left: 8px !important;
+    display: flex !important;
+    gap: 4px !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out !important;
+    z-index: 10 !important;
+    pointer-events: auto !important;
   }
 
-  /* Show delete button on hover only in editor */
-  [contenteditable="true"] .cte-practice-question-block:hover .practice-delete-btn,
-  .editor-content .cte-practice-question-block:hover .practice-delete-btn {
-    opacity: 1;
+  .cte-practice-question-block:hover .${PRACTICE_FLOATER_CLASS} {
+    opacity: 1 !important;
+    visibility: visible !important;
   }
 
-  body:not(.editor-mode) .practice-editor-only,
-  :not([contenteditable="true"]) .practice-editor-only {
-    display: none !important;
+  .cte-practice-delete-btn {
+    background: #ef4444 !important;
+    border: none !important;
+    border-radius: 4px !important;
+    padding: 6px !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  .cte-practice-delete-btn:hover {
+    background: #dc2626 !important;
+    transform: scale(1.05) !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15) !important;
+  }
+
+  .cte-practice-delete-btn:active {
+    transform: scale(0.95) !important;
+  }
+
+  .cte-practice-delete-btn svg {
+    color: white !important;
+    width: 16px !important;
+    height: 16px !important;
   }
   
   .cte-practice-question-block table {
@@ -564,7 +746,6 @@ export const getPracticeQuestionStyles = (): string => `
  * Client-side version of isAnswerCorrect
  */
 export const isAnswerCorrect = (userAnswer: any, correctAnswer: any, questionType: string): boolean => {
-  // Handle null or undefined userAnswer
   if (userAnswer === null || userAnswer === undefined) {
     return false;
   }
@@ -572,29 +753,24 @@ export const isAnswerCorrect = (userAnswer: any, correctAnswer: any, questionTyp
   try {
     switch (questionType) {
       case 'single-choice':
-        // For single-choice, compare strings (case-insensitive)
         let correctSingleAnswer = Array.isArray(correctAnswer) 
           ? correctAnswer[0] 
           : correctAnswer;
         return String(userAnswer).trim().toLowerCase() === String(correctSingleAnswer).trim().toLowerCase();
         
       case 'multiple-choice':
-        // Ensure we have arrays to compare
         const userMultipleAnswers = Array.isArray(userAnswer) ? userAnswer : [userAnswer];
         let correctMultipleAnswers = Array.isArray(correctAnswer) 
           ? correctAnswer 
           : [correctAnswer];
         
-        // If lengths differ, they can't be equal
         if (userMultipleAnswers.length !== correctMultipleAnswers.length) {
           return false;
         }
         
-        // Sort both arrays to ignore order
         const sortedUserAnswers = [...userMultipleAnswers].map(val => String(val).trim().toLowerCase()).sort();
         const sortedCorrectAnswers = [...correctMultipleAnswers].map(val => String(val).trim().toLowerCase()).sort();
         
-        // Compare each element
         for (let i = 0; i < sortedUserAnswers.length; i++) {
           if (sortedUserAnswers[i] !== sortedCorrectAnswers[i]) {
             return false;
@@ -603,21 +779,16 @@ export const isAnswerCorrect = (userAnswer: any, correctAnswer: any, questionTyp
         return true;
         
       case 'true-false':
-        // For true-false, compare booleans and maintain order
         const userTrueFalse = Array.isArray(userAnswer) ? userAnswer : [userAnswer];
         let correctTrueFalse = Array.isArray(correctAnswer) ? correctAnswer : [correctAnswer];
         
-        // Convert correct answers to booleans (handles both "true"/"false" strings and true/false booleans)
         correctTrueFalse = correctTrueFalse.map((val: any) => val === true || val === 'true');
-        // Convert user answers to booleans (handles both "true"/"false" strings and true/false booleans)
         const convertedUserTrueFalse = userTrueFalse.map((val: any) => val === true || val === 'true');
         
-        // If user provided fewer answers than expected, it's incorrect
         if (convertedUserTrueFalse.length < correctTrueFalse.length) {
           return false;
         }
         
-        // For true-false, order matters - verify each position matches
         for (let i = 0; i < correctTrueFalse.length; i++) {
           if (convertedUserTrueFalse[i] !== correctTrueFalse[i]) {
             return false;
@@ -626,16 +797,13 @@ export const isAnswerCorrect = (userAnswer: any, correctAnswer: any, questionTyp
         return true;
         
       case 'number':
-        // For number, compare as numbers
         let correctNumber = Array.isArray(correctAnswer) 
           ? correctAnswer[0] 
           : correctAnswer;
           
-        // Convert both to numbers, handle empty string or invalid input
         const userNum = userAnswer === '' ? NaN : Number(userAnswer);
         const correctNum = String(correctNumber).trim() === '' ? NaN : Number(correctNumber);
         
-        // Handle NaN comparison (empty input or invalid number)
         if (isNaN(userNum) || isNaN(correctNum)) {
           return false;
         }
@@ -643,21 +811,18 @@ export const isAnswerCorrect = (userAnswer: any, correctAnswer: any, questionTyp
         return userNum === correctNum;
         
       case 'text':
-        // For text, compare as trimmed, case-insensitive strings
         let correctText = Array.isArray(correctAnswer) 
           ? correctAnswer[0] 
           : correctAnswer;
           
-        // Compare trimmed strings case-insensitively
         return String(userAnswer).trim().toLowerCase() === String(correctText).trim().toLowerCase();
         
       default:
-        // For any other type, do string comparison
         return String(userAnswer).trim().toLowerCase() === String(correctAnswer).trim().toLowerCase();
     }
   } catch (error) {
     console.error('Error comparing answers:', error);
-    return false; // Default to incorrect if there's an error
+    return false;
   }
 };
 
@@ -721,34 +886,63 @@ export const getUserAnswerDisplay = (userAnswer: any, questionType: string): str
  * Setup interactive handlers for all practice question blocks
  */
 export const setupPracticeQuestionHandlers = (editorRef: RefObject<HTMLDivElement>): void => {
-  if (!editorRef.current) return;
+  if (!editorRef.current) {
+    return;
+  }
 
   const blocks = editorRef.current.querySelectorAll('.cte-practice-question-block');
 
   blocks.forEach((block) => {
+    const wrapper = block as HTMLElement;
+    
+    // Create floater if not exists
+    if (!wrapper.querySelector(`.${PRACTICE_FLOATER_CLASS}`)) {
+      createPracticeFloater(wrapper, () => {
+        // Trigger change if needed
+      });
+    }
+
+    // Setup hover handlers if not already attached
+    if (!wrapper.hasAttribute('data-hover-attached')) {
+      wrapper.setAttribute('data-hover-attached', 'true');
+      
+      wrapper.addEventListener('mouseenter', () => {
+        showPracticeFloater(wrapper);
+      });
+      
+      wrapper.addEventListener('mouseleave', () => {
+        hidePracticeFloater(wrapper);
+      });
+    }
+
     // Setup option clicks for single/multiple choice
     const options = block.querySelectorAll('.practice-option');
     options.forEach((opt) => {
-      opt.addEventListener('click', () => {
-        const input = opt.querySelector('input') as HTMLInputElement;
-        if (!input) return;
+      if (!opt.hasAttribute('data-click-attached')) {
+        opt.setAttribute('data-click-attached', 'true');
+        
+        opt.addEventListener('click', () => {
+          const input = opt.querySelector('input') as HTMLInputElement;
+          if (!input) return;
 
-        const type = opt.getAttribute('data-type');
-        if (type === 'single') {
-          // Uncheck all other radios in the block
-          block.querySelectorAll('input[type="radio"]').forEach((i: Element) => {
-            (i as HTMLInputElement).checked = false;
-          });
-          input.checked = true;
-        } else if (type === 'multiple') {
-          input.checked = !input.checked;
-        }
-      });
+          const type = opt.getAttribute('data-type');
+          if (type === 'single') {
+            block.querySelectorAll('input[type="radio"]').forEach((i: Element) => {
+              (i as HTMLInputElement).checked = false;
+            });
+            input.checked = true;
+          } else if (type === 'multiple') {
+            input.checked = !input.checked;
+          }
+        });
+      }
     });
 
     // Setup check answer button
     const checkBtn = block.querySelector('.check-answer-btn') as HTMLButtonElement;
-    if (checkBtn) {
+    if (checkBtn && !checkBtn.hasAttribute('data-click-attached')) {
+      checkBtn.setAttribute('data-click-attached', 'true');
+      
       checkBtn.addEventListener('click', () => {
         const type = block.getAttribute('data-question-type');
         let userAnswer: any = null;
@@ -771,7 +965,7 @@ export const setupPracticeQuestionHandlers = (editorRef: RefObject<HTMLDivElemen
               if (checked) {
                 answers.push(checked.value === 'true');
               } else {
-                answers.push(false); // Default to false if not answered
+                answers.push(false);
               }
             });
             userAnswer = answers;
@@ -789,7 +983,6 @@ export const setupPracticeQuestionHandlers = (editorRef: RefObject<HTMLDivElemen
             break;
         }
 
-        // Validate input for text and number types
         if (!inputExists) {
           alert('No input field available. Please check the question setup.');
           return;
@@ -814,11 +1007,11 @@ export const setupPracticeQuestionHandlers = (editorRef: RefObject<HTMLDivElemen
         const resultContent = block.querySelector('.result-content') as HTMLElement;
         if (resultContent) {
           if (isCorrect) {
-            resultContent.innerHTML = '<span class="tw-text-green-600 tw-font-bold">Benar!</span>';
+            resultContent.innerHTML = '<span class="tw-text-green-600 tw-font-bold">✅ Benar!</span>';
           } else {
             const userDisplay = getUserAnswerDisplay(userAnswer, type || '');
             const correctDisplay = getClientCorrectAnswerDisplay(correctAnswer, type || '');
-            resultContent.innerHTML = '<span class="tw-text-red-600 tw-font-bold">Salah.</span> Jawaban kamu = ' + userDisplay + '. Jawaban benar: ' + correctDisplay;
+            resultContent.innerHTML = '<span class="tw-text-red-600 tw-font-bold">❌ Salah.</span> Jawaban kamu: ' + userDisplay + '. Jawaban benar: ' + correctDisplay;
           }
         }
 
@@ -836,7 +1029,9 @@ export const setupPracticeQuestionHandlers = (editorRef: RefObject<HTMLDivElemen
 
     // Setup show explanation button
     const showExpBtn = block.querySelector('.show-explanation-btn') as HTMLButtonElement;
-    if (showExpBtn) {
+    if (showExpBtn && !showExpBtn.hasAttribute('data-click-attached')) {
+      showExpBtn.setAttribute('data-click-attached', 'true');
+      
       showExpBtn.addEventListener('click', () => {
         const encodedExp = block.getAttribute('data-explanation') || '';
         const exp = decodeURIComponent(encodedExp);
@@ -851,7 +1046,6 @@ export const setupPracticeQuestionHandlers = (editorRef: RefObject<HTMLDivElemen
           expArea.classList.remove('tw-hidden');
         }
 
-        // Optionally hide the button after showing
         showExpBtn.classList.add('tw-hidden');
       });
     }
@@ -862,5 +1056,6 @@ export default {
   PracticeButton,
   PracticeModal,
   insertPracticeQuestion,
-  getPracticeQuestionStyles
+  getPracticeQuestionStyles,
+  setupPracticeQuestionHandlers
 };

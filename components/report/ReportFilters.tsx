@@ -533,8 +533,8 @@ const ReportFilters: React.FC<ReportFiltersProps> = ({
         subtitle={`${getLocalActiveFiltersCount()} filter aktif • ${filters.length} filter tersedia`}
         icon={<Filter className="tw-w-5 tw-h-5" />}
         size="xl"
-        width="125vw"
-        height="95vh"
+        width="110vw"
+        height="120vh"
         scrollable={true}
         bottomButtons={filterModalBottomButtons}
         preventCloseOnOutsideClick={hasChanges}
@@ -593,8 +593,8 @@ const ReportFilters: React.FC<ReportFiltersProps> = ({
         subtitle={`${visibleColumns.filter(col => col !== 'id').length} dari ${columns.filter(col => col.key !== 'id').length} kolom dipilih`}
         icon={<Eye className="tw-w-5 tw-h-5" />}
         size="xl"
-        width="90vw"
-        height="80vh"
+        width="110vw"
+        height="120vh"
         scrollable={true}
         topButtons={columnModalTopButtons}
         bottomButtons={columnModalBottomButtons}
@@ -628,8 +628,6 @@ const ReportFilters: React.FC<ReportFiltersProps> = ({
         subtitle="Pilih kolom untuk di-freeze saat scroll horizontal"
         icon={<Lock className="tw-w-5 tw-h-5" />}
         size="lg"
-        width="70vw"
-        height="60vh"
         scrollable={true}
         bottomButtons={freezeModalBottomButtons}
       >

@@ -36,6 +36,7 @@ import ExamModal from '../try-out/ExamModal';
 import DrillModal from '../drill/DrillModal';
 import NavigationBar from '../../components/layout/NavigationBar';
 
+// ... (interface definitions remain the same)
 interface Material {
   id: number;
   title: string;
@@ -195,6 +196,8 @@ const SectionPage: React.FC = () => {
   const router = useRouter();
   const params = useParams();
   const sectionCode = params?.sectionCode as string;
+  
+  // State declarations
   const [selectedSection, setSelectedSection] = useState<Section | null>(null);
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   const [selectedMaterialId, setSelectedMaterialId] = useState<number | null>(null);
@@ -213,9 +216,14 @@ const SectionPage: React.FC = () => {
   const [materialDetail, setMaterialDetail] = useState<MaterialDetail | null>(null);
   const [loadingMaterial, setLoadingMaterial] = useState<boolean>(false);
   const [materialError, setMaterialError] = useState<string | null>(null);
-  const [codeHandlerLoaded, setCodeHandlerLoaded] = useState(false);
   
-  // State untuk cart
+  // Script loading states
+  const [highlightJsLoaded, setHighlightJsLoaded] = useState(false);
+  const [codeHandlerLoaded, setCodeHandlerLoaded] = useState(false);
+  const [practiceHandlerLoaded, setPracticeHandlerLoaded] = useState(false);
+  const [scriptsInitialized, setScriptsInitialized] = useState(false);
+  
+  // Cart states
   const [showCartModal, setShowCartModal] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartSuccess, setCartSuccess] = useState(false);
@@ -236,17 +244,147 @@ const SectionPage: React.FC = () => {
     intervalId: null
   });
 
-  // State untuk modals
+  // Modal states
   const [showExamModal, setShowExamModal] = useState(false);
   const [showDrillModal, setShowDrillModal] = useState(false);
   const [examType, setExamType] = useState<'quiz' | 'drill' | null>(null);
   const [examId, setExamId] = useState<number | null>(null);
   const [currentTopicId, setCurrentTopicId] = useState<number | null>(null);
 
-  // Ref untuk content area agar bisa reinitialize practice questions
+  // Ref untuk content area
   const contentRef = useRef<HTMLDivElement>(null);
+  const initializationAttempted = useRef(false);
 
-  // Cek resolusi untuk sidebar
+  // Function to load external scripts dynamically
+  const loadScript = (src: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      // Check if script already exists
+      const existingScript = document.querySelector(`script[src="${src}"]`);
+      if (existingScript) {
+        resolve();
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+      document.head.appendChild(script);
+    });
+  };
+
+  // Function to load CSS dynamically
+  const loadCSS = (href: string): Promise<void> => {
+    return new Promise((resolve) => {
+      // Check if CSS already exists
+      const existingLink = document.querySelector(`link[href="${href}"]`);
+      if (existingLink) {
+        resolve();
+        return;
+      }
+
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = href;
+      link.onload = () => resolve();
+      document.head.appendChild(link);
+    });
+  };
+
+  // Initialize scripts in correct order
+  const initializeScripts = async () => {
+    if (initializationAttempted.current) return;
+    initializationAttempted.current = true;
+
+    try {
+      console.log('[SectionPage] Starting script initialization...');
+
+      // 1. Load Highlight.js CSS
+      await loadCSS('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/felipec.min.css');
+      console.log('[SectionPage] Highlight.js CSS loaded');
+
+      // 2. Load Highlight.js library
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js');
+      setHighlightJsLoaded(true);
+      console.log('[SectionPage] Highlight.js library loaded');
+
+      // Wait a bit for hljs to be available
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // 3. Load CodeCloseOpen handler
+      await loadScript('/CodeCloseOpen.js');
+      setCodeHandlerLoaded(true);
+      console.log('[SectionPage] CodeCloseOpen handler loaded');
+
+      // 4. Load PracticeHandler
+      await loadScript('/PracticeHandler.js');
+      setPracticeHandlerLoaded(true);
+      console.log('[SectionPage] PracticeHandler loaded');
+
+      // Mark scripts as initialized
+      setScriptsInitialized(true);
+      console.log('[SectionPage] All scripts initialized successfully');
+
+    } catch (error) {
+      console.error('[SectionPage] Error loading scripts:', error);
+    }
+  };
+
+  // Initialize scripts on component mount
+  useEffect(() => {
+    initializeScripts();
+    
+    // Cleanup function
+    return () => {
+      initializationAttempted.current = false;
+    };
+  }, []);
+
+  // Initialize handlers when content is ready
+  useEffect(() => {
+    if (!scriptsInitialized || !materialDetail?.content || !contentRef.current) {
+      return;
+    }
+
+    console.log('[SectionPage] Content ready, initializing handlers...');
+
+    const initHandlers = () => {
+      // Wait for DOM to update
+      setTimeout(() => {
+        if (!contentRef.current) return;
+
+        // Initialize Highlight.js
+        if (window.hljs) {
+          console.log('[SectionPage] Highlighting code blocks...');
+          const codeBlocks = contentRef.current.querySelectorAll('pre code.cte-code-block');
+          codeBlocks.forEach((block) => {
+            // Remove existing highlighting
+            block.removeAttribute('data-highlighted');
+            window.hljs.highlightElement(block as HTMLElement);
+          });
+        }
+
+        // Initialize CodeCloseOpenHandler
+        if (window.CodeCloseOpenHandler) {
+          console.log('[SectionPage] Initializing CodeCloseOpenHandler...');
+          window.CodeCloseOpenHandler.reinit(contentRef.current);
+        }
+
+        // Initialize PracticeHandler
+        if (window.PracticeHandler) {
+          console.log('[SectionPage] Initializing PracticeHandler...');
+          window.PracticeHandler.reinit(contentRef.current);
+        }
+
+        console.log('[SectionPage] Handlers initialized successfully');
+      }, 300);
+    };
+
+    initHandlers();
+  }, [scriptsInitialized, materialDetail?.content]);
+
+  // Check mobile resolution
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 992);
@@ -261,20 +399,7 @@ const SectionPage: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Reinitialize practice questions ketika content berubah
-useEffect(() => {
-  if (codeHandlerLoaded && materialDetail?.content) {
-    // Delay sedikit untuk memastikan DOM sudah terupdate
-    setTimeout(() => {
-      if (window.CodeCloseOpenHandler) {
-        console.log('Reinitializing CodeCloseOpenHandler...');
-        window.CodeCloseOpenHandler.reinit(contentRef.current);
-      }
-    }, 100);
-  }
-}, [materialDetail?.content, codeHandlerLoaded]);
-
-  // Fetch detail materi saat selectedMaterialId berubah
+  // Fetch material detail
   useEffect(() => {
     const fetchMaterialDetail = async () => {
       if (!selectedMaterialId) return;
@@ -321,7 +446,7 @@ useEffect(() => {
     fetchMaterialDetail();
   }, [selectedMaterialId]);
 
-  // Fetch data section awal
+  // Fetch section data
   useEffect(() => {
     const fetchSectionData = async () => {
       try {
@@ -447,7 +572,7 @@ useEffect(() => {
     }
   }, [sectionCode]);
 
-  // Format durasi
+  // ... (rest of the functions remain the same)
   const formatDuration = (minutes: number | undefined): string => {
     if (!minutes) return '';
     
@@ -463,7 +588,6 @@ useEffect(() => {
     }
   };
 
-  // Toggle expand/collapse topik
   const toggleTopic = (topicId: number) => {
     const newExpanded = new Set(expandedTopics);
     if (newExpanded.has(topicId)) {
@@ -474,7 +598,6 @@ useEffect(() => {
     setExpandedTopics(newExpanded);
   };
 
-  // Pemilihan konten
   const selectContent = (topicId: number, contentType: 'material' | 'quiz' | 'drill', materialId?: number) => {
     setSelectedTopicId(topicId);
     setSelectedContentType(contentType);
@@ -494,7 +617,6 @@ useEffect(() => {
     }
   };
 
-  // Menandai konten selesai
   const markContentComplete = async (
     type: 'material' | 'quiz' | 'drill',
     topicId: number,
@@ -577,7 +699,6 @@ useEffect(() => {
     }
   };
 
-  // Function untuk tambah ke keranjang
   const handleAddToCart = async () => {
     if (!selectedSection) return;
 
@@ -622,7 +743,6 @@ useEffect(() => {
     }
   };
 
-  // Hitung progress topik
   const calculateTopicProgress = (topic: Topic) => {
     const mandatoryMaterials = topic.materials.filter(m => m.isMandatory);
     const completedMandatoryMaterials = mandatoryMaterials.filter(m => completedMaterials.has(m.id));
@@ -637,7 +757,6 @@ useEffect(() => {
     return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
   };
 
-  // Hitung progress materi tak wajib
   const calculateExtraProgress = (topic: Topic) => {
     const nonMandatoryMaterials = topic.materials.filter(m => !m.isMandatory);
     const completedNonMandatoryMaterials = nonMandatoryMaterials.filter(m => completedMaterials.has(m.id));
@@ -647,7 +766,6 @@ useEffect(() => {
       : 0;
   };
 
-  // Warna progress bar
   const getProgressColor = (progress: number) => {
     if (progress === 100) return 'success';
     if (progress >= 70) return 'info';
@@ -673,7 +791,6 @@ useEffect(() => {
     return selectedTopic.materials.findIndex(m => m.id === selectedMaterialId);
   };
 
-  // Navigasi ke konten berikutnya
   const handleNext = () => {
     if (!selectedSection?.isEntitled) {
       setShowCartModal(true);
@@ -721,7 +838,6 @@ useEffect(() => {
     }
   };
 
-  // Navigasi ke konten sebelumnya
   const handlePrev = () => {
     const currentTopic = getCurrentTopic();
     if (!currentTopic || !selectedSection) return;
@@ -760,7 +876,6 @@ useEffect(() => {
     }
   };
 
-  // Cek apakah konten pertama
   const isFirstContent = () => {
     if (!selectedTopic || !selectedSection) return true;
     
@@ -775,7 +890,6 @@ useEffect(() => {
     return false;
   };
 
-  // Cek apakah konten terakhir
   const isLastContent = () => {
     if (!selectedTopic || !selectedSection) return true;
     
@@ -798,7 +912,6 @@ useEffect(() => {
     return true;
   };
 
-  // Mulai quiz atau drill
   const startQuizOrDrill = (type: 'quiz' | 'drill', id: number, topicId: number) => {
     if (!selectedSection?.isEntitled) {
       setShowCartModal(true);
@@ -815,7 +928,6 @@ useEffect(() => {
     }
   };
 
-  // Handler menutup ExamModal
   const handleExamModalClose = () => {
     setShowExamModal(false);
     if (examType === 'quiz' && currentTopicId) {
@@ -823,7 +935,6 @@ useEffect(() => {
     }
   };
 
-  // Finalize tracking
   const finalizeTracking = () => {
     const { materialId, topicId, startTime, elapsedTime, intervalId } = trackingRef.current;
     if (intervalId) {
@@ -858,7 +969,6 @@ useEffect(() => {
     };
   };
 
-  // Effect tracking
   useEffect(() => {
     finalizeTracking();
 
@@ -914,6 +1024,7 @@ useEffect(() => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
+  // Render loading state
   if (loading) {
     return (
       <div className="tw-bg-gradient-to-br tw-from-purple-50 tw-via-pink-50 tw-to-indigo-50 tw-min-h-screen tw-flex tw-items-center tw-justify-center">
@@ -932,6 +1043,7 @@ useEffect(() => {
     );
   }
 
+  // Render error state
   if (error) {
     return (
       <div className="tw-bg-gradient-to-br tw-from-purple-50 tw-via-pink-50 tw-to-indigo-50 tw-min-h-screen tw-flex tw-items-center tw-justify-center">
@@ -959,6 +1071,7 @@ useEffect(() => {
     );
   }
 
+  // Render not found state
   if (!selectedSection) {
     return (
       <div className="tw-bg-gradient-to-br tw-from-purple-50 tw-via-pink-50 tw-to-indigo-50 tw-min-h-screen tw-flex tw-items-center tw-justify-center">
@@ -987,76 +1100,9 @@ useEffect(() => {
     );
   }
 
+  // Main render - Continue dengan UI yang sama tapi tanpa Script components
   return (
     <>
-      {/* Load Practice Question Handler Script */}
-<Script 
-        src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"
-        strategy="afterInteractive"
-        onLoad={() => {
-          console.log('Highlight.js loaded');
-        }}
-      />
-      
-      {/* Load Highlight.js Theme - Same as SuperEditor (felipec) */}
-      <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/felipec.min.css"
-      />
-      
-      {/* Load Practice Question Handler Script */}
-      <Script 
-        src="/CodeCloseOpen.js" 
-        strategy="afterInteractive"
-        onLoad={() => {
-          console.log('Code Close/Open Handler loaded');
-          setCodeHandlerLoaded(true);
-          
-          // Wait for highlight.js to be available
-          const initializeCodeBlocks = () => {
-            if (window.hljs && window.CodeCloseOpenHandler) {
-              // First, highlight all code blocks
-              document.querySelectorAll('pre code.cte-code-block').forEach((block) => {
-                window.hljs.highlightElement(block);
-              });
-              
-              // Then initialize collapse/expand handlers
-              window.CodeCloseOpenHandler.init();
-              console.log('Code blocks highlighted and handlers initialized');
-            } else {
-              // Retry after a short delay if hljs not ready yet
-              setTimeout(initializeCodeBlocks, 100);
-            }
-          };
-          
-          initializeCodeBlocks();
-        }}
-        onError={(e) => {
-          console.error('Failed to load Code Close/Open Handler:', e);
-        }}
-      />
-      <Script 
-  src="/PracticeHandler.js" 
-  strategy="afterInteractive"
-  onLoad={() => {
-    console.log('PracticeHandler loaded');
-    setCodeHandlerLoaded(true);
-    
-    // Wait for DOM to be fully updated
-    setTimeout(() => {
-      if (window.PracticeHandler && contentRef.current) {
-        // Initialize practice question handlers
-        window.PracticeHandler.init(contentRef.current);
-        console.log('PracticeHandler initialized');
-      } else {
-        console.warn('PracticeHandler or contentRef not available');
-      }
-    }, 100);
-  }}
-  onError={(e) => {
-    console.error('Failed to load PracticeHandler:', e);
-  }}
-/>
       <div className="tw-bg-gradient-to-br tw-from-purple-100 tw-via-pink-50 tw-to-indigo-100 tw-min-h-[125vh]">
         <NavigationBar />
         <Container fluid className="tw-px-0 md:tw-px-4 md:tw-py-10 tw-min-h-screen">

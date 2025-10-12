@@ -1,48 +1,210 @@
+// public/PracticeHandler.js
 /**
  * Practice Question Handler
- * Handles delete functionality, check answer, show/hide explanation, and hide trash button in read-only mode
+ * Handles interactive functionality for practice questions including answer checking,
+ * showing explanations, and delete buttons in editor mode.
  * 
  * Usage:
  * 1. Include this script in your HTML: <script src="/PracticeHandler.js"></script>
  * 2. Call window.PracticeHandler.init() after content is loaded
- * 3. Practice blocks must have class 'cte-practice-question-block'
- * 4. Call window.PracticeHandler.removeTrashButtons() before saving to database
+ * 3. Practice questions must have class 'cte-practice-question-block'
+ * 4. Call window.PracticeHandler.removeDeleteButtons() before saving to database
  */
 
 (function() {
   'use strict';
 
   // Class names (must match with Practice.tsx)
-  const PRACTICE_WRAPPER_CLASS = 'cte-practice-question-block';
-  const PRACTICE_DELETE_CLASS = 'practice-delete-btn';
-  const CHECK_ANSWER_CLASS = 'check-answer-btn';
-  const SHOW_EXPLANATION_CLASS = 'show-explanation-btn';
+  const PRACTICE_BLOCK_CLASS = 'cte-practice-question-block';
+  const CHECK_ANSWER_BTN_CLASS = 'check-answer-btn';
+  const SHOW_EXPLANATION_BTN_CLASS = 'show-explanation-btn';
   const RESULT_AREA_CLASS = 'result-area';
+  const RESULT_CONTENT_CLASS = 'result-content';
   const EXPLANATION_AREA_CLASS = 'explanation-area';
+  const EXPLANATION_CONTENT_CLASS = 'explanation-content';
+  const DELETE_BTN_CLASS = 'practice-delete-btn';
 
   /**
-   * Remove all trash buttons from practice blocks
+   * Client-side answer comparison function
+   * Compares user's answer with correct answer based on question type
+   */
+  function isAnswerCorrect(userAnswer, correctAnswer, questionType) {
+    // Handle null or undefined userAnswer
+    if (userAnswer === null || userAnswer === undefined) {
+      return false;
+    }
+
+    try {
+      switch (questionType) {
+        case 'single-choice':
+          // For single-choice, compare strings (case-insensitive)
+          let correctSingleAnswer = Array.isArray(correctAnswer) 
+            ? correctAnswer[0] 
+            : correctAnswer;
+          return String(userAnswer).trim().toLowerCase() === String(correctSingleAnswer).trim().toLowerCase();
+          
+        case 'multiple-choice':
+          // Ensure we have arrays to compare
+          const userMultipleAnswers = Array.isArray(userAnswer) ? userAnswer : [userAnswer];
+          let correctMultipleAnswers = Array.isArray(correctAnswer) 
+            ? correctAnswer 
+            : [correctAnswer];
+          
+          // If lengths differ, they can't be equal
+          if (userMultipleAnswers.length !== correctMultipleAnswers.length) {
+            return false;
+          }
+          
+          // Sort both arrays to ignore order
+          const sortedUserAnswers = [...userMultipleAnswers].map(val => String(val).trim().toLowerCase()).sort();
+          const sortedCorrectAnswers = [...correctMultipleAnswers].map(val => String(val).trim().toLowerCase()).sort();
+          
+          // Compare each element
+          for (let i = 0; i < sortedUserAnswers.length; i++) {
+            if (sortedUserAnswers[i] !== sortedCorrectAnswers[i]) {
+              return false;
+            }
+          }
+          return true;
+          
+        case 'true-false':
+          // For true-false, compare booleans and maintain order
+          const userTrueFalse = Array.isArray(userAnswer) ? userAnswer : [userAnswer];
+          let correctTrueFalse = Array.isArray(correctAnswer) ? correctAnswer : [correctAnswer];
+          
+          // Convert correct answers to booleans (handles both "true"/"false" strings and true/false booleans)
+          correctTrueFalse = correctTrueFalse.map((val) => val === true || val === 'true');
+          // Convert user answers to booleans (handles both "true"/"false" strings and true/false booleans)
+          const convertedUserTrueFalse = userTrueFalse.map((val) => val === true || val === 'true');
+          
+          // If user provided fewer answers than expected, it's incorrect
+          if (convertedUserTrueFalse.length < correctTrueFalse.length) {
+            return false;
+          }
+          
+          // For true-false, order matters - verify each position matches
+          for (let i = 0; i < correctTrueFalse.length; i++) {
+            if (convertedUserTrueFalse[i] !== correctTrueFalse[i]) {
+              return false;
+            }
+          }
+          return true;
+          
+        case 'number':
+          // For number, compare as numbers
+          let correctNumber = Array.isArray(correctAnswer) 
+            ? correctAnswer[0] 
+            : correctAnswer;
+            
+          // Convert both to numbers, handle empty string or invalid input
+          const userNum = userAnswer === '' ? NaN : Number(userAnswer);
+          const correctNum = String(correctNumber).trim() === '' ? NaN : Number(correctNumber);
+          
+          // Handle NaN comparison (empty input or invalid number)
+          if (isNaN(userNum) || isNaN(correctNum)) {
+            return false;
+          }
+          
+          return userNum === correctNum;
+          
+        case 'text':
+          // For text, compare as trimmed, case-insensitive strings
+          let correctText = Array.isArray(correctAnswer) 
+            ? correctAnswer[0] 
+            : correctAnswer;
+            
+          // Compare trimmed strings case-insensitively
+          return String(userAnswer).trim().toLowerCase() === String(correctText).trim().toLowerCase();
+          
+        default:
+          // For any other type, do string comparison
+          return String(userAnswer).trim().toLowerCase() === String(correctAnswer).trim().toLowerCase();
+      }
+    } catch (error) {
+      console.error('Error comparing answers:', error);
+      return false; // Default to incorrect if there's an error
+    }
+  }
+
+  /**
+   * Get display string for correct answer
+   */
+  function getCorrectAnswerDisplay(correctAnswer, questionType) {
+    if (!correctAnswer) return '';
+    
+    switch (questionType) {
+      case 'single-choice':
+        return Array.isArray(correctAnswer) ? correctAnswer[0] : correctAnswer;
+      case 'multiple-choice':
+        return Array.isArray(correctAnswer) 
+          ? correctAnswer.join(', ') 
+          : correctAnswer;
+      case 'true-false':
+        if (Array.isArray(correctAnswer)) {
+          return correctAnswer.map((val, idx) => 
+            `${idx + 1}. ${val === 'true' || val === true ? 'Benar' : 'Salah'}`
+          ).join(', ') || '';
+        }
+        return '';
+      case 'text':
+      case 'number':
+        return Array.isArray(correctAnswer) ? correctAnswer[0] : correctAnswer;
+      default:
+        return String(correctAnswer);
+    }
+  }
+
+  /**
+   * Get display string for user's answer
+   */
+  function getUserAnswerDisplay(userAnswer, questionType) {
+    if (userAnswer === null || userAnswer === undefined || userAnswer === '') return 'No answer provided';
+    
+    switch (questionType) {
+      case 'single-choice':
+        return userAnswer;
+      case 'multiple-choice':
+        return Array.isArray(userAnswer) 
+          ? userAnswer.join(', ') 
+          : userAnswer;
+      case 'true-false':
+        if (Array.isArray(userAnswer)) {
+          return userAnswer.map((val, idx) => 
+            `${idx + 1}. ${val === true || val === 'true' ? 'Benar' : 'Salah'}`
+          ).join(', ') || '';
+        }
+        return '';
+      case 'text':
+      case 'number':
+        return String(userAnswer);
+      default:
+        return String(userAnswer);
+    }
+  }
+
+  /**
+   * Remove all delete buttons from practice blocks
    * Should be called before saving content to database
    */
-  function removeTrashButtons(container) {
+  function removeDeleteButtons(container) {
     if (!container) {
       container = document;
     }
 
-    const trashButtons = container.querySelectorAll(`.${PRACTICE_DELETE_CLASS}`);
+    const deleteBtns = container.querySelectorAll(`.${DELETE_BTN_CLASS}`);
     let removedCount = 0;
 
-    trashButtons.forEach(button => {
-      button.remove();
+    deleteBtns.forEach(btn => {
+      btn.remove();
       removedCount++;
     });
 
-    console.log(`[PracticeHandler] Removed ${removedCount} trash button(s)`);
+    console.log(`[PracticeHandler] Removed ${removedCount} delete button(s)`);
     return removedCount;
   }
 
   /**
-   * Get clean HTML content without trash buttons
+   * Get clean HTML content without delete buttons
    * Useful for getting content before saving to database
    */
   function getCleanContent(container) {
@@ -54,159 +216,229 @@
     // Clone the container to avoid modifying the original
     const clone = container.cloneNode(true);
     
-    // Remove all trash buttons from the clone
-    const trashButtons = clone.querySelectorAll(`.${PRACTICE_DELETE_CLASS}`);
-    trashButtons.forEach(button => button.remove());
+    // Remove all delete buttons from the clone
+    const deleteBtns = clone.querySelectorAll(`.${DELETE_BTN_CLASS}`);
+    deleteBtns.forEach(btn => btn.remove());
 
     return clone.innerHTML;
   }
 
   /**
-   * Handle check answer for a practice block
+   * Delete a practice question block
    */
-  function handleCheckAnswer(wrapper) {
-    const questionType = wrapper.getAttribute('data-question-type');
-    const correctAnswer = JSON.parse(decodeURIComponent(wrapper.getAttribute('data-correct-answer') || ''));
-    const resultArea = wrapper.querySelector(`.${RESULT_AREA_CLASS}`);
-    const resultContent = resultArea.querySelector('.result-content');
-    const showExplanationBtn = wrapper.querySelector(`.${SHOW_EXPLANATION_CLASS}`);
-    
-    // Get user answer based on type
-    let userAnswer;
-    switch (questionType) {
-      case 'single-choice':
-        userAnswer = wrapper.querySelector('input[type="radio"]:checked')?.value;
-        break;
-      case 'multiple-choice':
-        userAnswer = Array.from(wrapper.querySelectorAll('input[type="checkbox"]:checked')).map(input => input.value);
-        break;
-      case 'true-false':
-        userAnswer = Array.from(wrapper.querySelectorAll('input[type="radio"]')).reduce((acc, input, idx) => {
-          if (input.checked) {
-            const statementIdx = Math.floor(idx / 2);
-            acc[statementIdx] = input.value === 'true';
+  function deletePracticeQuestion(block) {
+    try {
+      if (!confirm('Are you sure you want to delete this practice question?')) {
+        return;
+      }
+
+      // Create a paragraph to replace the practice block
+      const newParagraph = document.createElement('p');
+      newParagraph.innerHTML = '<br>';
+      
+      // Replace practice block with paragraph
+      if (block.parentNode) {
+        block.parentNode.replaceChild(newParagraph, block);
+        
+        // Set cursor to the new paragraph
+        setTimeout(() => {
+          const range = document.createRange();
+          const sel = window.getSelection();
+          
+          if (sel && newParagraph) {
+            range.setStart(newParagraph, 0);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
           }
-          return acc;
-        }, []);
-        break;
-      case 'text-input':
-        userAnswer = wrapper.querySelector('.practice-text-input')?.value;
-        break;
-      case 'number-input':
-        userAnswer = wrapper.querySelector('.practice-number-input')?.value;
-        break;
+        }, 0);
+      }
+    } catch (error) {
+      console.error('Error deleting practice question:', error);
     }
+  }
 
-    // Check if correct
-    const isCorrect = checkIfCorrect(userAnswer, correctAnswer, questionType);
+  /**
+   * Setup event listeners for a single practice block
+   */
+  function setupBlockHandlers(block) {
+    // Option clicks for single/multiple choice
+    const options = block.querySelectorAll('.practice-option');
+    options.forEach((opt) => {
+      // Remove existing listeners to prevent duplicates
+      const newOpt = opt.cloneNode(true);
+      opt.parentNode.replaceChild(newOpt, opt);
+      
+      newOpt.addEventListener('click', () => {
+        const input = newOpt.querySelector('input');
+        if (!input) return;
 
-    // Show result
-    resultContent.innerHTML = isCorrect ? 
-      '<div class="tw-text-green-600 tw-flex tw-items-center"><svg class="tw-w-5 tw-h-5 tw-mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Correct</div>' :
-      '<div class="tw-text-red-600 tw-flex tw-items-center"><svg class="tw-w-5 tw-h-5 tw-mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>Incorrect</div>';
-    resultArea.classList.remove('tw-hidden');
+        const type = newOpt.getAttribute('data-type');
+        if (type === 'single') {
+          // Uncheck all other radios in the block
+          block.querySelectorAll('input[type="radio"]').forEach((i) => {
+            i.checked = false;
+          });
+          input.checked = true;
+        } else if (type === 'multiple') {
+          input.checked = !input.checked;
+        }
+      });
+    });
+
+    // Check answer button
+    const checkBtn = block.querySelector(`.${CHECK_ANSWER_BTN_CLASS}`);
+    if (checkBtn) {
+      // Clone to remove existing listeners
+      const newCheckBtn = checkBtn.cloneNode(true);
+      checkBtn.parentNode.replaceChild(newCheckBtn, checkBtn);
+      
+      newCheckBtn.addEventListener('click', () => {
+        const type = block.getAttribute('data-question-type');
+        let userAnswer = null;
+        let inputExists = false;
+
+        switch (type) {
+          case 'single-choice':
+            userAnswer = block.querySelector('input[type="radio"]:checked')?.value || null;
+            inputExists = !!block.querySelector('input[type="radio"]');
+            break;
+          case 'multiple-choice':
+            userAnswer = Array.from(block.querySelectorAll('input[type="checkbox"]:checked')).map((i) => i.value);
+            inputExists = !!block.querySelector('input[type="checkbox"]');
+            break;
+          case 'true-false':
+            const answers = [];
+            const rows = block.querySelectorAll('tbody tr');
+            rows.forEach((row) => {
+              const checked = row.querySelector('input[type="radio"]:checked');
+              if (checked) {
+                answers.push(checked.value === 'true');
+              } else {
+                answers.push(false); // Default to false if not answered
+              }
+            });
+            userAnswer = answers;
+            inputExists = !!block.querySelector('input[type="radio"]');
+            break;
+          case 'text':
+            const textInput = block.querySelector('.practice-text-input');
+            userAnswer = textInput?.value.trim();
+            inputExists = !!textInput;
+            break;
+          case 'number':
+            const numberInput = block.querySelector('.practice-number-input');
+            userAnswer = numberInput?.value.trim();
+            inputExists = !!numberInput;
+            break;
+        }
+
+        // Validate input for text and number types
+        if (!inputExists) {
+          alert('No input field available. Please check the question setup.');
+          return;
+        }
+
+        if ((type === 'text' || type === 'number') && (userAnswer === '' || userAnswer === null)) {
+          alert('Please provide an answer first.');
+          return;
+        }
+
+        if ((type === 'single-choice' || type === 'multiple-choice' || type === 'true-false') && 
+            (userAnswer === null || (Array.isArray(userAnswer) && userAnswer.length === 0))) {
+          alert('Please select an answer first.');
+          return;
+        }
+
+        const encodedCorrect = block.getAttribute('data-correct-answer') || '';
+        const correctAnswer = JSON.parse(decodeURIComponent(encodedCorrect));
+
+        const isCorrect = isAnswerCorrect(userAnswer, correctAnswer, type || '');
+
+        const resultContent = block.querySelector(`.${RESULT_CONTENT_CLASS}`);
+        if (resultContent) {
+          if (isCorrect) {
+            resultContent.innerHTML = '<span class="tw-text-green-600 tw-font-bold">Benar!</span>';
+          } else {
+            const userDisplay = getUserAnswerDisplay(userAnswer, type || '');
+            const correctDisplay = getCorrectAnswerDisplay(correctAnswer, type || '');
+            resultContent.innerHTML = '<span class="tw-text-red-600 tw-font-bold">Salah.</span> Jawaban kamu = ' + userDisplay + '. Jawaban benar: ' + correctDisplay;
+          }
+        }
+
+        const resultArea = block.querySelector(`.${RESULT_AREA_CLASS}`);
+        if (resultArea) {
+          resultArea.classList.remove('tw-hidden');
+        }
+
+        const showExpBtn = block.querySelector(`.${SHOW_EXPLANATION_BTN_CLASS}`);
+        if (showExpBtn) {
+          showExpBtn.classList.remove('tw-hidden');
+        }
+      });
+    }
 
     // Show explanation button
-    showExplanationBtn.classList.remove('tw-hidden');
+    const showExpBtn = block.querySelector(`.${SHOW_EXPLANATION_BTN_CLASS}`);
+    if (showExpBtn) {
+      // Clone to remove existing listeners
+      const newShowExpBtn = showExpBtn.cloneNode(true);
+      showExpBtn.parentNode.replaceChild(newShowExpBtn, showExpBtn);
+      
+      newShowExpBtn.addEventListener('click', () => {
+        const encodedExp = block.getAttribute('data-explanation') || '';
+        const exp = decodeURIComponent(encodedExp);
 
-    // Disable inputs
-    const inputs = wrapper.querySelectorAll('input');
-    inputs.forEach(input => input.disabled = true);
-  }
+        const expContent = block.querySelector(`.${EXPLANATION_CONTENT_CLASS}`);
+        if (expContent) {
+          // Basic sanitization (you may want to use DOMPurify if available)
+          expContent.innerHTML = exp.replace(/<script.*?<\/script>/gi, '');
+        }
 
-  /**
-   * Check if answer is correct
-   */
-  function checkIfCorrect(userAnswer, correctAnswer, questionType) {
-    switch (questionType) {
-      case 'single-choice':
-        return userAnswer === correctAnswer;
-      case 'multiple-choice':
-        return JSON.stringify([...(userAnswer || [])].sort()) === JSON.stringify([...correctAnswer].sort());
-      case 'true-false':
-        return JSON.stringify(userAnswer) === JSON.stringify(correctAnswer);
-      case 'text-input':
-        return (userAnswer || '').toLowerCase().trim() === (correctAnswer || '').toLowerCase().trim();
-      case 'number-input':
-        return parseFloat(userAnswer) === parseFloat(correctAnswer);
-      default:
-        return false;
+        const expArea = block.querySelector(`.${EXPLANATION_AREA_CLASS}`);
+        if (expArea) {
+          expArea.classList.remove('tw-hidden');
+        }
+
+        // Optionally hide the button after showing
+        newShowExpBtn.classList.add('tw-hidden');
+      });
+    }
+
+    // Delete button (only in editor mode)
+    const deleteBtn = block.querySelector(`.${DELETE_BTN_CLASS}`);
+    if (deleteBtn) {
+      // Clone to remove existing listeners
+      const newDeleteBtn = deleteBtn.cloneNode(true);
+      deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+      
+      newDeleteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        deletePracticeQuestion(block);
+      });
     }
   }
 
   /**
-   * Toggle explanation
-   */
-  function toggleExplanation(wrapper, button) {
-    const explanationArea = wrapper.querySelector(`.${EXPLANATION_AREA_CLASS}`);
-    const explanationContent = explanationArea.querySelector('.explanation-content');
-    const isShown = !explanationArea.classList.contains('tw-hidden');
-
-    if (!isShown) {
-      // Load explanation if not loaded
-      if (!explanationContent.innerHTML.trim()) {
-        const encodedExplanation = wrapper.getAttribute('data-explanation');
-        explanationContent.innerHTML = decodeURIComponent(encodedExplanation || 'No explanation available.');
-      }
-    }
-
-    explanationArea.classList.toggle('tw-hidden');
-    button.textContent = isShown ? 'Show Explanation' : 'Hide Explanation';
-  }
-
-  /**
-   * Initialize handlers for all practice blocks in the given container
+   * Initialize handlers for all practice question blocks in the given container
    */
   function initializeHandlers(container) {
     if (!container) {
       container = document;
     }
 
-    const wrappers = container.querySelectorAll(`.${PRACTICE_WRAPPER_CLASS}`);
+    const blocks = container.querySelectorAll(`.${PRACTICE_BLOCK_CLASS}`);
     
-    wrappers.forEach(wrapper => {
-      // Setup delete button
-      const deleteBtn = wrapper.querySelector(`.${PRACTICE_DELETE_CLASS}`);
-      if (deleteBtn && !deleteBtn.hasAttribute('data-event-attached')) {
-        deleteBtn.setAttribute('data-event-attached', 'true');
-        deleteBtn.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          if (confirm('Delete this practice question?')) {
-            wrapper.remove();
-          }
-        });
-      }
-
-      // Setup check answer button
-      const checkBtn = wrapper.querySelector(`.${CHECK_ANSWER_CLASS}`);
-      if (checkBtn && !checkBtn.hasAttribute('data-event-attached')) {
-        checkBtn.setAttribute('data-event-attached', 'true');
-        checkBtn.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          handleCheckAnswer(wrapper);
-        });
-      }
-
-      // Setup show explanation button
-      const showExpBtn = wrapper.querySelector(`.${SHOW_EXPLANATION_CLASS}`);
-      if (showExpBtn && !showExpBtn.hasAttribute('data-event-attached')) {
-        showExpBtn.setAttribute('data-event-attached', 'true');
-        showExpBtn.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          toggleExplanation(wrapper, this);
-        });
-      }
+    blocks.forEach((block) => {
+      setupBlockHandlers(block);
     });
 
-    console.log(`[PracticeHandler] Initialized ${wrappers.length} practice blocks`);
+    console.log(`[PracticeHandler] Initialized handlers for ${blocks.length} practice question(s)`);
   }
 
   /**
-   * Inject CSS styles for practice blocks
+   * Inject CSS styles if needed (optional, since styles are in getPracticeQuestionStyles)
    */
   function injectStyles() {
     // Check if styles already injected
@@ -217,58 +449,14 @@
     const styleElement = document.createElement('style');
     styleElement.id = 'practice-handler-styles';
     styleElement.textContent = `
-      .${PRACTICE_WRAPPER_CLASS} {
-        margin: 1rem 0;
-        border-radius: 0.375rem;
-        overflow: hidden;
-        border: 1px solid #e5e7eb;
-        background: white;
-        position: relative;
-      }
-      
-      .${PRACTICE_DELETE_CLASS} {
-        background: none;
-        border: none;
-        color: #ef4444;
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-        opacity: 0;
-        visibility: hidden;
-      }
-      
-      .${PRACTICE_WRAPPER_CLASS}:hover .${PRACTICE_DELETE_CLASS} {
-        opacity: 1;
-        visibility: visible;
-      }
-      
-      .${PRACTICE_DELETE_CLASS}:hover {
-        background: #fee2e2;
-        color: #dc2626;
-      }
-      
-      .${RESULT_AREA_CLASS}, .${EXPLANATION_AREA_CLASS} {
-        transition: opacity 0.2s ease;
+      /* Add any additional runtime styles here if needed */
+      .${PRACTICE_BLOCK_CLASS} {
+        /* Ensure delete button is hidden by default */
       }
 
-      /* Hide editor-only elements in read-only view */
-      .${PRACTICE_DELETE_CLASS} {
+      body:not(.editor-mode) .${DELETE_BTN_CLASS},
+      :not([contenteditable="true"]) .${DELETE_BTN_CLASS} {
         display: none !important;
-      }
-
-      [contenteditable="true"] .${PRACTICE_DELETE_CLASS} {
-        display: block !important;
-      }
-
-      /* Responsive adjustments */
-      @media (max-width: 768px) {
-        .${PRACTICE_WRAPPER_CLASS} {
-          margin: 0.75rem 0;
-        }
       }
     `;
 
@@ -277,13 +465,13 @@
   }
 
   /**
-   * Initialize all practice blocks
+   * Initialize all practice questions
    */
   function init(container) {
     console.log('[PracticeHandler] Initializing...');
     
-    // Remove any trash buttons that might have been saved
-    removeTrashButtons(container);
+    // First, remove any delete buttons that might have been saved
+    removeDeleteButtons(container);
     
     // Inject styles
     injectStyles();
@@ -300,8 +488,8 @@
   function reinit(container) {
     console.log('[PracticeHandler] Reinitializing...');
     
-    // Remove trash buttons first
-    removeTrashButtons(container);
+    // Remove delete buttons first
+    removeDeleteButtons(container);
     
     // Reinitialize handlers
     initializeHandlers(container);
@@ -323,7 +511,7 @@
     init: init,
     reinit: reinit,
     cleanup: cleanup,
-    removeTrashButtons: removeTrashButtons,
+    removeDeleteButtons: removeDeleteButtons,
     getCleanContent: getCleanContent,
     version: '1.0.0'
   };
@@ -335,6 +523,8 @@
       init();
     });
   } else {
+    // DOM already loaded
+    console.log('[PracticeHandler] DOM already loaded, initializing immediately');
     init();
   }
 

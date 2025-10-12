@@ -1171,6 +1171,9 @@ const handleChange = useCallback(() => {
   }, [handleChange, componentsLoaded.keyConcept]);
 
   const handlePracticeInsert = useCallback((questionData: any) => {
+    if (savedSelection) {
+      restoreSelectionRange(savedSelection);
+    }
     if (componentsLoaded.practice && helpersRef.current.insertPracticeQuestion) {
       try {
         helpersRef.current.insertPracticeQuestion({ editorRef, handleChange, questionData });
@@ -1178,7 +1181,8 @@ const handleChange = useCallback(() => {
         console.warn('Error inserting practice question:', error);
       }
     }
-  }, [handleChange, componentsLoaded.practice]);
+    setSavedSelection(null);
+  }, [savedSelection, restoreSelectionRange, handleChange, componentsLoaded.practice]);
 
   const handlePaste = useCallback(() => {
     setTimeout(() => {
