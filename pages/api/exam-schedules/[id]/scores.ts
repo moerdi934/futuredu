@@ -50,7 +50,7 @@ export default async function handler(req: AuthenticatedRequest, res: NextApiRes
       SELECT 
         exam_name,
         CASE 
-          WHEN $4 = true THEN COALESCE(weighted_score, 0)
+          WHEN $4 = true THEN score--COALESCE(weighted_score, 0)
           ELSE score
         END as score,
         total_correct,

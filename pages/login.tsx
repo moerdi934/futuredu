@@ -119,7 +119,7 @@ const Login: React.FC = () => {
         <title>Login | Futuredu</title>
       </Head>
 
-      <div className="tw-min-h-screen tw-flex tw-items-center tw-justify-center tw-bg-gradient-to-br tw-from-purple-900 tw-via-purple-700 tw-to-indigo-800 tw-p-4">
+      <div className="tw-min-h-screen tw-flex tw-items-center tw-justify-center tw-bg-gradient-to-br tw-from-purple-900 tw-via-purple-700 tw-to-indigo-800 tw-p-4" style={{ height: '125vh' }}>
         {/* pola abstrak di belakang (opsional) */}
         <div className="tw-fixed tw-inset-0 -tw-z-10 tw-opacity-10">
           <svg

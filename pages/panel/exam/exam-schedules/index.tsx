@@ -1,6 +1,6 @@
-// pages/panel/exam/exam-schedules/index.tsx - Updated to pass isfree to GoLiveModal
-import React, { useState } from 'react';
-import { FaPlus, FaEye, FaEdit, FaTrash, FaCalendar, FaClock, FaCheck, FaTimes, FaRocket, FaUndo, FaGift } from 'react-icons/fa';
+// pages/panel/exam/exam-schedules/index.tsx - Optimized Student Loading
+import React, { useState, useEffect, useMemo } from 'react';
+import { FaPlus, FaEye, FaEdit, FaTrash, FaCalendar, FaClock, FaCheck, FaTimes, FaRocket, FaUndo, FaGift, FaPlay } from 'react-icons/fa';
 import { BookOpen } from 'lucide-react';
 import MainLayout from '../../../../components/layout/DashboardLayout';
 import ReportLayout from '../../../../components/report/ReportLayout';
@@ -10,9 +10,57 @@ import AddExamScheduleModal from './AddExamScheduleModal';
 import CreateExamModal from './AddExamModal';
 import ExamScheduleApprovalModal from './ApprovalModal';
 import ExamScheduleGoLiveModal from './GoLiveModal';
+import ExamModal from '../../../try-out/ExamModal';
+import ExamScoreModal from '../../../try-out/ExamScoreModal';
+
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? '';
+
+// Types for exam schedule data
+interface ExamSchedule {
+  id: number;
+  schedule_name: string;
+  name: string;
+  start_time: string;
+  end_time: string;
+  exam_type: string;
+  isfree: boolean;
+  is_valid: boolean;
+  approval_status: string;
+  create_date: string;
+  description?: string;
+  exam_name?: string;
+  exam_duration?: string;
+  question_qty?: string;
+  schedule_creator?: string;
+  exam_creator?: string;
+  is_live?: boolean;
+  is_deleted?: boolean;
+}
+
+// Student-specific interface (from new API)
+interface StudentExamSchedule {
+  id: number;
+  schedule_name: string;
+  description?: string;
+  exam_type: string;
+  isfree: boolean;
+  start_time: string;
+  end_time: string;
+  create_date: string;
+  exam_name?: string;
+  exam_duration?: number;
+  question_qty?: number;
+  has_completed: boolean;
+  total_score?: number;
+  average_score?: number;
+  total_correct?: number;
+  total_questions?: number;
+  completion_time?: string;
+  access_type: 'free' | 'entitled' | 'no_access';
+}
 
 const ExamSchedulesPage: React.FC = () => {
-  const { id: currentUserId, role: userRole } = useAuth();
+  const { id: currentUserId, role: userRole, isAuthenticated } = useAuth();
   
   // Modal states
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -21,8 +69,17 @@ const ExamSchedulesPage: React.FC = () => {
   const [showGoLiveModal, setShowGoLiveModal] = useState(false);
   const [selectedExamSchedule, setSelectedExamSchedule] = useState(null);
   
-  // State untuk refresh function
+  // Student-specific modals
+  const [showExamStartModal, setShowExamStartModal] = useState(false);
+  const [showScoreModal, setShowScoreModal] = useState(false);
+  const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
+  const [selectedScheduleName, setSelectedScheduleName] = useState<string>('');
+  
+  // State untuk refresh function (only for admin/teacher)
   const [refreshFunction, setRefreshFunction] = useState<(() => void) | null>(null);
+
+  // Determine if user is student
+  const isStudent = userRole === 'student';
 
   // Custom formatters
   const formatExamNames = (value: string) => {
@@ -39,9 +96,9 @@ const ExamSchedulesPage: React.FC = () => {
     );
   };
 
-  const formatDuration = (value: string) => {
+  const formatDuration = (value: string | number) => {
     if (!value) return '-';
-    const minutes = parseInt(value);
+    const minutes = typeof value === 'string' ? parseInt(value) : value;
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
     
@@ -51,7 +108,7 @@ const ExamSchedulesPage: React.FC = () => {
           <FaClock size={12} />
           {hours > 0 ? `${hours}j ${remainingMinutes}m` : `${remainingMinutes}m`}
         </div>
-        <div className="tw-text-xs tw-text-gray-500">({value} menit)</div>
+        <div className="tw-text-xs tw-text-gray-500">({minutes} menit)</div>
       </div>
     );
   };
@@ -139,7 +196,7 @@ const ExamSchedulesPage: React.FC = () => {
     );
   };
 
-  const formatQuestionQty = (value: string) => {
+  const formatQuestionQty = (value: string | number) => {
     return (
       <div className="tw-text-center">
         <div className="tw-text-lg tw-font-bold tw-text-indigo-600">
@@ -177,7 +234,89 @@ const ExamSchedulesPage: React.FC = () => {
     );
   };
 
-  // Permission checks
+  // Student-specific formatters
+  const formatStudentStatus = (value: any, row: StudentExamSchedule) => {
+    const hasCompleted = row.has_completed || false;
+    const accessType = row.access_type;
+    
+    if (hasCompleted) {
+      return (
+        <div className="tw-text-center">
+          <span className="tw-px-3 tw-py-2 tw-rounded-full tw-text-xs tw-font-medium tw-bg-green-100 tw-text-green-800 tw-flex tw-items-center tw-justify-center tw-gap-2">
+            <FaCheck size={12} />
+            Selesai
+          </span>
+        </div>
+      );
+    } else if (accessType === 'free' || accessType === 'entitled') {
+      return (
+        <div className="tw-text-center">
+          <span className="tw-px-3 tw-py-2 tw-rounded-full tw-text-xs tw-font-medium tw-bg-blue-100 tw-text-blue-800 tw-flex tw-items-center tw-justify-center tw-gap-2">
+            <FaPlay size={12} />
+            Tersedia
+          </span>
+        </div>
+      );
+    } else {
+      return (
+        <div className="tw-text-center">
+          <span className="tw-px-3 tw-py-2 tw-rounded-full tw-text-xs tw-font-medium tw-bg-gray-100 tw-text-gray-600">
+            Tidak Tersedia
+          </span>
+        </div>
+      );
+    }
+  };
+
+  const formatStudentScore = (value: any, row: StudentExamSchedule) => {
+    if (!row.has_completed || !row.total_score) {
+      return '-';
+    }
+    
+    return (
+      <div className="tw-text-center">
+        <div className="tw-text-lg tw-font-bold tw-text-purple-600">
+          {row.total_score}
+        </div>
+        <div className="tw-text-xs tw-text-gray-500">
+          {row.total_correct || 0}/{row.total_questions || 0} benar
+        </div>
+      </div>
+    );
+  };
+
+  const formatAccessType = (value: string) => {
+    const typeConfig = {
+      'free': { 
+        color: 'tw-bg-green-100 tw-text-green-800', 
+        icon: <FaGift size={12} />,
+        label: 'Gratis'
+      },
+      'entitled': { 
+        color: 'tw-bg-blue-100 tw-text-blue-800', 
+        icon: <FaCheck size={12} />,
+        label: 'Berlangganan'
+      },
+      'no_access': { 
+        color: 'tw-bg-gray-100 tw-text-gray-600', 
+        icon: <FaTimes size={12} />,
+        label: 'Tidak Akses'
+      }
+    };
+
+    const config = typeConfig[value] || typeConfig['no_access'];
+    
+    return (
+      <div className="tw-text-center">
+        <span className={`tw-px-3 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium tw-flex tw-items-center tw-justify-center tw-gap-2 ${config.color}`}>
+          {config.icon}
+          {config.label}
+        </span>
+      </div>
+    );
+  };
+
+  // Permission checks for admin/teacher
   const canUserManageExamSchedule = (row: any) => {
     return currentUserId && (
       userRole === 'admin' ||
@@ -196,7 +335,7 @@ const ExamSchedulesPage: React.FC = () => {
            !row.is_live;
   };
 
-  // Handler functions
+  // Handler functions for admin/teacher
   const handleScheduleSave = (scheduleData: any) => {
     console.log('Schedule saved:', scheduleData);
     refreshFunction?.();
@@ -234,10 +373,9 @@ const ExamSchedulesPage: React.FC = () => {
   };
 
   const handleGoLive = (row: any) => {
-    // Pass the complete row data including isfree status
     setSelectedExamSchedule({
       ...row,
-      isfree: row.isfree // Ensure isfree is passed
+      isfree: row.isfree
     });
     setShowGoLiveModal(true);
   };
@@ -297,85 +435,120 @@ const ExamSchedulesPage: React.FC = () => {
     }
   };
 
+  // Student-specific handlers
+  const handleStartExam = (row: StudentExamSchedule) => {
+    setSelectedScheduleId(row.id);
+    setSelectedScheduleName(row.schedule_name);
+    setShowExamStartModal(true);
+  };
+
+  const handleViewScore = (row: StudentExamSchedule) => {
+    setSelectedScheduleId(row.id);
+    setSelectedScheduleName(row.schedule_name);
+    setShowScoreModal(true);
+  };
+
   // Dynamic action buttons based on user role and schedule status
   const getActionButtons = (row: any, index: number): ActionColumnButton[] => {
     const buttons: ActionColumnButton[] = [];
 
-    // Detail button - always available
-    buttons.push({
-      label: 'Detail',
-      icon: React.createElement(FaEye),
-      variant: 'outline-info',
-      size: 'sm',
-      onClick: () => handleDetail(row)
-    });
+    if (isStudent) {
+      // Student actions - using StudentExamSchedule interface
+      const studentRow = row as StudentExamSchedule;
+      const hasCompleted = studentRow.has_completed || false;
+      const canAccess = studentRow.access_type === 'free' || studentRow.access_type === 'entitled';
 
-    // Go Live button - only for admin on approved schedules that are not live yet
-    if (canGoLive(row)) {
-      const isFreeExam = row.isfree === true;
-      buttons.push({
-        label: isFreeExam ? 'Go Live (Free)' : 'Go Live',
-        icon: React.createElement(isFreeExam ? FaGift : FaRocket),
-        variant: isFreeExam ? 'outline-success' : 'outline-success',
-        size: 'sm',
-        onClick: () => handleGoLive(row)
-      });
-    }
-
-    // Approval button - only for admin on pending schedules
-    if ((row.approval_status === 'need_approve') && canApproveExamSchedule(row)) {
-      buttons.push({
-        label: 'Setujui',
-        icon: React.createElement(FaCheck),
-        variant: 'outline-primary',
-        size: 'sm',
-        onClick: () => handleApprove(row)
-      });
-    }
-
-    // Edit button - for creators on pending schedules or admin
-    if (canUserManageExamSchedule(row) && !row.is_deleted) {
-      const canEdit = userRole === 'admin' || 
-                     (userRole === 'teacher' && row.created_by === currentUserId?.toString() && row.approval_status === 'need_approve');
-      
-      if (canEdit) {
+      if (hasCompleted) {
+        // Show score button
         buttons.push({
-          label: 'Edit',
-          icon: React.createElement(FaEdit),
-          variant: 'outline-warning',
+          label: 'Lihat Hasil',
+          icon: React.createElement(FaEye),
+          variant: 'outline-success',
           size: 'sm',
-          onClick: () => handleEdit(row)
+          onClick: () => handleViewScore(studentRow)
+        });
+      } else if (canAccess) {
+        // Start exam button
+        buttons.push({
+          label: 'Mulai Ujian',
+          icon: React.createElement(FaPlay),
+          variant: 'outline-primary',
+          size: 'sm',
+          onClick: () => handleStartExam(studentRow)
         });
       }
-    }
-
-    // Delete button
-    if (canUserManageExamSchedule(row) && !row.is_deleted) {
+    } else {
+      // Admin/Teacher actions - using original ExamSchedule interface
       buttons.push({
-        label: 'Delete',
-        icon: React.createElement(FaTrash),
-        variant: 'outline-danger',
+        label: 'Detail',
+        icon: React.createElement(FaEye),
+        variant: 'outline-info',
         size: 'sm',
-        onClick: () => handleDelete(row)
+        onClick: () => handleDetail(row)
       });
-    }
 
-    // Restore button
-    if (canUserManageExamSchedule(row) && row.is_deleted) {
-      buttons.push({
-        label: 'Restore',
-        icon: React.createElement(FaUndo),
-        variant: 'outline-success',
-        size: 'sm',
-        onClick: () => handleRestore(row)
-      });
+      if (canGoLive(row)) {
+        const isFreeExam = row.isfree === true;
+        buttons.push({
+          label: isFreeExam ? 'Go Live (Free)' : 'Go Live',
+          icon: React.createElement(isFreeExam ? FaGift : FaRocket),
+          variant: isFreeExam ? 'outline-success' : 'outline-success',
+          size: 'sm',
+          onClick: () => handleGoLive(row)
+        });
+      }
+
+      if ((row.approval_status === 'need_approve') && canApproveExamSchedule(row)) {
+        buttons.push({
+          label: 'Setujui',
+          icon: React.createElement(FaCheck),
+          variant: 'outline-primary',
+          size: 'sm',
+          onClick: () => handleApprove(row)
+        });
+      }
+
+      if (canUserManageExamSchedule(row) && !row.is_deleted) {
+        const canEdit = userRole === 'admin' || 
+                       (userRole === 'teacher' && row.created_by === currentUserId?.toString() && row.approval_status === 'need_approve');
+        
+        if (canEdit) {
+          buttons.push({
+            label: 'Edit',
+            icon: React.createElement(FaEdit),
+            variant: 'outline-warning',
+            size: 'sm',
+            onClick: () => handleEdit(row)
+          });
+        }
+      }
+
+      if (canUserManageExamSchedule(row) && !row.is_deleted) {
+        buttons.push({
+          label: 'Delete',
+          icon: React.createElement(FaTrash),
+          variant: 'outline-danger',
+          size: 'sm',
+          onClick: () => handleDelete(row)
+        });
+      }
+
+      if (canUserManageExamSchedule(row) && row.is_deleted) {
+        buttons.push({
+          label: 'Restore',
+          icon: React.createElement(FaUndo),
+          variant: 'outline-success',
+          size: 'sm',
+          onClick: () => handleRestore(row)
+        });
+      }
     }
 
     return buttons;
   };
 
-  // Updated columns with isfree column
-  const columns: ColumnConfig[] = [
+  // Base columns for both roles
+  const baseColumns: ColumnConfig[] = [
     {
       key: 'id',
       label: 'ID',
@@ -390,9 +563,11 @@ const ExamSchedulesPage: React.FC = () => {
       width: 220,
       colGroup: 'basic',
       formatter: (value, row) => (
-        <div className={`tw-font-semibold tw-leading-tight ${row.is_deleted ? 'tw-text-gray-400 tw-line-through' : 'tw-text-gray-800'}`}>
-          {value || '-'}
-          {row.is_live && (
+        <div className={`tw-font-semibold tw-leading-tight ${
+          isStudent ? 'tw-text-gray-800' : (row.is_deleted ? 'tw-text-gray-400 tw-line-through' : 'tw-text-gray-800')
+        }`}>
+          {value || row.name || '-'}
+          {!isStudent && row.is_live && (
             <span className="tw-ml-2 tw-inline-flex tw-items-center tw-gap-1 tw-px-2 tw-py-1 tw-bg-blue-100 tw-text-blue-800 tw-text-xs tw-rounded-full">
               <FaRocket size={10} />
               LIVE
@@ -414,7 +589,9 @@ const ExamSchedulesPage: React.FC = () => {
       width: 280,
       colGroup: 'basic',
       formatter: (value, row) => (
-        <div className={`tw-text-gray-600 tw-text-sm tw-line-clamp-3 tw-leading-relaxed ${row.is_deleted ? 'tw-text-gray-400' : ''}`} title={value}>
+        <div className={`tw-text-gray-600 tw-text-sm tw-line-clamp-3 tw-leading-relaxed ${
+          !isStudent && row.is_deleted ? 'tw-text-gray-400' : ''
+        }`} title={value}>
           {value || '-'}
         </div>
       )
@@ -456,6 +633,26 @@ const ExamSchedulesPage: React.FC = () => {
       formatter: formatQuestionQty
     },
     {
+      key: 'start_time',
+      label: 'Waktu Mulai',
+      type: 'datetime',
+      width: 180,
+      colGroup: 'schedule',
+      formatter: formatDateTime
+    },
+    {
+      key: 'end_time',
+      label: 'Waktu Selesai',
+      type: 'datetime',
+      width: 180,
+      colGroup: 'schedule',
+      formatter: formatDateTime
+    }
+  ];
+
+  // Additional columns for admin/teacher
+  const adminTeacherColumns: ColumnConfig[] = [
+    {
       key: 'approval_status',
       label: 'Status Persetujuan',
       type: 'string',
@@ -494,22 +691,6 @@ const ExamSchedulesPage: React.FC = () => {
       width: 130,
       colGroup: 'status',
       formatter: (value) => formatBoolean(value, 'Dihapus', 'red', 'green')
-    },
-    {
-      key: 'start_time',
-      label: 'Waktu Mulai',
-      type: 'datetime',
-      width: 180,
-      colGroup: 'schedule',
-      formatter: formatDateTime
-    },
-    {
-      key: 'end_time',
-      label: 'Waktu Selesai',
-      type: 'datetime',
-      width: 180,
-      colGroup: 'schedule',
-      formatter: formatDateTime
     },
     {
       key: 'schedule_creator',
@@ -561,137 +742,263 @@ const ExamSchedulesPage: React.FC = () => {
     }
   ];
 
-  // Updated report config
+  // Additional columns for student
+  const studentColumns: ColumnConfig[] = [
+    {
+      key: 'has_completed',
+      label: 'Status',
+      type: 'string',
+      width: 150,
+      colGroup: 'student',
+      formatter: formatStudentStatus
+    },
+    {
+      key: 'total_score',
+      label: 'Skor',
+      type: 'string',
+      width: 120,
+      colGroup: 'student',
+      formatter: formatStudentScore
+    },
+    {
+      key: 'access_type',
+      label: 'Akses',
+      type: 'string',
+      width: 130,
+      colGroup: 'student',
+      formatter: formatAccessType
+    }
+  ];
+
+  // Combine columns based on role
+  const columns = isStudent 
+    ? [...baseColumns, ...studentColumns]
+    : [...baseColumns, ...adminTeacherColumns];
+
+  // Different column groups based on role
+  const colGroups = isStudent ? [
+    {
+      key: 'basic',
+      label: 'Informasi Dasar',
+      columns: ['id', 'schedule_name', 'description']
+    },
+    {
+      key: 'exam_info',
+      label: 'Informasi Ujian',
+      columns: ['exam_name', 'exam_duration', 'exam_type', 'question_qty']
+    },
+    {
+      key: 'schedule',
+      label: 'Jadwal Waktu',
+      columns: ['start_time', 'end_time']
+    },
+    {
+      key: 'student',
+      label: 'Status Student',
+      columns: ['has_completed', 'total_score', 'access_type']
+    }
+  ] : [
+    {
+      key: 'basic',
+      label: 'Informasi Dasar',
+      columns: ['id', 'schedule_name', 'description']
+    },
+    {
+      key: 'exam_info',
+      label: 'Informasi Ujian',
+      columns: ['exam_name', 'exam_duration', 'exam_type', 'question_qty']
+    },
+    {
+      key: 'approval',
+      label: 'Sistem Persetujuan',
+      columns: ['approval_status', 'is_live', 'approver_name', 'approve_date', 'rejection_reason']
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      columns: ['isfree', 'is_valid', 'is_deleted']
+    },
+    {
+      key: 'schedule',
+      label: 'Jadwal Waktu',
+      columns: ['start_time', 'end_time']
+    },
+    {
+      key: 'creator',
+      label: 'Pembuat',
+      columns: ['schedule_creator', 'exam_creator']
+    }
+  ];
+
+  // Different default visible columns based on role
+  const defaultVisibleColumns = isStudent ? [
+    'schedule_name', 
+    'description', 
+    'exam_name', 
+    'exam_duration', 
+    'exam_type',
+    'start_time',
+    'end_time',
+    'has_completed',
+    'total_score',
+    'access_type'
+  ] : [
+    'schedule_name', 
+    'description', 
+    'exam_name', 
+    'exam_duration', 
+    'exam_type', 
+    'approval_status',
+    'is_live',
+    'isfree', 
+    'is_valid',
+    'start_time',
+    'schedule_creator'
+  ];
+
+  // Different action buttons based on role
+  const actionButtons = isStudent ? [] : [
+    {
+      label: 'Buat Jadwal Baru',
+      icon: React.createElement(FaPlus),
+      variant: 'primary',
+      onClick: () => {
+        if (userRole !== 'teacher' && userRole !== 'admin') {
+          alert('Hanya guru dan admin yang dapat membuat jadwal ujian');
+          return;
+        }
+        console.log('Create new exam schedule');
+        setShowScheduleModal(true);
+      }
+    },
+    {
+      label: 'Buat Ujian',
+      icon: React.createElement(BookOpen),
+      variant: 'success',
+      onClick: () => {
+        console.log('Create new exam');
+        setShowExamModal(true);
+      }
+    }
+  ];
+
+  // Different filters based on role
+  const filters = isStudent ? [
+    {
+      key: 'search',
+      type: 'text',
+      label: 'Pencarian Global'
+    },
+    {
+      key: 'schedule_name',
+      type: 'text',
+      label: 'Nama Jadwal'
+    },
+    {
+      key: 'exam_type',
+      type: 'text',
+      label: 'Tipe Ujian'
+    },
+    {
+      key: 'start_time',
+      type: 'date',
+      label: 'Tanggal Mulai (Dari)'
+    },
+    {
+      key: 'end_time',
+      type: 'date',
+      label: 'Tanggal Selesai (Sampai)'
+    }
+  ] : [
+    {
+      key: 'schedule_name',
+      type: 'text',
+      label: 'Nama Jadwal'
+    },
+    {
+      key: 'exam_type',
+      type: 'select',
+      label: 'Tipe Ujian',
+      apiEndpoint: '/exam-schedules/exam-types',
+      debounceMs: 300
+    },
+    {
+      key: 'approvalStatus',
+      type: 'select',
+      label: 'Status Persetujuan',
+      options: [
+        { value: 'all', label: 'Semua' },
+        { value: 'approved', label: 'Disetujui' },
+        { value: 'need_approve', label: 'Menunggu Persetujuan' },
+        { value: 'rejected', label: 'Ditolak' }
+      ]
+    },
+    {
+      key: 'liveStatus',
+      type: 'select',
+      label: 'Status Go Live',
+      options: [
+        { value: 'all', label: 'Semua' },
+        { value: 'live', label: 'Sudah Live' },
+        { value: 'not_live', label: 'Belum Live' }
+      ]
+    },
+    {
+      key: 'isfree',
+      type: 'boolean',
+      label: 'Status Free'
+    },
+    {
+      key: 'is_valid',
+      type: 'boolean',
+      label: 'Status Valid'
+    },
+    {
+      key: 'includeDeleted',
+      type: 'select',
+      label: 'Tampilkan Data',
+      options: [
+        { value: 'false', label: 'Hanya Data Aktif' },
+        { value: 'true', label: 'Termasuk Yang Dihapus' },
+        { value: 'only_deleted', label: 'Hanya Yang Dihapus' }
+      ]
+    },
+    {
+      key: 'schedule_creator',
+      type: 'select',
+      label: 'Pembuat Jadwal',
+      apiEndpoint: '/exam-schedules/schedule-creators',
+      debounceMs: 300
+    },
+    {
+      key: 'exam_creator',
+      type: 'select',
+      label: 'Pembuat Ujian',
+      apiEndpoint: '/exam-schedules/exam-creators',
+      debounceMs: 300
+    },
+    {
+      key: 'start_time',
+      type: 'date',
+      label: 'Tanggal Mulai (Dari)'
+    },
+    {
+      key: 'end_time',
+      type: 'date',
+      label: 'Tanggal Selesai (Sampai)'
+    }
+  ];
+
+  // Report config based on role
   const reportConfig: ReportConfig = {
-    title: 'Jadwal Ujian dengan Sistem Persetujuan',
+    title: isStudent ? 'Jadwal Ujian Anda' : 'Jadwal Ujian dengan Sistem Persetujuan',
     columns,
-    colGroups: [
-      {
-        key: 'basic',
-        label: 'Informasi Dasar',
-        columns: ['id', 'schedule_name', 'description']
-      },
-      {
-        key: 'exam_info',
-        label: 'Informasi Ujian',
-        columns: ['exam_name', 'exam_duration', 'exam_type', 'question_qty']
-      },
-      {
-        key: 'approval',
-        label: 'Sistem Persetujuan',
-        columns: ['approval_status', 'is_live', 'approver_name', 'approve_date', 'rejection_reason']
-      },
-      {
-        key: 'status',
-        label: 'Status',
-        columns: ['isfree', 'is_valid', 'is_deleted']
-      },
-      {
-        key: 'schedule',
-        label: 'Jadwal Waktu',
-        columns: ['start_time', 'end_time']
-      },
-      {
-        key: 'creator',
-        label: 'Pembuat',
-        columns: ['schedule_creator', 'exam_creator']
-      }
-    ],
-    filters: [
-      {
-        key: 'schedule_name',
-        type: 'text',
-        label: 'Nama Jadwal'
-      },
-      {
-        key: 'exam_type',
-        type: 'select',
-        label: 'Tipe Ujian',
-        apiEndpoint: '/exam-schedules/exam-types',
-        debounceMs: 300
-      },
-      {
-        key: 'approvalStatus',
-        type: 'select',
-        label: 'Status Persetujuan',
-        options: [
-          { value: 'all', label: 'Semua' },
-          { value: 'approved', label: 'Disetujui' },
-          { value: 'need_approve', label: 'Menunggu Persetujuan' },
-          { value: 'rejected', label: 'Ditolak' }
-        ]
-      },
-      {
-        key: 'liveStatus',
-        type: 'select',
-        label: 'Status Go Live',
-        options: [
-          { value: 'all', label: 'Semua' },
-          { value: 'live', label: 'Sudah Live' },
-          { value: 'not_live', label: 'Belum Live' }
-        ]
-      },
-      {
-        key: 'isfree',
-        type: 'boolean',
-        label: 'Status Free'
-      },
-      {
-        key: 'is_valid',
-        type: 'boolean',
-        label: 'Status Valid'
-      },
-      {
-        key: 'includeDeleted',
-        type: 'select',
-        label: 'Tampilkan Data',
-        options: [
-          { value: 'false', label: 'Hanya Data Aktif' },
-          { value: 'true', label: 'Termasuk Yang Dihapus' },
-          { value: 'only_deleted', label: 'Hanya Yang Dihapus' }
-        ]
-      },
-      {
-        key: 'schedule_creator',
-        type: 'select',
-        label: 'Pembuat Jadwal',
-        apiEndpoint: '/exam-schedules/schedule-creators',
-        debounceMs: 300
-      },
-      {
-        key: 'exam_creator',
-        type: 'select',
-        label: 'Pembuat Ujian',
-        apiEndpoint: '/exam-schedules/exam-creators',
-        debounceMs: 300
-      },
-      {
-        key: 'start_time',
-        type: 'date',
-        label: 'Tanggal Mulai (Dari)'
-      },
-      {
-        key: 'end_time',
-        type: 'date',
-        label: 'Tanggal Selesai (Sampai)'
-      }
-    ],
+    colGroups,
+    filters,
     defaultSort: [
       { key: 'id', direction: 'desc' }
     ],
-    defaultVisibleColumns: [
-      'schedule_name', 
-      'description', 
-      'exam_name', 
-      'exam_duration', 
-      'exam_type', 
-      'approval_status',
-      'is_live',
-      'isfree', 
-      'is_valid',
-      'start_time',
-      'schedule_creator'
-    ],
+    defaultVisibleColumns,
     defaultFreezeColumn: 'schedule_name',
     showIcon: true,
     showRowNumber: true,
@@ -699,98 +1006,98 @@ const ExamSchedulesPage: React.FC = () => {
     rowHeight: 80,
     exportConfig: {
       enabled: true,
-      filename: 'exam_schedules_with_approval',
+      filename: isStudent ? 'my_exam_schedules' : 'exam_schedules_with_approval',
       formats: ['excel', 'csv', 'pdf']
     },
     actionColumn: {
       enabled: true,
       label: 'Actions',
-      width: 350,
+      width: isStudent ? 200 : 350,
       sticky: false,
       buttons: getActionButtons
     },
-    actionButtons: [
-      {
-        label: 'Buat Jadwal Baru',
-        icon: React.createElement(FaPlus),
-        variant: 'primary',
-        onClick: () => {
-          if (userRole !== 'teacher' && userRole !== 'admin') {
-            alert('Hanya guru dan admin yang dapat membuat jadwal ujian');
-            return;
-          }
-          console.log('Create new exam schedule');
-          setShowScheduleModal(true);
-        }
-      },
-      {
-        label: 'Buat Ujian',
-        icon: React.createElement(BookOpen),
-        variant: 'success',
-        onClick: () => {
-          console.log('Create new exam');
-          setShowExamModal(true);
-        }
-      }
-    ]
+    actionButtons
   };
 
-  // Custom ReportLayout with refresh function extraction
-  const ReportLayoutWithRefresh: React.FC = () => {
-    return (
-      <ReportLayout
-        config={reportConfig}
-        apiEndpoint="/exam-schedules/all"
-        fetchOnMount={true}
-        searchMode="server"
-        onRefreshFunctionReady={setRefreshFunction}
-      />
-    );
-  };
+  // Choose API endpoint based on role
+  const apiEndpoint = isStudent ? '/exam-schedules/student' : '/exam-schedules/all';
 
   return (
     <MainLayout>
       <div className="tw-min-h-screen tw-bg-gradient-to-br tw-from-purple-50 tw-via-white tw-to-purple-50">
-        <ReportLayoutWithRefresh />
+        <ReportLayout
+          config={reportConfig}
+          apiEndpoint={apiEndpoint}
+          fetchOnMount={true}
+          searchMode="server"
+          onRefreshFunctionReady={setRefreshFunction}
+        />
       </div>
 
-      {/* Modal Buat Jadwal Ujian */}
-      <AddExamScheduleModal
-        isOpen={showScheduleModal}
-        onClose={() => setShowScheduleModal(false)}
-        onSave={handleScheduleSave}
-      />
+      {/* Modals for admin/teacher */}
+      {!isStudent && (
+        <>
+          <AddExamScheduleModal
+            isOpen={showScheduleModal}
+            onClose={() => setShowScheduleModal(false)}
+            onSave={handleScheduleSave}
+          />
 
-      {/* Modal Buat Ujian */}
-      <CreateExamModal
-        show={showExamModal}
-        onClose={() => setShowExamModal(false)}
-        onAddExam={handleExamSave}
-      />
+          <CreateExamModal
+            show={showExamModal}
+            onClose={() => setShowExamModal(false)}
+            onAddExam={handleExamSave}
+          />
 
-      {/* Modal Approval Jadwal Ujian */}
-      {selectedExamSchedule && (
-        <ExamScheduleApprovalModal
-          show={showApprovalModal}
-          onClose={() => {
-            setShowApprovalModal(false);
-            setSelectedExamSchedule(null);
-          }}
-          examScheduleData={selectedExamSchedule}
-          onSave={handleApprovalSave}
-        />
+          {selectedExamSchedule && (
+            <ExamScheduleApprovalModal
+              show={showApprovalModal}
+              onClose={() => {
+                setShowApprovalModal(false);
+                setSelectedExamSchedule(null);
+              }}
+              examScheduleData={selectedExamSchedule}
+              onSave={handleApprovalSave}
+            />
+          )}
+
+          <ExamScheduleGoLiveModal
+            isOpen={showGoLiveModal}
+            onClose={() => {
+              setShowGoLiveModal(false);
+              setSelectedExamSchedule(null);
+            }}
+            onSave={handleGoLiveSave}
+            examScheduleData={selectedExamSchedule}
+          />
+        </>
       )}
 
-      {/* Modal Go Live Jadwal Ujian - Updated to pass isfree */}
-      <ExamScheduleGoLiveModal
-        isOpen={showGoLiveModal}
-        onClose={() => {
-          setShowGoLiveModal(false);
-          setSelectedExamSchedule(null);
-        }}
-        onSave={handleGoLiveSave}
-        examScheduleData={selectedExamSchedule}
-      />
+      {/* Modals for students */}
+      {isStudent && selectedScheduleId && (
+        <>
+          <ExamModal
+            show={showExamStartModal}
+            onClose={() => {
+              setShowExamStartModal(false);
+              setSelectedScheduleId(null);
+              setSelectedScheduleName('');
+            }}
+            scheduleId={selectedScheduleId}
+          />
+
+          <ExamScoreModal
+            show={showScoreModal}
+            onClose={() => {
+              setShowScoreModal(false);
+              setSelectedScheduleId(null);
+              setSelectedScheduleName('');
+            }}
+            scheduleId={selectedScheduleId}
+            scheduleName={selectedScheduleName}
+          />
+        </>
+      )}
     </MainLayout>
   );
 };

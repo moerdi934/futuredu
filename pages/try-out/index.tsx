@@ -42,7 +42,7 @@ function TryOutPage(
     : InferGetServerSidePropsType<typeof getServerSideProps>
 ) {
   return (
-    <div className="tw-min-h-screen" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}}>
+    <div className="tw-min-h-screen" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}} >
       <NavigationBar />
       
       <div className="tw-relative tw-overflow-hidden tw-pb-12">

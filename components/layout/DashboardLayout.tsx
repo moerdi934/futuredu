@@ -252,7 +252,7 @@ const menuData: MenuItem[] = [
     roles: ['admin', 'teacher', 'student'],
     subItems: [
       { icon: FileText, text: 'Exams', path: '/panel/exam/dashboard', roles: ['admin', 'teacher', 'student'] },
-      { icon: FileEdit, text: 'Exam Schedules', path: '/panel/exam/exam-schedules', roles: ['admin', 'teacher'] },
+      { icon: FileEdit, text: 'Exam Schedules', path: '/panel/exam/exam-schedules', roles: ['admin', 'teacher', 'student'] },
       { icon: PenTool, text: 'Questions', path: '/panel/exam/question-dashboard', roles: ['admin', 'teacher'] },
       { icon: Edit, text: 'Edit Question', path: '/panel/exam/questions', roles: ['admin', 'teacher'] },
       { icon: FolderEdit, text: 'Exam Categories', path: '/panel/exam/categories', roles: ['admin'] },
