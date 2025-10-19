@@ -1,4 +1,4 @@
-// pages/all-courses.tsx - Updated with direct course access
+// pages/all-courses.tsx - Updated with direct course access (Classes Only)
 import React, { useState, useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';
@@ -12,10 +12,11 @@ import {
 import NavigationBar from '../../components/layout/NavigationBar';
 import { ButtonGradient } from '../../components/button/ButtonTemplate';
 import GoToCartFloater from '../../components/floater/GoToCartFloater';
-import CoursePurchaseModal from './CoursePurchaseModal';
+// import CoursePurchaseModal from './CoursePurchaseModal';
 import ClassPurchaseModal from './ClassPurchaseModal';
 
 // Types
+/*
 interface LiveCourse {
   id: number;
   title: string;
@@ -35,6 +36,7 @@ interface LiveCourse {
   creator_name?: string;
   create_date: string;
 }
+*/
 
 interface LiveClass {
   id: number;
@@ -67,6 +69,7 @@ interface LiveClass {
   create_date: string;
 }
 
+/*
 interface UserCourseProgress {
   id: number;
   title: string;
@@ -84,6 +87,7 @@ interface UserCourseProgress {
   material_progress_percentage: number;
   overall_progress_percentage: number;
 }
+*/
 
 interface QuoteType {
   text: string;
@@ -140,37 +144,37 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
   const { isAuthenticated, id: userId } = useAuth();
   
   // State
-  const [liveCourses, setLiveCourses] = useState<LiveCourse[]>([]);
+  // const [liveCourses, setLiveCourses] = useState<LiveCourse[]>([]);
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
-  const [filteredCourses, setFilteredCourses] = useState<LiveCourse[]>([]);
+  // const [filteredCourses, setFilteredCourses] = useState<LiveCourse[]>([]);
   const [filteredClasses, setFilteredClasses] = useState<LiveClass[]>([]);
   const [currentQuote, setCurrentQuote] = useState<QuoteType>(initialQuote);
-  const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false);
   const [classesLoading, setClassesLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<string>('newest');
-  const [purchasedCourses, setPurchasedCourses] = useState<Set<number>>(new Set());
+  // const [purchasedCourses, setPurchasedCourses] = useState<Set<number>>(new Set());
   const [enrolledClasses, setEnrolledClasses] = useState<Set<number>>(new Set());
-  const [userProgress, setUserProgress] = useState<UserCourseProgress[]>([]);
-  const [progressLoading, setProgressLoading] = useState(false);
+  // const [userProgress, setUserProgress] = useState<UserCourseProgress[]>([]);
+  // const [progressLoading, setProgressLoading] = useState(false);
   
   // Floater state
   const [showFloater, setShowFloater] = useState(false);
   const [floaterItemName, setFloaterItemName] = useState('');
   
   // Modal states
-  const [showCourseModal, setShowCourseModal] = useState(false);
+  // const [showCourseModal, setShowCourseModal] = useState(false);
   const [showClassModal, setShowClassModal] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState<{ id: number; name: string } | null>(null);
+  // const [selectedCourse, setSelectedCourse] = useState<{ id: number; name: string } | null>(null);
   const [selectedClass, setSelectedClass] = useState<{ id: number; name: string } | null>(null);
   
   // Accordion states
   const [accordions, setAccordions] = useState({
     yourClasses: true,
-    yourCourses: true,
+    // yourCourses: true,
     availableClasses: false,
-    availableCourses: false,
+    // availableCourses: false,
   });
 
   const toggleAccordion = (key: keyof typeof accordions) => {
@@ -179,18 +183,19 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
 
   // Fetch functions
   useEffect(() => {
-    fetchLiveCourses();
+    // fetchLiveCourses();
     fetchLiveClasses();
   }, [sortBy]);
 
   useEffect(() => {
     if (isAuthenticated && userId) {
-      fetchUserProgress();
-      fetchPurchasedCourses();
+      // fetchUserProgress();
+      // fetchPurchasedCourses();
       fetchEnrolledClasses();
     }
   }, [isAuthenticated, userId]);
 
+  /*
   useEffect(() => {
     let filtered = liveCourses;
     if (searchTerm) {
@@ -202,6 +207,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
     }
     setFilteredCourses(filtered);
   }, [liveCourses, searchTerm]);
+  */
 
   useEffect(() => {
     let filtered = liveClasses;
@@ -216,6 +222,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
     setFilteredClasses(filtered);
   }, [liveClasses, searchTerm]);
 
+  /*
   const fetchLiveCourses = async () => {
     setLoading(true);
     try {
@@ -236,6 +243,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
       setLoading(false);
     }
   };
+  */
 
   const fetchLiveClasses = async () => {
     setClassesLoading(true);
@@ -258,6 +266,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
     }
   };
 
+  /*
   const fetchUserProgress = async () => {
     if (!isAuthenticated || typeof window === 'undefined') return;
     const token = localStorage.getItem('authToken');
@@ -286,6 +295,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
       console.error('Error fetching purchased courses:', error);
     }
   };
+  */
 
   const fetchEnrolledClasses = async () => {
     if (!isAuthenticated || !userId) return;
@@ -301,15 +311,18 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
     }
   };
 
+  /*
   useEffect(() => {
     fetchPurchasedCourses();
   }, [userProgress]);
+  */
 
   useEffect(() => {
     fetchEnrolledClasses();
   }, [liveClasses, userId]);
 
   // Handlers
+  /*
   const handleStartLearning = (courseString: string) => {
     router.push(`/course/${courseString}`);
   };
@@ -317,11 +330,13 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
   const handleViewCourse = (courseString: string) => {
     router.push(`/course/${courseString}`);
   };
+  */
 
   const handleLogin = () => {
     router.push('/login');
   };
 
+  /*
   const handleBuyCourse = (courseId: number, courseName: string) => {
     if (!isAuthenticated) {
       router.push('/login');
@@ -330,6 +345,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
     setSelectedCourse({ id: courseId, name: courseName });
     setShowCourseModal(true);
   };
+  */
 
   const handleBuyClass = (classId: number, className: string) => {
     if (!isAuthenticated) {
@@ -388,21 +404,23 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
     });
   };
 
+  /*
   const getDefaultImage = () => {
     return 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80';
   };
+  */
 
   // Get user's enrolled classes and available items
   const userEnrolledClasses = liveClasses.filter(cls => enrolledClasses.has(cls.id));
   const availableClasses = filteredClasses.filter(cls => !enrolledClasses.has(cls.id));
-  const availableCourses = filteredCourses.filter(course => !purchasedCourses.has(course.id));
+  // const availableCourses = filteredCourses.filter(course => !purchasedCourses.has(course.id));
 
   return (
     <div className="tw-min-h-screen" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
       <NavigationBar />
       <Head>
-        <title>Courses & Classes - Platform Pembelajaran</title>
-        <meta name="description" content="Jelajahi koleksi kursus dan kelas menarik dan tingkatkan skill-mu dengan pembelajaran yang interaktif" />
+        <title>Classes - Platform Pembelajaran</title>
+        <meta name="description" content="Jelajahi koleksi kelas menarik dan tingkatkan skill-mu dengan pembelajaran yang interaktif" />
       </Head>
 
       {/* Floater */}
@@ -413,6 +431,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
       />
 
       {/* Modals */}
+      {/*
       {selectedCourse && (
         <CoursePurchaseModal
           show={showCourseModal}
@@ -423,6 +442,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
           onSuccess={handlePurchaseSuccess}
         />
       )}
+      */}
 
       {selectedClass && (
         <ClassPurchaseModal
@@ -443,13 +463,13 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
           <div className="tw-text-center tw-mb-12">
             <div className="tw-mb-8">
               <div className="tw-inline-flex tw-items-center tw-justify-center tw-w-20 tw-h-20 tw-bg-white/20 tw-backdrop-blur-sm tw-rounded-full tw-mb-6 tw-shadow-lg">
-                <BookOpen className="tw-w-10 tw-h-10 tw-text-yellow-300" />
+                <GraduationCap className="tw-w-10 tw-h-10 tw-text-yellow-300" />
               </div>
               <h1 className="tw-text-4xl md:tw-text-5xl lg:tw-text-6xl tw-font-bold tw-text-white tw-mb-4 tw-drop-shadow-lg">
-                Explore Learning
+                Explore Classes
               </h1>
               <p className="tw-text-lg md:tw-text-xl tw-text-white/90 tw-font-medium tw-drop-shadow tw-max-w-3xl tw-mx-auto">
-                Jelajahi koleksi kursus dan kelas menarik dan tingkatkan skill-mu dengan pembelajaran yang interaktif!
+                Jelajahi koleksi kelas menarik dan tingkatkan skill-mu dengan pembelajaran yang interaktif bersama mentor ahli!
               </p>
             </div>
           </div>
@@ -482,7 +502,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
                   <Search className="tw-absolute tw-left-3 tw-top-1/2 tw-transform tw--translate-y-1/2 tw-text-white/60 tw-w-5 tw-h-5" />
                   <input
                     type="text"
-                    placeholder="Cari kursus atau kelas..."
+                    placeholder="Cari kelas..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="tw-pl-10 tw-pr-4 tw-py-3 tw-rounded-xl tw-border-0 tw-bg-white/20 tw-text-white tw-placeholder-white/60 tw-backdrop-blur-sm tw-w-full"
@@ -571,7 +591,8 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
               </AccordionSection>
             )}
 
-            {/* 2. Your Courses */}
+            {/* 2. Your Courses - COMMENTED OUT */}
+            {/*
             {isAuthenticated && userProgress.length > 0 && (
               <AccordionSection
                 title="Kursus Kamu"
@@ -620,6 +641,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
                 </div>
               </AccordionSection>
             )}
+            */}
 
             {/* 3. Available Classes */}
             <AccordionSection
@@ -737,7 +759,8 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
               )}
             </AccordionSection>
 
-            {/* 4. Available Courses */}
+            {/* 4. Available Courses - COMMENTED OUT */}
+            {/*
             <AccordionSection
               title="Kursus yang Tersedia"
               icon={<BookOpen className="tw-w-6 tw-h-6 tw-text-white" />}
@@ -850,6 +873,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ initialQuote }) => {
                 </div>
               )}
             </AccordionSection>
+            */}
           </div>
         </div>
       </div>

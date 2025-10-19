@@ -55,7 +55,7 @@ import { useAuth } from '../../../../context/AuthContext';
 /* -------------------------------------------------------------------------- */
 interface Question {
   exam_type_id: number | string;
-  id_subtopik: number | string;
+  question_topic_type: number | string;
   question_text: string;
   question_type: string;
   options?: string[];
@@ -575,7 +575,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
 
       const newQuestion: Question = {
         exam_type_id: subTopik?.value || '',
-        id_subtopik: subTopik?.value || '',
+        question_topic_type: subTopik?.value || '',
         question_text: questionText,
         question_type: questionType,
         options: questionType === 'single-choice' || questionType === 'multiple-choice' ? options : undefined,
@@ -610,7 +610,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
     
     const newQuestion: Question = {
       exam_type_id: subTopik?.value || '',
-      id_subtopik: subTopik?.value || '',
+      question_topic_type: subTopik?.value || '',
       question_text: questionText,
       question_type: questionType,
       options: questionType === 'single-choice' || questionType === 'multiple-choice' ? options : undefined,
@@ -1235,8 +1235,8 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
         subtitle={`Soal dengan kode ${savedQuestionCode} telah berhasil dibuat`}
         icon={<CheckCircle className="tw-w-5 tw-h-5" />}
         size="md"
-        width="500px"
-        height="400px"
+        width="110vw"
+        height="120vh"
         scrollable={false}
         bottomButtons={[
           {
