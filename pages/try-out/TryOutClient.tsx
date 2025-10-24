@@ -1,4 +1,4 @@
-// pages/exam/TryOutClient.tsx - Updated with Floater Integration
+// pages/exam/TryOutClient.tsx - Updated with Coin System Integration
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -6,7 +6,7 @@ import { Container, Row, Col, Card, Accordion, Spinner, Badge } from 'react-boot
 import {
   BookOpen, Clock, Star, Zap, Target, Trophy, Gift, 
   ShoppingCart, Play, Calendar, Check, AlertCircle,
-  Award, ChevronDown, ChevronUp, Unlock, Lock
+  Award, ChevronDown, ChevronUp, Unlock, Lock, Coins
 } from 'lucide-react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
@@ -14,7 +14,8 @@ import { useAuth } from '../../context/AuthContext';
 import ExamModal from './ExamModal';
 import ExamScoreModal from './ExamScoreModal';
 import TryOutPurchaseModal from './TryOutPurchaseModal';
-import GoToCartFloater from '../../components/floater/GoToCartFloater'; // NEW
+import GoToCartFloater from '../../components/floater/GoToCartFloater';
+import CoinPurchaseModal from '../../components/modals/CoinPurchaseModal'; // NEW
 import { ButtonGradient } from '../../components/button/ButtonTemplate';
 
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,8 @@ interface ExamSchedule {
   is_promo?: boolean;
   promo_description?: string;
   is_live?: boolean;
+  coin_price?: number; // NEW: Price in coins
+  coin_type?: 'tryout'; // NEW: Coin type for purchase
 }
 
 interface UserEntitlement {
@@ -66,6 +69,13 @@ interface GroupedSchedules {
   };
 }
 
+// NEW: Coin balance interface
+interface CoinBalance {
+  coin_type: 'class' | 'course' | 'tryout';
+  total_balance: number;
+  expiring_soon: number;
+}
+
 interface Props { 
   initialSchedules?: ExamSchedule[] | null;
 }
@@ -89,11 +99,54 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [showAllOwned, setShowAllOwned] = useState(false);
   
-  // NEW: Floater states
+  // Floater states
   const [showFloater, setShowFloater] = useState(false);
   const [addedItemName, setAddedItemName] = useState('');
   
+  // NEW: Coin system states
+  const [coinBalances, setCoinBalances] = useState<CoinBalance[]>([]);
+  const [coinModalOpen, setCoinModalOpen] = useState(false);
+  const [selectedCoinSchedule, setSelectedCoinSchedule] = useState<ExamSchedule | null>(null);
+  const [coinLoading, setCoinLoading] = useState(false);
+  
   const MAX_INITIAL_OWNED = 6;
+
+  // NEW: Fetch user coin balances
+  const fetchCoinBalances = async () => {
+    if (!isAuthenticated || !userId) return;
+    
+    try {
+      setCoinLoading(true);
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await axios.get(
+        `${apiUrl}/coins/balance`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Cache-Control': 'no-cache',
+          },
+          params: { _t: Date.now() }
+        }
+      );
+
+      if (response.data.success) {
+        setCoinBalances(response.data.data.balances || []);
+      }
+    } catch (error) {
+      console.error('Error fetching coin balances:', error);
+      setCoinBalances([]);
+    } finally {
+      setCoinLoading(false);
+    }
+  };
+
+  // NEW: Get coin balance for specific type
+  const getCoinBalance = (coinType: 'tryout'): number => {
+    const balance = coinBalances.find(b => b.coin_type === coinType);
+    return balance ? balance.total_balance : 0;
+  };
 
   const fetchSchedules = async () => {
     try {
@@ -273,6 +326,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     if (isAuthenticated) {
       fetchUserEntitlements();
       fetchUserScores();
+      fetchCoinBalances(); // NEW: Fetch coin balances
     }
   }, [isAuthenticated, userId]);
 
@@ -293,7 +347,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     if (!timeString) return (
       <span className="tw-flex tw-items-center tw-text-violet-600 tw-font-medium">
         <Zap className="tw-w-4 tw-h-4 tw-mr-1" />
-        Anytime
+        Kapan Saja
       </span>
     );
     
@@ -303,7 +357,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
         <span className="tw-flex tw-items-center">
           <span className="tw-text-violet-600 tw-font-semibold tw-flex tw-items-center">
             <Zap className="tw-w-4 tw-h-4 tw-mr-1" />
-            Anytime
+            Kapan Saja
           </span>
           <span className="tw-inline-block tw-ml-2 tw-w-3 tw-h-3 tw-bg-violet-500 tw-rounded-full tw-animate-pulse"></span>
         </span>
@@ -375,7 +429,30 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     setPurchaseModalOpen(true);
   };
 
-  // UPDATED: No alert, just return success/error
+  // NEW: Handle coin purchase
+  const handleBuyWithCoins = (schedule: ExamSchedule) => {
+    if (!isAuthenticated) {
+      alert('Silakan login terlebih dahulu untuk membeli try-out');
+      router.push('/login');
+      return;
+    }
+
+    setSelectedCoinSchedule(schedule);
+    setCoinModalOpen(true);
+  };
+
+  // NEW: Handle coin purchase success
+  const handleCoinPurchaseSuccess = (entitlements: string[]) => {
+    setAddedItemName(`Try-out dibeli dengan koin: ${entitlements.join(', ')}`);
+    setShowFloater(true);
+    
+    // Refresh data
+    if (isAuthenticated) {
+      fetchUserEntitlements();
+      fetchCoinBalances();
+    }
+  };
+
   const handleAddToCartFromModal = async (productId: number) => {
     try {
       const token = localStorage.getItem('authToken');
@@ -405,7 +482,6 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     }
   };
 
-  // NEW: Handle success callback dari modal
   const handleAddToCartSuccess = (itemName: string) => {
     setAddedItemName(itemName);
     setShowFloater(true);
@@ -430,6 +506,11 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
       ? calculateDiscountPercentage(schedule.original_price, schedule.price) 
       : 0;
 
+    // NEW: Coin purchase availability
+    const canBuyWithCoins = schedule.coin_price !== undefined && schedule.coin_type === 'tryout';
+    const tryoutCoinBalance = getCoinBalance('tryout');
+    const hasEnoughCoins = canBuyWithCoins && tryoutCoinBalance >= (schedule.coin_price || 0);
+
     return (
       <Card key={schedule.id} className="tw-border-0 tw-shadow-lg tw-transition-all tw-duration-300 tw-hover:shadow-2xl tw-hover:scale-105 tw-bg-white tw-relative">
         <Card.Body className="tw-p-6">
@@ -450,6 +531,13 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
             {schedule.is_promo && discountPercentage > 0 && !isOwned && (
               <Badge className="tw-bg-red-500 tw-text-white tw-flex tw-items-center tw-gap-1 tw-px-2 tw-py-1">
                 -{discountPercentage}%
+              </Badge>
+            )}
+            {/* NEW: Coin purchase badge */}
+            {canBuyWithCoins && !isOwned && !hasCompleted && (
+              <Badge className="tw-bg-yellow-500 tw-text-white tw-flex tw-items-center tw-gap-1 tw-px-2 tw-py-1">
+                <Coins className="tw-w-3 tw-h-3" />
+                {schedule.coin_price} Koin
               </Badge>
             )}
           </div>
@@ -530,6 +618,17 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
                       )}
                     </div>
                   </div>
+                  {/* NEW: Coin price display */}
+                  {canBuyWithCoins && (
+                    <div className="tw-flex tw-items-center tw-justify-between tw-mb-2 tw-pt-2 tw-border-t tw-border-gray-200">
+                      <span className="tw-text-sm tw-font-medium tw-text-gray-600">Atau dengan Koin:</span>
+                      <div className="tw-flex tw-items-center tw-gap-2">
+                        <Coins className="tw-w-4 tw-h-4 tw-text-yellow-600" />
+                        <span className="tw-text-lg tw-font-bold tw-text-yellow-600">{schedule.coin_price}</span>
+                        <span className="tw-text-sm tw-text-gray-500">Koin Try-out</span>
+                      </div>
+                    </div>
+                  )}
                   {schedule.is_promo && schedule.promo_description && (
                     <div className="tw-text-xs tw-text-red-600 tw-bg-red-50 tw-px-2 tw-py-1 tw-rounded">
                       🔥 {schedule.promo_description}
@@ -539,6 +638,26 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
               ) : (
                 <div className="tw-text-center">
                   <p className="tw-text-sm tw-text-gray-600">Hubungi admin untuk info harga</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* NEW: Coin balance display for authenticated users */}
+          {!hasCompleted && !isFree && !isOwned && isAuthenticated && canBuyWithCoins && (
+            <div className="tw-mb-4 tw-bg-yellow-50 tw-p-3 tw-rounded-lg tw-border tw-border-yellow-200">
+              <div className="tw-flex tw-items-center tw-justify-between tw-text-sm">
+                <span className="tw-text-gray-600">Koin Try-out Anda:</span>
+                <div className="tw-flex tw-items-center tw-gap-2">
+                  <Coins className="tw-w-4 tw-h-4 tw-text-yellow-600" />
+                  <span className={`tw-font-bold ${hasEnoughCoins ? 'tw-text-green-600' : 'tw-text-red-600'}`}>
+                    {coinLoading ? '...' : tryoutCoinBalance}
+                  </span>
+                </div>
+              </div>
+              {!hasEnoughCoins && canBuyWithCoins && (
+                <div className="tw-text-xs tw-text-red-600 tw-mt-1">
+                  Butuh {(schedule.coin_price || 0) - tryoutCoinBalance} koin lagi
                 </div>
               )}
             </div>
@@ -606,18 +725,44 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
               className="tw-w-full"
             />
           ) : (
-            <ButtonGradient
-              action="cart"
-              customText={hasValidPrice ? `Beli ${formatPrice(schedule.price!)}` : 'Beli Try Out'}
-              onClick={() => handleBuyTryOut(schedule)}
-              size="md"
-              className="tw-w-full"
-              customColors={{
-                gradient1: '#8B5CF6',
-                gradient2: '#7C3AED',
-                text: '#FFFFFF'
-              }}
-            />
+            <div className="tw-space-y-2">
+              {/* Regular purchase button */}
+              {hasValidPrice && (
+                <ButtonGradient
+                  action="cart"
+                  customText={`Beli ${formatPrice(schedule.price!)}`}
+                  onClick={() => handleBuyTryOut(schedule)}
+                  size="md"
+                  className="tw-w-full"
+                  customColors={{
+                    gradient1: '#8B5CF6',
+                    gradient2: '#7C3AED',
+                    text: '#FFFFFF'
+                  }}
+                />
+              )}
+              {/* NEW: Coin purchase button */}
+              {canBuyWithCoins && (
+                <ButtonGradient
+                  action="custom"
+                  customText={
+                    <div className="tw-flex tw-items-center tw-justify-center tw-gap-2">
+                      <Coins className="tw-w-4 tw-h-4" />
+                      <span>Beli dengan {schedule.coin_price} Koin</span>
+                    </div>
+                  }
+                  onClick={() => handleBuyWithCoins(schedule)}
+                  size="md"
+                  className="tw-w-full"
+                  disabled={!hasEnoughCoins}
+                  customColors={{
+                    gradient1: hasEnoughCoins ? '#F59E0B' : '#9CA3AF',
+                    gradient2: hasEnoughCoins ? '#D97706' : '#6B7280',
+                    text: '#FFFFFF'
+                  }}
+                />
+              )}
+            </div>
           )}
         </Card.Body>
       </Card>
@@ -655,6 +800,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
         if (isAuthenticated) {
           fetchUserEntitlements();
           fetchUserScores();
+          fetchCoinBalances(); // NEW: Also refresh coin balances
         }
       }
     }, 5 * 60 * 1000);
@@ -666,6 +812,37 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     <>
       <Row className="justify-content-center">
         <Col lg={11} xl={10}>
+          {/* NEW: Coin Balance Display */}
+          {isAuthenticated && (
+            <div className="tw-mb-6">
+              <Card className="tw-border-0 tw-shadow-lg tw-bg-gradient-to-r tw-from-yellow-50 tw-to-orange-100 tw-border tw-border-yellow-200">
+                <Card.Body className="tw-p-4">
+                  <div className="tw-flex tw-items-center tw-justify-between">
+                    <div className="tw-flex tw-items-center tw-gap-3">
+                      <div className="tw-w-10 tw-h-10 tw-bg-yellow-500 tw-rounded-full tw-flex tw-items-center tw-justify-center">
+                        <Coins className="tw-w-5 tw-h-5 tw-text-white" />
+                      </div>
+                      <div>
+                        <h6 className="tw-font-bold tw-text-yellow-800 tw-mb-0">Koin Try-out Anda</h6>
+                        <p className="tw-text-yellow-700 tw-text-sm tw-mb-0">Gunakan koin untuk pembelian instan</p>
+                      </div>
+                    </div>
+                    <div className="tw-text-right">
+                      {coinLoading ? (
+                        <div className="tw-animate-pulse tw-bg-yellow-300 tw-h-8 tw-w-16 tw-rounded"></div>
+                      ) : (
+                        <div className="tw-text-2xl tw-font-bold tw-text-yellow-800">
+                          {getCoinBalance('tryout')}
+                        </div>
+                      )}
+                      <div className="tw-text-sm tw-text-yellow-700">Tersedia</div>
+                    </div>
+                  </div>
+                </Card.Body>
+              </Card>
+            </div>
+          )}
+
           {/* My Try Outs Section */}
           {isAuthenticated && (userEntitlements.length > 0 || completedSchedules.length > 0) && (
             <div className="tw-mb-8">
@@ -790,10 +967,10 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
                 <Clock className="tw-w-12 tw-h-12 tw-text-violet-600" />
               </div>
               <h4 className="tw-text-xl tw-font-semibold tw-text-violet-800 tw-mb-2">Belum Ada Try Out Tersedia</h4>
-              <p className="tw-text-violet-600 tw-mb-4">Try out akan segera hadir! Stay tuned</p>
+              <p className="tw-text-violet-600 tw-mb-4">Try out akan segera hadir! Nantikan terus</p>
               <ButtonGradient
                 action="refresh"
-                customText="Refresh"
+                customText="Muat Ulang"
                 onClick={handleRetry}
                 size="md"
               />
@@ -828,7 +1005,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
                         <div className="tw-ml-auto tw-flex tw-items-center tw-gap-3">
                           <div className="tw-flex tw-items-center tw-gap-1">
                             <div className="tw-w-2 tw-h-2 tw-bg-green-500 tw-rounded-full tw-animate-pulse"></div>
-                            <span className="tw-text-sm tw-font-medium tw-text-green-600">{totalSchedules} Available</span>
+                            <span className="tw-text-sm tw-font-medium tw-text-green-600">{totalSchedules} Tersedia</span>
                           </div>
                         </div>
                       </div>
@@ -925,9 +1102,26 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
             onSuccess={handleAddToCartSuccess}
           />
         )}
+
+        {/* NEW: Coin Purchase Modal */}
+        {selectedCoinSchedule && (
+          <CoinPurchaseModal
+            show={coinModalOpen}
+            onHide={() => {
+              setCoinModalOpen(false);
+              setSelectedCoinSchedule(null);
+            }}
+            productId={selectedCoinSchedule.id}
+            productName={selectedCoinSchedule.name}
+            coinType="tryout"
+            coinPrice={selectedCoinSchedule.coin_price || 0}
+            userCoinBalance={getCoinBalance('tryout')}
+            onSuccess={handleCoinPurchaseSuccess}
+          />
+        )}
       </Row>
 
-      {/* NEW: Cart Floater */}
+      {/* Cart Floater */}
       <GoToCartFloater
         show={showFloater}
         onHide={() => setShowFloater(false)}

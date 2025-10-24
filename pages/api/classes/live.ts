@@ -1,4 +1,4 @@
-// pages/api/classes/live.ts - IMPROVED VERSION
+// pages/api/classes/live.ts - UPDATED WITH COIN SUPPORT
 import { NextApiRequest, NextApiResponse } from 'next';
 import pool from '../../../lib/db';
 
@@ -31,6 +31,9 @@ interface LiveClass {
   effective_end?: string;
   creator_name?: string;
   create_date: string;
+  // NEW: Coin support fields
+  coin_price?: number;
+  coin_type?: 'class' | 'course' | 'tryout';
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -39,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
-  // ⭐ Use explicit client for better connection management
+  // Use explicit client for better connection management
   const client = await pool.connect();
   
   try {
@@ -79,11 +82,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           p.stock,
           (ARRAY_AGG(p.features))[1] as features,
           p.classtype,
+          -- NEW: Add coin support fields
+          p.coin_price,
+          p.coin_type,
           pc.max_students,
           array_length(c.student_list, 1) as current_students,
-          ph.price,
+          -- Apply CEILING to prices for integer values
+          CEILING(ph.price) as price,
           ph.is_promo,
-          ph.no_promo_price,
+          CEILING(ph.no_promo_price) as no_promo_price,
           ph.promo_description,
           ph.effective_start,
           ph.effective_end
@@ -123,7 +130,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         WHERE c.approval_status = 'approved'
           AND (c.is_deleted IS NULL OR c.is_deleted = false)
           AND c.real_start_datetime IS NULL
-          AND p.type = 13
+          AND p.type = 13  -- Class products
           AND p.stock > 0
           AND (
             ph.effective_start <= NOW()
@@ -133,7 +140,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           c.id, c.name, c.description, c.teacher_id, t.user_code, ta.nama_lengkap,
           c.student_list, c.start_date, c.end_date, c.class_mode, c.meeting_url,
           c.course_id, co.title, c.create_date, cu.user_code, ca.nama_lengkap,
-          p.product_id, p.name, p.stock, p.classtype, pc.max_students,
+          p.product_id, p.name, p.stock, p.classtype, p.coin_price, p.coin_type, pc.max_students,
           ph.price, ph.is_promo, ph.no_promo_price, ph.promo_description,
           ph.effective_start, ph.effective_end
       )
@@ -218,9 +225,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       course_id: row.course_id,
       product_id: row.product_id,
       product_name: row.product_name,
-      price: row.price,
+      price: row.price, // Already ceiling-ed in SQL
       is_promo: row.is_promo,
-      no_promo_price: row.no_promo_price,
+      no_promo_price: row.no_promo_price, // Already ceiling-ed in SQL
       promo_description: row.promo_description,
       stock: row.stock,
       max_students: row.max_students,
@@ -230,7 +237,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       effective_start: row.effective_start,
       effective_end: row.effective_end,
       creator_name: row.creator_name,
-      create_date: row.create_date
+      create_date: row.create_date,
+      // NEW: Include coin fields
+      coin_price: row.coin_price ? Math.ceil(row.coin_price) : undefined,
+      coin_type: row.coin_type
     }));
 
     const total = result.rows.length > 0 ? result.rows[0].total_count : 0;
@@ -252,7 +262,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error: any) {
     console.error('Get Live Classes Error:', error);
     
-    // ⭐ Better error responses
+    // Better error responses
     if (error.code === '53300') {
       return res.status(503).json({ 
         success: false,
@@ -267,7 +277,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   } finally {
-    // ⭐ CRITICAL: Always release the client
+    // CRITICAL: Always release the client
     client.release();
   }
 }

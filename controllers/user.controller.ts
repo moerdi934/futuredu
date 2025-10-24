@@ -77,24 +77,24 @@ export const create = async (req: NextApiRequest, res: NextApiResponse) => {
       });
     }
 
-    const { username, email, password, captchaToken }: CreateUserRequest = req.body;
+    const { username, email, password /*, captchaToken*/ }: CreateUserRequest = req.body;
 
-    // Verify CAPTCHA
-    try {
-      const response = await axios.post(`https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`);
-      const { success } = response.data;
+    // // Verify CAPTCHA (disabled temporarily)
+    // try {
+    //   const response = await axios.post(`https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`);
+    //   const { success } = response.data;
 
-      if (!success) {
-        return res.status(400).json({
-          message: "CAPTCHA verification failed. Please try again."
-        });
-      }
-    } catch (error) {
-      console.error("Error verifying CAPTCHA:", error);
-      return res.status(500).json({
-        message: "Error verifying CAPTCHA."
-      });
-    }
+    //   if (!success) {
+    //     return res.status(400).json({
+    //       message: "CAPTCHA verification failed. Please try again."
+    //     });
+    //   }
+    // } catch (error) {
+    //   console.error("Error verifying CAPTCHA:", error);
+    //   return res.status(500).json({
+    //     message: "Error verifying CAPTCHA."
+    //   });
+    // }
 
     // Create user (password otomatis di-hash di model)
     const user: User = { username, email, password, role: 'student' };
@@ -106,6 +106,7 @@ export const create = async (req: NextApiRequest, res: NextApiResponse) => {
     });
   }
 };
+
 
 // Get user status
 export const getStatus = async (req: AuthenticatedRequest, res: NextApiResponse) => {

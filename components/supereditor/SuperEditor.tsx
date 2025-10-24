@@ -88,9 +88,9 @@ const ImageGradientButton: React.FC<{ onClick: () => void }> = ({ onClick }) => 
         gradient2: '#34D399',
         text: '#FFFFFF'
       }}
-     tooltip="Insert Image"
+      tooltip="Insert Image"
       tooltipPosition="top"
-      tooltipPortal={false}
+      tooltipPortal={true}
       className="tw-w-8 tw-h-8 tw-relative"
       tabIndex={-1}
     />
@@ -114,7 +114,7 @@ const EquationGradientButton: React.FC<{ onClick: () => void }> = ({ onClick }) 
       }}
       tooltip="Insert Equation (Ctrl+Shift+E)"
       tooltipPosition="top"
-      tooltipPortal={false}
+      tooltipPortal={true}
       className="tw-w-8 tw-h-8 tw-relative"
       tabIndex={-1}
     />
@@ -125,14 +125,14 @@ interface SuperEditorProps {
   onChange?: (content: string) => void;
   initialValue?: string;
   editorId?: string | null;
-  height?: string; // Add height prop
+  height?: string;
 }
 
 const SuperEditor: React.FC<SuperEditorProps> = ({ 
   onChange, 
   initialValue = '', 
   editorId = null,
-  height = '200px' // Default height
+  height = '200px'
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -146,6 +146,11 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
   // Refs for color buttons
   const textColorButtonRef = useRef<HTMLButtonElement>(null);
   const backgroundColorButtonRef = useRef<HTMLButtonElement>(null);
+  
+  // CRITICAL: Content preservation refs
+  const contentRef = useRef<string>(initialValue);
+  const preventContentLoss = useRef<boolean>(false);
+  const savedCursorPosition = useRef<{startOffset: number, endOffset: number, startContainer?: Node, endContainer?: Node} | null>(null);
   
   // Component loading states
   const [componentsLoaded, setComponentsLoaded] = useState<{
@@ -218,7 +223,6 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
   const [editingTable, setEditingTable] = useState<any>(null);
   const [savedSelection, setSavedSelection] = useState<Range | null>(null);
   const [isEditorFocused, setIsEditorFocused] = useState<boolean>(false);
-  const [toolbarStyle, setToolbarStyle] = useState<React.CSSProperties>({});
   const [isToolbarCollapsed, setIsToolbarCollapsed] = useState<boolean>(false);
   const [dropdownStates, setDropdownStates] = useState({
     fontSize: false,
@@ -233,16 +237,9 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
   const [colorPickerPosition, setColorPickerPosition] = useState({ top: 0, left: 0 });
   const [backgroundColorPickerPosition, setBackgroundColorPickerPosition] = useState({ top: 0, left: 0 });
 
-  // Memoize default toolbar style to prevent unnecessary re-renders
-  const defaultToolbarStyle = useMemo((): React.CSSProperties => ({
-    position: 'position',
-    top: 'auto',
-    zIndex: 1,
-    transform: 'none',
-    backgroundColor: '#f3e8ff',
-    borderBottom: '1px solid #c084fc',
-    boxShadow: 'none'
-  }), []);
+  // CRITICAL: Layout state - determine if toolbar should be at bottom
+  const [isToolbarBottom, setIsToolbarBottom] = useState<boolean>(false);
+  const layoutCheckRef = useRef<number>(0);
 
   // Load helper functions and track component loading
   useEffect(() => {
@@ -324,33 +321,135 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
       }
     };
 
-    handleResize(); // Check initial size
+    handleResize();
     window.addEventListener('resize', handleResize);
     
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Debounced change handler
-const debouncedHandleChange = useMemo(() => {
-  let timeout: NodeJS.Timeout;
-  return (onChangeCallback?: (content: string) => void) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      if (editorRef.current) {
-        const newContent = editorRef.current.innerHTML;
-        setContent(newContent);
-        if (onChangeCallback) onChangeCallback(newContent);
-
-        // Re-setup image handlers after any change
-        if (componentsLoaded.imageModal && helpersRef.current.setupImageResizeHandlers) {
-          try {
-            helpersRef.current.setupImageResizeHandlers(editorRef, () => debouncedHandleChange(onChangeCallback));
-          } catch (error) {
-            console.warn('Error re-setting up image handlers:', error);
-          }
+  // CRITICAL: Content preservation during layout changes
+  const preserveContent = useCallback(() => {
+    if (editorRef.current) {
+      contentRef.current = editorRef.current.innerHTML;
+      
+      // Save cursor position
+      if (typeof window !== 'undefined') {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          
+          // Convert to text-based offsets for reliable restoration
+          const preCaretRange = range.cloneRange();
+          preCaretRange.selectNodeContents(editorRef.current);
+          preCaretRange.setEnd(range.startContainer, range.startOffset);
+          const startOffset = preCaretRange.toString().length;
+          
+          const preCaretRangeEnd = range.cloneRange();
+          preCaretRangeEnd.selectNodeContents(editorRef.current);
+          preCaretRangeEnd.setEnd(range.endContainer, range.endOffset);
+          const endOffset = preCaretRangeEnd.toString().length;
+          
+          savedCursorPosition.current = {
+            startOffset,
+            endOffset,
+            startContainer: range.startContainer,
+            endContainer: range.endContainer
+          };
+        } else {
+          savedCursorPosition.current = null;
         }
+      }
+    }
+  }, []);
 
-        // Refresh other handlers
+  const restoreContent = useCallback(() => {
+    if (editorRef.current && contentRef.current) {
+      preventContentLoss.current = true;
+      editorRef.current.innerHTML = contentRef.current;
+      
+      // Restore cursor position after content is restored
+      if (savedCursorPosition.current && typeof window !== 'undefined') {
+        setTimeout(() => {
+          const { startOffset, endOffset } = savedCursorPosition.current!;
+          
+          try {
+            // Create a range to restore cursor position
+            const range = document.createRange();
+            const selection = window.getSelection();
+            
+            if (selection) {
+              // Walk through text nodes to find the correct position
+              const walker = document.createTreeWalker(
+                editorRef.current!,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+              );
+              
+              let currentOffset = 0;
+              let startNode: Node | null = null;
+              let endNode: Node | null = null;
+              let startPos = 0;
+              let endPos = 0;
+              
+              let node;
+              while (node = walker.nextNode()) {
+                const nodeLength = node.textContent?.length || 0;
+                
+                if (!startNode && currentOffset + nodeLength >= startOffset) {
+                  startNode = node;
+                  startPos = startOffset - currentOffset;
+                }
+                
+                if (!endNode && currentOffset + nodeLength >= endOffset) {
+                  endNode = node;
+                  endPos = endOffset - currentOffset;
+                  break;
+                }
+                
+                currentOffset += nodeLength;
+              }
+              
+              if (startNode && endNode) {
+                range.setStart(startNode, Math.min(startPos, startNode.textContent?.length || 0));
+                range.setEnd(endNode, Math.min(endPos, endNode.textContent?.length || 0));
+                
+                selection.removeAllRanges();
+                selection.addRange(range);
+              } else if (startNode) {
+                // Fallback: place cursor at start position
+                range.setStart(startNode, Math.min(startPos, startNode.textContent?.length || 0));
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+              } else {
+                // Fallback: place cursor at end of editor
+                range.selectNodeContents(editorRef.current!);
+                range.collapse(false);
+                selection.removeAllRanges();
+                selection.addRange(range);
+              }
+            }
+          } catch (error) {
+            console.warn('Error restoring cursor position:', error);
+            // Fallback: focus editor and place cursor at end
+            if (editorRef.current) {
+              editorRef.current.focus();
+              const range = document.createRange();
+              const selection = window.getSelection();
+              if (selection) {
+                range.selectNodeContents(editorRef.current);
+                range.collapse(false);
+                selection.removeAllRanges();
+                selection.addRange(range);
+              }
+            }
+          }
+        }, 50); // Small delay to ensure DOM is ready
+      }
+      
+      // Re-setup handlers after content restoration
+      setTimeout(() => {
         if (componentsLoaded.code && helpersRef.current.refreshAllCodeBlockHighlighting) {
           try {
             helpersRef.current.refreshAllCodeBlockHighlighting(editorRef);
@@ -365,21 +464,64 @@ const debouncedHandleChange = useMemo(() => {
             console.warn('Error setting up table handlers:', error);
           }
         }
-        if (componentsLoaded.practice && helpersRef.current.setupPracticeQuestionHandlers) {
-          try {
-            helpersRef.current.setupPracticeQuestionHandlers(editorRef);
-          } catch (error) {
-            console.warn('Error setting up practice question handlers:', error);
+        preventContentLoss.current = false;
+      }, 100);
+    }
+  }, [componentsLoaded]);
+
+  // Debounced change handler with content preservation
+  const debouncedHandleChange = useMemo(() => {
+    let timeout: NodeJS.Timeout;
+    return (onChangeCallback?: (content: string) => void) => {
+      // Skip if we're in content preservation mode
+      if (preventContentLoss.current) return;
+      
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        if (editorRef.current) {
+          const newContent = editorRef.current.innerHTML;
+          contentRef.current = newContent; // Always keep ref updated
+          setContent(newContent);
+          if (onChangeCallback) onChangeCallback(newContent);
+
+          // Re-setup handlers
+          if (componentsLoaded.imageModal && helpersRef.current.setupImageResizeHandlers) {
+            try {
+              helpersRef.current.setupImageResizeHandlers(editorRef, () => debouncedHandleChange(onChangeCallback));
+            } catch (error) {
+              console.warn('Error re-setting up image handlers:', error);
+            }
+          }
+
+          if (componentsLoaded.code && helpersRef.current.refreshAllCodeBlockHighlighting) {
+            try {
+              helpersRef.current.refreshAllCodeBlockHighlighting(editorRef);
+            } catch (error) {
+              console.warn('Error refreshing code highlighting:', error);
+            }
+          }
+          if (componentsLoaded.table && helpersRef.current.setupTableHandlers) {
+            try {
+              helpersRef.current.setupTableHandlers(editorRef);
+            } catch (error) {
+              console.warn('Error setting up table handlers:', error);
+            }
+          }
+          if (componentsLoaded.practice && helpersRef.current.setupPracticeQuestionHandlers) {
+            try {
+              helpersRef.current.setupPracticeQuestionHandlers(editorRef);
+            } catch (error) {
+              console.warn('Error setting up practice question handlers:', error);
+            }
           }
         }
-      }
-    }, 50);
-  };
-}, [componentsLoaded]); // Removed handleChange from dependencies
+      }, 50);
+    };
+  }, [componentsLoaded]);
 
-const handleChange = useCallback(() => {
-  debouncedHandleChange(onChange);
-}, [debouncedHandleChange, onChange]);
+  const handleChange = useCallback(() => {
+    debouncedHandleChange(onChange);
+  }, [debouncedHandleChange, onChange]);
 
   const execCommand = useCallback((command: string, value: string | null = null) => {
     if (editorRef.current && typeof document !== 'undefined') {
@@ -388,6 +530,86 @@ const handleChange = useCallback(() => {
       handleChange();
     }
   }, [handleChange]);
+
+  // CRITICAL: Layout detection logic with content preservation
+  const checkToolbarLayout = useCallback(() => {
+    if (!containerRef.current || typeof window === 'undefined') return;
+    
+    const now = Date.now();
+    // Throttle layout checks to prevent excessive calculations
+    if (now - layoutCheckRef.current < 200) return;
+    layoutCheckRef.current = now;
+    
+    const container = containerRef.current;
+    const containerRect = container.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    
+    // Determine if container is tall enough to warrant bottom toolbar
+    // Use a more conservative threshold to prevent constant switching
+    const shouldBeBottom = containerRect.height > viewportHeight * 0.8;
+    
+    if (shouldBeBottom !== isToolbarBottom) {
+      // Preserve content before layout change
+      preserveContent();
+      setIsToolbarBottom(shouldBeBottom);
+      
+      // Schedule content restoration after layout change
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          restoreContent();
+        });
+      });
+    }
+  }, [isToolbarBottom, preserveContent, restoreContent]);
+
+  // Throttled layout check
+  const throttledLayoutCheck = useMemo(() => {
+    let rafId: number | null = null;
+    
+    return () => {
+      if (rafId || typeof window === 'undefined') return;
+      
+      rafId = requestAnimationFrame(() => {
+        checkToolbarLayout();
+        rafId = null;
+      });
+    };
+  }, [checkToolbarLayout]);
+
+  // Layout check on scroll and resize
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let scrollTimeout: NodeJS.Timeout;
+    let resizeTimeout: NodeJS.Timeout;
+
+    const handleScroll = () => {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        throttledLayoutCheck();
+      }, 100);
+    };
+
+    const handleResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        throttledLayoutCheck();
+      }, 200);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleResize, { passive: true });
+    
+    // Initial check
+    throttledLayoutCheck();
+    
+    return () => {
+      clearTimeout(scrollTimeout);
+      clearTimeout(resizeTimeout);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [throttledLayoutCheck]);
 
   const saveSelectionRange = useCallback((): Range | null => {
     if (typeof window === 'undefined') return null;
@@ -412,11 +634,10 @@ const handleChange = useCallback(() => {
     }
   }, []);
 
-  // SKIP TO EDITOR functionality
+  // Skip to editor functionality
   const skipToEditor = useCallback(() => {
     if (editorRef.current) {
       editorRef.current.focus();
-      // Place cursor at the end of content
       const range = document.createRange();
       const selection = window.getSelection();
       range.selectNodeContents(editorRef.current);
@@ -426,15 +647,11 @@ const handleChange = useCallback(() => {
     }
   }, []);
 
-  // Handle keyboard shortcut for skipping to editor
   const handleToolbarKeyDown = useCallback((event: React.KeyboardEvent) => {
-    // Alt + E to skip to editor
     if (event.altKey && event.key.toLowerCase() === 'e') {
       event.preventDefault();
       skipToEditor();
-    }
-    // Tab key from last toolbar element should go to editor
-    else if (event.key === 'Tab' && !event.shiftKey) {
+    } else if (event.key === 'Tab' && !event.shiftKey) {
       const target = event.target as HTMLElement;
       if (target.closest('.toolbar-group:last-child')) {
         event.preventDefault();
@@ -445,138 +662,65 @@ const handleChange = useCallback(() => {
 
   // Element detection functions
   const findTextColorButton = useCallback((): HTMLElement | null => {
-    console.log('=== FINDING TEXT COLOR BUTTON ===');
-    
-    // Method 1: Try ref first
     if (textColorButtonRef.current && typeof textColorButtonRef.current === 'object' && 'getBoundingClientRect' in textColorButtonRef.current) {
-      console.log('Found text color button via ref:', textColorButtonRef.current);
       return textColorButtonRef.current as HTMLElement;
     }
     
-    // Method 2: Try querySelector on container
     if (containerRef.current) {
       const buttonElement = containerRef.current.querySelector('.text-color-picker-button button') as HTMLElement;
       if (buttonElement) {
-        console.log('Found text color button via container querySelector:', buttonElement);
         return buttonElement;
       }
     }
     
-    // Method 3: Try more specific selectors
-    const selectors = [
-      '.text-color-picker-button button',
-      'button[aria-label*="Custom"]',
-      '.toolbar-group button'
-    ];
-    
-    for (const selector of selectors) {
-      const buttonElement = document.querySelector(selector) as HTMLElement;
-      if (buttonElement && buttonElement.getBoundingClientRect) {
-        console.log(`Found text color button via selector "${selector}":`, buttonElement);
-        return buttonElement;
-      }
-    }
-    
-    console.error('Could not find text color button element');
     return null;
   }, []);
 
   const findBackgroundColorButton = useCallback((): HTMLElement | null => {
-    console.log('=== FINDING BACKGROUND COLOR BUTTON ===');
-    
-    // Method 1: Try ref first
     if (backgroundColorButtonRef.current && typeof backgroundColorButtonRef.current === 'object' && 'getBoundingClientRect' in backgroundColorButtonRef.current) {
-      console.log('Found background color button via ref:', backgroundColorButtonRef.current);
       return backgroundColorButtonRef.current as HTMLElement;
     }
     
-    // Method 2: Try querySelector on container
     if (containerRef.current) {
       const buttonElement = containerRef.current.querySelector('.background-color-picker-button button') as HTMLElement;
       if (buttonElement) {
-        console.log('Found background color button via container querySelector:', buttonElement);
         return buttonElement;
       }
     }
     
-    // Method 3: Try more specific selectors
-    const selectors = [
-      '.background-color-picker-button button',
-      'button[aria-label*="Custom"]',
-      '.toolbar-group button'
-    ];
-    
-    for (const selector of selectors) {
-      const elements = document.querySelectorAll(selector) as NodeListOf<HTMLElement>;
-      const buttonElement = elements.length > 1 ? elements[1] : elements[0];
-      if (buttonElement && buttonElement.getBoundingClientRect) {
-        console.log(`Found background color button via selector "${selector}":`, buttonElement);
-        return buttonElement;
-      }
-    }
-    
-    console.error('Could not find background color button element');
     return null;
   }, []);
 
-  // FIXED: Positioning with absolute coordinates and scroll offset for scrollable behavior
+  // Color picker positioning
   const updateColorPickerPosition = useCallback((triggerElement: HTMLElement) => {
-    console.log('=== UPDATING COLOR PICKER POSITION ===');
-    console.log('Trigger element:', triggerElement);
-    
-    if (!triggerElement || typeof triggerElement !== 'object' || !('getBoundingClientRect' in triggerElement) || typeof window === 'undefined') {
-      console.warn('Invalid trigger element for color picker positioning:', triggerElement);
+    if (!triggerElement || typeof window === 'undefined') {
       setColorPickerPosition({ top: 100, left: 100 });
       return;
     }
 
     try {
       const buttonRect = triggerElement.getBoundingClientRect();
-      console.log('Button rect:', buttonRect);
-      
-      // Get scroll position for absolute positioning
-      const scrollY = window.scrollY || window.pageYOffset;
-      const scrollX = window.scrollX || window.pageXOffset;
-      
-      console.log('Scroll position:', { scrollX, scrollY });
-      
-      // Calculate absolute position with scroll offset (for absolute positioning)
-      const absoluteTop = buttonRect.bottom + scrollY;
-      const absoluteLeft = buttonRect.left + scrollX;
-      
-      // Color picker dimensions
       const pickerWidth = 350;
       const pickerHeight = 450;
       const gap = 8;
       
-      // Document dimensions
-      const documentWidth = document.documentElement.scrollWidth;
-      const documentHeight = document.documentElement.scrollHeight;
-      
-      // Viewport dimensions
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
       
-      // Calculate position
-      let top = absoluteTop + gap;
-      let left = absoluteLeft;
+      let top = buttonRect.bottom + gap;
+      let left = buttonRect.left;
       
-      // Adjust if picker would go off screen horizontally
-      if (left + pickerWidth > scrollX + viewportWidth) {
-        left = Math.max(scrollX + 16, buttonRect.right + scrollX - pickerWidth);
+      if (left + pickerWidth > viewportWidth) {
+        left = Math.max(16, buttonRect.right - pickerWidth);
       }
       
-      // Adjust if picker would go off screen vertically within viewport
-      // But allow scrolling if needed by using document height
-      if (top + pickerHeight > scrollY + viewportHeight && top - pickerHeight - gap > scrollY) {
-        top = buttonRect.top + scrollY - pickerHeight - gap;
+      if (top + pickerHeight > viewportHeight && top - pickerHeight - gap > 0) {
+        top = buttonRect.top - pickerHeight - gap;
       }
       
-      // Final bounds check - ensure it's not off the document
-      top = Math.max(scrollY + 16, Math.min(top, documentHeight - pickerHeight + scrollY));
-      left = Math.max(scrollX + 16, Math.min(left, Math.max(documentWidth - pickerWidth + scrollX, scrollX + 16)));
+      top = Math.max(16, Math.min(top, viewportHeight - pickerHeight - 16));
+      left = Math.max(16, Math.min(left, viewportWidth - pickerWidth - 16));
 
-      console.log('Calculated text color picker position:', { top, left });
       setColorPickerPosition({ top, left });
     } catch (error) {
       console.error('Error calculating color picker position:', error);
@@ -585,60 +729,34 @@ const handleChange = useCallback(() => {
   }, []);
 
   const updateBackgroundColorPickerPosition = useCallback((triggerElement: HTMLElement) => {
-    console.log('=== UPDATING BACKGROUND COLOR PICKER POSITION ===');
-    console.log('Trigger element:', triggerElement);
-    
-    if (!triggerElement || typeof triggerElement !== 'object' || !('getBoundingClientRect' in triggerElement) || typeof window === 'undefined') {
-      console.warn('Invalid trigger element for background color picker positioning:', triggerElement);
+    if (!triggerElement || typeof window === 'undefined') {
       setBackgroundColorPickerPosition({ top: 100, left: 100 });
       return;
     }
 
     try {
       const buttonRect = triggerElement.getBoundingClientRect();
-      console.log('Background button rect:', buttonRect);
-      
-      // Get scroll position for absolute positioning
-      const scrollY = window.scrollY || window.pageYOffset;
-      const scrollX = window.scrollX || window.pageXOffset;
-      
-      // Calculate absolute position with scroll offset (for absolute positioning)
-      const absoluteTop = buttonRect.bottom + scrollY;
-      const absoluteLeft = buttonRect.left + scrollX;
-      
-      // Color picker dimensions
       const pickerWidth = 350;
       const pickerHeight = 450;
       const gap = 8;
       
-      // Document dimensions
-      const documentWidth = document.documentElement.scrollWidth;
-      const documentHeight = document.documentElement.scrollHeight;
-      
-      // Viewport dimensions
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
       
-      // Calculate position
-      let top = absoluteTop + gap;
-      let left = absoluteLeft;
+      let top = buttonRect.bottom + gap;
+      let left = buttonRect.left;
       
-      // Adjust if picker would go off screen horizontally
-      if (left + pickerWidth > scrollX + viewportWidth) {
-        left = Math.max(scrollX + 16, buttonRect.right + scrollX - pickerWidth);
+      if (left + pickerWidth > viewportWidth) {
+        left = Math.max(16, buttonRect.right - pickerWidth);
       }
       
-      // Adjust if picker would go off screen vertically within viewport
-      // But allow scrolling if needed by using document height
-      if (top + pickerHeight > scrollY + viewportHeight && top - pickerHeight - gap > scrollY) {
-        top = buttonRect.top + scrollY - pickerHeight - gap;
+      if (top + pickerHeight > viewportHeight && top - pickerHeight - gap > 0) {
+        top = buttonRect.top - pickerHeight - gap;
       }
       
-      // Final bounds check - ensure it's not off the document
-      top = Math.max(scrollY + 16, Math.min(top, documentHeight - pickerHeight + scrollY));
-      left = Math.max(scrollX + 16, Math.min(left, Math.max(documentWidth - pickerWidth + scrollX, scrollX + 16)));
+      top = Math.max(16, Math.min(top, viewportHeight - pickerHeight - 16));
+      left = Math.max(16, Math.min(left, viewportWidth - pickerWidth - 16));
 
-      console.log('Calculated background color picker position:', { top, left });
       setBackgroundColorPickerPosition({ top, left });
     } catch (error) {
       console.error('Error calculating background color picker position:', error);
@@ -661,7 +779,6 @@ const handleChange = useCallback(() => {
     }
   }, [execCommand]);
 
-  // KeyConcept shortcut handler
   const handleKeyConceptShortcut = useCallback(() => {
     if (componentsLoaded.keyConcept && helpersRef.current.insertKeyConceptBlock) {
       try {
@@ -715,102 +832,9 @@ const handleChange = useCallback(() => {
     'ctrl+shift+e': () => !dropdownStates.numberedList && (saveSelection(), setDropdownStates(prev => ({ ...prev, numberedList: true, bulletList: false, multilevelList: false }))),
     'ctrl+shift+m': () => !dropdownStates.multilevelList && (saveSelection(), setDropdownStates(prev => ({ ...prev, multilevelList: true, bulletList: false, numberedList: false }))),
     'ctrl+shift+k': () => handleKeyConceptShortcut(),
-    'alt+e': () => skipToEditor(), // Add skip to editor shortcut
+    'alt+e': () => skipToEditor(),
     'escape': () => handleEscapeKey()
   }), [showHelpModal, dropdownStates, showColorPicker, showBackgroundColorPicker, showTableModal, saveSelection, execCommand, handleHyperlinkShortcut, handleKeyConceptShortcut, handleEscapeKey, skipToEditor]);
-
-  const updateToolbarPosition = useCallback(() => {
-    if (!containerRef.current || !toolbarRef.current || !editorRef.current || typeof window === 'undefined') return;
-    
-    const container = containerRef.current;
-    const toolbar = toolbarRef.current;
-    const editor = editorRef.current;
-    
-    const containerRect = container.getBoundingClientRect();
-    const editorRect = editor.getBoundingClientRect();
-    const toolbarHeight = toolbar.offsetHeight;
-    
-    const isEditorVisible = editorRect.top < window.innerHeight && editorRect.bottom > 0;
-    
-    if (isEditorVisible && containerRect.top < 0 && containerRect.bottom > toolbarHeight) {
-      const stickyTop = Math.max(0, Math.min(-containerRect.top, containerRect.height - toolbarHeight));
-      setToolbarStyle({
-        position: 'sticky',
-        top: '0px',
-        zIndex: 1000,
-        transform: `translateY(${stickyTop}px)`,
-        backgroundColor: '#f3e8ff',
-        borderBottom: '1px solid #c084fc',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      });
-    } else {
-      setToolbarStyle(defaultToolbarStyle);
-    }
-  }, [defaultToolbarStyle]);
-
-  // Throttle scroll handler to improve performance
-  const throttledUpdateToolbarPosition = useMemo(() => {
-    let ticking = false;
-    return () => {
-      if (!ticking && typeof window !== 'undefined') {
-        requestAnimationFrame(() => {
-          if (isEditorFocused) {
-            updateToolbarPosition();
-          }
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-  }, [isEditorFocused, updateToolbarPosition]);
-
-  // Consolidated scroll and resize handler
-  useEffect(() => {
-    if (!isEditorFocused || typeof window === 'undefined') return;
-
-    window.addEventListener('scroll', throttledUpdateToolbarPosition, { passive: true });
-    window.addEventListener('resize', throttledUpdateToolbarPosition, { passive: true });
-    
-    return () => {
-      window.removeEventListener('scroll', throttledUpdateToolbarPosition);
-      window.removeEventListener('resize', throttledUpdateToolbarPosition);
-    };
-  }, [isEditorFocused, throttledUpdateToolbarPosition]);
-
-  // Update toolbar position when focus changes
-  useEffect(() => {
-    if (isEditorFocused) {
-      updateToolbarPosition();
-    } else {
-      setToolbarStyle(defaultToolbarStyle);
-    }
-  }, [isEditorFocused, updateToolbarPosition, defaultToolbarStyle]);
-
-  // Initialize editor content
-  useEffect(() => {
-    if (initialValue && editorRef.current && Object.values(componentsLoaded).some(Boolean)) {
-      editorRef.current.innerHTML = initialValue;
-      
-      const timer = setTimeout(() => {
-        if (componentsLoaded.code && helpersRef.current.refreshAllCodeBlockHighlighting) {
-          try {
-            helpersRef.current.refreshAllCodeBlockHighlighting(editorRef);
-          } catch (error) {
-            console.warn('Error refreshing code highlighting:', error);
-          }
-        }
-        if (componentsLoaded.table && helpersRef.current.setupTableHandlers) {
-          try {
-            helpersRef.current.setupTableHandlers(editorRef);
-          } catch (error) {
-            console.warn('Error setting up table handlers:', error);
-          }
-        }
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [initialValue, componentsLoaded]);
 
   // Create key combination string
   const getKeyCombo = useCallback((event: KeyboardEvent): string => {
@@ -857,7 +881,7 @@ const handleChange = useCallback(() => {
     };
   }, [isEditorFocused, keyboardShortcuts, getKeyCombo]);
 
-  // Click outside handler with improved logic
+  // Click outside handler
   const handleClickOutside = useCallback((event: MouseEvent) => {
     const target = event.target as Element;
     
@@ -977,6 +1001,36 @@ const handleChange = useCallback(() => {
       });
     };
   }, [content, handleChange, componentsLoaded]);
+
+  // Initialize editor content with preservation
+  useEffect(() => {
+    if (initialValue && editorRef.current && Object.values(componentsLoaded).some(Boolean)) {
+      // Only set initial value if content ref is empty (first time)
+      if (!contentRef.current) {
+        contentRef.current = initialValue;
+        editorRef.current.innerHTML = initialValue;
+        
+        const timer = setTimeout(() => {
+          if (componentsLoaded.code && helpersRef.current.refreshAllCodeBlockHighlighting) {
+            try {
+              helpersRef.current.refreshAllCodeBlockHighlighting(editorRef);
+            } catch (error) {
+              console.warn('Error refreshing code highlighting:', error);
+            }
+          }
+          if (componentsLoaded.table && helpersRef.current.setupTableHandlers) {
+            try {
+              helpersRef.current.setupTableHandlers(editorRef);
+            } catch (error) {
+              console.warn('Error setting up table handlers:', error);
+            }
+          }
+        }, 100);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [initialValue, componentsLoaded]);
 
   // Event handlers
   const handleTextColor = useCallback((color: string) => {
@@ -1227,46 +1281,248 @@ const handleChange = useCallback(() => {
 
   // Color button click handlers
   const handleTextColorClick = useCallback(() => {
-    console.log('=== TEXT COLOR BUTTON CLICKED ===');
-    
     saveSelection();
     
     setTimeout(() => {
       const buttonElement = findTextColorButton();
       
       if (buttonElement) {
-        console.log('Found text color button, positioning picker...');
         updateColorPickerPosition(buttonElement);
         setShowColorPicker(!showColorPicker);
         setShowBackgroundColorPicker(false);
       } else {
-        console.warn('Text color button not found, showing with default position');
         setShowColorPicker(!showColorPicker);
         setShowBackgroundColorPicker(false);
       }
-    }, 50);
+    }, 10);
   }, [saveSelection, findTextColorButton, updateColorPickerPosition, showColorPicker]);
 
   const handleBackgroundColorClick = useCallback(() => {
-    console.log('=== BACKGROUND COLOR BUTTON CLICKED ===');
-    
     saveSelection();
     
     setTimeout(() => {
       const buttonElement = findBackgroundColorButton();
       
       if (buttonElement) {
-        console.log('Found background color button, positioning picker...');
         updateBackgroundColorPickerPosition(buttonElement);
         setShowBackgroundColorPicker(!showBackgroundColorPicker);
         setShowColorPicker(false);
       } else {
-        console.warn('Background color button not found, showing with default position');
         setShowBackgroundColorPicker(!showBackgroundColorPicker);
         setShowColorPicker(false);
       }
-    }, 50);
+    }, 10);
   }, [saveSelection, findBackgroundColorButton, updateBackgroundColorPickerPosition, showBackgroundColorPicker]);
+
+  // CRITICAL: Memoized toolbar component to prevent re-renders
+  const ToolbarComponent = useMemo(() => (
+    <div 
+      ref={toolbarRef}
+      className="toolbar-container tw-transition-all tw-duration-200"
+      onKeyDown={handleToolbarKeyDown}
+    >
+      {/* Text Formatting Group */}
+      <div className="toolbar-group">
+        <div className="toolbar-group-label">Format</div>
+        <BoldButton 
+          onClick={() => execCommand('bold')} 
+          editorRef={editorRef}
+          handleChange={handleChange}
+          tabIndex={-1}
+        />
+        <ItalicButton 
+          onClick={() => execCommand('italic')} 
+          editorRef={editorRef}
+          handleChange={handleChange}
+          tabIndex={-1}
+        />
+        <UnderlineButton 
+          onClick={() => execCommand('underline')} 
+          tabIndex={-1}
+        />
+        <StrikethroughButton 
+          onClick={() => execCommand('strikeThrough')} 
+          tabIndex={-1}
+        />
+        <SubscriptButton 
+          onClick={() => execCommand('subscript')} 
+          tabIndex={-1}
+        />
+        <SuperscriptButton 
+          onClick={() => execCommand('superscript')} 
+          tabIndex={-1}
+        />
+        <HyperlinkButton 
+          onClick={() => {
+            const selection = window.getSelection();
+            const selectedText = selection?.toString();
+            
+            if (selectedText) {
+              const url = prompt('Enter URL:', 'https://');
+              if (url) {
+                execCommand('createLink', url);
+              }
+            } else {
+              alert('Please select text first to create a hyperlink.');
+            }
+          }} 
+          tabIndex={-1}
+        />
+      </div>
+
+      {/* Font & Typography Group */}
+      <div className="toolbar-group">
+        <div className="toolbar-group-label">Font</div>
+        <FontSizeButton 
+          ref={fontSizeButtonRef}
+          execCommand={execCommand}
+          isOpen={dropdownStates?.fontSize || false}
+          onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, fontSize: isOpen }))}
+          tabIndex={-1}
+        />
+        <FontNameButton 
+          execCommand={execCommand}
+          isOpen={dropdownStates?.fontName || false}
+          onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, fontName: isOpen }))}
+          tabIndex={-1}
+        />
+        <HeadingButton 
+          ref={headingButtonRef}
+          execCommand={execCommand}
+          isOpen={dropdownStates?.heading || false}
+          onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, heading: isOpen }))}
+          tabIndex={-1}
+        />
+      </div>
+
+      {/* Text Color Group with proper ref setup */}
+      <div className="toolbar-group">
+        <div className="toolbar-group-label">Color</div>
+        <div className="tw-relative text-color-picker-button">
+          <TextColorButton 
+            ref={textColorButtonRef}
+            onClick={handleTextColorClick}
+            currentColor={currentTextColor}
+            tabIndex={-1}
+          />
+        </div>
+        
+        <div className="tw-relative background-color-picker-button">
+          <BackgroundColorButton 
+            ref={backgroundColorButtonRef}
+            onClick={handleBackgroundColorClick}
+            currentColor={currentBackgroundColor}
+            tabIndex={-1}
+          />
+        </div>
+      </div>
+
+      {/* Alignment Group */}
+      <div className="toolbar-group">
+        <div className="toolbar-group-label">Align</div>
+        <AlignmentButton 
+          ref={alignmentButtonRef}
+          execCommand={execCommand}
+          isOpen={dropdownStates?.alignment || false}
+          onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, alignment: isOpen }))}
+          tabIndex={-1}
+        />
+      </div>
+
+      {/* Lists Group */}
+      <div className="toolbar-group">
+        <div className="toolbar-group-label">Lists</div>
+        <BulletListButton 
+          editorRef={editorRef}
+          handleChange={handleChange}
+          dropdownStates={dropdownStates}
+          setDropdownStates={setDropdownStates}
+          tabIndex={-1}
+        />
+        <NumberedListButton 
+          editorRef={editorRef}
+          handleChange={handleChange}
+          dropdownStates={dropdownStates}
+          setDropdownStates={setDropdownStates}
+          tabIndex={-1}
+        />
+        <MultilevelListButton 
+          editorRef={editorRef}
+          handleChange={handleChange}
+          dropdownStates={dropdownStates}
+          setDropdownStates={setDropdownStates}
+          tabIndex={-1}
+        />
+      </div>
+
+      {/* Insert Group */}
+      <div className="toolbar-group">
+        <div className="toolbar-group-label">Insert</div>
+        
+        <ImageGradientButton 
+          onClick={() => {
+            setShowImageModal(true);
+          }}
+        />
+        
+        <EquationGradientButton 
+          onClick={() => {
+            saveSelection();
+            setShowEquationModal(true);
+          }}
+        />
+        
+        <CodeButton 
+          onClick={() => {
+            saveSelection();
+            setShowCodeModal(true);
+          }}
+          tabIndex={-1}
+        />
+        
+        <TableButton 
+          onClick={() => {
+            saveSelection();
+            setShowTableModal(true);
+          }}
+          tabIndex={-1}
+        />
+        
+        <KeyConceptButton 
+          onClick={handleKeyConceptInsert}
+          tabIndex={-1}
+        />
+        
+        <PracticeButton 
+          onClick={() => {
+            saveSelection();
+            setShowPracticeModal(true);
+          }}
+          tabIndex={-1}
+        />
+      </div>
+
+      {/* Tools Group */}
+      <div className="toolbar-group">
+        <div className="toolbar-group-label">Tools</div>
+        <HelpButton 
+          onClick={() => setShowHelpModal(true)}
+          tabIndex={-1}
+        />
+      </div>
+    </div>
+  ), [
+    handleToolbarKeyDown,
+    execCommand,
+    handleChange,
+    dropdownStates,
+    handleTextColorClick,
+    currentTextColor,
+    handleBackgroundColorClick,
+    currentBackgroundColor,
+    saveSelection,
+    handleKeyConceptInsert
+  ]);
 
   // Dynamic styles
   const dynamicStyles = useMemo(() => {
@@ -1305,13 +1561,19 @@ const handleChange = useCallback(() => {
         border: 2px solid #800080 !important;
       }
 
-      /* FIXED: High Z-Index for Portal Elements with absolute positioning for scrollable behavior */
-      body > div[style*="position: absolute"][style*="z-index: 99999"] {
-        z-index: 99999 !important;
+      /* Color picker portal with fixed positioning */
+      .color-picker-portal {
+        position: fixed !important;
+        z-index: 999999 !important;
+        background: white;
+        border: 2px solid #c084fc;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
         pointer-events: auto;
+        will-change: transform;
       }
 
-      /* Responsive Toolbar Styles */
+      /* Layout-based toolbar positioning */
       .toolbar-container {
         display: flex;
         flex-wrap: wrap;
@@ -1322,6 +1584,17 @@ const handleChange = useCallback(() => {
         max-width: 100%;
         overflow: visible;
         position: relative;
+        will-change: transform;
+        transform: translateZ(0);
+        transition: all 0.3s ease;
+      }
+
+      /* Bottom toolbar variation */
+      .editor-container[data-toolbar-bottom="true"] .toolbar-container {
+        border-bottom: none;
+        border-top: 1px solid #c084fc;
+        background: linear-gradient(180deg, #f3e8ff 0%, #ede9fe 100%);
+        border-radius: 0 0 8px 8px;
       }
 
       .toolbar-group {
@@ -1336,11 +1609,14 @@ const handleChange = useCallback(() => {
         flex-shrink: 0;
         min-width: 0;
         position: relative;
+        transition: all 0.15s ease;
       }
       
       .toolbar-group:hover {
         background: #faf5ff;
         border-color: #a855f7;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       }
 
       .toolbar-group-label {
@@ -1493,17 +1769,6 @@ const handleChange = useCallback(() => {
         }
       }
 
-      /* FIXED: Color picker portal styles with absolute positioning for scrollable behavior */
-      .color-picker-portal {
-        position: absolute;
-        z-index: 99999;
-        background: white;
-        border: 2px solid #c084fc;
-        border-radius: 8px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-        pointer-events: auto;
-      }
-
       /* Ensure proper text wrapping in editor */
       .editor-content * {
         max-width: 100%;
@@ -1529,7 +1794,7 @@ const handleChange = useCallback(() => {
         word-wrap: break-word;
       }
 
-      /* Dropdown Portal Styles */
+      /* Dropdown and tooltip styles with proper z-indexing */
       .dropdown-portal {
         z-index: 99999 !important;
         position: absolute;
@@ -1538,6 +1803,7 @@ const handleChange = useCallback(() => {
         border-radius: 12px;
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         animation: dropdownFadeIn 0.15s ease-out;
+        will-change: transform, opacity;
       }
 
       @keyframes dropdownFadeIn {
@@ -1551,30 +1817,48 @@ const handleChange = useCallback(() => {
         }
       }
 
-      /* Tooltip Portal Styles */
+      /* Enhanced Tooltip styles */
       .tooltip-portal {
-        z-index: 99999 !important;
-        position: absolute;
-        background: #1f2937;
+        z-index: 999999 !important;
+        position: fixed !important;
+        background: rgba(31, 41, 55, 0.95);
+        backdrop-filter: blur(4px);
         color: white;
-        padding: 4px 8px;
+        padding: 6px 10px;
         border-radius: 6px;
         font-size: 12px;
         font-weight: 500;
         white-space: nowrap;
         pointer-events: none;
         animation: tooltipFadeIn 0.15s ease-out;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        will-change: transform, opacity;
       }
 
       @keyframes tooltipFadeIn {
         from {
           opacity: 0;
-          transform: scale(0.95);
+          transform: scale(0.9);
         }
         to {
           opacity: 1;
           transform: scale(1);
         }
+      }
+
+      /* Prevent layout shifts during tooltip display */
+      .toolbar-group button {
+        position: relative;
+        will-change: transform;
+      }
+
+      .toolbar-group button:hover {
+        transform: none !important;
+      }
+
+      .toolbar-group button:focus {
+        outline: 2px solid #a855f7;
+        outline-offset: 2px;
       }
     `;
 
@@ -1648,6 +1932,7 @@ const handleChange = useCallback(() => {
       ref={containerRef}
       className="editor-container"
       data-editor-id={uniqueEditorId}
+      data-toolbar-bottom={isToolbarBottom.toString()}
     >
       {/* Skip to Editor Link */}
       <a 
@@ -1667,205 +1952,8 @@ const handleChange = useCallback(() => {
         Skip to Editor (Alt+E)
       </a>
 
-      <div 
-        ref={toolbarRef}
-        className="toolbar-container tw-transition-all tw-duration-200"
-        style={toolbarStyle}
-        onKeyDown={handleToolbarKeyDown}
-      >
-        {/* Text Formatting Group */}
-        <div className="toolbar-group">
-          <div className="toolbar-group-label">Format</div>
-          <BoldButton 
-            onClick={() => execCommand('bold')} 
-            editorRef={editorRef}
-            handleChange={handleChange}
-            tabIndex={-1}
-          />
-          <ItalicButton 
-            onClick={() => execCommand('italic')} 
-            editorRef={editorRef}
-            handleChange={handleChange}
-            tabIndex={-1}
-          />
-          <UnderlineButton 
-            onClick={() => execCommand('underline')} 
-            tabIndex={-1}
-          />
-          <StrikethroughButton 
-            onClick={() => execCommand('strikeThrough')} 
-            tabIndex={-1}
-          />
-          <SubscriptButton 
-            onClick={() => execCommand('subscript')} 
-            tabIndex={-1}
-          />
-          <SuperscriptButton 
-            onClick={() => execCommand('superscript')} 
-            tabIndex={-1}
-          />
-          <HyperlinkButton 
-            onClick={() => {
-              const selection = window.getSelection();
-              const selectedText = selection?.toString();
-              
-              if (selectedText) {
-                const url = prompt('Enter URL:', 'https://');
-                if (url) {
-                  execCommand('createLink', url);
-                }
-              } else {
-                alert('Please select text first to create a hyperlink.');
-              }
-            }} 
-            tabIndex={-1}
-          />
-        </div>
-
-        {/* Font & Typography Group */}
-        <div className="toolbar-group">
-          <div className="toolbar-group-label">Font</div>
-          <FontSizeButton 
-            ref={fontSizeButtonRef}
-            execCommand={execCommand}
-            isOpen={dropdownStates?.fontSize || false}
-            onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, fontSize: isOpen }))}
-            tabIndex={-1}
-          />
-          <FontNameButton 
-            execCommand={execCommand}
-            isOpen={dropdownStates?.fontName || false}
-            onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, fontName: isOpen }))}
-            tabIndex={-1}
-          />
-          <HeadingButton 
-            ref={headingButtonRef}
-            execCommand={execCommand}
-            isOpen={dropdownStates?.heading || false}
-            onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, heading: isOpen }))}
-            tabIndex={-1}
-          />
-        </div>
-
-        {/* Text Color Group with proper ref setup */}
-        <div className="toolbar-group">
-          <div className="toolbar-group-label">Color</div>
-          <div className="tw-relative text-color-picker-button">
-            <TextColorButton 
-              ref={textColorButtonRef}
-              onClick={handleTextColorClick}
-              currentColor={currentTextColor}
-              tabIndex={-1}
-            />
-          </div>
-          
-          <div className="tw-relative background-color-picker-button">
-            <BackgroundColorButton 
-              ref={backgroundColorButtonRef}
-              onClick={handleBackgroundColorClick}
-              currentColor={currentBackgroundColor}
-              tabIndex={-1}
-            />
-          </div>
-        </div>
-
-        {/* Alignment Group */}
-        <div className="toolbar-group">
-          <div className="toolbar-group-label">Align</div>
-          <AlignmentButton 
-            ref={alignmentButtonRef}
-            execCommand={execCommand}
-            isOpen={dropdownStates?.alignment || false}
-            onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, alignment: isOpen }))}
-            tabIndex={-1}
-          />
-        </div>
-
-        {/* Lists Group */}
-        <div className="toolbar-group">
-          <div className="toolbar-group-label">Lists</div>
-          <BulletListButton 
-            editorRef={editorRef}
-            handleChange={handleChange}
-            dropdownStates={dropdownStates}
-            setDropdownStates={setDropdownStates}
-            tabIndex={-1}
-          />
-          <NumberedListButton 
-            editorRef={editorRef}
-            handleChange={handleChange}
-            dropdownStates={dropdownStates}
-            setDropdownStates={setDropdownStates}
-            tabIndex={-1}
-          />
-          <MultilevelListButton 
-            editorRef={editorRef}
-            handleChange={handleChange}
-            dropdownStates={dropdownStates}
-            setDropdownStates={setDropdownStates}
-            tabIndex={-1}
-          />
-        </div>
-
-        {/* Insert Group - Updated with gradient buttons */}
-        <div className="toolbar-group">
-          <div className="toolbar-group-label">Insert</div>
-          
-          {/* Image Button - using gradient style with tabIndex */}
-          <ImageGradientButton 
-            onClick={() => {
-              setShowImageModal(true);
-            }}
-          />
-          
-          {/* Equation Button - using gradient style with tabIndex */}
-          <EquationGradientButton 
-            onClick={() => {
-              saveSelection();
-              setShowEquationModal(true);
-            }}
-          />
-          
-          {/* Code Button - already using gradient style */}
-          <CodeButton 
-            onClick={() => {
-              saveSelection();
-              setShowCodeModal(true);
-            }}
-            tabIndex={-1}
-          />
-          
-          <TableButton 
-            onClick={() => {
-              saveSelection();
-              setShowTableModal(true);
-            }}
-            tabIndex={-1}
-          />
-          
-          <KeyConceptButton 
-            onClick={handleKeyConceptInsert}
-            tabIndex={-1}
-          />
-          
-          <PracticeButton 
-            onClick={() => {
-              saveSelection();
-              setShowPracticeModal(true);
-            }}
-            tabIndex={-1}
-          />
-        </div>
-
-        {/* Tools Group */}
-        <div className="toolbar-group">
-          <div className="toolbar-group-label">Tools</div>
-          <HelpButton 
-            onClick={() => setShowHelpModal(true)}
-            tabIndex={-1}
-          />
-        </div>
-      </div>
+      {/* CONDITIONAL LAYOUT: Toolbar first when normal, Editor first when bottom */}
+      {!isToolbarBottom && ToolbarComponent}
       
       {/* Editor */}
       <div
@@ -1877,11 +1965,14 @@ const handleChange = useCallback(() => {
         onBlur={handleEditorBlur}
         onPaste={handlePaste}
         onFocus={handleEditorFocus}
-        tabIndex={0} // Make sure editor is focusable and first in tab order after toolbar
+        tabIndex={0}
         role="textbox"
         aria-label="Text editor"
         aria-describedby="editor-help"
       />
+      
+      {/* CONDITIONAL LAYOUT: Toolbar after editor when bottom */}
+      {isToolbarBottom && ToolbarComponent}
       
       {/* Hidden helper text for screen readers */}
       <div id="editor-help" className="tw-sr-only">
@@ -1891,17 +1982,17 @@ const handleChange = useCallback(() => {
       {/* Dynamic Styles */}
       <style jsx>{dynamicStyles}</style>
       
-      {/* FIXED: Color Pickers with Portal - Absolute positioning for scrollable behavior */}
+      {/* Color Pickers with Portal - Fixed positioning */}
       {showColorPicker && (
         <Portal>
           <div 
             ref={colorPickerRef} 
             className="color-picker-portal"
             style={{
-              position: 'absolute',
+              position: 'fixed',
               top: `${colorPickerPosition.top}px`,
               left: `${colorPickerPosition.left}px`,
-              zIndex: 99999,
+              zIndex: 999999,
             }}
           >
             <ColorPicker 
@@ -1920,10 +2011,10 @@ const handleChange = useCallback(() => {
             ref={backgroundColorPickerRef} 
             className="color-picker-portal"
             style={{
-              position: 'absolute',
+              position: 'fixed',
               top: `${backgroundColorPickerPosition.top}px`,
               left: `${backgroundColorPickerPosition.left}px`,
-              zIndex: 99999,
+              zIndex: 999999,
             }}
           >
             <ColorPicker 

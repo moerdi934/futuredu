@@ -1,10 +1,10 @@
-// controllers/products.controller.ts - Updated with is_stackable support
+// controllers/products.controller.ts - Updated with Coin System Support
 import { NextApiRequest, NextApiResponse } from 'next';
 import pool from '../lib/db';
-import ProductModel, { ProductPrice } from '../models/products.model';
+import ProductModel, { ProductPrice, ProductCoinReward } from '../models/products.model';
 import { PoolClient } from 'pg';
 
-// Types for request bodies (updated with is_stackable)
+// Types for request bodies (updated with coin support)
 export interface UpdateProductRequest {
   name: string;
   description: string;
@@ -12,10 +12,13 @@ export interface UpdateProductRequest {
   type: number;
   features: string[];
   classtype: string;
-  is_stackable?: boolean;  // New field
+  is_stackable?: boolean;
+  coin_price?: number; // NEW
+  coin_type?: 'class' | 'course' | 'tryout'; // NEW
   course_ids?: number[];
   exam_schedule_ids?: number[];
   prices?: ProductPrice[];
+  coin_rewards?: ProductCoinReward[]; // NEW: For coin topup products
 }
 
 export interface UpdateProductPricesRequest {
@@ -31,7 +34,20 @@ export interface CreateProductRequest {
   exam_schedule_id?: number;
   features: string[];
   classtype: string;
-  is_stackable?: boolean;  // New field
+  is_stackable?: boolean;
+  coin_price?: number; // NEW
+  coin_type?: 'class' | 'course' | 'tryout'; // NEW
+  coin_rewards?: ProductCoinReward[]; // NEW
+}
+
+// NEW: Coin-specific request types
+export interface UpdateProductCoinSettingsRequest {
+  coin_price?: number;
+  coin_type?: 'class' | 'course' | 'tryout';
+}
+
+export interface UpdateProductCoinRewardsRequest {
+  coin_rewards: ProductCoinReward[];
 }
 
 // Helper functions for entitlements (unchanged)
@@ -133,7 +149,7 @@ const ProductController = {
     try {
       await client.query('BEGIN');
 
-      // --- Ambil data dari body (updated to include is_stackable)
+      // --- Ambil data dari body (updated to include coin settings)
       const {
         name, 
         description, 
@@ -141,20 +157,23 @@ const ProductController = {
         type, 
         features, 
         classtype,
-        is_stackable = true,  // Default to true if not provided
+        is_stackable = true,
+        coin_price, // NEW
+        coin_type, // NEW
         course_ids = [], 
         exam_schedule_ids = [],
-        prices = []
+        prices = [],
+        coin_rewards = [] // NEW
       }: UpdateProductRequest = req.body;
       
       const { id } = req.query;
 
-      // --- 1. Update produk utama (including is_stackable)
+      // --- 1. Update produk utama (including coin settings)
       await client.query(`
         UPDATE products SET name=$1, description=$2, stock=$3, type=$4,
-          features=$5, classtype=$6, is_stackable=$7, updated_at=NOW()
-        WHERE product_id=$8
-      `, [name, description, stock, type, features, classtype, is_stackable, id]);
+          features=$5, classtype=$6, is_stackable=$7, coin_price=$8, coin_type=$9, updated_at=NOW()
+        WHERE product_id=$10
+      `, [name, description, stock, type, features, classtype, is_stackable, coin_price || null, coin_type || null, id]);
 
       // --- Handle special logic for non-stackable products
       if (!is_stackable) {
@@ -221,6 +240,11 @@ const ProductController = {
           id, p.price, p.effective_start, p.effective_end, p.description || null,
           p.is_promo || false, p.no_promo_price || null, p.promo_description || null
         ]);
+      }
+
+      // --- 5. NEW: Update coin rewards (for coin topup products)
+      if (coin_rewards.length > 0 || type === 15) { // Type 15 = coin topup products
+        await ProductModel.setProductCoinRewards(id as string, coin_rewards, client);
       }
 
       await client.query('COMMIT');
@@ -308,12 +332,16 @@ const ProductController = {
       exam_schedule_id, 
       features, 
       classtype,
-      is_stackable = true  // Default to true for new products
+      is_stackable = true,
+      coin_price, // NEW
+      coin_type, // NEW
+      coin_rewards = [] // NEW
     }: CreateProductRequest = req.body;
     
     try {
       const newProduct = await ProductModel.createProduct({
-        name, description, price, stock, type, exam_schedule_id, features, classtype, is_stackable
+        name, description, price, stock, type, exam_schedule_id, features, classtype, 
+        is_stackable, coin_price, coin_type, coin_rewards
       });
       return res.json({ success: true, data: newProduct });
     } catch (error: any) {
@@ -322,7 +350,7 @@ const ProductController = {
     }
   },
 
-  // New endpoint: Update only product stackability
+  // Update only product stackability
   updateProductStackability: async (req: NextApiRequest, res: NextApiResponse) => {
     const { id } = req.query;
     const { is_stackable }: { is_stackable: boolean } = req.body;
@@ -359,6 +387,135 @@ const ProductController = {
       res.status(500).json({ success: false, message: err.message });
     } finally {
       client.release();
+    }
+  },
+
+  // NEW: Update product coin settings
+  updateProductCoinSettings: async (req: NextApiRequest, res: NextApiResponse) => {
+    const { id } = req.query;
+    const { coin_price, coin_type }: UpdateProductCoinSettingsRequest = req.body;
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      const success = await ProductModel.updateProductCoinSettings(
+        id as string, 
+        coin_price || null, 
+        coin_type || null, 
+        client
+      );
+      
+      if (!success) {
+        throw new Error('Product not found or update failed');
+      }
+      
+      await client.query('COMMIT');
+      res.json({ 
+        success: true, 
+        message: 'Product coin settings updated successfully' 
+      });
+    } catch (err: any) {
+      await client.query('ROLLBACK');
+      console.error('Error updating product coin settings:', err);
+      res.status(500).json({ success: false, message: err.message });
+    } finally {
+      client.release();
+    }
+  },
+
+  // NEW: Update product coin rewards
+  updateProductCoinRewards: async (req: NextApiRequest, res: NextApiResponse) => {
+    const { id } = req.query;
+    const { coin_rewards }: UpdateProductCoinRewardsRequest = req.body;
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      await ProductModel.setProductCoinRewards(id as string, coin_rewards, client);
+      
+      await client.query('COMMIT');
+      res.json({ 
+        success: true, 
+        message: 'Product coin rewards updated successfully' 
+      });
+    } catch (err: any) {
+      await client.query('ROLLBACK');
+      console.error('Error updating product coin rewards:', err);
+      res.status(500).json({ success: false, message: err.message });
+    } finally {
+      client.release();
+    }
+  },
+
+  // NEW: Get coin topup products
+  getCoinTopupProducts: async (req: NextApiRequest, res: NextApiResponse) => {
+    try {
+      const products = await ProductModel.getCoinTopupProducts();
+      return res.json({ success: true, data: products });
+    } catch (error: any) {
+      console.error('Error fetching coin topup products:', error);
+      return res.status(500).json({ success: false, message: 'Failed to fetch coin topup products' });
+    }
+  },
+
+  // NEW: Get products buyable with coins
+  getProductsBuyableWithCoins: async (req: NextApiRequest, res: NextApiResponse) => {
+    const { coin_type } = req.query;
+    try {
+      const products = await ProductModel.getProductsBuyableWithCoins(
+        coin_type as 'class' | 'course' | 'tryout' | undefined
+      );
+      return res.json({ success: true, data: products });
+    } catch (error: any) {
+      console.error('Error fetching products buyable with coins:', error);
+      return res.status(500).json({ success: false, message: 'Failed to fetch products buyable with coins' });
+    }
+  },
+
+  // NEW: Validate coin purchase for a product
+  validateCoinPurchase: async (req: NextApiRequest, res: NextApiResponse) => {
+    try {
+      const { productId, userId } = req.query;
+      
+      if (!productId || !userId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Product ID and User ID are required' 
+        });
+      }
+      
+      const validation = await ProductModel.validateCoinPurchase(
+        parseInt(userId as string), 
+        parseInt(productId as string)
+      );
+      
+      return res.json({ success: true, data: validation });
+    } catch (error: any) {
+      console.error('Error validating coin purchase:', error);
+      return res.status(500).json({ success: false, message: 'Failed to validate coin purchase' });
+    }
+  },
+
+  // NEW: Get coin requirements for cart
+  getCoinRequirementsForCart: async (req: NextApiRequest, res: NextApiResponse) => {
+    try {
+      const { productIds } = req.body;
+      
+      if (!productIds || !Array.isArray(productIds)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Product IDs array is required' 
+        });
+      }
+      
+      const requirements = await ProductModel.getCoinRequirementsForCart(productIds);
+      
+      return res.json({ success: true, data: requirements });
+    } catch (error: any) {
+      console.error('Error getting coin requirements for cart:', error);
+      return res.status(500).json({ success: false, message: 'Failed to get coin requirements' });
     }
   }
 };

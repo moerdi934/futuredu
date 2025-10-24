@@ -1,4 +1,4 @@
-// models/examTypes.model.ts
+// models/examTypes.model.ts - Updated with array grade support
 import pool from '../lib/db';
 
 // Types
@@ -9,10 +9,14 @@ export interface ExamType {
   description?: string;
   kind?: number;
   master_id?: string;
+  mix_master_id?: string[];
+  grade?: number[];
   create_user_id?: string;
   edit_user_id?: string;
   create_date?: Date;
   edit_date?: Date;
+  creator?: string;
+  editor?: string;
 }
 
 export interface ExamTypeCreateData {
@@ -21,6 +25,8 @@ export interface ExamTypeCreateData {
   code?: string;
   kind?: number;
   master_id?: string;
+  mix_master_id?: string[];
+  grade?: number[];
   create_user_id?: string;
 }
 
@@ -30,6 +36,8 @@ export interface ExamTypeUpdateData {
   code?: string;
   kind?: number;
   master_id?: string;
+  mix_master_id?: string[];
+  grade?: number[];
   edit_user_id?: string;
 }
 
@@ -39,13 +47,23 @@ export interface ExamTypeSearchOptions {
   page?: number;
   limit?: number;
   search?: string;
-  kind?: number;
+  kind?: number; // Single kind (backward compatible)
+  kinds?: number[]; // Multiple kinds (NEW)
   masterId?: string;
+  grade?: number;
 }
 
 export interface ExamTypeSearchResult {
   examTypes: ExamType[];
   total: number;
+}
+
+export interface ExamTypePagedResult {
+  data: ExamType[];
+  total: number;
+  currentPage: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 export interface SubtopicInfo {
@@ -66,12 +84,27 @@ const getAllExamTypes = async (options: ExamTypeSearchOptions = {}): Promise<Exa
 
   const offset = (page - 1) * limit;
   let query = `
-    SELECT id, name, code, COUNT(*) OVER() AS total
-    FROM exam_types
+    SELECT 
+      et.id, 
+      et.name, 
+      et.code, 
+      et.description,
+      et.kind,
+      et.master_id,
+      et.mix_master_id,
+      et.grade,
+      et.create_date,
+      et.edit_date,
+      cu.name as creator,
+      eu.name as editor,
+      COUNT(*) OVER() AS total
+    FROM exam_types et
+    LEFT JOIN v_dashboard_userdata cu ON et.create_user_id = cu.userid
+    LEFT JOIN v_dashboard_userdata eu ON et.edit_user_id = eu.userid
   `;
 
   const values: any[] = [];
-  const validSortFields = ['id', 'name', 'code'];
+  const validSortFields = ['id', 'name', 'code', 'kind', 'create_date'];
   if (validSortFields.includes(sortField.toLowerCase()) && ['asc', 'desc'].includes(sortOrder.toLowerCase())) {
     query += ` ORDER BY ${sortField} ${sortOrder.toUpperCase()}`;
   } else {
@@ -79,6 +112,7 @@ const getAllExamTypes = async (options: ExamTypeSearchOptions = {}): Promise<Exa
   }
 
   query += ` LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+  
   try {
     const result = await pool.query(query, [limit, offset]);
     return {
@@ -94,7 +128,23 @@ const getAllExamTypes = async (options: ExamTypeSearchOptions = {}): Promise<Exa
 const getExamTypeById = async (id: string): Promise<ExamType | undefined> => {
   try {
     const result = await pool.query(
-      'SELECT id, name, code FROM exam_types WHERE id = $1',
+      `SELECT 
+        et.id, 
+        et.name, 
+        et.code, 
+        et.description,
+        et.kind,
+        et.master_id,
+        et.mix_master_id,
+        et.grade,
+        et.create_date,
+        et.edit_date,
+        cu.name as creator,
+        eu.name as editor
+      FROM exam_types et
+      LEFT JOIN v_dashboard_userdata cu ON et.create_user_id = cu.userid
+      LEFT JOIN v_dashboard_userdata eu ON et.edit_user_id = eu.userid
+      WHERE et.id = $1`,
       [id]
     );
     return result.rows[0];
@@ -105,13 +155,14 @@ const getExamTypeById = async (id: string): Promise<ExamType | undefined> => {
 };
 
 const createExamType = async (data: ExamTypeCreateData): Promise<ExamType> => {
-  const { name, description, code, kind, master_id, create_user_id } = data;
+  const { name, description, code, kind, master_id, mix_master_id, grade, create_user_id } = data;
   try {
     const result = await pool.query(
-      `INSERT INTO exam_types (name, description, code, kind, master_id, create_user_id, create_date)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())
-       RETURNING id, name, code`,
-      [name, description, code, kind, master_id, create_user_id]
+      `INSERT INTO exam_types (name, description, code, kind, master_id, mix_master_id, grade, create_user_id, create_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+       RETURNING 
+         id, name, code, description, kind, master_id, mix_master_id, grade, create_date`,
+      [name, description, code, kind, master_id, mix_master_id, grade, create_user_id]
     );
     return result.rows[0];
   } catch (error) {
@@ -121,15 +172,16 @@ const createExamType = async (data: ExamTypeCreateData): Promise<ExamType> => {
 };
 
 const updateExamType = async (id: string, data: ExamTypeUpdateData): Promise<ExamType | undefined> => {
-  const { name, description, code, kind, master_id, edit_user_id } = data;
+  const { name, description, code, kind, master_id, mix_master_id, grade, edit_user_id } = data;
   try {
     const result = await pool.query(
       `UPDATE exam_types 
        SET name = $1, description = $2, code = $3, kind = $4, master_id = $5,
-           edit_user_id = $6, edit_date = NOW()
-       WHERE id = $7
-       RETURNING id, name, code`,
-      [name, description, code, kind, master_id, edit_user_id, id]
+           mix_master_id = $6, grade = $7, edit_user_id = $8, edit_date = NOW()
+       WHERE id = $9
+       RETURNING 
+         id, name, code, description, kind, master_id, mix_master_id, grade, edit_date`,
+      [name, description, code, kind, master_id, mix_master_id, grade, edit_user_id, id]
     );
     return result.rows[0];
   } catch (error) {
@@ -140,6 +192,16 @@ const updateExamType = async (id: string, data: ExamTypeUpdateData): Promise<Exa
 
 const deleteExamType = async (id: string): Promise<ExamType | undefined> => {
   try {
+    // Check if exam type is being used
+    const usageCheck = await pool.query(
+      `SELECT COUNT(*) as count FROM exam_types WHERE master_id = $1 OR $1 = ANY(mix_master_id)`,
+      [id]
+    );
+    
+    if (parseInt(usageCheck.rows[0].count) > 0) {
+      throw new Error('Cannot delete exam type that is being used as master');
+    }
+
     const result = await pool.query(
       'DELETE FROM exam_types WHERE id = $1 RETURNING id',
       [id]
@@ -159,12 +221,9 @@ const searchExamTypes = async (options: ExamTypeSearchOptions = {}): Promise<Exa
     sortOrder = 'asc',
     page = 1,
     limit = 10,
-    masterId
+    masterId,
+    grade
   } = options;
-
-  if (kind === undefined) {
-    throw new Error('Kind parameter is required');
-  }
 
   const offset = (page - 1) * limit;
   let query = `
@@ -172,29 +231,44 @@ const searchExamTypes = async (options: ExamTypeSearchOptions = {}): Promise<Exa
       et.id, 
       et.name, 
       et.code, 
+      et.description,
+      et.kind,
+      et.master_id,
+      et.mix_master_id,
+      et.grade,
+      et.create_date,
+      et.edit_date,
+      cu.name as creator,
+      eu.name as editor,
       COUNT(*) OVER() AS total
-      ${kind == 3 ? `, COALESCE((
-        SELECT MAX(CAST(SUBSTRING(q.code FROM 8 FOR 4) AS INTEGER)) + 1
-        FROM questions q
-        WHERE SUBSTRING(q.code FROM 6 FOR 2) = et.code
-      ), 1) AS "NextID"` : ''}
     FROM exam_types et
+    LEFT JOIN v_dashboard_userdata cu ON et.create_user_id = cu.userid
+    LEFT JOIN v_dashboard_userdata eu ON et.edit_user_id = eu.userid
     WHERE (et.name ILIKE $1 OR et.description ILIKE $1 OR et.code ILIKE $1)
-    AND kind = $2
   `;
-  const values: any[] = [`%${search}%`, kind];
+  
+  const values: any[] = [`%${search}%`];
 
-  // Tambahkan kondisi master_id jika masterId tersedia
+  if (kind !== undefined) {
+    query += ` AND et.kind = $${values.length + 1}`;
+    values.push(kind);
+  }
+
   if (masterId !== undefined && masterId !== null) {
     query += ` AND et.master_id = $${values.length + 1}`;
     values.push(masterId);
   }
 
-  const validSortFields = ['id', 'name', 'code'];
+  if (grade !== undefined && grade !== null) {
+    query += ` AND $${values.length + 1} = ANY(et.grade)`;
+    values.push(grade);
+  }
+
+  const validSortFields = ['id', 'name', 'code', 'kind', 'create_date'];
   if (validSortFields.includes(sortField.toLowerCase()) && ['asc', 'desc'].includes(sortOrder.toLowerCase())) {
-    query += ` ORDER BY ${sortField} ${sortOrder.toUpperCase()}`;
+    query += ` ORDER BY et.${sortField} ${sortOrder.toUpperCase()}`;
   } else {
-    query += ` ORDER BY name ASC`;
+    query += ` ORDER BY et.name ASC`;
   }
 
   query += ` LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
@@ -208,6 +282,102 @@ const searchExamTypes = async (options: ExamTypeSearchOptions = {}): Promise<Exa
     };
   } catch (error) {
     console.error('Error searching exam types:', error);
+    throw error;
+  }
+};
+
+const getPagedExamTypes = async (options: ExamTypeSearchOptions = {}): Promise<ExamTypePagedResult> => {
+  const {
+    search = '',
+    kind, // Single kind (backward compatible)
+    kinds, // Multiple kinds (NEW)
+    sortField = 'id',
+    sortOrder = 'desc',
+    page = 1,
+    limit = 10,
+    masterId,
+    grade
+  } = options;
+
+  const offset = (page - 1) * limit;
+  
+  let query = `
+    SELECT 
+      et.id, 
+      et.name, 
+      et.code, 
+      et.description,
+      et.kind,
+      et.master_id,
+      et.mix_master_id,
+      et.grade,
+      et.create_date,
+      et.edit_date,
+      cu.name as creator,
+      eu.name as editor,
+      CASE 
+        WHEN et.master_id IS NOT NULL THEN (SELECT name FROM exam_types WHERE id = et.master_id)
+        ELSE NULL
+      END as master_name,
+      COUNT(*) OVER() AS total
+    FROM exam_types et
+    LEFT JOIN v_dashboard_userdata cu ON et.create_user_id = cu.userid
+    LEFT JOIN v_dashboard_userdata eu ON et.edit_user_id = eu.userid
+    WHERE 1=1
+  `;
+  
+  const values: any[] = [];
+
+  if (search) {
+    query += ` AND (et.name ILIKE $${values.length + 1} OR et.description ILIKE $${values.length + 1} OR et.code ILIKE $${values.length + 1})`;
+    values.push(`%${search}%`);
+  }
+
+  // Support both single kind and multiple kinds
+  if (kinds && kinds.length > 0) {
+    // Multiple kinds: use ANY with array
+    query += ` AND et.kind = ANY($${values.length + 1})`;
+    values.push(kinds);
+  } else if (kind !== undefined) {
+    // Single kind: use equality
+    query += ` AND et.kind = $${values.length + 1}`;
+    values.push(kind);
+  }
+
+  if (masterId !== undefined && masterId !== null) {
+    query += ` AND et.master_id = $${values.length + 1}`;
+    values.push(masterId);
+  }
+
+  if (grade !== undefined && grade !== null) {
+    query += ` AND $${values.length + 1} = ANY(et.grade)`;
+    values.push(grade);
+  }
+
+  const validSortFields = ['id', 'name', 'code', 'kind', 'create_date', 'edit_date'];
+  if (validSortFields.includes(sortField.toLowerCase()) && ['asc', 'desc'].includes(sortOrder.toLowerCase())) {
+    query += ` ORDER BY et.${sortField} ${sortOrder.toUpperCase()}`;
+  } else {
+    query += ` ORDER BY et.id DESC`;
+  }
+
+  query += ` LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+  values.push(limit, offset);
+
+  try {
+    const result = await pool.query(query, values);
+    const total = result.rows.length > 0 ? parseInt(result.rows[0].total) : 0;
+    const totalPages = Math.ceil(total / limit);
+    
+    return {
+      data: result.rows,
+      total,
+      currentPage: page,
+      pageSize: limit,
+      totalPages
+    };
+  } catch (error) {
+    console.error('Error getting paged exam types:', error);
     throw error;
   }
 };
@@ -259,6 +429,20 @@ const getSubtopicsInfo = async (subtopicIds: string[]): Promise<SubtopicInfo[]> 
   return result.rows;
 };
 
+// Get hierarchy data for filters
+const getKindOptions = async (kind: number): Promise<ExamType[]> => {
+  try {
+    const result = await pool.query(
+      `SELECT id, name, code FROM exam_types WHERE kind = $1 ORDER BY name ASC`,
+      [kind]
+    );
+    return result.rows;
+  } catch (error) {
+    console.error('Error getting kind options:', error);
+    throw error;
+  }
+};
+
 export {
   getAllExamTypes,
   getExamTypeById,
@@ -266,5 +450,7 @@ export {
   updateExamType,
   deleteExamType,
   searchExamTypes,
-  getSubtopicsInfo
+  getPagedExamTypes,
+  getSubtopicsInfo,
+  getKindOptions
 };

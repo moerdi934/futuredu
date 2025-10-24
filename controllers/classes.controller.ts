@@ -183,6 +183,8 @@ export const getAllClasses = async (req: AuthenticatedRequest, res: NextApiRespo
         hour: '2-digit',  
         minute: '2-digit',
       }),
+      start_date:cls.start_date,
+      end_date:cls.end_date,
       real_start_datetime: cls.real_start_datetime,
       real_end_datetime: cls.real_end_datetime,
       creator: cls.creator_name,

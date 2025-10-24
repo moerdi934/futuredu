@@ -1,10 +1,12 @@
-// controllers/Checkout.controller.ts - Updated with correct product types
+// controllers/Checkout.controller.ts - Updated with Coin Rewards Support
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
 import axios from 'axios';
 import pool from '../lib/db';
 import SalesOrder, { ItemData } from '../models/salesOrder.model';
 import Invoice from '../models/invoice.model';
+import UserCoinModel from '../models/UserCoin.model'; // NEW
+import CoinController from './Coin.controller'; // NEW
 import { AuthenticatedRequest } from '../lib/middleware/auth';
 import PQueue from 'p-queue';
 
@@ -119,7 +121,7 @@ class CheckoutController {
   }
 
   /* ────────────────────────────────────────────────────────────────────── */
-  /* 1. POST /checkout/process - Enhanced with Queue and Class Support      */
+  /* 1. POST /checkout/process - Enhanced with Queue, Class and Coin Support */
   /* ────────────────────────────────────────────────────────────────────── */
   static async processCheckout(req: CheckoutRequest, res: NextApiResponse<CheckoutResponse>) {
     return checkoutQueue.add(async () => {
@@ -169,7 +171,7 @@ class CheckoutController {
 
       lap('load-cart');
 
-      /* 1-b. Validate and get detailed product info (including classes) ▸── */
+      /* 1-b. Validate and get detailed product info (including classes and coins) ▸── */
       const productDetails = await CheckoutController.getProductDetails(selectedProductIds, client);
       
       if (productDetails.length !== products.length) {
@@ -178,7 +180,7 @@ class CheckoutController {
 
       // Check for class-specific validations
       for (const product of productDetails) {
-        if (product.type === 13) { // Class product (updated from 2 to 13)
+        if (product.type === 13) { // Class product
           // Check if class has started
           if (product.class_real_start_datetime) {
             throw new Error(`Class "${product.name}" has already started and cannot be purchased`);
@@ -199,7 +201,7 @@ class CheckoutController {
       const orderNumber = await SalesOrder.generateOrderNumber('000', client);
       lap('gen-orderNo');
 
-      // Set checkout expiry to 30 minutes (already correct)
+      // Set checkout expiry to 30 minutes
       const expiredAt = new Date(Date.now() + 30 * 60 * 1000);
       const orderId = await SalesOrder.createHeader(
         { orderNumber, userId, expiredAt }, 
@@ -247,6 +249,8 @@ class CheckoutController {
         if (currentStock < quantity) {
           if (productType === 13) { // Class products
             throw new Error(`Not enough slots available for class "${productDetail.name}". Available: ${currentStock}, Requested: ${quantity}`);
+          } else if (productType === 15) { // Coin topup products
+            throw new Error(`Not enough coin packages available for "${productDetail.name}". Available: ${currentStock}, Requested: ${quantity}`);
           } else {
             throw new Error(`Not enough stock for product "${productDetail.name}". Available: ${currentStock}, Requested: ${quantity}`);
           }
@@ -369,7 +373,7 @@ class CheckoutController {
   }
 
   /* ────────────────────────────────────────────────────────────────────── */
-  /* Helper: Get detailed product information including class data          */
+  /* Helper: Get detailed product information including class and coin data  */
   /* ────────────────────────────────────────────────────────────────────── */
   private static async getProductDetails(productIds: number[], client: PoolClient) {
     const query = `
@@ -384,10 +388,14 @@ class CheckoutController {
         c.name as class_name,
         c.student_list as class_student_list,
         c.real_start_datetime as class_real_start_datetime,
-        pc.max_students
+        pc.max_students,
+        -- NEW: Coin rewards data
+        pcoin.coin_type as coin_reward_type,
+        pcoin.amount as coin_reward_amount
       FROM products p
       LEFT JOIN product_classes pc ON p.product_id = pc.product_id
       LEFT JOIN classes c ON pc.class_id = c.id
+      LEFT JOIN product_coin pcoin ON p.product_id = pcoin.product_id
       WHERE p.product_id = ANY($1::int[])
     `;
     
@@ -425,7 +433,7 @@ class CheckoutController {
         expiry: {
           start_time: new Date().toISOString().replace('T', ' ').slice(0, 19) + ' +0000',
           unit: 'minute',
-          duration: 30  // Changed from 1440 to 30 minutes
+          duration: 30
         },
         callbacks: { 
           finish: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' 
@@ -480,7 +488,7 @@ class CheckoutController {
   }
 
   /* ────────────────────────────────────────────────────────────────────── */
-  /* 3. Callback Midtrans                                                  */
+  /* 3. Callback Midtrans - Enhanced with Coin Rewards                     */
   /* ────────────────────────────────────────────────────────────────────── */
   static async handleMidtransCallback(
     req: NextApiRequest, 
@@ -537,7 +545,7 @@ class CheckoutController {
         if (!invoiceExists) {
           const invoiceNumber = await Invoice.generateInvoiceNumber('000', client);
           
-          await Invoice.create({
+          const invoice = await Invoice.create({
             orderId,
             invoiceNumber,
             midtrans_transaction_id: notification.transaction_id,
@@ -551,7 +559,11 @@ class CheckoutController {
             acquirer: notification.acquirer
           }, client);
 
+          // Grant regular entitlements
           await CheckoutController.grantEntitlements(orderId, userId, client);
+          
+          // NEW: Grant coin rewards for coin topup products
+          await CheckoutController.grantCoinRewards(orderId, userId, invoice.invoice_id!, client);
         }
       }
 
@@ -604,7 +616,7 @@ class CheckoutController {
       }
 
       for (const item of orderItems.rows) {
-        if (item.type === 12) { // Course product (updated types)
+        if (item.type === 12) { // Course product
           if (item.course_id) {
             await client.query(
               `INSERT INTO course_entitlements
@@ -631,6 +643,7 @@ class CheckoutController {
             console.log(`User ${userId} enrolled in class ${item.class_id}`);
           }
         }
+        // Note: Type 15 (Coin topup products) are handled in grantCoinRewards
       }
 
       // Handle exam schedule entitlements for all relevant product types
@@ -658,6 +671,48 @@ class CheckoutController {
 
     } catch (error) {
       console.error('Error granting entitlements:', error);
+      throw error;
+    }
+  }
+
+  /* ────────────────────────────────────────────────────────────────────── */
+  /* NEW: Grant coin rewards for coin topup products                       */
+  /* ────────────────────────────────────────────────────────────────────── */
+  static async grantCoinRewards(orderId: number, userId: string, invoiceId: number, client: PoolClient) {
+    try {
+      // Get purchased products with coin rewards
+      const coinProducts = await client.query(`
+        SELECT 
+          soi.product_id,
+          soi.quantity,
+          p.type,
+          pc.coin_type,
+          pc.amount as coin_amount
+        FROM sales_order_item soi
+        JOIN products p ON soi.product_id = p.product_id
+        JOIN product_coin pc ON p.product_id = pc.product_id
+        WHERE soi.order_id = $1
+          AND p.type = 15  -- Coin topup products
+      `, [orderId]);
+
+      console.log(`Found ${coinProducts.rows.length} coin reward products for order ${orderId}`);
+
+      for (const coinProduct of coinProducts.rows) {
+        const totalCoins = parseFloat(coinProduct.coin_amount) * coinProduct.quantity;
+        
+        console.log(`Granting ${totalCoins} ${coinProduct.coin_type} coins to user ${userId}`);
+        
+        await UserCoinModel.addCoins({
+          user_id: parseInt(userId),
+          coin_type: coinProduct.coin_type,
+          amount: totalCoins,
+          source: 'purchase',
+          reference_id: invoiceId
+        }, client);
+      }
+
+    } catch (error) {
+      console.error('Error granting coin rewards:', error);
       throw error;
     }
   }

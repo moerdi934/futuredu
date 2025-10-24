@@ -1,141 +1,300 @@
-// components/supereditor/Toolbars/Font/Font.tsx - With Tooltip Support
-import React, { useState, useRef, useEffect } from 'react';
+// components/supereditor/Toolbars/Font/Font.tsx - Complete with All Active States
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Bold, Italic, Underline, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, Strikethrough, Subscript, Superscript, Link, Heading } from 'lucide-react';
 import { ButtonGradient } from '../../../button/ButtonTemplate';
 
-// Custom execCommand functions for semantic elements
-const execStrongCommand = (editorRef, handleChange) => {
-  const selection = window.getSelection();
-  if (selection.rangeCount === 0) return;
-  
-  const range = selection.getRangeAt(0);
-  const selectedText = range.toString();
-  
-  if (selectedText) {
-    const strong = document.createElement('strong');
-    strong.textContent = selectedText;
-    range.deleteContents();
-    range.insertNode(strong);
-    selection.removeAllRanges();
-    if (handleChange) handleChange();
-  }
+// Interface for tracking active formatting states
+interface FormattingStates {
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  strikethrough: boolean;
+  subscript: boolean;
+  superscript: boolean;
+}
+
+// Hook for tracking formatting states
+const useFormattingStates = (editorRef: React.RefObject<HTMLDivElement>) => {
+  const [states, setStates] = useState<FormattingStates>({
+    bold: false,
+    italic: false,
+    underline: false,
+    strikethrough: false,
+    subscript: false,
+    superscript: false,
+  });
+
+  const updateFormattingStates = useCallback(() => {
+    if (!editorRef.current || typeof document === 'undefined') return;
+
+    try {
+      // Make sure the editor is focused to get accurate command states
+      const isFocused = document.activeElement === editorRef.current || 
+                       editorRef.current.contains(document.activeElement);
+      
+      if (!isFocused) return;
+
+      // Check each formatting command
+      const newStates = {
+        bold: document.queryCommandState('bold'),
+        italic: document.queryCommandState('italic'),
+        underline: document.queryCommandState('underline'),
+        strikethrough: document.queryCommandState('strikeThrough'),
+        subscript: document.queryCommandState('subscript'),
+        superscript: document.queryCommandState('superscript'),
+      };
+
+      // Only update if states have actually changed to prevent unnecessary re-renders
+      setStates(prevStates => {
+        const hasChanged = Object.keys(newStates).some(
+          key => newStates[key as keyof FormattingStates] !== prevStates[key as keyof FormattingStates]
+        );
+        return hasChanged ? newStates : prevStates;
+      });
+    } catch (error) {
+      console.warn('Error checking formatting states:', error);
+    }
+  }, [editorRef]);
+
+  // Set up event listeners for selection changes
+  useEffect(() => {
+    if (!editorRef.current) return;
+
+    const editor = editorRef.current;
+    
+    const handleSelectionChange = () => {
+      // Small delay to ensure DOM is updated
+      setTimeout(updateFormattingStates, 10);
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      // Update states after key operations
+      setTimeout(updateFormattingStates, 10);
+    };
+
+    const handleMouseUp = () => {
+      // Update states after mouse operations (selection changes)
+      setTimeout(updateFormattingStates, 10);
+    };
+
+    const handleFocus = () => {
+      // Update states when editor gains focus
+      setTimeout(updateFormattingStates, 10);
+    };
+
+    const handleInput = () => {
+      // Update states after content changes
+      setTimeout(updateFormattingStates, 10);
+    };
+
+    // Add event listeners
+    document.addEventListener('selectionchange', handleSelectionChange);
+    editor.addEventListener('keyup', handleKeyUp);
+    editor.addEventListener('mouseup', handleMouseUp);
+    editor.addEventListener('focus', handleFocus);
+    editor.addEventListener('input', handleInput);
+
+    // Initial check
+    updateFormattingStates();
+
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+      editor.removeEventListener('keyup', handleKeyUp);
+      editor.removeEventListener('mouseup', handleMouseUp);
+      editor.removeEventListener('focus', handleFocus);
+      editor.removeEventListener('input', handleInput);
+    };
+  }, [editorRef, updateFormattingStates]);
+
+  return { states, updateFormattingStates };
 };
 
-const execEmCommand = (editorRef, handleChange) => {
-  const selection = window.getSelection();
-  if (selection.rangeCount === 0) return;
-  
-  const range = selection.getRangeAt(0);
-  const selectedText = range.toString();
-  
-  if (selectedText) {
-    const em = document.createElement('em');
-    em.textContent = selectedText;
-    range.deleteContents();
-    range.insertNode(em);
-    selection.removeAllRanges();
-    if (handleChange) handleChange();
-  }
+// Enhanced formatting button with active state
+interface FormattingButtonProps {
+  command: string;
+  icon: React.ReactNode;
+  tooltip: string;
+  isActive?: boolean;
+  onClick?: () => void;
+  editorRef?: React.RefObject<HTMLDivElement>;
+  handleChange?: () => void;
+}
+
+const FormattingButton: React.FC<FormattingButtonProps> = ({ 
+  command, 
+  icon, 
+  tooltip, 
+  isActive = false, 
+  onClick,
+  editorRef,
+  handleChange 
+}) => {
+  const handleClick = () => {
+    if (editorRef?.current) {
+      editorRef.current.focus();
+      
+      // Execute the command
+      if (onClick) {
+        onClick();
+      } else {
+        document.execCommand(command, false);
+      }
+      
+      // Trigger change handler
+      if (handleChange) {
+        setTimeout(handleChange, 10);
+      }
+    }
+  };
+
+  return (
+    <ButtonGradient
+      action={isActive ? "apply" : "edit"}
+      customIcon={icon}
+      onClick={handleClick}
+      size="md"
+      showText={false}
+      tooltip={tooltip}
+      tooltipPosition="top"
+      tooltipPortal={false}
+      className={`tw-w-8 tw-h-8 tw-relative transition-all duration-200 ${
+        isActive 
+          ? 'tw-ring-2 tw-ring-purple-400 tw-ring-offset-1 tw-shadow-lg tw-scale-105' 
+          : 'hover:tw-scale-105'
+      }`}
+      customColors={isActive ? {
+        primary: '#7C3AED',
+        secondary: '#6D28D9', 
+        gradient1: '#7C3AED',
+        gradient2: '#8B5CF6',
+        text: '#FFFFFF'
+      } : undefined}
+    />
+  );
 };
 
-// Font style buttons with tooltips (ICON-ONLY)
-export const BoldButton = ({ onClick, editorRef, handleChange }) => (
-  <ButtonGradient
-    action="edit"
-    customIcon={<Bold className="tw-w-4 tw-h-4" />}
-    onClick={() => {
-      if (editorRef && handleChange) {
-        execStrongCommand(editorRef, handleChange);
-      } else {
-        onClick?.();
-      }
-    }}
-    size="md"
-    showText={false}
-    tooltip="Bold (Ctrl+B)"
-    tooltipPosition="top"
-    tooltipPortal={false}  // ← RENDER LOCALLY instead of portal to body
-    className="tw-w-8 tw-h-8 tw-relative"  // ← Add relative positioning for absolute tooltip
-  />
-);
+// Font style buttons with active state tracking
+export const BoldButton: React.FC<{
+  onClick?: () => void;
+  editorRef?: React.RefObject<HTMLDivElement>;
+  handleChange?: () => void;
+}> = ({ onClick, editorRef, handleChange }) => {
+  const { states } = useFormattingStates(editorRef || { current: null });
 
-export const ItalicButton = ({ onClick, editorRef, handleChange }) => (
-  <ButtonGradient
-    action="edit"
-    customIcon={<Italic className="tw-w-4 tw-h-4" />}
-    onClick={() => {
-      if (editorRef && handleChange) {
-        execEmCommand(editorRef, handleChange);
-      } else {
-        onClick?.();
-      }
-    }}
-    size="md"
-    showText={false}
-    tooltip="Italic (Ctrl+I)"
-    tooltipPosition="top"
-    tooltipPortal={false}  // ← LOCAL TOOLTIP
-    className="tw-w-8 tw-h-8 tw-relative"
-  />
-);
+  return (
+    <FormattingButton
+      command="bold"
+      icon={<Bold className="tw-w-4 tw-h-4" />}
+      tooltip="Bold (Ctrl+B)"
+      isActive={states.bold}
+      onClick={onClick}
+      editorRef={editorRef}
+      handleChange={handleChange}
+    />
+  );
+};
 
-export const UnderlineButton = ({ onClick }) => (
-  <ButtonGradient
-    action="edit"
-    customIcon={<Underline className="tw-w-4 tw-h-4" />}
-    onClick={onClick}
-    size="md"
-    showText={false}
-    tooltip="Underline (Ctrl+U)"
-    tooltipPosition="top"
-    tooltipPortal={false}  // ← LOCAL TOOLTIP
-    className="tw-w-8 tw-h-8 tw-relative"
-  />
-);
+export const ItalicButton: React.FC<{
+  onClick?: () => void;
+  editorRef?: React.RefObject<HTMLDivElement>;
+  handleChange?: () => void;
+}> = ({ onClick, editorRef, handleChange }) => {
+  const { states } = useFormattingStates(editorRef || { current: null });
 
-export const StrikethroughButton = ({ onClick }) => (
-  <ButtonGradient
-    action="delete"
-    customIcon={<Strikethrough className="tw-w-4 tw-h-4" />}
-    onClick={onClick}
-    size="md"
-    showText={false}
-    tooltip="Strikethrough (Ctrl+D)"
-    tooltipPosition="top"
-    tooltipPortal={false}  // ← LOCAL TOOLTIP
-    className="tw-w-8 tw-h-8 tw-relative"
-  />
-);
+  return (
+    <FormattingButton
+      command="italic"
+      icon={<Italic className="tw-w-4 tw-h-4" />}
+      tooltip="Italic (Ctrl+I)"
+      isActive={states.italic}
+      onClick={onClick}
+      editorRef={editorRef}
+      handleChange={handleChange}
+    />
+  );
+};
 
-export const SubscriptButton = ({ onClick }) => (
-  <ButtonGradient
-    action="edit"
-    customIcon={<Subscript className="tw-w-4 tw-h-4" />}
-    onClick={onClick}
-    size="md"
-    showText={false}
-    tooltip="Subscript (Ctrl+Shift+_)"
-    tooltipPosition="top"
-    tooltipPortal={false}  // ← Tambahkan ini
-    className="tw-w-8 tw-h-8 tw-relative"  // ← Tambahkan tw-relative
-  />
-);
+export const UnderlineButton: React.FC<{
+  onClick?: () => void;
+  editorRef?: React.RefObject<HTMLDivElement>;
+  handleChange?: () => void;
+}> = ({ onClick, editorRef, handleChange }) => {
+  const { states } = useFormattingStates(editorRef || { current: null });
 
-export const SuperscriptButton = ({ onClick }) => (
-  <ButtonGradient
-    action="edit"
-    customIcon={<Superscript className="tw-w-4 tw-h-4" />}
-    onClick={onClick}
-    size="md"
-    showText={false}
-    tooltip="Superscript (Ctrl+Shift++)"
-    tooltipPosition="top"
-    tooltipPortal={false}  // ← Tambahkan ini
-    className="tw-w-8 tw-h-8 tw-relative"  // ← Tambahkan tw-relative
-  />
-);
+  return (
+    <FormattingButton
+      command="underline"
+      icon={<Underline className="tw-w-4 tw-h-4" />}
+      tooltip="Underline (Ctrl+U)"
+      isActive={states.underline}
+      onClick={onClick}
+      editorRef={editorRef}
+      handleChange={handleChange}
+    />
+  );
+};
 
-export const HyperlinkButton = ({ onClick }) => (
+export const StrikethroughButton: React.FC<{
+  onClick?: () => void;
+  editorRef?: React.RefObject<HTMLDivElement>;
+  handleChange?: () => void;
+}> = ({ onClick, editorRef, handleChange }) => {
+  const { states } = useFormattingStates(editorRef || { current: null });
+
+  return (
+    <FormattingButton
+      command="strikeThrough"
+      icon={<Strikethrough className="tw-w-4 tw-h-4" />}
+      tooltip="Strikethrough (Ctrl+D)"
+      isActive={states.strikethrough}
+      onClick={onClick}
+      editorRef={editorRef}
+      handleChange={handleChange}
+    />
+  );
+};
+
+export const SubscriptButton: React.FC<{
+  onClick?: () => void;
+  editorRef?: React.RefObject<HTMLDivElement>;
+  handleChange?: () => void;
+}> = ({ onClick, editorRef, handleChange }) => {
+  const { states } = useFormattingStates(editorRef || { current: null });
+
+  return (
+    <FormattingButton
+      command="subscript"
+      icon={<Subscript className="tw-w-4 tw-h-4" />}
+      tooltip="Subscript (Ctrl+Shift+_)"
+      isActive={states.subscript}
+      onClick={onClick}
+      editorRef={editorRef}
+      handleChange={handleChange}
+    />
+  );
+};
+
+export const SuperscriptButton: React.FC<{
+  onClick?: () => void;
+  editorRef?: React.RefObject<HTMLDivElement>;
+  handleChange?: () => void;
+}> = ({ onClick, editorRef, handleChange }) => {
+  const { states } = useFormattingStates(editorRef || { current: null });
+
+  return (
+    <FormattingButton
+      command="superscript"
+      icon={<Superscript className="tw-w-4 tw-h-4" />}
+      tooltip="Superscript (Ctrl+Shift++)"
+      isActive={states.superscript}
+      onClick={onClick}
+      editorRef={editorRef}
+      handleChange={handleChange}
+    />
+  );
+};
+
+export const HyperlinkButton: React.FC<{ onClick?: () => void }> = ({ onClick }) => (
   <ButtonGradient
     action="link"
     customIcon={<Link className="tw-w-4 tw-h-4" />}
@@ -144,26 +303,30 @@ export const HyperlinkButton = ({ onClick }) => (
     showText={false}
     tooltip="Insert Link (Ctrl+Shift+L)"
     tooltipPosition="top"
-    tooltipPortal={false}  // ← Tambahkan ini
-    className="tw-w-8 tw-h-8 tw-relative"  // ← Tambahkan tw-relative
+    tooltipPortal={false}
+    className="tw-w-8 tw-h-8 tw-relative"
   />
 );
 
 // Font size dropdown with tooltip
-export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen }, ref) => {
+export const FontSizeButton = React.forwardRef<any, {
+  execCommand: (command: string, value?: string) => void;
+  onToggle?: (isOpen: boolean) => void;
+  isOpen?: boolean;
+}>(({ execCommand, onToggle, isOpen }, ref) => {
   const [showFontSizeDropdown, setShowFontSizeDropdown] = useState(false);
   const [currentFontSize, setCurrentFontSize] = useState('3');
   const fontSizes = ['1', '2', '3', '4', '5', '6', '7'];
-  const dropdownRef = useRef(null);
-  const savedSelectionRef = useRef(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const savedSelectionRef = useRef<Range | null>(null);
   
   useEffect(() => {
     setShowFontSizeDropdown(isOpen || false);
   }, [isOpen]);
   
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowFontSizeDropdown(false);
         if (onToggle) onToggle(false);
       }
@@ -171,11 +334,11 @@ export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen 
     
     if (showFontSizeDropdown) {
       const selection = window.getSelection();
-      if (selection.rangeCount > 0) {
+      if (selection && selection.rangeCount > 0) {
         savedSelectionRef.current = selection.getRangeAt(0).cloneRange();
         
         try {
-          const parentElement = selection.anchorNode.parentElement;
+          const parentElement = selection.anchorNode?.parentElement;
           let currentElement = parentElement;
           while (currentElement && !currentElement.getAttribute('size') && 
                 !currentElement.style.fontSize && 
@@ -184,17 +347,17 @@ export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen 
           }
           
           if (currentElement && currentElement.getAttribute('size')) {
-            setCurrentFontSize(currentElement.getAttribute('size'));
+            setCurrentFontSize(currentElement.getAttribute('size') || '3');
           } else if (currentElement && currentElement.style.fontSize) {
             const pxSize = parseInt(currentElement.style.fontSize);
             if (!isNaN(pxSize)) {
-              const sizeMap = {
+              const sizeMap: { [key: number]: string } = {
                 10: '1', 13: '2', 16: '3', 18: '4', 24: '5', 32: '6', 48: '7'
               };
               const closest = Object.keys(sizeMap).reduce((prev, curr) => {
-                return (Math.abs(curr - pxSize) < Math.abs(prev - pxSize) ? curr : prev);
-              }, 16);
-              setCurrentFontSize(sizeMap[closest]);
+                return (Math.abs(Number(curr) - pxSize) < Math.abs(Number(prev) - pxSize) ? curr : prev);
+              }, '16');
+              setCurrentFontSize(sizeMap[Number(closest)]);
             }
           } else {
             setCurrentFontSize('3');
@@ -213,14 +376,16 @@ export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen 
     };
   }, [showFontSizeDropdown, onToggle]);
   
-  const handleFontSizeSelect = (size) => {
+  const handleFontSizeSelect = (size: string) => {
     if (savedSelectionRef.current) {
       const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(savedSelectionRef.current);
-      
-      execCommand('fontSize', size);
-      savedSelectionRef.current = null;
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(savedSelectionRef.current);
+        
+        execCommand('fontSize', size);
+        savedSelectionRef.current = null;
+      }
     } else {
       execCommand('fontSize', size);
     }
@@ -266,7 +431,7 @@ export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen 
         showText={false}
         tooltip={`Font Size: ${currentFontSize} (Ctrl+Shift+S or Ctrl++/-)`}
         tooltipPosition="top"
-        tooltipPortal={false}  // ← LOCAL TOOLTIP
+        tooltipPortal={false}
         className="tw-w-16 tw-h-8 tw-relative"
       >
         <div className="tw-flex tw-items-center tw-gap-1">
@@ -309,7 +474,11 @@ export const FontSizeButton = React.forwardRef(({ execCommand, onToggle, isOpen 
 FontSizeButton.displayName = 'FontSizeButton';
 
 // Font name dropdown with tooltip
-export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
+export const FontNameButton: React.FC<{
+  execCommand: (command: string, value?: string) => void;
+  onToggle?: (isOpen: boolean) => void;
+  isOpen?: boolean;
+}> = ({ execCommand, onToggle, isOpen }) => {
   const [showFontNameDropdown, setShowFontNameDropdown] = useState(false);
   const [currentFontName, setCurrentFontName] = useState('Arial');
   const fontNames = [
@@ -321,16 +490,16 @@ export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
     'Tahoma',
     'Trebuchet MS'
   ];
-  const dropdownRef = useRef(null);
-  const savedSelectionRef = useRef(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const savedSelectionRef = useRef<Range | null>(null);
   
   useEffect(() => {
     setShowFontNameDropdown(isOpen || false);
   }, [isOpen]);
   
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowFontNameDropdown(false);
         if (onToggle) onToggle(false);
       }
@@ -338,11 +507,11 @@ export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
     
     if (showFontNameDropdown) {
       const selection = window.getSelection();
-      if (selection.rangeCount > 0) {
+      if (selection && selection.rangeCount > 0) {
         savedSelectionRef.current = selection.getRangeAt(0).cloneRange();
         
         try {
-          const parentElement = selection.anchorNode.parentElement;
+          const parentElement = selection.anchorNode?.parentElement;
           let currentElement = parentElement;
           while (currentElement && !currentElement.getAttribute('face') && 
                 !getComputedStyle(currentElement).fontFamily && 
@@ -351,7 +520,7 @@ export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
           }
           
           if (currentElement && currentElement.getAttribute('face')) {
-            setCurrentFontName(currentElement.getAttribute('face'));
+            setCurrentFontName(currentElement.getAttribute('face') || 'Arial');
           } else if (currentElement) {
             const fontFamily = getComputedStyle(currentElement).fontFamily;
             if (fontFamily) {
@@ -378,14 +547,16 @@ export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
     };
   }, [showFontNameDropdown, fontNames, onToggle]);
   
-  const handleFontNameSelect = (fontName) => {
+  const handleFontNameSelect = (fontName: string) => {
     if (savedSelectionRef.current) {
       const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(savedSelectionRef.current);
-      
-      execCommand('fontName', fontName);
-      savedSelectionRef.current = null;
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(savedSelectionRef.current);
+        
+        execCommand('fontName', fontName);
+        savedSelectionRef.current = null;
+      }
     } else {
       execCommand('fontName', fontName);
     }
@@ -401,7 +572,7 @@ export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
     if (onToggle) onToggle(newState);
   };
   
-  const getShortFontName = (name) => {
+  const getShortFontName = (name: string) => {
     if (name === 'Times New Roman') return 'Times';
     if (name === 'Courier New') return 'Courier';
     if (name === 'Trebuchet MS') return 'Trebuchet';
@@ -417,7 +588,7 @@ export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
         showText={false}
         tooltip={`Font: ${currentFontName} (Ctrl+Shift+Z)`}
         tooltipPosition="top"
-        tooltipPortal={false}  // ← LOCAL TOOLTIP
+        tooltipPortal={false}
         className="tw-w-16 tw-h-8 tw-relative"
       >
         <div className="tw-flex tw-items-center tw-gap-1">
@@ -459,11 +630,15 @@ export const FontNameButton = ({ execCommand, onToggle, isOpen }) => {
 };
 
 // Text alignment dropdown with tooltip
-export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen }, ref) => {
+export const AlignmentButton = React.forwardRef<any, {
+  execCommand: (command: string, value?: string) => void;
+  onToggle?: (isOpen: boolean) => void;
+  isOpen?: boolean;
+}>(({ execCommand, onToggle, isOpen }, ref) => {
   const [showAlignmentDropdown, setShowAlignmentDropdown] = useState(false);
   const [currentAlignment, setCurrentAlignment] = useState('left');
   const [currentAlignmentIndex, setCurrentAlignmentIndex] = useState(0);
-  const savedSelectionRef = useRef(null);
+  const savedSelectionRef = useRef<Range | null>(null);
 
   const alignmentOptions = [
     { value: 'justifyLeft', label: 'Left', icon: AlignLeft },
@@ -471,15 +646,15 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
     { value: 'justifyRight', label: 'Right', icon: AlignRight },
     { value: 'justifyFull', label: 'Justify', icon: AlignJustify }
   ];
-  const dropdownRef = useRef(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     setShowAlignmentDropdown(isOpen || false);
   }, [isOpen]);
   
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowAlignmentDropdown(false);
         if (onToggle) onToggle(false);
       }
@@ -487,7 +662,7 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
 
     if (showAlignmentDropdown) {
       const selection = window.getSelection();
-      if (selection.rangeCount > 0) {
+      if (selection && selection.rangeCount > 0) {
         savedSelectionRef.current = selection.getRangeAt(0).cloneRange();
       }
 
@@ -499,17 +674,19 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
     };
   }, [showAlignmentDropdown, onToggle]);
 
-  const handleAlignmentSelect = (alignmentValue) => {
+  const handleAlignmentSelect = (alignmentValue: string) => {
     if (savedSelectionRef.current) {
       const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(savedSelectionRef.current);
-      savedSelectionRef.current = null;
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(savedSelectionRef.current);
+        savedSelectionRef.current = null;
+      }
     }
 
     execCommand(alignmentValue);
 
-    const alignmentMap = {
+    const alignmentMap: { [key: string]: string } = {
       'justifyLeft': 'left',
       'justifyCenter': 'center', 
       'justifyRight': 'right',
@@ -524,7 +701,7 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
     if (onToggle) onToggle(false);
   };
 
-  const cycleAlignment = (direction) => {
+  const cycleAlignment = (direction: 'next' | 'prev') => {
     let newIndex;
     if (direction === 'next') {
       newIndex = (currentAlignmentIndex + 1) % alignmentOptions.length;
@@ -543,7 +720,7 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
   
   const getCurrentIcon = () => {
     const option = alignmentOptions.find(opt => {
-      const alignmentMap = {
+      const alignmentMap: { [key: string]: string } = {
         'justifyLeft': 'left',
         'justifyCenter': 'center', 
         'justifyRight': 'right',
@@ -556,7 +733,7 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
   
   const getCurrentLabel = () => {
     const option = alignmentOptions.find(opt => {
-      const alignmentMap = {
+      const alignmentMap: { [key: string]: string } = {
         'justifyLeft': 'left',
         'justifyCenter': 'center', 
         'justifyRight': 'right',
@@ -585,8 +762,8 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
         showText={false}
         tooltip={`Align ${getCurrentLabel()} (Ctrl+Shift+A or ↑/↓)`}
         tooltipPosition="top"
-        tooltipPortal={false}  // ← Tambahkan ini
-      className="tw-w-8 tw-h-8 tw-relative"  // ← Tambahkan tw-relative
+        tooltipPortal={false}
+        className="tw-w-8 tw-h-8 tw-relative"
       />
       
       {showAlignmentDropdown && (
@@ -596,7 +773,7 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
             <div className="tw-space-y-1">
               {alignmentOptions.map(option => {
                 const Icon = option.icon;
-                const alignmentMap = {
+                const alignmentMap: { [key: string]: string } = {
                   'justifyLeft': 'left',
                   'justifyCenter': 'center', 
                   'justifyRight': 'right',
@@ -633,10 +810,14 @@ export const AlignmentButton = React.forwardRef(({ execCommand, onToggle, isOpen
 AlignmentButton.displayName = 'AlignmentButton';
 
 // Heading dropdown with tooltip
-export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }, ref) => {
+export const HeadingButton = React.forwardRef<any, {
+  execCommand: (command: string, value?: string) => void;
+  onToggle?: (isOpen: boolean) => void;
+  isOpen?: boolean;
+}>(({ execCommand, onToggle, isOpen }, ref) => {
   const [showHeadingDropdown, setShowHeadingDropdown] = useState(false);
   const [currentHeading, setCurrentHeading] = useState('normal');
-  const savedSelectionRef = useRef(null);
+  const savedSelectionRef = useRef<Range | null>(null);
   
   const headingOptions = [
     { value: 'normal', label: 'Normal Text', tag: 'p', shortLabel: 'P' },
@@ -645,9 +826,9 @@ export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }
     { value: 'h3', label: 'Heading 3', tag: 'h3', shortLabel: 'H3' },
     { value: 'h4', label: 'Heading 4', tag: 'h4', shortLabel: 'H4' }
   ];
-  const dropdownRef = useRef(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   
-  const applyHeading = (level) => {
+  const applyHeading = (level: number | 'normal') => {
     if (level === 'normal') {
       execCommand('formatBlock', '<p>');
     } else {
@@ -669,8 +850,8 @@ export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }
   }, [isOpen]);
   
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowHeadingDropdown(false);
         if (onToggle) onToggle(false);
       }
@@ -678,12 +859,12 @@ export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }
     
     if (showHeadingDropdown) {
       const selection = window.getSelection();
-      if (selection.rangeCount > 0) {
+      if (selection && selection.rangeCount > 0) {
         savedSelectionRef.current = selection.getRangeAt(0).cloneRange();
         
         try {
-          const parentElement = selection.anchorNode.parentElement || selection.anchorNode;
-          let currentElement = parentElement;
+          const parentElement = selection.anchorNode?.parentElement || selection.anchorNode;
+          let currentElement = parentElement as Element | null;
           while (currentElement && !['H1', 'H2', 'H3', 'H4'].includes(currentElement.tagName) && 
                 currentElement !== document.body) {
             currentElement = currentElement.parentElement;
@@ -708,18 +889,20 @@ export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }
     };
   }, [showHeadingDropdown, onToggle]);
   
-  const handleHeadingSelect = (headingValue) => {
+  const handleHeadingSelect = (headingValue: string) => {
     if (savedSelectionRef.current) {
       const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(savedSelectionRef.current);
-      
-      if (headingValue === 'normal') {
-        execCommand('formatBlock', '<p>');
-      } else {
-        execCommand('formatBlock', `<${headingValue}>`);
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(savedSelectionRef.current);
+        
+        if (headingValue === 'normal') {
+          execCommand('formatBlock', '<p>');
+        } else {
+          execCommand('formatBlock', `<${headingValue}>`);
+        }
+        savedSelectionRef.current = null;
       }
-      savedSelectionRef.current = null;
     } else {
       if (headingValue === 'normal') {
         execCommand('formatBlock', '<p>');
@@ -758,8 +941,8 @@ export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }
         showText={false}
         tooltip={`${getCurrentLabel()} (Ctrl+Shift+G or Ctrl+Shift+1-4)`}
         tooltipPosition="top"
-        tooltipPortal={false}  // ← Tambahkan ini
-    className="tw-w-8 tw-h-8 tw-relative"  // ← Tambahkan tw-relative
+        tooltipPortal={false}
+        className="tw-w-8 tw-h-8 tw-relative"
       >
         <div className="tw-flex tw-items-center tw-gap-1">
           <Heading className="tw-w-3 tw-h-3" />
@@ -813,7 +996,16 @@ export const HeadingButton = React.forwardRef(({ execCommand, onToggle, isOpen }
 HeadingButton.displayName = 'HeadingButton';
 
 // Common buttons group using ButtonGradient with icon-only design and tooltips
-export const FontButtons = ({ 
+export const FontButtons: React.FC<{
+  execCommand: (command: string, value?: string) => void;
+  editorRef?: React.RefObject<HTMLDivElement>;
+  handleChange?: () => void;
+  dropdownStates?: any;
+  setDropdownStates?: any;
+  fontSizeButtonRef?: any;
+  alignmentButtonRef?: any;
+  headingButtonRef?: any;
+}> = ({ 
   execCommand, 
   editorRef, 
   handleChange, 
@@ -825,7 +1017,7 @@ export const FontButtons = ({
 }) => {
   const handleHyperlink = () => {
     const selection = window.getSelection();
-    const selectedText = selection.toString();
+    const selectedText = selection?.toString();
     
     if (selectedText) {
       const url = prompt('Enter URL:', 'https://');
@@ -851,14 +1043,30 @@ export const FontButtons = ({
           editorRef={editorRef}
           handleChange={handleChange}
         />
-        <UnderlineButton onClick={() => execCommand('underline')} />
-        <StrikethroughButton onClick={() => execCommand('strikeThrough')} />
+        <UnderlineButton 
+          onClick={() => execCommand('underline')}
+          editorRef={editorRef}
+          handleChange={handleChange}
+        />
+        <StrikethroughButton 
+          onClick={() => execCommand('strikeThrough')}
+          editorRef={editorRef}
+          handleChange={handleChange}
+        />
       </div>
 
       {/* Script Buttons */}
       <div className="tw-flex tw-gap-1 tw-items-center tw-bg-blue-50 tw-rounded-lg tw-p-1">
-        <SubscriptButton onClick={() => execCommand('subscript')} />
-        <SuperscriptButton onClick={() => execCommand('superscript')} />
+        <SubscriptButton 
+          onClick={() => execCommand('subscript')}
+          editorRef={editorRef}
+          handleChange={handleChange}
+        />
+        <SuperscriptButton 
+          onClick={() => execCommand('superscript')}
+          editorRef={editorRef}
+          handleChange={handleChange}
+        />
       </div>
 
       {/* Link Button */}
@@ -872,12 +1080,12 @@ export const FontButtons = ({
           ref={fontSizeButtonRef}
           execCommand={execCommand}
           isOpen={dropdownStates?.fontSize || false}
-          onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, fontSize: isOpen }))}
+          onToggle={(isOpen) => setDropdownStates && setDropdownStates((prev: any) => ({ ...prev, fontSize: isOpen }))}
         />
         <FontNameButton 
           execCommand={execCommand}
           isOpen={dropdownStates?.fontName || false}
-          onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, fontName: isOpen }))}
+          onToggle={(isOpen) => setDropdownStates && setDropdownStates((prev: any) => ({ ...prev, fontName: isOpen }))}
         />
       </div>
 
@@ -887,13 +1095,13 @@ export const FontButtons = ({
           ref={headingButtonRef}
           execCommand={execCommand}
           isOpen={dropdownStates?.heading || false}
-          onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, heading: isOpen }))}
+          onToggle={(isOpen) => setDropdownStates && setDropdownStates((prev: any) => ({ ...prev, heading: isOpen }))}
         />
         <AlignmentButton 
           ref={alignmentButtonRef}
           execCommand={execCommand}
           isOpen={dropdownStates?.alignment || false}
-          onToggle={(isOpen) => setDropdownStates && setDropdownStates(prev => ({ ...prev, alignment: isOpen }))}
+          onToggle={(isOpen) => setDropdownStates && setDropdownStates((prev: any) => ({ ...prev, alignment: isOpen }))}
         />
       </div>
     </div>

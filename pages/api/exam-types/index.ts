@@ -10,9 +10,11 @@ export default async function handler(req: AuthenticatedRequest, res: NextApiRes
 
     switch (req.method) {
       case 'GET':
+        // Get all exam types with basic pagination
         await examTypesController.getAllExamTypes(req, res);
         break;
       case 'POST':
+        // Create new exam type
         await examTypesController.createExamType(req, res);
         break;
       default:
@@ -20,6 +22,7 @@ export default async function handler(req: AuthenticatedRequest, res: NextApiRes
         res.status(405).end(`Method ${req.method} Not Allowed`);
     }
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('API Error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 }

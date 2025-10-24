@@ -85,53 +85,53 @@ const menuDataEng: MenuItem[] = [
   },
   {
     icon: Users,
-    text: 'Users',
+    text: 'Pengguna',
     path: '/panel/users',
     roles: ['admin'],
     subItems: [
-      { icon: Users, text: 'Students', path: '/panel/users/students', roles: ['admin'] },
-      { icon: UserPlus, text: 'Edit Student', path: '/panel/users/students/edit', roles: ['admin'] },
-      { icon: UserCheck, text: 'Teachers', path: '/panel/users/teachers', roles: ['admin'] },
-      { icon: UserCog, text: 'Edit Teacher', path: '/panel/users/teachers/edit', roles: ['admin'] },
-      { icon: Shield, text: 'Admins', path: '/panel/users/admins', roles: ['admin'] },
+      { icon: Users, text: 'Siswa', path: '/panel/users/students', roles: ['admin'] },
+      { icon: UserPlus, text: 'Edit Siswa', path: '/panel/users/students/edit', roles: ['admin'] },
+      { icon: UserCheck, text: 'Guru', path: '/panel/users/teachers', roles: ['admin'] },
+      { icon: UserCog, text: 'Edit Guru', path: '/panel/users/teachers/edit', roles: ['admin'] },
+      { icon: Shield, text: 'Admin', path: '/panel/users/admins', roles: ['admin'] },
       { icon: UserCog, text: 'Update Admin', path: '/panel/users/admins/edit', roles: ['admin'] },
-      { icon: Shield, text: 'Roles', path: '/panel/users/roles', roles: ['admin'] }
+      { icon: Shield, text: 'Peran', path: '/panel/users/roles', roles: ['admin'] }
     ]
   },
   {
     icon: GraduationCap,
-    text: 'Courses',
+    text: 'Kursus',
     path: '/panel/courses',
     roles: ['admin', 'teacher', 'student'],
     subItems: [
-      { icon: School, text: 'Classes', path: '/panel/courses/dashboard', roles: ['admin', 'teacher'] },
-      { icon: GraduationCap, text: 'Edit Classes', path: '/panel/courses/classes-page', roles: ['admin','teacher','student','Student'] },
-      { icon: BookOpen, text: 'Courses', path: '/panel/courses/list', roles: ['admin', 'teacher', 'student'] },
-      { icon: Edit, text: 'Edit Courses', path: '/panel/courses/courses-page', roles: ['admin', 'teacher', 'student'] },
-      { icon: FileText, text: 'Request Courses', path: '/panel/courses/requests', roles: ['admin', 'teacher', 'student'] },
-      { icon: BarChart, text: 'Progress', path: '/panel/courses/progress', roles: ['admin', 'teacher', 'student'] },
-      { icon: Tags, text: 'Course Categories', path: '/panel/courses/categories', roles: ['admin'] },
-      { icon: FileBox, text: 'Packages', path: '/panel/courses/packages', roles: ['admin', 'student'] },
-      { icon: MessageCircle, text: 'Discussion', path: '/panel/courses/discussion', roles: ['admin', 'teacher', 'student'] },
-      { icon: HelpCircle, text: 'Q&A', path: '/panel/courses/qa', roles: ['admin', 'teacher', 'student'] },
-      { icon: MessageCircle, text: 'Reviews', path: '/panel/courses/reviews', roles: ['admin', 'teacher', 'student'] },
-      { icon: Award, text: 'Certificates', path: '/panel/courses/certificates', roles: ['admin', 'teacher', 'student'] }
+      { icon: School, text: 'Kelas', path: '/panel/courses/dashboard', roles: ['admin', 'teacher'] },
+      { icon: GraduationCap, text: 'Edit Kelas', path: '/panel/courses/classes-page', roles: ['admin','teacher','student','Student'] },
+      { icon: BookOpen, text: 'Kursus', path: '/panel/courses/list', roles: ['admin', 'teacher', 'student'] },
+      { icon: Edit, text: 'Edit Kursus', path: '/panel/courses/courses-page', roles: ['admin', 'teacher', 'student'] },
+      { icon: FileText, text: 'Permintaan Kursus', path: '/panel/courses/requests', roles: ['admin', 'teacher', 'student'] },
+      { icon: BarChart, text: 'Progres', path: '/panel/courses/progress', roles: ['admin', 'teacher', 'student'] },
+      { icon: Tags, text: 'Kategori Kursus', path: '/panel/courses/categories', roles: ['admin'] },
+      { icon: FileBox, text: 'Paket', path: '/panel/courses/packages', roles: ['admin', 'student'] },
+      { icon: MessageCircle, text: 'Diskusi', path: '/panel/courses/discussion', roles: ['admin', 'teacher', 'student'] },
+      { icon: HelpCircle, text: 'Tanya Jawab', path: '/panel/courses/qa', roles: ['admin', 'teacher', 'student'] },
+      { icon: MessageCircle, text: 'Ulasan', path: '/panel/courses/reviews', roles: ['admin', 'teacher', 'student'] },
+      { icon: Award, text: 'Sertifikat', path: '/panel/courses/certificates', roles: ['admin', 'teacher', 'student'] }
     ]
   },
   {
     icon: FileQuestion,
-    text: 'Exam',
+    text: 'Ujian',
     path: '/panel/exam',
     roles: ['admin', 'teacher', 'student'],
     subItems: [
-      { icon: FileText, text: 'Exams', path: '/panel/exam/dashboard', roles: ['admin', 'teacher', 'student'] },
-      { icon: FileEdit, text: 'Exam Schedules', path: '/panel/exam/exam-schedules', roles: ['admin', 'teacher'] },
-      { icon: PenTool, text: 'Questions', path: '/panel/exam/question-dashboard', roles: ['admin', 'teacher'] },
-      { icon: Edit, text: 'Edit Question', path: '/panel/exam/questions', roles: ['admin', 'teacher'] },
-      { icon: FolderEdit, text: 'Exam Categories', path: '/panel/exam/categories', roles: ['admin'] },
-      { icon: Tags, text: 'Question Categories', path: '/panel/exam/question-categories', roles: ['admin'] },
-      { icon: Trophy, text: 'Ranking', path: '/panel/exam/ranking', roles: ['admin', 'teacher', 'student'] },
-      { icon: Flag, text: 'Progress', path: '/panel/exam/progress', roles: ['admin', 'teacher', 'student'] }
+      { icon: FileText, text: 'Ujian', path: '/panel/exam/dashboard', roles: ['admin', 'teacher', 'student'] },
+      { icon: FileEdit, text: 'Jadwal Ujian', path: '/panel/exam/exam-schedules', roles: ['admin', 'teacher'] },
+      { icon: PenTool, text: 'Soal', path: '/panel/exam/question-dashboard', roles: ['admin', 'teacher'] },
+      { icon: Edit, text: 'Edit Soal', path: '/panel/exam/questions', roles: ['admin', 'teacher'] },
+      { icon: FolderEdit, text: 'Kategori Ujian', path: '/panel/exam/categories', roles: ['admin'] },
+      { icon: Tags, text: 'Kategori Soal', path: '/panel/exam/question-categories', roles: ['admin'] },
+      { icon: Trophy, text: 'Peringkat', path: '/panel/exam/ranking', roles: ['admin', 'teacher', 'student'] },
+      { icon: Flag, text: 'Progres', path: '/panel/exam/progress', roles: ['admin', 'teacher', 'student'] }
     ]
   },
   {
@@ -140,66 +140,67 @@ const menuDataEng: MenuItem[] = [
     path: '/panel/blog',
     roles: ['admin', 'teacher'],
     subItems: [
-      { icon: FileText, text: 'Contents', path: '/panel/blog/contents', roles: ['admin', 'teacher'] },
-      { icon: Tags, text: 'Categories', path: '/panel/blog/categories', roles: ['admin'] },
-      { icon: FileEdit, text: 'Add Contents', path: '/panel/blog/contents/add', roles: ['admin', 'teacher'] },
-      { icon: FileBox, text: 'Drafts', path: '/panel/blog/drafts', roles: ['admin', 'teacher'] },
-      { icon: MessageCircle, text: 'Comments', path: '/panel/blog/comments', roles: ['admin', 'teacher'] },
-      { icon: BarChart, text: 'Activity', path: '/panel/blog/activity', roles: ['admin'] },
+      { icon: FileText, text: 'Konten', path: '/panel/blog/contents', roles: ['admin', 'teacher'] },
+      { icon: Tags, text: 'Kategori', path: '/panel/blog/categories', roles: ['admin'] },
+      { icon: FileEdit, text: 'Tambah Konten', path: '/panel/blog/contents/add', roles: ['admin', 'teacher'] },
+      { icon: FileBox, text: 'Draft', path: '/panel/blog/drafts', roles: ['admin', 'teacher'] },
+      { icon: MessageCircle, text: 'Komentar', path: '/panel/blog/comments', roles: ['admin', 'teacher'] },
+      { icon: BarChart, text: 'Aktivitas', path: '/panel/blog/activity', roles: ['admin'] },
       { icon: Tag, text: 'SEO', path: '/panel/blog/seo', roles: ['admin'] },
-      { icon: DollarSign, text: 'Ads', path: '/panel/blog/ads', roles: ['admin'] }
+      { icon: DollarSign, text: 'Iklan', path: '/panel/blog/ads', roles: ['admin'] }
     ]
   },
   {
     icon: CreditCard,
-    text: 'Payment',
+    text: 'Pembayaran',
     path: '/panel/payment',
     roles: ['admin'],
     subItems: [
-      { icon: DollarSign, text: 'Revenue', path: '/panel/payment/revenue', roles: ['admin'] },
-      { icon: Receipt, text: 'Transactions', path: '/panel/payment/transactions', roles: ['admin'] },
-      { icon: CreditCard, text: 'Payment Methods', path: '/panel/payment/methods', roles: ['admin'] },
-      { icon: Percent, text: 'Taxes', path: '/panel/payment/taxes', roles: ['admin'] },
-      { icon: Tag, text: 'Discounts', path: '/panel/payment/discounts', roles: ['admin'] },
-      { icon: DollarSign, text: 'Commisions', path: '/panel/payment/commisions', roles: ['admin'] },
-      { icon: RefreshCcw, text: 'Refunds', path: '/panel/payment/refunds', roles: ['admin'] },
-      { icon: Wallet, text: 'Salaries', path: '/panel/payment/salaries', roles: ['admin'] },
-      { icon: Building, text: 'Operational', path: '/panel/payment/operational', roles: ['admin'] },
-      { icon: Tag, text: 'Promotion', path: '/panel/payment/promotion', roles: ['admin'] },
-      { icon: PartyPopper, text: 'Events', path: '/panel/payment/events', roles: ['admin'] }
+      { icon: DollarSign, text: 'Pendapatan', path: '/panel/payment/revenue', roles: ['admin'] },
+      { icon: Receipt, text: 'Transaksi', path: '/panel/payment/transactions', roles: ['admin'] },
+      { icon: CreditCard, text: 'Metode Pembayaran', path: '/panel/payment/methods', roles: ['admin'] },
+      { icon: Percent, text: 'Pajak', path: '/panel/payment/taxes', roles: ['admin'] },
+      { icon: Tag, text: 'Diskon', path: '/panel/payment/discounts', roles: ['admin'] },
+      { icon: DollarSign, text: 'Komisi', path: '/panel/payment/commisions', roles: ['admin'] },
+      { icon: RefreshCcw, text: 'Pengembalian', path: '/panel/payment/refunds', roles: ['admin'] },
+      { icon: Wallet, text: 'Gaji', path: '/panel/payment/salaries', roles: ['admin'] },
+      { icon: Building, text: 'Operasional', path: '/panel/payment/operational', roles: ['admin'] },
+      { icon: Tag, text: 'Promosi', path: '/panel/payment/promotion', roles: ['admin'] },
+      { icon: PartyPopper, text: 'Acara', path: '/panel/payment/events', roles: ['admin'] }
     ]
   },
   {
     icon: Calendar,
-    text: 'Calendar',
+    text: 'Kalender',
     path: '/panel/calendar',
     roles: ['admin', 'teacher', 'student'],
     subItems: [
-      { icon: CalendarDays, text: 'Calendar', path: '/panel/calendar/schedules', roles: ['admin', 'teacher', 'student'] },
-      { icon: Users, text: 'Classes', path: '/panel/calendar/classes', roles: ['admin', 'teacher', 'student'] },
-      { icon: FileQuestion, text: 'Exams', path: '/panel/calendar/exams', roles: ['admin', 'teacher', 'student'] },
-      { icon: ListTodo, text: 'Tasks', path: '/panel/calendar/tasks', roles: ['admin', 'teacher', 'student'] },
-      { icon: CalendarCheck, text: 'Events', path: '/panel/calendar/events', roles: ['admin', 'teacher', 'student'] },
-      { icon: CalendarClock, text: 'Promotion', path: '/panel/calendar/promotion', roles: ['admin'] }
+      { icon: CalendarDays, text: 'Kalender', path: '/panel/calendar/schedules', roles: ['admin', 'teacher', 'student'] },
+      { icon: Users, text: 'Kelas', path: '/panel/calendar/classes', roles: ['admin', 'teacher', 'student'] },
+      { icon: FileQuestion, text: 'Ujian', path: '/panel/calendar/exams', roles: ['admin', 'teacher', 'student'] },
+      { icon: ListTodo, text: 'Tugas', path: '/panel/calendar/tasks', roles: ['admin', 'teacher', 'student'] },
+      { icon: CalendarCheck, text: 'Acara', path: '/panel/calendar/events', roles: ['admin', 'teacher', 'student'] },
+      { icon: CalendarClock, text: 'Promosi', path: '/panel/calendar/promotion', roles: ['admin'] }
     ]
   },
   {
     icon: MessageSquare,
-    text: 'Messages',
+    text: 'Pesan',
     path: '/panel/messages',
     roles: ['admin', 'teacher', 'student'],
     subItems: [
-      { icon: MessageSquare, text: 'Messages In', path: '/panel/messages/inbox', roles: ['admin', 'teacher', 'student'] },
-      { icon: Share2, text: 'Broadcast', path: '/panel/messages/broadcast', roles: ['admin'] },
-      { icon: FileText, text: 'Templates', path: '/panel/messages/templates', roles: ['admin'] },
+      { icon: MessageSquare, text: 'Kotak Masuk', path: '/panel/messages/inbox', roles: ['admin', 'teacher', 'student'] },
+      { icon: Share2, text: 'Siaran', path: '/panel/messages/broadcast', roles: ['admin'] },
+      { icon: FileText, text: 'Template', path: '/panel/messages/templates', roles: ['admin'] },
       { icon: Mail, text: 'Email', path: '/panel/messages/email', roles: ['admin', 'teacher', 'student'] },
-      { icon: Bell, text: 'Notification', path: '/panel/messages/notifications', roles: ['admin', 'teacher', 'student'] },
-      { icon: Phone, text: 'Phone', path: '/panel/messages/phone', roles: ['admin', 'teacher', 'student'] },
-      { icon: Share2, text: 'Social Media', path: '/panel/messages/social', roles: ['admin'] },
-      { icon: TicketCheck, text: 'Support Tickets', path: '/panel/messages/support', roles: ['admin', 'teacher', 'student'] }
+      { icon: Bell, text: 'Notifikasi', path: '/panel/messages/notifications', roles: ['admin', 'teacher', 'student'] },
+      { icon: Phone, text: 'Telepon', path: '/panel/messages/phone', roles: ['admin', 'teacher', 'student'] },
+      { icon: Share2, text: 'Media Sosial', path: '/panel/messages/social', roles: ['admin'] },
+      { icon: TicketCheck, text: 'Tiket Dukungan', path: '/panel/messages/support', roles: ['admin', 'teacher', 'student'] }
     ]
   }
 ];
+
 const menuData: MenuItem[] = [
   {
     icon: LayoutDashboard,
@@ -209,56 +210,56 @@ const menuData: MenuItem[] = [
   },
   {
     icon: Users,
-    text: 'Akun',
+    text: 'Pengguna',
     path: '/panel/users',
     roles: ['admin', 'student'],
     subItems: [
-      { icon: Users, text: 'Students', path: '/panel/users/students', roles: ['admin'] },
-      { icon: Users, text: 'Students', path: '/panel/users/students', roles: ['admin'] },
-      { icon: Users, text: 'Students', path: '/panel/users/students', roles: ['admin'] },
-      { icon: Users, text: 'Students', path: '/panel/users/students', roles: ['admin'] },
-      { icon: UserPlus, text: 'Edit Student', path: '/panel/users/students/edit', roles: ['admin'] },
-      { icon: UserCheck, text: 'Teachers', path: '/panel/users/teachers', roles: ['admin'] },
-      { icon: UserCog, text: 'Edit Teacher', path: '/panel/users/teachers/edit', roles: ['admin'] },
-      { icon: Shield, text: 'Admins', path: '/panel/users/admins', roles: ['admin'] },
+      { icon: Users, text: 'Akun', path: '/panel/users/account', roles: ['admin','student'] },
+      { icon: Users, text: 'Pengaturan Target', path: '/panel/users/target', roles: ['admin','student'] },
+      { icon: Users, text: 'Ubah Kata Sandi', path: '/panel/users/change-password', roles: ['admin','student'] },
+      { icon: Users, text: 'Siswa', path: '/panel/users/students', roles: ['admin'] },
+      { icon: UserPlus, text: 'Edit Siswa', path: '/panel/users/students/edit', roles: ['admin'] },
+      { icon: UserCheck, text: 'Guru', path: '/panel/users/teachers', roles: ['admin'] },
+      { icon: UserCog, text: 'Edit Guru', path: '/panel/users/teachers/edit', roles: ['admin'] },
+      { icon: Shield, text: 'Admin', path: '/panel/users/admins', roles: ['admin'] },
       { icon: UserCog, text: 'Update Admin', path: '/panel/users/admins/edit', roles: ['admin'] },
-      { icon: Shield, text: 'Roles', path: '/panel/users/roles', roles: ['admin'] }
+      { icon: Shield, text: 'Peran', path: '/panel/users/roles', roles: ['admin'] }
     ]
   },
   {
     icon: GraduationCap,
-    text: 'Courses',
+    text: 'Kursus',
     path: '/panel/courses',
     roles: ['admin', 'teacher', 'student'],
     subItems: [
-      { icon: School, text: 'Classes', path: '/panel/courses/dashboard', roles: ['admin', 'teacher'] },
-      { icon: GraduationCap, text: 'Edit Classes', path: '/panel/courses/classes-page', roles: ['admin','teacher','student','Student'] },
-      { icon: BookOpen, text: 'Courses', path: '/panel/courses/list', roles: ['admin', 'teacher', 'student'] },
-      { icon: Edit, text: 'Edit Courses', path: '/panel/courses/courses-page', roles: ['admin', 'teacher', 'student'] },
-      { icon: FileText, text: 'Request Courses', path: '/panel/courses/requests', roles: ['admin', 'teacher', 'student'] },
-      { icon: BarChart, text: 'Progress', path: '/panel/courses/progress', roles: ['admin', 'teacher', 'student'] },
-      { icon: Tags, text: 'Course Categories', path: '/panel/courses/categories', roles: ['admin'] },
-      { icon: FileBox, text: 'Packages', path: '/panel/courses/packages', roles: ['admin', 'student'] },
-      { icon: MessageCircle, text: 'Discussion', path: '/panel/courses/discussion', roles: ['admin', 'teacher', 'student'] },
-      { icon: HelpCircle, text: 'Q&A', path: '/panel/courses/qa', roles: ['admin', 'teacher', 'student'] },
-      { icon: MessageCircle, text: 'Reviews', path: '/panel/courses/reviews', roles: ['admin', 'teacher', 'student'] },
-      { icon: Award, text: 'Certificates', path: '/panel/courses/certificates', roles: ['admin', 'teacher', 'student'] }
+      { icon: School, text: 'Kelas', path: '/panel/courses/dashboard', roles: ['admin', 'teacher'] },
+      { icon: GraduationCap, text: 'Edit Kelas', path: '/panel/courses/classes-page', roles: ['admin','teacher','student','Student'] },
+      { icon: BookOpen, text: 'Kursus', path: '/panel/courses/list', roles: ['admin', 'teacher', 'student'] },
+      { icon: Edit, text: 'Edit Kursus', path: '/panel/courses/courses-page', roles: ['admin', 'teacher', 'student'] },
+      { icon: FileText, text: 'Permintaan Kursus', path: '/panel/courses/requests', roles: ['admin', 'teacher', 'student'] },
+      { icon: BarChart, text: 'Progres', path: '/panel/courses/progress', roles: ['admin', 'teacher', 'student'] },
+      { icon: Tags, text: 'Kategori Kursus', path: '/panel/courses/categories', roles: ['admin'] },
+      { icon: FileBox, text: 'Paket', path: '/panel/courses/packages', roles: ['admin', 'student'] },
+      { icon: MessageCircle, text: 'Diskusi', path: '/panel/courses/discussion', roles: ['admin', 'teacher', 'student'] },
+      { icon: HelpCircle, text: 'Tanya Jawab', path: '/panel/courses/qa', roles: ['admin', 'teacher', 'student'] },
+      { icon: MessageCircle, text: 'Ulasan', path: '/panel/courses/reviews', roles: ['admin', 'teacher', 'student'] },
+      { icon: Award, text: 'Sertifikat', path: '/panel/courses/certificates', roles: ['admin', 'teacher', 'student'] }
     ]
   },
   {
     icon: FileQuestion,
-    text: 'Exam',
+    text: 'Ujian',
     path: '/panel/exam',
     roles: ['admin', 'teacher', 'student'],
     subItems: [
-      { icon: FileText, text: 'Exams', path: '/panel/exam/dashboard', roles: ['admin', 'teacher', 'student'] },
-      { icon: FileEdit, text: 'Exam Schedules', path: '/panel/exam/exam-schedules', roles: ['admin', 'teacher', 'student'] },
-      { icon: PenTool, text: 'Questions', path: '/panel/exam/question-dashboard', roles: ['admin', 'teacher'] },
-      { icon: Edit, text: 'Edit Question', path: '/panel/exam/questions', roles: ['admin', 'teacher'] },
-      { icon: FolderEdit, text: 'Exam Categories', path: '/panel/exam/categories', roles: ['admin'] },
-      { icon: Tags, text: 'Question Categories', path: '/panel/exam/question-categories', roles: ['admin'] },
-      { icon: Trophy, text: 'Ranking', path: '/panel/exam/ranking', roles: ['admin', 'teacher', 'student'] },
-      { icon: Flag, text: 'Progress', path: '/panel/exam/progress', roles: ['admin', 'teacher', 'student'] }
+      { icon: FileText, text: 'Ujian', path: '/panel/exam/dashboard', roles: ['admin', 'teacher', 'student'] },
+      { icon: FileEdit, text: 'Jadwal Ujian', path: '/panel/exam/exam-schedules', roles: ['admin', 'teacher', 'student'] },
+      { icon: PenTool, text: 'Soal', path: '/panel/exam/question-dashboard', roles: ['admin', 'teacher'] },
+      { icon: Edit, text: 'Edit Soal', path: '/panel/exam/questions', roles: ['admin', 'teacher'] },
+      { icon: FolderEdit, text: 'Kategori Ujian', path: '/panel/exam/exam-categories', roles: ['admin'] },
+      { icon: Tags, text: 'Kategori Soal', path: '/panel/exam/question-categories', roles: ['admin'] },
+      { icon: Trophy, text: 'Peringkat', path: '/panel/exam/ranking', roles: ['admin', 'teacher', 'student'] },
+      { icon: Flag, text: 'Progres', path: '/panel/exam/progress', roles: ['admin', 'teacher', 'student'] }
     ]
   },
   {
@@ -267,63 +268,63 @@ const menuData: MenuItem[] = [
     path: '/panel/blog',
     roles: ['admin', 'teacher'],
     subItems: [
-      { icon: FileText, text: 'Contents', path: '/panel/blog/contents', roles: ['admin', 'teacher'] },
-      { icon: Tags, text: 'Categories', path: '/panel/blog/categories', roles: ['admin'] },
-      { icon: FileEdit, text: 'Add Contents', path: '/panel/blog/contents/add', roles: ['admin', 'teacher'] },
-      { icon: FileBox, text: 'Drafts', path: '/panel/blog/drafts', roles: ['admin', 'teacher'] },
-      { icon: MessageCircle, text: 'Comments', path: '/panel/blog/comments', roles: ['admin', 'teacher'] },
-      { icon: BarChart, text: 'Activity', path: '/panel/blog/activity', roles: ['admin'] },
+      { icon: FileText, text: 'Konten', path: '/panel/blog/contents', roles: ['admin', 'teacher'] },
+      { icon: Tags, text: 'Kategori', path: '/panel/blog/categories', roles: ['admin'] },
+      { icon: FileEdit, text: 'Tambah Konten', path: '/panel/blog/contents/add', roles: ['admin', 'teacher'] },
+      { icon: FileBox, text: 'Draft', path: '/panel/blog/drafts', roles: ['admin', 'teacher'] },
+      { icon: MessageCircle, text: 'Komentar', path: '/panel/blog/comments', roles: ['admin', 'teacher'] },
+      { icon: BarChart, text: 'Aktivitas', path: '/panel/blog/activity', roles: ['admin'] },
       { icon: Tag, text: 'SEO', path: '/panel/blog/seo', roles: ['admin'] },
-      { icon: DollarSign, text: 'Ads', path: '/panel/blog/ads', roles: ['admin'] }
+      { icon: DollarSign, text: 'Iklan', path: '/panel/blog/ads', roles: ['admin'] }
     ]
   },
   {
     icon: CreditCard,
-    text: 'Payment',
+    text: 'Pembayaran',
     path: '/panel/payment',
     roles: ['admin'],
     subItems: [
-      { icon: DollarSign, text: 'Revenue', path: '/panel/payment/revenue', roles: ['admin'] },
-      { icon: Receipt, text: 'Transactions', path: '/panel/payment/transactions', roles: ['admin'] },
-      { icon: CreditCard, text: 'Payment Methods', path: '/panel/payment/methods', roles: ['admin'] },
-      { icon: Percent, text: 'Taxes', path: '/panel/payment/taxes', roles: ['admin'] },
-      { icon: Tag, text: 'Discounts', path: '/panel/payment/discounts', roles: ['admin'] },
-      { icon: DollarSign, text: 'Commisions', path: '/panel/payment/commisions', roles: ['admin'] },
-      { icon: RefreshCcw, text: 'Refunds', path: '/panel/payment/refunds', roles: ['admin'] },
-      { icon: Wallet, text: 'Salaries', path: '/panel/payment/salaries', roles: ['admin'] },
-      { icon: Building, text: 'Operational', path: '/panel/payment/operational', roles: ['admin'] },
-      { icon: Tag, text: 'Promotion', path: '/panel/payment/promotion', roles: ['admin'] },
-      { icon: PartyPopper, text: 'Events', path: '/panel/payment/events', roles: ['admin'] }
+      { icon: DollarSign, text: 'Pendapatan', path: '/panel/payment/revenue', roles: ['admin'] },
+      { icon: Receipt, text: 'Transaksi', path: '/panel/payment/transactions', roles: ['admin'] },
+      { icon: CreditCard, text: 'Metode Pembayaran', path: '/panel/payment/methods', roles: ['admin'] },
+      { icon: Percent, text: 'Pajak', path: '/panel/payment/taxes', roles: ['admin'] },
+      { icon: Tag, text: 'Diskon', path: '/panel/payment/discounts', roles: ['admin'] },
+      { icon: DollarSign, text: 'Komisi', path: '/panel/payment/commisions', roles: ['admin'] },
+      { icon: RefreshCcw, text: 'Pengembalian', path: '/panel/payment/refunds', roles: ['admin'] },
+      { icon: Wallet, text: 'Gaji', path: '/panel/payment/salaries', roles: ['admin'] },
+      { icon: Building, text: 'Operasional', path: '/panel/payment/operational', roles: ['admin'] },
+      { icon: Tag, text: 'Promosi', path: '/panel/payment/promotion', roles: ['admin'] },
+      { icon: PartyPopper, text: 'Acara', path: '/panel/payment/events', roles: ['admin'] }
     ]
   },
   {
     icon: Calendar,
-    text: 'Calendar',
+    text: 'Kalender',
     path: '/panel/calendar',
     roles: ['admin', 'teacher', 'student'],
     subItems: [
-      { icon: CalendarDays, text: 'Calendar', path: '/panel/calendar/schedules', roles: ['admin', 'teacher', 'student'] },
-      { icon: Users, text: 'Classes', path: '/panel/calendar/classes', roles: ['admin', 'teacher', 'student'] },
-      { icon: FileQuestion, text: 'Exams', path: '/panel/calendar/exams', roles: ['admin', 'teacher', 'student'] },
-      { icon: ListTodo, text: 'Tasks', path: '/panel/calendar/tasks', roles: ['admin', 'teacher', 'student'] },
-      { icon: CalendarCheck, text: 'Events', path: '/panel/calendar/events', roles: ['admin', 'teacher', 'student'] },
-      { icon: CalendarClock, text: 'Promotion', path: '/panel/calendar/promotion', roles: ['admin'] }
+      { icon: CalendarDays, text: 'Kalender', path: '/panel/calendar/schedules', roles: ['admin', 'teacher', 'student'] },
+      { icon: Users, text: 'Kelas', path: '/panel/calendar/classes', roles: ['admin', 'teacher', 'student'] },
+      { icon: FileQuestion, text: 'Ujian', path: '/panel/calendar/exams', roles: ['admin', 'teacher', 'student'] },
+      { icon: ListTodo, text: 'Tugas', path: '/panel/calendar/tasks', roles: ['admin', 'teacher', 'student'] },
+      { icon: CalendarCheck, text: 'Acara', path: '/panel/calendar/events', roles: ['admin', 'teacher', 'student'] },
+      { icon: CalendarClock, text: 'Promosi', path: '/panel/calendar/promotion', roles: ['admin'] }
     ]
   },
   {
     icon: MessageSquare,
-    text: 'Messages',
+    text: 'Pesan',
     path: '/panel/messages',
     roles: ['admin', 'teacher', 'student'],
     subItems: [
-      { icon: MessageSquare, text: 'Messages In', path: '/panel/messages/inbox', roles: ['admin', 'teacher', 'student'] },
-      { icon: Share2, text: 'Broadcast', path: '/panel/messages/broadcast', roles: ['admin'] },
-      { icon: FileText, text: 'Templates', path: '/panel/messages/templates', roles: ['admin'] },
+      { icon: MessageSquare, text: 'Kotak Masuk', path: '/panel/messages/inbox', roles: ['admin', 'teacher', 'student'] },
+      { icon: Share2, text: 'Siaran', path: '/panel/messages/broadcast', roles: ['admin'] },
+      { icon: FileText, text: 'Template', path: '/panel/messages/templates', roles: ['admin'] },
       { icon: Mail, text: 'Email', path: '/panel/messages/email', roles: ['admin', 'teacher', 'student'] },
-      { icon: Bell, text: 'Notification', path: '/panel/messages/notifications', roles: ['admin', 'teacher', 'student'] },
-      { icon: Phone, text: 'Phone', path: '/panel/messages/phone', roles: ['admin', 'teacher', 'student'] },
-      { icon: Share2, text: 'Social Media', path: '/panel/messages/social', roles: ['admin'] },
-      { icon: TicketCheck, text: 'Support Tickets', path: '/panel/messages/support', roles: ['admin', 'teacher', 'student'] }
+      { icon: Bell, text: 'Notifikasi', path: '/panel/messages/notifications', roles: ['admin', 'teacher', 'student'] },
+      { icon: Phone, text: 'Telepon', path: '/panel/messages/phone', roles: ['admin', 'teacher', 'student'] },
+      { icon: Share2, text: 'Media Sosial', path: '/panel/messages/social', roles: ['admin'] },
+      { icon: TicketCheck, text: 'Tiket Dukungan', path: '/panel/messages/support', roles: ['admin', 'teacher', 'student'] }
     ]
   }
 ];
@@ -421,7 +422,7 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({ isExpanded, onToggle }) =
         <button 
           className="toggle-btn-modern tw-group tw-relative tw-rounded-xl tw-text-white tw-transition-all tw-duration-300 tw-border-2 tw-border-purple-600 hover:tw-border-purple-400 tw-bg-gradient-to-br tw-from-purple-700 tw-to-purple-900 hover:tw-from-purple-600 hover:tw-to-purple-800 tw-shadow-lg hover:tw-shadow-2xl hover:tw-scale-110 lg:tw-p-3 tw-p-2" 
           onClick={onToggle}
-          aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+          aria-label={isExpanded ? "Tutup sidebar" : "Buka sidebar"}
         >
           <div className="tw-relative tw-flex tw-items-center tw-justify-center">
             {isExpanded ? (
@@ -478,7 +479,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ isExpanded }) => {
   if (!isAuthenticated) {
     return (
       <div className="tw-p-3 tw-text-white tw-text-center">
-        <p className="tw-text-sm">Please login to access menu</p>
+        <p className="tw-text-sm">Silakan login untuk mengakses menu</p>
       </div>
     );
   }
@@ -486,7 +487,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ isExpanded }) => {
   if (filteredMenuItems.length === 0) {
     return (
       <div className="tw-p-3 tw-text-white tw-text-center">
-        <p className="tw-text-sm">No menu items available for your role</p>
+        <p className="tw-text-sm">Tidak ada item menu yang tersedia untuk peran Anda</p>
       </div>
     );
   }
@@ -532,7 +533,7 @@ const SidebarFooter: React.FC<SidebarFooterProps> = ({ isExpanded }) => {
           onClick={() => setShowLogoutModal(true)}
         >
           <LogOut size={20} />
-          {isExpanded && <span>Logout</span>}
+          {isExpanded && <span>Keluar</span>}
         </Button>
       </div>
 

@@ -99,7 +99,7 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
   const diagnosticTests: DiagnosticTest[] = [
     {
       id: 99,
-      title: "Quantitative Reasoning",
+      title: "Penalaran Kuantitatif",
       description: "Uji kemampuan matematika dan logika numerik untuk menyelesaikan masalah kompleks",
       icon: <Target className="tw-w-6 tw-h-6" />,
       duration: "45 menit",
@@ -108,7 +108,7 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
     },
     {
       id: 2,
-      title: "Visual-Spatial Reasoning",
+      title: "Penalaran Visual-Spasial",
       description: "Evaluasi kemampuan memahami dan memanipulasi objek dalam ruang dimensional",
       icon: <Eye className="tw-w-6 tw-h-6" />,
       duration: "35 menit",
@@ -117,7 +117,7 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
     },
     {
       id: 3,
-      title: "Verbal Literacy",
+      title: "Literasi Verbal",
       description: "Tes pemahaman bahasa, kosakata, dan kemampuan komunikasi tertulis",
       icon: <BookOpen className="tw-w-6 tw-h-6" />,
       duration: "40 menit",
@@ -126,7 +126,7 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
     },
     {
       id: 4,
-      title: "Fluid Reasoning (Abstract)",
+      title: "Penalaran Cair (Abstrak)",
       description: "Ukur kemampuan berpikir abstrak dan memecahkan masalah baru tanpa pengetahuan sebelumnya",
       icon: <Lightbulb className="tw-w-6 tw-h-6" />,
       duration: "50 menit",
@@ -135,7 +135,7 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
     },
     {
       id: 5,
-      title: "Logical Deductive Reasoning",
+      title: "Penalaran Deduktif Logis",
       description: "Evaluasi kemampuan menarik kesimpulan logis dari premis yang diberikan",
       icon: <Search className="tw-w-6 tw-h-6" />,
       duration: "45 menit",
@@ -144,7 +144,7 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
     },
     {
       id: 6,
-      title: "Working Memory",
+      title: "Memori Kerja",
       description: "Tes kapasitas memori kerja dalam menyimpan dan memproses informasi sementara",
       icon: <Brain className="tw-w-6 tw-h-6" />,
       duration: "30 menit",
@@ -153,7 +153,7 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
     },
     {
       id: 7,
-      title: "Processing Speed",
+      title: "Kecepatan Pemrosesan",
       description: "Ukur kecepatan pemrosesan informasi dan respons terhadap tugas sederhana",
       icon: <Zap className="tw-w-6 tw-h-6" />,
       duration: "25 menit",
@@ -162,7 +162,7 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
     },
     {
       id: 8,
-      title: "Attention & Executive Control",
+      title: "Perhatian & Kontrol Eksekutif",
       description: "Evaluasi kemampuan fokus, kontrol diri, dan manajemen tugas kognitif",
       icon: <Clock className="tw-w-6 tw-h-6" />,
       duration: "35 menit",
@@ -171,7 +171,7 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
     },
     {
       id: 9,
-      title: "Problem Solving / Creative Thinking",
+      title: "Pemecahan Masalah / Berpikir Kreatif",
       description: "Tes kemampuan berpikir kreatif dan inovatif dalam memecahkan masalah kompleks",
       icon: <Puzzle className="tw-w-6 tw-h-6" />,
       duration: "55 menit",
@@ -180,7 +180,7 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
     },
     {
       id: 10,
-      title: "Crystallized Knowledge",
+      title: "Pengetahuan Terkristalisasi",
       description: "Evaluasi pengetahuan yang telah dipelajari dan pengalaman akademis terkumpul",
       icon: <Trophy className="tw-w-6 tw-h-6" />,
       duration: "60 menit",
@@ -236,7 +236,7 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
     <div className="tw-h-full" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', minHeight: '125vh'}}>
       <NavigationBar></NavigationBar> 
       <Head>
-        <title>Diagnostic Test - Platform Pembelajaran</title>
+        <title>Tes Diagnostik - Platform Pembelajaran</title>
         <meta name="description" content="Temukan potensi kognitif terbaikmu melalui serangkaian tes diagnostik yang komprehensif dan terstruktur" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
@@ -255,7 +255,7 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
                   <Brain className="tw-w-10 tw-h-10 tw-text-yellow-300" />
                 </div>
                 <h1 className="tw-text-4xl md:tw-text-5xl lg:tw-text-6xl tw-font-bold tw-text-white tw-mb-4 tw-drop-shadow-lg">
-                  Diagnostic Test
+                  Tes Diagnostik
                 </h1>
                 <p className="tw-text-lg md:tw-text-xl tw-text-white/90 tw-font-medium tw-drop-shadow tw-max-w-3xl tw-mx-auto">
                   Temukan potensi kognitif terbaikmu melalui serangkaian tes diagnostik yang komprehensif dan terstruktur! 🧠✨
@@ -268,7 +268,7 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
                 <div className="tw-flex tw-items-center tw-justify-center tw-gap-3 tw-mb-4">
                   <Quote className="tw-w-8 tw-h-8 tw-text-yellow-300" />
                   <h3 className="tw-text-2xl md:tw-text-3xl tw-font-bold tw-text-white">
-                    Words of Wisdom
+                    Kata-kata Bijak
                   </h3>
                 </div>
                 <div className="tw-text-center">
