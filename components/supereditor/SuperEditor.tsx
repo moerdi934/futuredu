@@ -1003,34 +1003,50 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
   }, [content, handleChange, componentsLoaded]);
 
   // Initialize editor content with preservation
-  useEffect(() => {
-    if (initialValue && editorRef.current && Object.values(componentsLoaded).some(Boolean)) {
-      // Only set initial value if content ref is empty (first time)
-      if (!contentRef.current) {
-        contentRef.current = initialValue;
-        editorRef.current.innerHTML = initialValue;
-        
-        const timer = setTimeout(() => {
-          if (componentsLoaded.code && helpersRef.current.refreshAllCodeBlockHighlighting) {
-            try {
-              helpersRef.current.refreshAllCodeBlockHighlighting(editorRef);
-            } catch (error) {
-              console.warn('Error refreshing code highlighting:', error);
-            }
-          }
-          if (componentsLoaded.table && helpersRef.current.setupTableHandlers) {
-            try {
-              helpersRef.current.setupTableHandlers(editorRef);
-            } catch (error) {
-              console.warn('Error setting up table handlers:', error);
-            }
-          }
-        }, 100);
-        
-        return () => clearTimeout(timer);
+// Handle initial content AND external updates safely
+useEffect(() => {
+  if (!editorRef.current || typeof document === 'undefined') return;
+
+  // Only set content if:
+  // 1. It's the first load (contentRef is empty), OR
+  // 2. Editor is NOT focused (user is not typing)
+  const isEditorFocused = document.activeElement === editorRef.current;
+  
+  if (
+    (contentRef.current === '' && initialValue !== '') ||
+    (!isEditorFocused && editorRef.current.innerHTML !== initialValue)
+  ) {
+    contentRef.current = initialValue;
+    editorRef.current.innerHTML = initialValue;
+
+    // Re-apply all handlers
+    const timer = setTimeout(() => {
+      if (componentsLoaded.code && helpersRef.current.refreshAllCodeBlockHighlighting) {
+        helpersRef.current.refreshAllCodeBlockHighlighting(editorRef);
       }
-    }
-  }, [initialValue, componentsLoaded]);
+      if (componentsLoaded.table && helpersRef.current.setupTableHandlers) {
+        helpersRef.current.setupTableHandlers(editorRef);
+      }
+      if (componentsLoaded.practice && helpersRef.current.setupPracticeQuestionHandlers) {
+        helpersRef.current.setupPracticeQuestionHandlers(editorRef);
+      }
+      if (componentsLoaded.imageModal && helpersRef.current.setupImageResizeHandlers) {
+        helpersRef.current.setupImageResizeHandlers(editorRef, handleChange);
+      }
+      if (helpersRef.current.EquationUtils) {
+        helpersRef.current.EquationUtils.setupEquationHandlers(
+          editorRef,
+          setEditingEquation,
+          setIsEditingEquation,
+          setShowEquationModal,
+          handleChange
+        );
+      }
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }
+}, [initialValue, componentsLoaded]);
 
   // Event handlers
   const handleTextColor = useCallback((color: string) => {

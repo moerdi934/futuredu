@@ -269,7 +269,7 @@ export const createExamSchedule = async (req: AuthenticatedRequest, res: NextApi
     is_need_order_exam, 
     is_need_weighted_score 
   } = req.body;
-
+  console.log(req.user)
   const userRole = req.user?.role;
   const userId = req.user?.id;
   

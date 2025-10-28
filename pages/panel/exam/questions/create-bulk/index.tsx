@@ -24,9 +24,11 @@ import {
   Zap,
   Target,
   Award,
+  Upload,
+  FileJson,
+  AlertCircle,
 } from 'lucide-react';
 import axios from 'axios';
-import debounce from 'lodash/debounce';
 import SuperEditor from '../../../../../components/supereditor/SuperEditor';
 import { useAuth } from '../../../../../context/AuthContext';
 import {
@@ -39,6 +41,8 @@ import {
 import { LearningModal, ModalButton } from '../../../../../components/modal/ModalTemplate';
 import { ButtonGradient } from '../../../../../components/button/ButtonTemplate';
 import CreateBulkModal from './CreateBulkModal';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 
 const optionLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 
@@ -74,7 +78,6 @@ interface QuestionData {
   passage: any | null;
   passageSearchResults: any[];
   isLoadingPassage: boolean;
-  passageSearchTerm: string;
   newPassageTitle: string;
   newPassageContent: string;
   showPassageModal: boolean;
@@ -86,9 +89,6 @@ interface QuestionData {
   questionText: string;
   hasExplanation: boolean;
   explanationContent: string;
-  bidangSearchTerm: string;
-  topikSearchTerm: string;
-  subTopikSearchTerm: string;
 }
 
 const initialQuestionData: QuestionData = {
@@ -107,7 +107,6 @@ const initialQuestionData: QuestionData = {
   passage: null,
   passageSearchResults: [],
   isLoadingPassage: false,
-  passageSearchTerm: '',
   newPassageTitle: '',
   newPassageContent: '',
   showPassageModal: false,
@@ -119,12 +118,8 @@ const initialQuestionData: QuestionData = {
   questionText: '',
   hasExplanation: false,
   explanationContent: '',
-  bidangSearchTerm: '',
-  topikSearchTerm: '',
-  subTopikSearchTerm: '',
 };
 
-// Custom Accordion Item Component
 const CustomAccordionItem: React.FC<{
   eventKey: string;
   activeKey: string | null;
@@ -147,7 +142,6 @@ const CustomAccordionItem: React.FC<{
         {header}
       </div>
       
-      {/* UBAH INI - Jangan pakai conditional rendering */}
       <div 
         className={`tw-transition-all tw-duration-300 tw-ease-in-out ${
           isOpen 
@@ -163,7 +157,7 @@ const CustomAccordionItem: React.FC<{
         <div 
           className="tw-bg-gray-50 tw-p-2 sm:tw-p-4 tw-rounded-b-lg"
           style={{
-            display: isOpen ? 'block' : 'none', // Tetap di DOM tapi hidden
+            display: isOpen ? 'block' : 'none',
             overflow: 'visible',
             position: 'relative',
             zIndex: 10
@@ -176,150 +170,312 @@ const CustomAccordionItem: React.FC<{
   );
 };
 
+const parseEquationTags = (content: string): string => {
+  if (!content) return content;
+  
+  return content.replace(/<equation>([\s\S]*?)<\/equation>/g, (match, latex) => {
+    try {
+      const isMultiline = /\\begin\{(align|gather|equation|eqnarray)/.test(latex);
+      
+      const rendered = katex.renderToString(latex.trim(), {
+        displayMode: isMultiline,
+        throwOnError: false
+      });
+
+      const containerTag = isMultiline ? 'div' : 'span';
+      return `<${containerTag} class="cte-katex-equation ${isMultiline ? 'cte-katex-block' : 'cte-katex-inline'}" data-latex="${encodeURIComponent(latex.trim())}" data-display-mode="${isMultiline}" data-editable="true">${rendered}</${containerTag}>`;
+    } catch (error) {
+      console.error('Error parsing equation:', error);
+      return match;
+    }
+  });
+};
+
+const parseTableMarkup = (content: string): string => {
+  if (!content) return content;
+  return content;
+};
+
+const processContent = (content: string): string => {
+  if (!content) return content;
+  
+  let processed = parseEquationTags(content);
+  processed = parseTableMarkup(processed);
+  
+  return processed;
+};
+
 const BulkQuestionItem: React.FC<{
   index: number;
   data: QuestionData;
   onChange: (index: number, data: QuestionData) => void;
   onRemove: (index: number) => void;
+  onInsertAfter: (index: number, questions: QuestionData[]) => void;
   isOpen: boolean;
   onToggle: () => void;
-}> = ({ index, data, onChange, onRemove, isOpen, onToggle }) => {
+}> = ({ index, data, onChange, onRemove, onInsertAfter, isOpen, onToggle }) => {
   const { id } = useAuth();
   const userId = id || null;
-  const dataRef = useRef(data);
   
+  const [showIndividualImport, setShowIndividualImport] = useState(false);
+  const [individualJsonInput, setIndividualJsonInput] = useState('');
+  const [individualImportError, setIndividualImportError] = useState('');
+  
+  // ✅ Ref untuk menyimpan latest data (PERBAIKAN UTAMA)
+  const latestDataRef = useRef(data);
+  
+  // ✅ Update ref setiap data berubah
   useEffect(() => {
-    dataRef.current = data;
+    latestDataRef.current = data;
   }, [data]);
+  
+  // Refs for debounce timeouts
+  const bidangSearchTimeout = useRef<NodeJS.Timeout>();
+  const topikSearchTimeout = useRef<NodeJS.Timeout>();
+  const subTopikSearchTimeout = useRef<NodeJS.Timeout>();
+  const passageSearchTimeout = useRef<NodeJS.Timeout>();
+  
+  // Track if initial fetch has been done
+  const hasInitiallyFetchedBidang = useRef(false);
+  const hasInitiallyFetchedTopik = useRef(false);
+  const hasInitiallyFetchedSubTopik = useRef(false);
+  const hasInitiallyFetchedPassage = useRef(false);
+  
+  // ✅ Track if currently fetching (MENCEGAH DOUBLE FETCH)
+  const isFetchingBidang = useRef(false);
+  const isFetchingTopik = useRef(false);
+  const isFetchingSubTopik = useRef(false);
+  const isFetchingPassage = useRef(false);
+  
+  // Track the last topik value to detect when it changes
+  const lastTopikValue = useRef<any>(null);
 
-  const debouncedSetBidangSearch = useCallback(
-    debounce((val: string) => {
-      const current = dataRef.current;
-      onChange(index, { ...current, bidangSearchTerm: val });
-    }, 300),
-    [index, onChange]
-  );
-  
-  const debouncedSetTopikSearch = useCallback(
-    debounce((val: string) => {
-      const current = dataRef.current;
-      onChange(index, { ...current, topikSearchTerm: val });
-    }, 300),
-    [index, onChange]
-  );
-  
-  const debouncedSetSubTopikSearch = useCallback(
-    debounce((val: string) => {
-      const current = dataRef.current;
-      onChange(index, { ...current, subTopikSearchTerm: val });
-    }, 300),
-    [index, onChange]
-  );
-  
-  const debouncedSetPassageSearch = useCallback(
-    debounce((val: string) => {
-      const current = dataRef.current;
-      onChange(index, { ...current, passageSearchTerm: val });
-    }, 500),
-    [index, onChange]
-  );
-
+  // ✅ FIXED: Fetch Bidang only once on mount
   useEffect(() => {
-    const fetchBidang = async (searchTerm: string = '') => {
-      const curr = dataRef.current;
-      onChange(index, { ...curr, isLoadingBidang: true });
+    if (hasInitiallyFetchedBidang.current) return;
+    hasInitiallyFetchedBidang.current = true;
+
+    const controller = new AbortController();
+    
+    const fetchBidang = async () => {
+      if (isFetchingBidang.current) return;
+      isFetchingBidang.current = true;
+      
+      onChange(index, { ...latestDataRef.current, isLoadingBidang: true });
+      
       try {
         const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/exam-types/search?search=${searchTerm}&kind=1`
+          `${process.env.NEXT_PUBLIC_API_URL}/exam-types/search?search=&kind=1`,
+          { signal: controller.signal }
         );
+        
         if (response.data && Array.isArray(response.data.examTypes)) {
           const formattedOptions = response.data.examTypes.map((exam: any) => ({
             label: `${String(exam.code || '')} - ${String(exam.name || '')}`.trim(),
             value: exam.id,
             code: exam.code,
           }));
-          const curr2 = dataRef.current;
+          
           onChange(index, {
-            ...curr2,
+            ...latestDataRef.current,
             bidangOptions: formattedOptions,
             isLoadingBidang: false,
           });
         } else {
-          const curr2 = dataRef.current;
-          onChange(index, { ...curr2, bidangOptions: [], isLoadingBidang: false });
+          onChange(index, { ...latestDataRef.current, bidangOptions: [], isLoadingBidang: false });
         }
-      } catch {
-        const curr2 = dataRef.current;
-        onChange(index, { ...curr2, bidangOptions: [], isLoadingBidang: false });
+      } catch (error: any) {
+        if (!axios.isCancel(error)) {
+          onChange(index, { ...latestDataRef.current, bidangOptions: [], isLoadingBidang: false });
+        }
+      } finally {
+        isFetchingBidang.current = false;
       }
     };
 
-    fetchBidang(dataRef.current.bidangSearchTerm);
-  }, [dataRef.current.bidangSearchTerm]);
+    fetchBidang();
+    
+    return () => {
+      controller.abort();
+      isFetchingBidang.current = false;
+    };
+  }, []);
 
-  useEffect(() => {
-    if (!dataRef.current.bidang) {
-      const curr = dataRef.current;
-      onChange(index, {
-        ...curr,
-        topikOptions: [],
-        topik: null,
-        subTopikOptions: [],
-        subTopik: null,
-      });
-      return;
+  // ✅ FIXED: Search handler for Bidang
+  const handleBidangSearch = (searchTerm: string) => {
+    if (bidangSearchTimeout.current) {
+      clearTimeout(bidangSearchTimeout.current);
     }
-
-    const fetchTopik = async (searchTerm: string = '') => {
-      const curr = dataRef.current;
-      onChange(index, { ...curr, isLoadingTopik: true });
+    
+    onChange(index, { ...latestDataRef.current, isLoadingBidang: true });
+    
+    bidangSearchTimeout.current = setTimeout(async () => {
+      const controller = new AbortController();
+      
       try {
         const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/exam-types/search?search=${searchTerm}&kind=2&masterId=${dataRef.current.bidang?.value}`
+          `${process.env.NEXT_PUBLIC_API_URL}/exam-types/search?search=${searchTerm}&kind=1`,
+          { signal: controller.signal }
         );
+        
         if (response.data && Array.isArray(response.data.examTypes)) {
           const formattedOptions = response.data.examTypes.map((exam: any) => ({
             label: `${String(exam.code || '')} - ${String(exam.name || '')}`.trim(),
             value: exam.id,
             code: exam.code,
           }));
-          const curr2 = dataRef.current;
+          
           onChange(index, {
-            ...curr2,
+            ...latestDataRef.current,
+            bidangOptions: formattedOptions,
+            isLoadingBidang: false,
+          });
+        } else {
+          onChange(index, { ...latestDataRef.current, bidangOptions: [], isLoadingBidang: false });
+        }
+      } catch (error: any) {
+        if (!axios.isCancel(error)) {
+          onChange(index, { ...latestDataRef.current, bidangOptions: [], isLoadingBidang: false });
+        }
+      }
+    }, 300);
+  };
+
+  // ✅ FIXED: Fetch Topik when bidang changes
+  useEffect(() => {
+    if (!data.bidang) {
+      hasInitiallyFetchedTopik.current = false;
+      isFetchingTopik.current = false;
+      return;
+    }
+
+    // ✅ Prevent double fetch
+    if (isFetchingTopik.current) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const fetchTopik = async () => {
+      isFetchingTopik.current = true;
+      onChange(index, { ...latestDataRef.current, isLoadingTopik: true });
+      
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/exam-types/search?search=&kind=2&masterId=${data.bidang.value}`,
+          { signal: controller.signal }
+        );
+        
+        if (response.data && Array.isArray(response.data.examTypes)) {
+          const formattedOptions = response.data.examTypes.map((exam: any) => ({
+            label: `${String(exam.code || '')} - ${String(exam.name || '')}`.trim(),
+            value: exam.id,
+            code: exam.code,
+          }));
+          
+          onChange(index, {
+            ...latestDataRef.current,
             topikOptions: formattedOptions,
             isLoadingTopik: false,
           });
         } else {
-          const curr2 = dataRef.current;
-          onChange(index, { ...curr2, topikOptions: [], isLoadingTopik: false });
+          onChange(index, { ...latestDataRef.current, topikOptions: [], isLoadingTopik: false });
         }
-      } catch {
-        const curr2 = dataRef.current;
-        onChange(index, { ...curr2, topikOptions: [], isLoadingTopik: false });
+      } catch (error: any) {
+        if (!axios.isCancel(error)) {
+          onChange(index, { ...latestDataRef.current, topikOptions: [], isLoadingTopik: false });
+        }
+      } finally {
+        isFetchingTopik.current = false;
       }
     };
 
-    fetchTopik(dataRef.current.topikSearchTerm);
-  }, [dataRef.current.bidang, dataRef.current.topikSearchTerm]);
+    if (!hasInitiallyFetchedTopik.current) {
+      hasInitiallyFetchedTopik.current = true;
+      fetchTopik();
+    }
+    
+    return () => {
+      controller.abort();
+      isFetchingTopik.current = false;
+    };
+  }, [data.bidang?.value]);
 
+  // ✅ FIXED: Search handler for Topik
+  const handleTopikSearch = (searchTerm: string) => {
+    if (!data.bidang) return;
+    
+    if (topikSearchTimeout.current) {
+      clearTimeout(topikSearchTimeout.current);
+    }
+    
+    onChange(index, { ...latestDataRef.current, isLoadingTopik: true });
+    
+    topikSearchTimeout.current = setTimeout(async () => {
+      const controller = new AbortController();
+      
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/exam-types/search?search=${searchTerm}&kind=2&masterId=${latestDataRef.current.bidang.value}`,
+          { signal: controller.signal }
+        );
+        
+        if (response.data && Array.isArray(response.data.examTypes)) {
+          const formattedOptions = response.data.examTypes.map((exam: any) => ({
+            label: `${String(exam.code || '')} - ${String(exam.name || '')}`.trim(),
+            value: exam.id,
+            code: exam.code,
+          }));
+          
+          onChange(index, {
+            ...latestDataRef.current,
+            topikOptions: formattedOptions,
+            isLoadingTopik: false,
+          });
+        } else {
+          onChange(index, { ...latestDataRef.current, topikOptions: [], isLoadingTopik: false });
+        }
+      } catch (error: any) {
+        if (!axios.isCancel(error)) {
+          onChange(index, { ...latestDataRef.current, topikOptions: [], isLoadingTopik: false });
+        }
+      }
+    }, 300);
+  };
+
+  // ✅ FIXED: Fetch SubTopik when topik changes
   useEffect(() => {
-    if (!dataRef.current.topik) {
-      const curr = dataRef.current;
-      onChange(index, {
-        ...curr,
-        subTopikOptions: [],
-        subTopik: null,
-      });
+    if (!data.topik) {
+      hasInitiallyFetchedSubTopik.current = false;
+      isFetchingSubTopik.current = false;
+      lastTopikValue.current = null;
       return;
     }
 
-    const fetchSubTopik = async (searchTerm: string = '') => {
-      const curr = dataRef.current;
-      onChange(index, { ...curr, isLoadingSubTopik: true });
+    const topikChanged = lastTopikValue.current !== data.topik.value;
+    lastTopikValue.current = data.topik.value;
+
+    if (!topikChanged && hasInitiallyFetchedSubTopik.current) {
+      return;
+    }
+
+    // ✅ Prevent double fetch
+    if (isFetchingSubTopik.current) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const fetchSubTopik = async () => {
+      isFetchingSubTopik.current = true;
+      onChange(index, { ...latestDataRef.current, isLoadingSubTopik: true });
+      
       try {
         const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/exam-types/search?search=${searchTerm}&kind=3&masterId=${dataRef.current.topik?.value}`
+          `${process.env.NEXT_PUBLIC_API_URL}/exam-types/search?search=&kind=3&masterId=${data.topik.value}`,
+          { signal: controller.signal }
         );
+        
         if (response.data && Array.isArray(response.data.examTypes)) {
           const formattedOptions = response.data.examTypes.map((exam: any) => ({
             label: `${String(exam.code || '')} - ${String(exam.name || '')}`.trim(),
@@ -327,70 +483,194 @@ const BulkQuestionItem: React.FC<{
             NextID: exam.NextID,
             code: exam.code,
           }));
-          const curr2 = dataRef.current;
+          
           onChange(index, {
-            ...curr2,
+            ...latestDataRef.current,
+            subTopikOptions: formattedOptions,
+            isLoadingSubTopik: false,
+            subTopik: topikChanged ? null : latestDataRef.current.subTopik,
+          });
+        } else {
+          onChange(index, { 
+            ...latestDataRef.current, 
+            subTopikOptions: [], 
+            isLoadingSubTopik: false,
+            subTopik: topikChanged ? null : latestDataRef.current.subTopik,
+          });
+        }
+      } catch (error: any) {
+        if (!axios.isCancel(error)) {
+          onChange(index, { 
+            ...latestDataRef.current, 
+            subTopikOptions: [], 
+            isLoadingSubTopik: false,
+            subTopik: topikChanged ? null : latestDataRef.current.subTopik,
+          });
+        }
+      } finally {
+        isFetchingSubTopik.current = false;
+      }
+    };
+
+    if (!hasInitiallyFetchedSubTopik.current || topikChanged) {
+      hasInitiallyFetchedSubTopik.current = true;
+      fetchSubTopik();
+    }
+    
+    return () => {
+      controller.abort();
+      isFetchingSubTopik.current = false;
+    };
+  }, [data.topik?.value]);
+
+  // ✅ FIXED: Search handler for SubTopik
+  const handleSubTopikSearch = (searchTerm: string) => {
+    if (!data.topik) return;
+    
+    if (subTopikSearchTimeout.current) {
+      clearTimeout(subTopikSearchTimeout.current);
+    }
+    
+    onChange(index, { ...latestDataRef.current, isLoadingSubTopik: true });
+    
+    subTopikSearchTimeout.current = setTimeout(async () => {
+      const controller = new AbortController();
+      
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/exam-types/search?search=${searchTerm}&kind=3&masterId=${latestDataRef.current.topik.value}`,
+          { signal: controller.signal }
+        );
+        
+        if (response.data && Array.isArray(response.data.examTypes)) {
+          const formattedOptions = response.data.examTypes.map((exam: any) => ({
+            label: `${String(exam.code || '')} - ${String(exam.name || '')}`.trim(),
+            value: exam.id,
+            NextID: exam.NextID,
+            code: exam.code,
+          }));
+          
+          onChange(index, {
+            ...latestDataRef.current,
             subTopikOptions: formattedOptions,
             isLoadingSubTopik: false,
           });
         } else {
-          const curr2 = dataRef.current;
-          onChange(index, { ...curr2, subTopikOptions: [], isLoadingSubTopik: false });
+          onChange(index, { 
+            ...latestDataRef.current, 
+            subTopikOptions: [], 
+            isLoadingSubTopik: false,
+          });
         }
-      } catch {
-        const curr2 = dataRef.current;
-        onChange(index, { ...curr2, subTopikOptions: [], isLoadingSubTopik: false });
+      } catch (error: any) {
+        if (!axios.isCancel(error)) {
+          onChange(index, { 
+            ...latestDataRef.current, 
+            subTopikOptions: [], 
+            isLoadingSubTopik: false,
+          });
+        }
       }
-    };
+    }, 300);
+  };
 
-    fetchSubTopik(dataRef.current.subTopikSearchTerm);
-  }, [dataRef.current.topik, dataRef.current.subTopikSearchTerm]);
-
+  // ✅ FIXED: Fetch Passages when hasPassage is true
   useEffect(() => {
-    if (!dataRef.current.hasPassage) {
-      const curr = dataRef.current;
-      onChange(index, {
-        ...curr,
-        passageSearchResults: [],
-        passage: null,
-      });
+    if (!data.hasPassage) {
+      hasInitiallyFetchedPassage.current = false;
+      isFetchingPassage.current = false;
       return;
     }
 
-    const fetchPassages = async (searchTerm: string = '') => {
-      const curr = dataRef.current;
-      onChange(index, { ...curr, isLoadingPassage: true });
+    // ✅ Prevent double fetch
+    if (isFetchingPassage.current) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const fetchPassages = async () => {
+      isFetchingPassage.current = true;
+      onChange(index, { ...latestDataRef.current, isLoadingPassage: true });
+      
       try {
         const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/questions/passage/search?search=${searchTerm}`
+          `${process.env.NEXT_PUBLIC_API_URL}/questions/passage/search?search=`,
+          { signal: controller.signal }
         );
+        
         if (response.data && Array.isArray(response.data)) {
-          const curr2 = dataRef.current;
           onChange(index, {
-            ...curr2,
+            ...latestDataRef.current,
             passageSearchResults: response.data,
             isLoadingPassage: false,
           });
         } else {
-          const curr2 = dataRef.current;
-          onChange(index, { ...curr2, passageSearchResults: [], isLoadingPassage: false });
+          onChange(index, { ...latestDataRef.current, passageSearchResults: [], isLoadingPassage: false });
         }
-      } catch {
-        const curr2 = dataRef.current;
-        onChange(index, { ...curr2, passageSearchResults: [], isLoadingPassage: false });
+      } catch (error: any) {
+        if (!axios.isCancel(error)) {
+          onChange(index, { ...latestDataRef.current, passageSearchResults: [], isLoadingPassage: false });
+        }
+      } finally {
+        isFetchingPassage.current = false;
       }
     };
 
-    fetchPassages(dataRef.current.passageSearchTerm);
-  }, [dataRef.current.hasPassage, dataRef.current.passageSearchTerm]);
+    if (!hasInitiallyFetchedPassage.current) {
+      hasInitiallyFetchedPassage.current = true;
+      fetchPassages();
+    }
+    
+    return () => {
+      controller.abort();
+      isFetchingPassage.current = false;
+    };
+  }, [data.hasPassage]);
+
+  // ✅ FIXED: Search handler for Passage
+  const handlePassageSearch = (searchTerm: string) => {
+    if (!data.hasPassage) return;
+    
+    if (passageSearchTimeout.current) {
+      clearTimeout(passageSearchTimeout.current);
+    }
+    
+    onChange(index, { ...latestDataRef.current, isLoadingPassage: true });
+    
+    passageSearchTimeout.current = setTimeout(async () => {
+      const controller = new AbortController();
+      
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/questions/passage/search?search=${searchTerm}`,
+          { signal: controller.signal }
+        );
+        
+        if (response.data && Array.isArray(response.data)) {
+          onChange(index, {
+            ...latestDataRef.current,
+            passageSearchResults: response.data,
+            isLoadingPassage: false,
+          });
+        } else {
+          onChange(index, { ...latestDataRef.current, passageSearchResults: [], isLoadingPassage: false });
+        }
+      } catch (error: any) {
+        if (!axios.isCancel(error)) {
+          onChange(index, { ...latestDataRef.current, passageSearchResults: [], isLoadingPassage: false });
+        }
+      }
+    }, 500);
+  };
 
   const createPassage = async () => {
     try {
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/questions/passage`,
         {
-          title: dataRef.current.newPassageTitle,
-          passage: dataRef.current.newPassageContent,
+          title: data.newPassageTitle,
+          passage: data.newPassageContent,
           create_user_id: userId,
         },
         {
@@ -399,19 +679,22 @@ const BulkQuestionItem: React.FC<{
           },
         }
       );
-      const curr = dataRef.current;
+      
       onChange(index, {
-        ...curr,
+        ...latestDataRef.current,
         passage: {
           id: response.data.id,
-          title: curr.newPassageTitle,
-          passage: curr.newPassageContent,
+          title: data.newPassageTitle,
+          passage: data.newPassageContent,
         },
+        newPassageTitle: '',
+        newPassageContent: '',
         showPassageModal: false,
         createNewPassage: false,
       });
-    } catch {
-      // Handle error if needed
+    } catch (error) {
+      console.error('Error creating passage:', error);
+      alert('Gagal membuat bacaan baru. Silakan coba lagi.');
     }
   };
 
@@ -419,70 +702,109 @@ const BulkQuestionItem: React.FC<{
     {
       action: 'cancel',
       text: 'Batal',
-      icon: <X className="tw-w-4 tw-h-4" />,
       onClick: () => {
-        const updated = {
-          ...data,
+        onChange(index, {
+          ...latestDataRef.current,
           showPassageModal: false,
           createNewPassage: false,
-        };
-        onChange(index, updated);
-      }
+        });
+      },
     },
     {
       action: 'save',
       text: 'Simpan Bacaan',
-      icon: <Check className="tw-w-4 tw-h-4" />,
       onClick: createPassage,
-      disabled: !data.newPassageTitle.trim() || !data.newPassageContent.trim()
-    }
+    },
   ];
 
-  const headerContent = (
-    <div className="tw-relative">
-      <div className="tw-pr-12 sm:tw-pr-20 md:tw-pr-24 tw-p-4 tw-bg-gradient-to-r tw-from-purple-50 tw-to-indigo-50 tw-border-b tw-border-purple-200">
-        <div className="tw-flex tw-items-center tw-space-x-2 tw-w-full tw-min-w-0">
-          {isOpen ? (
-            <ChevronUp className="tw-w-4 tw-h-4 tw-text-purple-600 tw-shrink-0" />
-          ) : (
-            <ChevronDown className="tw-w-4 tw-h-4 tw-text-purple-600 tw-shrink-0" />
-          )}
-          <span className="tw-font-semibold tw-text-sm sm:tw-text-lg tw-text-purple-700 tw-truncate">
-            Pertanyaan {index + 1}
-          </span>
-        </div>
-      </div>
+  const handleIndividualImport = () => {
+    try {
+      setIndividualImportError('');
       
-      <div className="tw-absolute tw-right-2 sm:tw-right-4 tw-top-1/2 tw-transform -tw-translate-y-1/2 tw-z-20">
-        <div className="sm:tw-hidden">
-          <ButtonGradient
-            action="delete"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove(index);
-            }}
-            customIcon={<Trash2 className="tw-w-3 tw-h-3" />}
-            customText=""
-            className="tw-px-2 tw-py-2 tw-min-w-0"
-          />
-        </div>
+      const parsedData = JSON.parse(individualJsonInput);
+      
+      if (Array.isArray(parsedData)) {
+        const importedQuestions: QuestionData[] = parsedData.map((item: any) => {
+          const processedQuestionText = processContent(item.questionText || item.question || '');
+          const processedOptions = (item.options || ['']).map((opt: string) => processContent(opt));
+          const processedExplanation = processContent(item.explanation || item.explanationContent || '');
+          
+          return {
+            ...initialQuestionData,
+            bidang: null,
+            topik: null,
+            subTopik: null,
+            level: item.level || null,
+            hasPassage: false,
+            questionType: item.questionType || item.type || 'single-choice',
+            questionText: processedQuestionText,
+            options: processedOptions,
+            correctAnswer: item.correctAnswer || item.correct || [],
+            statements: item.statements || [''],
+            answer: item.answer || '',
+            hasExplanation: !!(item.explanation || item.explanationContent),
+            explanationContent: processedExplanation,
+          };
+        });
         
-        <div className="tw-hidden sm:tw-block">
-          <ButtonGradient
-            action="delete"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove(index);
-            }}
-            customIcon={<Trash2 className="tw-w-4 tw-h-4" />}
-            customText="Hapus"
-          />
-        </div>
-      </div>
-    </div>
-  );
+        onInsertAfter(index, importedQuestions);
+        setShowIndividualImport(false);
+        setIndividualJsonInput('');
+        alert(`Berhasil menambahkan ${importedQuestions.length} soal setelah soal #${index + 1}!`);
+      } else {
+        const processedQuestionText = processContent(parsedData.questionText || parsedData.question || '');
+        const processedOptions = (parsedData.options || ['']).map((opt: string) => processContent(opt));
+        const processedExplanation = processContent(parsedData.explanation || parsedData.explanationContent || '');
+        
+        const importedQuestion: QuestionData = {
+          ...latestDataRef.current,
+          level: parsedData.level || data.level,
+          questionType: parsedData.questionType || parsedData.type || data.questionType,
+          questionText: processedQuestionText,
+          options: processedOptions,
+          correctAnswer: parsedData.correctAnswer || parsedData.correct || [],
+          statements: parsedData.statements || [''],
+          answer: parsedData.answer || '',
+          hasExplanation: !!(parsedData.explanation || parsedData.explanationContent),
+          explanationContent: processedExplanation,
+        };
+        
+        onChange(index, importedQuestion);
+        setShowIndividualImport(false);
+        setIndividualJsonInput('');
+        alert(`Berhasil mengimport data ke soal #${index + 1}!`);
+      }
+    } catch (error: any) {
+      setIndividualImportError(`Error: ${error.message || 'Format JSON tidak valid'}`);
+    }
+  };
+
+  const individualImportButtons: ModalButton[] = [
+    {
+      action: 'cancel',
+      text: 'Batal',
+      onClick: () => {
+        setShowIndividualImport(false);
+        setIndividualJsonInput('');
+        setIndividualImportError('');
+      },
+    },
+    {
+      action: 'save',
+      text: 'Import',
+      onClick: handleIndividualImport,
+    },
+  ];
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (bidangSearchTimeout.current) clearTimeout(bidangSearchTimeout.current);
+      if (topikSearchTimeout.current) clearTimeout(topikSearchTimeout.current);
+      if (subTopikSearchTimeout.current) clearTimeout(subTopikSearchTimeout.current);
+      if (passageSearchTimeout.current) clearTimeout(passageSearchTimeout.current);
+    };
+  }, []);
 
   return (
     <>
@@ -490,118 +812,159 @@ const BulkQuestionItem: React.FC<{
         eventKey={String(index)}
         activeKey={isOpen ? String(index) : null}
         onToggle={() => onToggle()}
-        header={headerContent}
-      >
-        <div 
-          className="tw-space-y-4"
-          style={{
-            position: 'relative',
-            zIndex: 100,
-            overflow: 'visible'
-          }}
-        >
-          {/* Grid fields */}
-          <div className="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 lg:tw-grid-cols-3 tw-gap-3 sm:tw-gap-4 tw-mb-4 sm:tw-mb-6">
-            <div 
-              className="tw-w-full tw-min-w-0"
-              style={{ position: 'relative', zIndex: 103 }}
-            >
-              <SearchSingleField
-                label="Bidang"
-                value={data.bidang}
-                options={data.bidangOptions}
-                onChange={(newValue) => {
-                  const updated = {
-                    ...data,
-                    bidang: newValue,
-                    topik: null,
-                    subTopik: null,
-                    topikOptions: [],
-                    subTopikOptions: [],
-                    topikSearchTerm: '',
-                    subTopikSearchTerm: '',
-                  };
-                  onChange(index, updated);
+        header={
+          <div className="tw-flex tw-flex-col sm:tw-flex-row tw-justify-between tw-items-start sm:tw-items-center tw-p-3 sm:tw-p-6 tw-gap-3 sm:tw-gap-0">
+            <div className="tw-flex tw-items-center tw-gap-3 tw-min-w-0 tw-flex-1">
+              <div className="tw-bg-purple-100 tw-p-2 sm:tw-p-3 tw-rounded-lg sm:tw-rounded-xl tw-flex-shrink-0">
+                <Target className="tw-w-4 tw-h-4 sm:tw-w-5 sm:tw-h-5 tw-text-purple-600" />
+              </div>
+              <div className="tw-min-w-0 tw-flex-1">
+                <h3 className="tw-text-base sm:tw-text-lg tw-font-bold tw-text-purple-800 tw-break-words">
+                  Soal #{index + 1}
+                </h3>
+                <p className="tw-text-xs sm:tw-text-sm tw-text-gray-600 tw-break-words">
+                  {data.questionType
+                    ? questionTypeOptions.find((opt) => opt.value === data.questionType)?.label
+                    : 'Belum diatur'}
+                  {data.level && ` • Level ${data.level}`}
+                </p>
+              </div>
+            </div>
+
+            <div className="tw-flex tw-gap-2 sm:tw-gap-3 tw-w-full sm:tw-w-auto tw-flex-shrink-0">
+              <ButtonGradient
+                action="custom"
+                customText="Import"
+                customIcon={<Upload className="tw-w-4 tw-h-4" />}
+                customColors={{
+                  primary: '#8B5CF6',
+                  secondary: '#7C3AED',
+                  gradient1: '#8B5CF6',
+                  gradient2: '#A78BFA',
+                  text: '#FFFFFF'
                 }}
-                onInputChange={(val: string) => debouncedSetBidangSearch(val)}
-                isLoading={data.isLoadingBidang}
-                icon={<Award size={16} />}
-                required
+                size="md"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowIndividualImport(true);
+                }}
+                className="tw-flex-1 sm:tw-flex-none"
+              />
+
+              <ButtonGradient
+                action="custom"
+                customText={isOpen ? 'Tutup' : 'Buka'}
+                customIcon={
+                  isOpen ? (
+                    <ChevronUp className="tw-w-4 tw-h-4" />
+                  ) : (
+                    <ChevronDown className="tw-w-4 tw-h-4" />
+                  )
+                }
+                customColors={{
+                  primary: '#7C3AED',
+                  secondary: '#6D28D9',
+                  gradient1: '#7C3AED',
+                  gradient2: '#A78BFA',
+                  text: '#FFFFFF'
+                }}
+                size="md"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                className="tw-flex-1 sm:tw-flex-none"
+              />
+
+              <ButtonGradient
+                action="delete"
+                customText="Hapus"
+                customIcon={<Trash2 className="tw-w-4 tw-h-4" />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm('Yakin ingin menghapus soal ini?')) {
+                    onRemove(index);
+                  }
+                }}
+                size="md"
+                className="tw-flex-1 sm:tw-flex-none"
               />
             </div>
-            {data.bidang && (
-              <div 
-                className="tw-w-full tw-min-w-0"
-                style={{ position: 'relative', zIndex: 102 }}
-              >
-                <SearchSingleField
-                  label="Topik"
-                  value={data.topik}
-                  options={data.topikOptions}
-                  onChange={(newValue) => {
-                    const updated = {
-                      ...data,
-                      topik: newValue,
-                      subTopik: null,
-                      subTopikOptions: [],
-                      subTopikSearchTerm: '',
-                    };
-                    onChange(index, updated);
-                  }}
-                  onInputChange={(val: string) => debouncedSetTopikSearch(val)}
-                  isLoading={data.isLoadingTopik}
-                  icon={<BookOpen size={16} />}
-                  required
-                />
-              </div>
-            )}
-            {data.topik && (
-              <div 
-                className="tw-w-full tw-min-w-0 sm:tw-col-span-2 lg:tw-col-span-1"
-                style={{ position: 'relative', zIndex: 101 }}
-              >
-                <SearchSingleField
-                  label="Sub Topik"
-                  value={
-                    data.subTopik
-                      ? { label: data.subTopik.label, value: data.subTopik.value }
-                      : null
-                  }
-                  options={data.subTopikOptions.map((opt: any) => ({
-                    label: opt.label,
-                    value: opt.value,
-                  }))}
-                  onChange={(newValue) => {
-                    const selected = data.subTopikOptions.find(
-                      (p: any) => p.value === newValue?.value
-                    );
-                    const updated = {
-                      ...data,
-                      subTopik: selected || null,
-                    };
-                    onChange(index, updated);
-                  }}
-                  onInputChange={(val: string) => debouncedSetSubTopikSearch(val)}
-                  isLoading={data.isLoadingSubTopik}
-                  icon={<Target size={16} />}
-                  required
-                />
-              </div>
-            )}
+          </div>
+        }
+      >
+        <div className="tw-space-y-3 sm:tw-space-y-6 tw-w-full">
+          <div 
+            className="tw-mb-4 sm:tw-mb-6 tw-w-full"
+            style={{ position: 'relative', zIndex: 300, overflow: 'visible' }}
+          >
+            <SearchSingleField
+              label="Bidang"
+              value={data.bidang}
+              options={data.bidangOptions}
+              onChange={(newValue) => {
+                onChange(index, {
+                  ...latestDataRef.current,
+                  bidang: newValue,
+                  topik: null,
+                  subTopik: null,
+                  topikOptions: [],
+                  subTopikOptions: [],
+                });
+              }}
+              onInputChange={handleBidangSearch}
+              isLoading={data.isLoadingBidang}
+              required
+            />
+          </div>
+
+          <div 
+            className="tw-mb-4 sm:tw-mb-6 tw-w-full"
+            style={{ position: 'relative', zIndex: 200, overflow: 'visible' }}
+          >
+            <SearchSingleField
+              label="Topik"
+              value={data.topik}
+              options={data.topikOptions}
+              onChange={(newValue) => {
+                onChange(index, {
+                  ...latestDataRef.current,
+                  topik: newValue,
+                  subTopik: null,
+                  subTopikOptions: [],
+                });
+              }}
+              onInputChange={handleTopikSearch}
+              isLoading={data.isLoadingTopik}
+              required
+              disabled={!data.bidang}
+            />
+          </div>
+
+          <div 
+            className="tw-mb-4 sm:tw-mb-6 tw-w-full"
+            style={{ position: 'relative', zIndex: 150, overflow: 'visible' }}
+          >
+            <SearchSingleField
+              label="Sub Topik"
+              value={data.subTopik}
+              options={data.subTopikOptions}
+              onChange={(newValue) => {
+                onChange(index, { ...latestDataRef.current, subTopik: newValue });
+              }}
+              onInputChange={handleSubTopikSearch}
+              isLoading={data.isLoadingSubTopik}
+              required
+              disabled={!data.topik}
+            />
           </div>
 
           <div className="tw-mb-4 sm:tw-mb-6 tw-w-full tw-min-w-0">
             <SelectCustomField
               label="Level"
-              value={
-                data.level !== null
-                  ? levelOptions.find((opt) => opt.value === data.level) || null
-                  : null
-              }
+              value={levelOptions.find((opt) => opt.value === data.level) || null}
               options={levelOptions}
               onChange={(newValue) => {
-                const updated = { ...data, level: newValue ? newValue.value : null };
-                onChange(index, updated);
+                onChange(index, { ...latestDataRef.current, level: newValue ? newValue.value : null });
               }}
               required
             />
@@ -616,14 +979,12 @@ const BulkQuestionItem: React.FC<{
                 label="Ada Bacaan"
                 checked={data.hasPassage}
                 onChange={(checked) => {
-                  const updated = {
-                    ...data,
+                  onChange(index, {
+                    ...latestDataRef.current,
                     hasPassage: checked,
                     passage: checked ? data.passage : null,
                     passageSearchResults: checked ? data.passageSearchResults : [],
-                    passageSearchTerm: '',
-                  };
-                  onChange(index, updated);
+                  });
                 }}
                 icon={<Bookmark size={16} />}
                 color="tw-text-purple-700"
@@ -650,8 +1011,7 @@ const BulkQuestionItem: React.FC<{
                       action={!data.createNewPassage ? 'apply' : 'custom'}
                       customText="Pilih Bacaan"
                       onClick={() => {
-                        const updated = { ...data, createNewPassage: false };
-                        onChange(index, updated);
+                        onChange(index, { ...latestDataRef.current, createNewPassage: false });
                       }}
                       size="md"
                       className="tw-w-full"
@@ -662,12 +1022,11 @@ const BulkQuestionItem: React.FC<{
                       action={data.createNewPassage ? 'apply' : 'custom'}
                       customText="Buat Baru"
                       onClick={() => {
-                        const updated = {
-                          ...data,
+                        onChange(index, {
+                          ...latestDataRef.current,
                           createNewPassage: true,
                           showPassageModal: true,
-                        };
-                        onChange(index, updated);
+                        });
                       }}
                       size="md"
                       className="tw-w-full"
@@ -699,10 +1058,9 @@ const BulkQuestionItem: React.FC<{
                         const selected = data.passageSearchResults.find(
                           (p: any) => p.id === newValue?.value
                         );
-                        const updated = { ...data, passage: selected || null };
-                        onChange(index, updated);
+                        onChange(index, { ...latestDataRef.current, passage: selected || null });
                       }}
-                      onInputChange={(val: string) => debouncedSetPassageSearch(val)}
+                      onInputChange={handlePassageSearch}
                       isLoading={data.isLoadingPassage}
                       required
                     />
@@ -732,15 +1090,14 @@ const BulkQuestionItem: React.FC<{
               }
               options={questionTypeOptions}
               onChange={(newValue) => {
-                const updated = {
-                  ...data,
+                onChange(index, {
+                  ...latestDataRef.current,
                   questionType: newValue?.value.toString() || 'single-choice',
                   options: [''],
                   correctAnswer: [],
                   statements: [''],
                   answer: '',
-                };
-                onChange(index, updated);
+                });
               }}
               required
             />
@@ -756,10 +1113,10 @@ const BulkQuestionItem: React.FC<{
             <div className="tw-bg-white tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-shadow-sm tw-w-full">
               <SuperEditor
                 onChange={(html) => {
-                  const updated = { ...data, questionText: html };
-                  onChange(index, updated);
+                  onChange(index, { ...latestDataRef.current, questionText: html });
                 }}
-                initialValue="<p>Mulai mengetik soal di sini...</p>"
+                initialValue={data.questionText || "<p>Mulai mengetik soal di sini...</p>"}
+                editorId={`question-text-${index}`}
                 height="120px"
               />
             </div>
@@ -833,8 +1190,7 @@ const BulkQuestionItem: React.FC<{
                                   updatedCorrect = [...(data.correctAnswer as number[]), idx];
                                 }
                               }
-                              const updated = { ...data, correctAnswer: updatedCorrect };
-                              onChange(index, updated);
+                              onChange(index, { ...latestDataRef.current, correctAnswer: updatedCorrect });
                             }}
                           />
                         </div>
@@ -844,10 +1200,10 @@ const BulkQuestionItem: React.FC<{
                           onChange={(html) => {
                             const newOptions = [...data.options];
                             newOptions[idx] = html;
-                            const updated = { ...data, options: newOptions };
-                            onChange(index, updated);
+                            onChange(index, { ...latestDataRef.current, options: newOptions });
                           }}
-                          initialValue="<p>Masukkan teks opsi...</p>"
+                          initialValue={option || "<p>Masukkan teks opsi...</p>"}
+                          editorId={`option-${index}-${idx}`}
                           height="80px"
                         />
                       </div>
@@ -860,8 +1216,7 @@ const BulkQuestionItem: React.FC<{
                   action="add"
                   customText="Tambah Opsi"
                   onClick={() => {
-                    const updated = { ...data, options: [...data.options, ''] };
-                    onChange(index, updated);
+                    onChange(index, { ...latestDataRef.current, options: [...data.options, ''] });
                   }}
                   disabled={data.options.length >= optionLabels.length}
                   size="md"
@@ -890,8 +1245,7 @@ const BulkQuestionItem: React.FC<{
                           onChange={(e) => {
                             const newStatements = [...data.statements];
                             newStatements[idx] = e.target.value;
-                            const updated = { ...data, statements: newStatements };
-                            onChange(index, updated);
+                            onChange(index, { ...latestDataRef.current, statements: newStatements });
                           }}
                         />
                       </div>
@@ -920,8 +1274,7 @@ const BulkQuestionItem: React.FC<{
                             onClick={() => {
                               const newCorrect = [...(data.correctAnswer as boolean[])];
                               newCorrect[idx] = true;
-                              const updated = { ...data, correctAnswer: newCorrect };
-                              onChange(index, updated);
+                              onChange(index, { ...latestDataRef.current, correctAnswer: newCorrect });
                             }}
                             className="tw-w-full"
                           />
@@ -950,8 +1303,7 @@ const BulkQuestionItem: React.FC<{
                             onClick={() => {
                               const newCorrect = [...(data.correctAnswer as boolean[])];
                               newCorrect[idx] = false;
-                              const updated = { ...data, correctAnswer: newCorrect };
-                              onChange(index, updated);
+                              onChange(index, { ...latestDataRef.current, correctAnswer: newCorrect });
                             }}
                             className="tw-w-full"
                           />
@@ -966,12 +1318,11 @@ const BulkQuestionItem: React.FC<{
                   action="add"
                   customText="Tambah Pernyataan"
                   onClick={() => {
-                    const updated = {
-                      ...data,
+                    onChange(index, {
+                      ...latestDataRef.current,
                       statements: [...data.statements, ''],
                       correctAnswer: [...(data.correctAnswer as boolean[]), false],
-                    };
-                    onChange(index, updated);
+                    });
                   }}
                   size="md"
                 />
@@ -985,8 +1336,7 @@ const BulkQuestionItem: React.FC<{
                 label="Jawaban Benar"
                 value={data.answer}
                 onChange={(e) => {
-                  const updated = { ...data, answer: e.target.value };
-                  onChange(index, updated);
+                  onChange(index, { ...latestDataRef.current, answer: e.target.value });
                 }}
                 required
               />
@@ -999,8 +1349,7 @@ const BulkQuestionItem: React.FC<{
                 label="Ada Pembahasan"
                 checked={data.hasExplanation}
                 onChange={(checked) => {
-                  const updated = { ...data, hasExplanation: checked };
-                  onChange(index, updated);
+                  onChange(index, { ...latestDataRef.current, hasExplanation: checked });
                 }}
                 icon={<FileText size={16} />}
                 color="tw-text-purple-700"
@@ -1020,10 +1369,10 @@ const BulkQuestionItem: React.FC<{
                 <div className="tw-bg-gray-50 tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-w-full">
                   <SuperEditor
                     onChange={(html) => {
-                      const updated = { ...data, explanationContent: html };
-                      onChange(index, updated);
+                      onChange(index, { ...latestDataRef.current, explanationContent: html });
                     }}
-                    initialValue="<p>Mulai mengetik pembahasan di sini...</p>"
+                    initialValue={data.explanationContent || "<p>Mulai mengetik pembahasan di sini...</p>"}
+                    editorId={`explanation-${index}`}
                     height="100px"
                   />
                 </div>
@@ -1031,7 +1380,6 @@ const BulkQuestionItem: React.FC<{
             )}
           </div>
 
-          {/* Spacer for dropdown space */}
           <div className="tw-h-64" aria-hidden="true" />
         </div>
       </CustomAccordionItem>
@@ -1039,12 +1387,11 @@ const BulkQuestionItem: React.FC<{
       <LearningModal
         show={data.showPassageModal}
         onHide={() => {
-          const updated = {
-            ...data,
+          onChange(index, {
+            ...latestDataRef.current,
             showPassageModal: false,
             createNewPassage: false,
-          };
-          onChange(index, updated);
+          });
         }}
         title="Buat Bacaan Baru"
         subtitle="Buat bacaan baru untuk soal"
@@ -1062,11 +1409,10 @@ const BulkQuestionItem: React.FC<{
               label="Judul Bacaan"
               value={data.newPassageTitle}
               onChange={(e) => {
-                const updated = {
-                  ...data,
+                onChange(index, {
+                  ...latestDataRef.current,
                   newPassageTitle: e.target.value,
-                };
-                onChange(index, updated);
+                });
               }}
               required
             />
@@ -1079,13 +1425,128 @@ const BulkQuestionItem: React.FC<{
             <div className="tw-bg-gray-50 tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-shadow-sm tw-w-full">
               <SuperEditor
                 onChange={(html) => {
-                  const updated = { ...data, newPassageContent: html };
-                  onChange(index, updated);
+                  onChange(index, { ...latestDataRef.current, newPassageContent: html });
                 }}
                 initialValue="<p>Mulai mengetik bacaan di sini...</p>"
                 height="300px"
               />
             </div>
+          </div>
+        </div>
+      </LearningModal>
+
+      <LearningModal
+        show={showIndividualImport}
+        onHide={() => {
+          setShowIndividualImport(false);
+          setIndividualJsonInput('');
+          setIndividualImportError('');
+        }}
+        title={`Import JSON - Soal #${index + 1}`}
+        subtitle="Import data untuk soal ini atau tambahkan beberapa soal setelahnya"
+        icon={<FileJson className="tw-w-5 tw-h-5" />}
+        size="lg"
+        width="90vw"
+        height="85vh"
+        scrollable={true}
+        bottomButtons={individualImportButtons}
+        preventCloseOnOutsideClick={false}
+      >
+        <div className="tw-space-y-4 tw-w-full">
+          <div className="tw-bg-gradient-to-r tw-from-purple-50 tw-to-indigo-50 tw-border-2 tw-border-purple-200 tw-rounded-lg tw-p-4">
+            <h4 className="tw-text-purple-800 tw-font-semibold tw-mb-3 tw-flex tw-items-center tw-gap-2">
+              <FileJson className="tw-w-5 tw-h-5" />
+              2 Mode Import
+            </h4>
+            
+            <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4">
+              <div className="tw-bg-white tw-border-2 tw-border-purple-300 tw-rounded-lg tw-p-3">
+                <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
+                  <div className="tw-bg-purple-500 tw-text-white tw-rounded-full tw-w-6 tw-h-6 tw-flex tw-items-center tw-justify-center tw-text-xs tw-font-bold">1</div>
+                  <h5 className="tw-font-semibold tw-text-purple-800">Replace Mode</h5>
+                </div>
+                <p className="tw-text-sm tw-text-gray-700 tw-mb-2">
+                  Paste <strong>1 object JSON</strong> untuk mengganti data soal ini
+                </p>
+                <pre className="tw-bg-gray-100 tw-border tw-border-gray-300 tw-rounded tw-p-2 tw-text-xs tw-overflow-x-auto">
+{`{
+  "level": 2,
+  "questionType": "single-choice",
+  "questionText": "Soal...",
+  "options": ["A", "B", "C"],
+  "correctAnswer": [0]
+}`}
+                </pre>
+              </div>
+
+              <div className="tw-bg-white tw-border-2 tw-border-indigo-300 tw-rounded-lg tw-p-3">
+                <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
+                  <div className="tw-bg-indigo-500 tw-text-white tw-rounded-full tw-w-6 tw-h-6 tw-flex tw-items-center tw-justify-center tw-text-xs tw-font-bold">2</div>
+                  <h5 className="tw-font-semibold tw-text-indigo-800">Insert Mode</h5>
+                </div>
+                <p className="tw-text-sm tw-text-gray-700 tw-mb-2">
+                  Paste <strong>array JSON</strong> untuk menambah soal setelah soal ini
+                </p>
+                <pre className="tw-bg-gray-100 tw-border tw-border-gray-300 tw-rounded tw-p-2 tw-text-xs tw-overflow-x-auto">
+{`[
+  {
+    "level": 2,
+    "questionText": "Soal 1...",
+    ...
+  },
+  {
+    "level": 3,
+    "questionText": "Soal 2...",
+    ...
+  }
+]`}
+                </pre>
+              </div>
+            </div>
+          </div>
+
+          <div className="tw-bg-blue-50 tw-border-2 tw-border-blue-200 tw-rounded-lg tw-p-4">
+            <h4 className="tw-text-blue-800 tw-font-semibold tw-mb-2">
+              💡 Equation & Table Support
+            </h4>
+            <p className="tw-text-blue-700 tw-text-sm">
+              Gunakan tag <code className="tw-bg-blue-100 tw-px-1 tw-rounded">&lt;equation&gt;&lt;/equation&gt;</code> untuk equation:
+            </p>
+            <pre className="tw-bg-white tw-border tw-border-blue-300 tw-rounded tw-p-2 tw-text-xs tw-mt-2 tw-overflow-x-auto">
+{`"questionText": "Hitung <equation>\\\\frac{1}{2}</equation>"`}
+            </pre>
+          </div>
+
+          <div className="tw-w-full">
+            <label className="tw-text-purple-700 tw-font-medium tw-mb-2 tw-block tw-flex tw-items-center tw-gap-2">
+              <FileJson className="tw-w-4 tw-h-4" />
+              JSON Data <span className="tw-text-red-500">*</span>
+            </label>
+            <textarea
+              value={individualJsonInput}
+              onChange={(e) => setIndividualJsonInput(e.target.value)}
+              className="tw-w-full tw-h-48 tw-p-3 tw-border-2 tw-border-purple-300 tw-rounded-lg tw-font-mono tw-text-sm focus:tw-border-purple-500 focus:tw-outline-none"
+              placeholder='Paste JSON object atau array di sini...'
+            />
+          </div>
+
+          {individualImportError && (
+            <div className="tw-bg-red-50 tw-border-2 tw-border-red-300 tw-rounded-lg tw-p-4">
+              <p className="tw-text-red-700 tw-text-sm tw-font-medium">
+                {individualImportError}
+              </p>
+            </div>
+          )}
+
+          <div className="tw-bg-yellow-50 tw-border-2 tw-border-yellow-200 tw-rounded-lg tw-p-4">
+            <h4 className="tw-text-yellow-800 tw-font-semibold tw-mb-2">
+              ⚠️ Catatan Penting
+            </h4>
+            <ul className="tw-text-yellow-700 tw-text-sm tw-space-y-1 tw-list-disc tw-list-inside">
+              <li><strong>Replace mode:</strong> Bidang, Topik, Subtopik yang sudah dipilih akan tetap dipertahankan</li>
+              <li><strong>Insert mode:</strong> Soal baru akan ditambahkan dengan Bidang, Topik, Subtopik kosong</li>
+              <li>Equation akan otomatis dirender dengan KaTeX</li>
+            </ul>
           </div>
         </div>
       </LearningModal>
@@ -1099,184 +1560,387 @@ const CreateQuestionBulk: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successData, setSuccessData] = useState<any[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [autoExport, setAutoExport] = useState(false);
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [autoExport, setAutoExport] = useState(false);
+  
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [errorDetails, setErrorDetails] = useState<string[]>([]);
+  
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [jsonInput, setJsonInput] = useState('');
+  const [importError, setImportError] = useState('');
 
   const addQuestion = () => {
-    const newIndex = questions.length;
-    setQuestions((prev) => [...prev, { ...initialQuestionData }]);
-    setOpenIndex(newIndex);
+    setQuestions([...questions, { ...initialQuestionData }]);
+    setOpenIndex(questions.length);
   };
 
-  const updateQuestion = (idx: number, data: QuestionData) => {
-    const updated = [...questions];
-    updated[idx] = data;
+  const removeQuestion = (index: number) => {
+    const updated = questions.filter((_, i) => i !== index);
     setQuestions(updated);
-  };
-
-  const removeQuestion = (idx: number) => {
-    const updated = questions.filter((_, i) => i !== idx);
-    setQuestions(updated);
-    if (openIndex === idx) {
+    if (openIndex === index) {
       setOpenIndex(updated.length > 0 ? 0 : null);
-    } else if (openIndex !== null && openIndex > idx) {
-      setOpenIndex(openIndex - 1);
     }
   };
 
-  const downloadCSV = (data: any[]) => {
-    if (data.length === 0) return;
-    
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const filename = `${today}_${data.length}_questions.csv`;
-    
-    const headers = ['id', 'code', 'question_type', 'level'];
-    const rows = data.map(q => [q.id, q.code, q.question_type, q.level]);
-    
-    let csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(',') + '\n' 
-      + rows.map(row => row.join(',')).join('\n');
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const updateQuestion = (index: number, data: QuestionData) => {
+    const updated = [...questions];
+    updated[index] = data;
+    setQuestions(updated);
+  };
+
+  const insertQuestionsAfter = (index: number, newQuestions: QuestionData[]) => {
+    const updated = [...questions];
+    updated.splice(index + 1, 0, ...newQuestions);
+    setQuestions(updated);
+    setOpenIndex(index + 1);
+  };
+
+  const handleReset = () => {
+    setQuestions([{ ...initialQuestionData }]);
+    setOpenIndex(0);
+    setSuccessData([]);
+    setShowSuccessModal(false);
+  };
+
+  const handleImportJSON = () => {
+    try {
+      setImportError('');
+      
+      const parsedData = JSON.parse(jsonInput);
+      
+      if (!Array.isArray(parsedData)) {
+        throw new Error('JSON harus berupa array dari objek soal');
+      }
+      
+      const importedQuestions: QuestionData[] = parsedData.map((item: any) => {
+        const processedQuestionText = processContent(item.questionText || item.question || '');
+        const processedOptions = (item.options || ['']).map((opt: string) => processContent(opt));
+        const processedExplanation = processContent(item.explanation || item.explanationContent || '');
+        
+        return {
+          ...initialQuestionData,
+          bidang: null,
+          topik: null,
+          subTopik: null,
+          level: item.level || null,
+          hasPassage: false,
+          questionType: item.questionType || item.type || 'single-choice',
+          questionText: processedQuestionText,
+          options: processedOptions,
+          correctAnswer: item.correctAnswer || item.correct || [],
+          statements: item.statements || [''],
+          answer: item.answer || '',
+          hasExplanation: !!(item.explanation || item.explanationContent),
+          explanationContent: processedExplanation,
+        };
+      });
+      
+      setQuestions(importedQuestions);
+      setOpenIndex(0);
+      setShowImportModal(false);
+      setJsonInput('');
+      
+      alert(`Berhasil mengimport ${importedQuestions.length} soal! Silakan lengkapi Bidang, Topik, dan Sub Topik untuk setiap soal.`);
+    } catch (error: any) {
+      setImportError(`Error: ${error.message || 'Format JSON tidak valid'}`);
+    }
+  };
+
+  const validateQuestion = (q: QuestionData): boolean => {
+    if (!q.bidang || !q.topik || !q.subTopik) return false;
+    if (q.level === null) return false;
+    if (!q.questionText || q.questionText.trim() === '' || q.questionText === '<p>Mulai mengetik soal di sini...</p>') return false;
+
+    if (q.questionType === 'single-choice' || q.questionType === 'multiple-choice') {
+      if (q.options.length === 0) return false;
+      if (q.correctAnswer.length === 0) return false;
+    } else if (q.questionType === 'true-false') {
+      if (q.statements.length === 0) return false;
+      if (q.correctAnswer.length === 0) return false;
+    } else if (q.questionType === 'number' || q.questionType === 'text') {
+      if (!q.answer || q.answer.trim() === '') return false;
+    }
+
+    if (q.hasExplanation) {
+      if (!q.explanationContent || q.explanationContent.trim() === '' || q.explanationContent === '<p>Mulai mengetik pembahasan di sini...</p>') {
+        return false;
+      }
+    }
+
+    if (q.hasPassage) {
+      if (!q.passage && !q.createNewPassage) return false;
+      if (q.createNewPassage && (!q.newPassageTitle || !q.newPassageContent)) return false;
+    }
+
+    return true;
   };
 
   const handleSubmit = async () => {
-    const invalidQuestions = questions.filter((q, idx) => {
-      if (!q.subTopik?.value) {
-        alert(`Pertanyaan ${idx + 1}: Sub Topik harus dipilih`);
-        return true;
-      }
-      if (!q.level) {
-        alert(`Pertanyaan ${idx + 1}: Level harus dipilih`);
-        return true;
-      }
-      if (!q.questionText?.trim()) {
-        alert(`Pertanyaan ${idx + 1}: Teks soal harus diisi`);
-        return true;
-      }
-      return false;
-    });
+    const invalidQuestions = questions
+      .map((q, idx) => ({ q, idx }))
+      .filter(({ q }) => !validateQuestion(q));
 
     if (invalidQuestions.length > 0) {
+      const invalidIndexes = invalidQuestions.map(({ idx }) => idx + 1).join(', ');
+      alert(`Soal nomor ${invalidIndexes} belum lengkap. Mohon lengkapi semua field yang diperlukan.`);
       return;
     }
 
     setIsSubmitting(true);
-    
-    const prepared = questions.map((q) => {
-      let updatedCorrectAnswer: string[] | number[] | undefined;
-      
-      if (q.questionType === 'true-false') {
-        updatedCorrectAnswer = (q.correctAnswer as boolean[]).map((ans) => 
-          ans ? 'true' : 'false'
-        );
-      } else if (q.questionType === 'number' || q.questionType === 'text') {
-        updatedCorrectAnswer = [q.answer];
-      } else if (q.questionType === 'single-choice' || q.questionType === 'multiple-choice') {
-        updatedCorrectAnswer = (q.correctAnswer as number[])
-          .map((index) => optionLabels[index])
-          .sort();
-      }
-
-      return {
-        question_topic_type: q.subTopik?.value || null,
-        question_text: q.questionText,
-        question_type: q.questionType,
-        options: 
-          q.questionType === 'single-choice' || q.questionType === 'multiple-choice'
-            ? q.options 
-            : undefined,
-        correct_answer: updatedCorrectAnswer,
-        statements: q.questionType === 'true-false' ? q.statements : undefined,
-        explanation: q.hasExplanation ? q.explanationContent : null,
-        passage_id: q.hasPassage ? q.passage?.id || null : null,
-        level: q.level,
-      };
-    });
 
     try {
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/questions/bulk`,
-        { questions: prepared },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-          },
+      const results = [];
+      const questionsPayload = [];
+
+      for (let i = 0; i < questions.length; i++) {
+        const q = questions[i];
+
+        let passageId = q.passage?.id || null;
+        if (q.hasPassage && q.createNewPassage && q.newPassageTitle && q.newPassageContent) {
+          try {
+            const passageResponse = await axios.post(
+              `${process.env.NEXT_PUBLIC_API_URL}/questions/passage`,
+              {
+                title: q.newPassageTitle,
+                passage: q.newPassageContent,
+                create_user_id: localStorage.getItem('userId'),
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+                },
+              }
+            );
+            passageId = passageResponse.data.id;
+          } catch (error) {
+            console.error('Error creating passage for question', i + 1, error);
+            throw new Error(`Gagal membuat bacaan untuk soal ${i + 1}`);
+          }
         }
-      );
-      
-      setSuccessData(response.data);
-      setShowSuccessModal(true);
-      
-      if (autoExport) {
-        downloadCSV(response.data);
+
+        const questionPayload: any = {
+          question_topic_type: q.subTopik?.value,
+          question_text: q.questionText,
+          question_type: q.questionType,
+          level: q.level,
+          passage_id: passageId,
+          explanation: (q.hasExplanation && q.explanationContent) ? q.explanationContent : null,
+        };
+
+        if (q.questionType === 'single-choice' || q.questionType === 'multiple-choice') {
+          questionPayload.options = q.options;
+          questionPayload.correct_answer = q.correctAnswer.map((idx: number) => optionLabels[idx]);
+        } else if (q.questionType === 'true-false') {
+          questionPayload.statements = q.statements;
+          questionPayload.correct_answer = q.correctAnswer;
+        } else if (q.questionType === 'number' || q.questionType === 'text') {
+          questionPayload.correct_answer = [q.answer];
+        }
+
+        questionsPayload.push(questionPayload);
+      }
+
+      try {
+        const response = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_URL}/questions/bulk`,
+          { questions: questionsPayload },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+            },
+          }
+        );
+
+        const createdQuestions = response.data.questions || response.data || [];
+        
+        createdQuestions.forEach((created: any, i: number) => {
+          const q = questions[i];
+          results.push({
+            index: i + 1,
+            id: created.id,
+            success: true,
+            code: created.code || created.id,
+            question_type: created.question_type || q.questionType,
+            level: created.level || q.level,
+            data: {
+              ...questionsPayload[i],
+              id: created.id,
+              code: created.code || created.id,
+              question_type: created.question_type || q.questionType,
+              level: created.level || q.level,
+              bidang: q.bidang?.label || '',
+              topik: q.topik?.label || '',
+              subTopik: q.subTopik?.label || '',
+            },
+          });
+        });
+
+        setSuccessData(results);
+        setShowSuccessModal(true);
+
+        if (autoExport) {
+          setTimeout(() => {
+            downloadCSV(results);
+          }, 500);
+        }
+      } catch (error: any) {
+        console.error('Error during bulk creation:', error);
+        
+        const details = error.response?.data?.details || [];
+        const message = error.response?.data?.error || 'Gagal membuat soal';
+        
+        setErrorMessage(message);
+        setErrorDetails(details);
+        setShowErrorModal(true);
       }
     } catch (error) {
-      console.error('Error creating questions:', error);
+      console.error('Error during bulk creation:', error);
       alert('Terjadi kesalahan saat membuat soal. Silakan coba lagi.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleReset = () => {
-    setQuestions([{ ...initialQuestionData }]);
-    setOpenIndex(0);
-    setShowSuccessModal(false);
+  const downloadCSV = (data: any[]) => {
+    const successfulQuestions = data.filter((d) => d.success);
+
+    if (successfulQuestions.length === 0) {
+      alert('Tidak ada soal yang berhasil dibuat untuk di-export.');
+      return;
+    }
+
+    const headers = [
+      'No',
+      'ID Soal',
+      'Kode Soal',
+      'Bidang',
+      'Topik',
+      'Sub Topik',
+      'Level',
+      'Tipe Soal',
+      'Teks Soal',
+      'Status',
+    ];
+
+    const rows = successfulQuestions.map((q) => {
+      const questionTextPlain = q.data.question_text.replace(/<[^>]*>/g, '').substring(0, 100);
+      return [
+        q.index,
+        q.data.id,
+        q.code,
+        q.data.bidang,
+        q.data.topik,
+        q.data.subTopik,
+        q.data.level,
+        q.data.question_type,
+        questionTextPlain,
+        'Berhasil',
+      ];
+    });
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `bulk-questions-${Date.now()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const handleBack = () => {
-    router.back();
-  };
+  const importModalButtons: ModalButton[] = [
+    {
+      action: 'cancel',
+      text: 'Batal',
+      onClick: () => {
+        setShowImportModal(false);
+        setJsonInput('');
+        setImportError('');
+      },
+    },
+    {
+      action: 'save',
+      text: 'Import Soal',
+      onClick: handleImportJSON,
+    },
+  ];
+
+  const errorModalButtons: ModalButton[] = [
+    {
+      action: 'cancel',
+      text: 'Tutup',
+      onClick: () => {
+        setShowErrorModal(false);
+        setErrorMessage('');
+        setErrorDetails([]);
+      },
+    },
+  ];
 
   return (
     <MainLayout>
-      <div className="tw-min-h-screen tw-w-full tw-overflow-x-hidden">
-        <div className="tw-p-3 sm:tw-p-6 tw-bg-gradient-to-br tw-from-purple-50 tw-via-white tw-to-indigo-50">
-          <div className="tw-max-w-full tw-mx-auto" style={{ overflow: 'visible' }}>
-            
-            {/* Header Card */}
-            <div className="tw-bg-gradient-to-r tw-from-purple-600 tw-to-indigo-600 tw-text-white tw-rounded-xl sm:tw-rounded-2xl tw-shadow-xl sm:tw-shadow-2xl tw-border-0 tw-mb-4 sm:tw-mb-6 tw-w-full">
-              <div className="tw-p-4 sm:tw-p-6">
-                <div className="tw-flex tw-flex-col sm:tw-flex-row tw-justify-between tw-items-start sm:tw-items-center tw-gap-3 sm:tw-gap-4">
-                  <div className="tw-flex tw-items-center tw-space-x-3 sm:tw-space-x-4 tw-min-w-0 tw-flex-1">
-                    <div className="tw-bg-white/20 tw-p-2 sm:tw-p-3 tw-rounded-lg sm:tw-rounded-xl tw-flex-shrink-0">
-                      <BookOpen className="tw-w-6 tw-h-6 sm:tw-w-8 sm:tw-h-8" />
-                    </div>
-                    <div className="tw-min-w-0 tw-flex-1">
-                      <h1 className="tw-text-xl sm:tw-text-2xl tw-font-bold tw-mb-1 tw-break-words">Buat Banyak Soal</h1>
-                      <p className="tw-text-purple-100 tw-text-xs sm:tw-text-sm tw-break-words">
-                        Buat beberapa soal sekaligus dengan mudah dan efisien
-                      </p>
-                    </div>
+      <div className="tw-min-h-screen tw-bg-gradient-to-br tw-from-purple-50 tw-to-indigo-50 tw-p-3 sm:tw-p-6">
+        <div className="tw-max-w-7xl tw-mx-auto tw-w-full">
+          <div className="tw-mb-4 sm:tw-mb-6 tw-w-full">
+            <div className="tw-bg-white tw-rounded-lg sm:tw-rounded-xl tw-shadow-lg tw-border-2 tw-border-purple-200 tw-p-4 sm:tw-p-6 tw-w-full">
+              <div className="tw-flex tw-flex-col lg:tw-flex-row tw-justify-between tw-items-start lg:tw-items-center tw-gap-4">
+                <div className="tw-flex tw-items-center tw-gap-3 sm:tw-gap-4 tw-min-w-0 tw-flex-1">
+                  <div className="tw-bg-gradient-to-br tw-from-purple-500 tw-to-indigo-500 tw-p-2 sm:tw-p-3 tw-rounded-lg sm:tw-rounded-xl tw-flex-shrink-0">
+                    <Award className="tw-w-6 tw-h-6 sm:tw-w-8 sm:tw-h-8 tw-text-white" />
                   </div>
-                  <div className="tw-flex tw-gap-2 sm:tw-gap-3 tw-w-full sm:tw-w-auto tw-flex-shrink-0">
-                    <ButtonGradient
-                      action="back"
-                      customText="Kembali"
-                      onClick={handleBack}
-                      size="md"
-                      customColors={{
-                        primary: '#ffffff',
-                        secondary: '#f3f4f6',
-                        gradient1: '#ffffff',
-                        gradient2: '#f3f4f6',
-                        text: '#6B7280'
-                      }}
-                      className="tw-flex-1 sm:tw-flex-none"
-                    />
+                  <div className="tw-min-w-0 tw-flex-1">
+                    <h1 className="tw-text-xl sm:tw-text-2xl md:tw-text-3xl tw-font-bold tw-text-purple-800 tw-break-words">
+                      Buat Soal (Bulk)
+                    </h1>
+                    <p className="tw-text-sm sm:tw-text-base tw-text-gray-600 tw-mt-1 tw-break-words">
+                      Buat beberapa soal sekaligus dengan mudah dan cepat
+                    </p>
                   </div>
+                </div>
+
+                <div className="tw-flex tw-flex-col sm:tw-flex-row tw-gap-2 sm:tw-gap-3 tw-w-full lg:tw-w-auto tw-flex-shrink-0">
+                  <ButtonGradient
+                    action="custom"
+                    customText="Import JSON"
+                    onClick={() => setShowImportModal(true)}
+                    size="md"
+                    customIcon={<Upload className="tw-w-4 tw-h-4" />}
+                    customColors={{
+                      primary: '#8B5CF6',
+                      secondary: '#7C3AED',
+                      gradient1: '#8B5CF6',
+                      gradient2: '#A78BFA',
+                      text: '#FFFFFF'
+                    }}
+                    className="tw-flex-1 sm:tw-flex-none"
+                  />
+                  
+                  <ButtonGradient
+                    action="back"
+                    customText="Kembali"
+                    onClick={() => router.back()}
+                    size="md"
+                    customColors={{
+                      primary: '#ffffff',
+                      secondary: '#f3f4f6',
+                      gradient1: '#ffffff',
+                      gradient2: '#f3f4f6',
+                      text: '#6B7280'
+                    }}
+                    className="tw-flex-1 sm:tw-flex-none"
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Stats Card */}
             <div className="tw-bg-white tw-rounded-lg sm:tw-rounded-xl tw-shadow-lg tw-border-2 tw-border-purple-200 tw-mb-4 sm:tw-mb-6 tw-w-full">
               <div className="tw-p-4 sm:tw-p-6">
                 <div className="tw-flex tw-flex-col lg:tw-flex-row tw-justify-between tw-items-start lg:tw-items-center tw-gap-4">
@@ -1309,7 +1973,6 @@ const CreateQuestionBulk: React.FC = () => {
               </div>
             </div>
 
-            {/* Questions Container */}
             <div className="tw-bg-white tw-rounded-lg sm:tw-rounded-xl tw-shadow-lg tw-border-2 tw-border-purple-200 tw-w-full" style={{ overflow: 'visible' }}>
               <div className="tw-p-3 sm:tw-p-6" style={{ overflow: 'visible' }}>
                 <div className="tw-flex tw-flex-col sm:tw-flex-row tw-justify-between tw-items-start sm:tw-items-center tw-mb-4 sm:tw-mb-6 tw-gap-3 sm:tw-gap-0">
@@ -1363,6 +2026,7 @@ const CreateQuestionBulk: React.FC = () => {
                       data={q}
                       onChange={(i, d) => updateQuestion(i, d)}
                       onRemove={(i) => removeQuestion(i)}
+                      onInsertAfter={(i, qs) => insertQuestionsAfter(i, qs)}
                       isOpen={openIndex === idx}
                       onToggle={() => setOpenIndex(openIndex === idx ? null : idx)}
                     />
@@ -1392,7 +2056,6 @@ const CreateQuestionBulk: React.FC = () => {
               </div>
             </div>
 
-            {/* Submit Section */}
             {questions.length > 0 && (
               <div className="tw-bg-gradient-to-r tw-from-green-50 tw-to-emerald-50 tw-border-2 tw-border-green-200 tw-rounded-lg sm:tw-rounded-xl tw-shadow-lg tw-mt-4 sm:tw-mt-6 tw-w-full">
                 <div className="tw-p-4 sm:tw-p-6">
@@ -1454,6 +2117,145 @@ const CreateQuestionBulk: React.FC = () => {
         </div>
       </div>
       
+      <LearningModal
+        show={showImportModal}
+        onHide={() => {
+          setShowImportModal(false);
+          setJsonInput('');
+          setImportError('');
+        }}
+        title="Import Soal dari JSON"
+        subtitle="Paste JSON data untuk mengimport soal secara bulk"
+        icon={<FileJson className="tw-w-5 tw-h-5" />}
+        size="lg"
+        width="95vw"
+        height="90vh"
+        scrollable={true}
+        bottomButtons={importModalButtons}
+        preventCloseOnOutsideClick={false}
+      >
+        <div className="tw-space-y-4 tw-w-full">
+          <div className="tw-bg-blue-50 tw-border-2 tw-border-blue-200 tw-rounded-lg tw-p-4">
+            <h4 className="tw-text-blue-800 tw-font-semibold tw-mb-2 tw-flex tw-items-center tw-gap-2">
+              <FileJson className="tw-w-5 tw-h-5" />
+              Format JSON
+            </h4>
+            <p className="tw-text-blue-700 tw-text-sm tw-mb-3">
+              Paste JSON array dengan format berikut. Bidang, Topik, dan Sub Topik akan dikosongkan dan harus diisi manual:
+            </p>
+            <pre className="tw-bg-white tw-border tw-border-blue-300 tw-rounded tw-p-3 tw-text-xs tw-overflow-x-auto">
+{`[
+  {
+    "level": 2,
+    "questionType": "single-choice",
+    "questionText": "Hitung <equation>\\\\frac{1}{2} + \\\\frac{1}{3}</equation>",
+    "options": [
+      "<equation>\\\\frac{5}{6}</equation>",
+      "<equation>\\\\frac{2}{5}</equation>",
+      "<equation>\\\\frac{1}{6}</equation>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "Jawaban adalah <equation>\\\\frac{5}{6}</equation>"
+  }
+]`}
+            </pre>
+            <p className="tw-text-blue-600 tw-text-xs tw-mt-2">
+              <strong>Tips:</strong> Gunakan tag <code className="tw-bg-blue-100 tw-px-1 tw-rounded">&lt;equation&gt;&lt;/equation&gt;</code> untuk equation dan format HTML untuk table.
+            </p>
+          </div>
+
+          <div className="tw-w-full">
+            <label className="tw-text-purple-700 tw-font-medium tw-mb-2 tw-block">
+              JSON Data <span className="tw-text-red-500">*</span>
+            </label>
+            <textarea
+              value={jsonInput}
+              onChange={(e) => setJsonInput(e.target.value)}
+              className="tw-w-full tw-h-64 tw-p-3 tw-border-2 tw-border-purple-300 tw-rounded-lg tw-font-mono tw-text-sm focus:tw-border-purple-500 focus:tw-outline-none"
+              placeholder='Paste JSON array di sini...'
+            />
+          </div>
+
+          {importError && (
+            <div className="tw-bg-red-50 tw-border-2 tw-border-red-300 tw-rounded-lg tw-p-4">
+              <p className="tw-text-red-700 tw-text-sm tw-font-medium">
+                {importError}
+              </p>
+            </div>
+          )}
+
+          <div className="tw-bg-yellow-50 tw-border-2 tw-border-yellow-200 tw-rounded-lg tw-p-4">
+            <h4 className="tw-text-yellow-800 tw-font-semibold tw-mb-2">
+              ⚠️ Perhatian
+            </h4>
+            <ul className="tw-text-yellow-700 tw-text-sm tw-space-y-1 tw-list-disc tw-list-inside">
+              <li>Bidang, Topik, dan Sub Topik akan dikosongkan dan <strong>harus diisi manual</strong></li>
+              <li>Bacaan (passage) tidak akan diimport - silakan atur manual jika diperlukan</li>
+              <li>Pastikan format JSON valid sebelum import</li>
+              <li>Equation akan otomatis dirender dengan KaTeX</li>
+            </ul>
+          </div>
+        </div>
+      </LearningModal>
+
+      <LearningModal
+        show={showErrorModal}
+        onHide={() => {
+          setShowErrorModal(false);
+          setErrorMessage('');
+          setErrorDetails([]);
+        }}
+        title="Gagal Membuat Soal"
+        subtitle="Terjadi kesalahan saat membuat soal. Mohon perbaiki masalah berikut:"
+        icon={<AlertCircle className="tw-w-5 tw-h-5 tw-text-red-500" />}
+        size="lg"
+        width="90vw"
+        height="auto"
+        scrollable={true}
+        bottomButtons={errorModalButtons}
+        preventCloseOnOutsideClick={false}
+      >
+        <div className="tw-space-y-4 tw-w-full">
+          <div className="tw-bg-red-50 tw-border-2 tw-border-red-300 tw-rounded-lg tw-p-4">
+            <h4 className="tw-text-red-800 tw-font-semibold tw-mb-2 tw-flex tw-items-center tw-gap-2">
+              <AlertCircle className="tw-w-5 tw-h-5" />
+              Error Message
+            </h4>
+            <p className="tw-text-red-700 tw-text-sm">
+              {errorMessage}
+            </p>
+          </div>
+
+          {errorDetails.length > 0 && (
+            <div className="tw-bg-white tw-border-2 tw-border-red-200 tw-rounded-lg tw-p-4">
+              <h4 className="tw-text-red-800 tw-font-semibold tw-mb-3">
+                Detail Kesalahan:
+              </h4>
+              <ul className="tw-space-y-2">
+                {errorDetails.map((detail, idx) => (
+                  <li key={idx} className="tw-flex tw-items-start tw-gap-2 tw-text-red-700 tw-text-sm">
+                    <span className="tw-text-red-500 tw-font-bold tw-mt-0.5">•</span>
+                    <span>{detail}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="tw-bg-yellow-50 tw-border-2 tw-border-yellow-200 tw-rounded-lg tw-p-4">
+            <h4 className="tw-text-yellow-800 tw-font-semibold tw-mb-2">
+              💡 Saran
+            </h4>
+            <ul className="tw-text-yellow-700 tw-text-sm tw-space-y-1 tw-list-disc tw-list-inside">
+              <li>Periksa kembali field yang belum terisi</li>
+              <li>Pastikan semua soal memiliki jawaban benar</li>
+              <li>Untuk tipe number dan text, pastikan jawaban diisi</li>
+              <li>Perbaiki soal yang bermasalah lalu coba submit kembali</li>
+            </ul>
+          </div>
+        </div>
+      </LearningModal>
+
       <CreateBulkModal
         show={showSuccessModal}
         onHide={() => setShowSuccessModal(false)}
