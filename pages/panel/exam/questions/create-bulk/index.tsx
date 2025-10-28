@@ -221,7 +221,7 @@ const BulkQuestionItem: React.FC<{
   const [individualJsonInput, setIndividualJsonInput] = useState('');
   const [individualImportError, setIndividualImportError] = useState('');
   
-  // ✅ Ref untuk menyimpan latest data (PERBAIKAN UTAMA)
+  // ✅ Ref untuk menyimpan latest data
   const latestDataRef = useRef(data);
   
   // ✅ Update ref setiap data berubah
@@ -241,7 +241,7 @@ const BulkQuestionItem: React.FC<{
   const hasInitiallyFetchedSubTopik = useRef(false);
   const hasInitiallyFetchedPassage = useRef(false);
   
-  // ✅ Track if currently fetching (MENCEGAH DOUBLE FETCH)
+  // ✅ Track if currently fetching
   const isFetchingBidang = useRef(false);
   const isFetchingTopik = useRef(false);
   const isFetchingSubTopik = useRef(false);
@@ -249,8 +249,13 @@ const BulkQuestionItem: React.FC<{
   
   // Track the last topik value to detect when it changes
   const lastTopikValue = useRef<any>(null);
+  
+  // ✅ Track last search term untuk prevent duplicate searches
+  const lastBidangSearch = useRef<string>('');
+  const lastTopikSearch = useRef<string>('');
+  const lastSubTopikSearch = useRef<string>('');
 
-  // ✅ FIXED: Fetch Bidang only once on mount
+  // ✅ Fetch Bidang only once on mount
   useEffect(() => {
     if (hasInitiallyFetchedBidang.current) return;
     hasInitiallyFetchedBidang.current = true;
@@ -301,8 +306,20 @@ const BulkQuestionItem: React.FC<{
     };
   }, []);
 
-  // ✅ FIXED: Search handler for Bidang
+  // ✅ FIXED: Search handler for Bidang dengan guard condition
   const handleBidangSearch = (searchTerm: string) => {
+    // ✅ Skip jika search term sama dengan yang terakhir (prevent duplicate)
+    if (searchTerm === lastBidangSearch.current) {
+      return;
+    }
+    
+    // ✅ Skip jika search kosong dan sudah ada options (prevent unnecessary fetch saat re-render)
+    if (!searchTerm.trim() && data.bidangOptions.length > 0) {
+      return;
+    }
+    
+    lastBidangSearch.current = searchTerm;
+    
     if (bidangSearchTimeout.current) {
       clearTimeout(bidangSearchTimeout.current);
     }
@@ -341,15 +358,15 @@ const BulkQuestionItem: React.FC<{
     }, 300);
   };
 
-  // ✅ FIXED: Fetch Topik when bidang changes
+  // ✅ Fetch Topik when bidang changes
   useEffect(() => {
     if (!data.bidang) {
       hasInitiallyFetchedTopik.current = false;
       isFetchingTopik.current = false;
+      lastTopikSearch.current = '';
       return;
     }
 
-    // ✅ Prevent double fetch
     if (isFetchingTopik.current) {
       return;
     }
@@ -401,9 +418,21 @@ const BulkQuestionItem: React.FC<{
     };
   }, [data.bidang?.value]);
 
-  // ✅ FIXED: Search handler for Topik
+  // ✅ FIXED: Search handler for Topik dengan guard condition
   const handleTopikSearch = (searchTerm: string) => {
     if (!data.bidang) return;
+    
+    // ✅ Skip jika search term sama dengan yang terakhir
+    if (searchTerm === lastTopikSearch.current) {
+      return;
+    }
+    
+    // ✅ Skip jika search kosong dan sudah ada options
+    if (!searchTerm.trim() && data.topikOptions.length > 0) {
+      return;
+    }
+    
+    lastTopikSearch.current = searchTerm;
     
     if (topikSearchTimeout.current) {
       clearTimeout(topikSearchTimeout.current);
@@ -443,12 +472,13 @@ const BulkQuestionItem: React.FC<{
     }, 300);
   };
 
-  // ✅ FIXED: Fetch SubTopik when topik changes
+  // ✅ Fetch SubTopik when topik changes
   useEffect(() => {
     if (!data.topik) {
       hasInitiallyFetchedSubTopik.current = false;
       isFetchingSubTopik.current = false;
       lastTopikValue.current = null;
+      lastSubTopikSearch.current = '';
       return;
     }
 
@@ -459,7 +489,6 @@ const BulkQuestionItem: React.FC<{
       return;
     }
 
-    // ✅ Prevent double fetch
     if (isFetchingSubTopik.current) {
       return;
     }
@@ -523,9 +552,21 @@ const BulkQuestionItem: React.FC<{
     };
   }, [data.topik?.value]);
 
-  // ✅ FIXED: Search handler for SubTopik
+  // ✅ FIXED: Search handler for SubTopik dengan guard condition
   const handleSubTopikSearch = (searchTerm: string) => {
     if (!data.topik) return;
+    
+    // ✅ Skip jika search term sama dengan yang terakhir
+    if (searchTerm === lastSubTopikSearch.current) {
+      return;
+    }
+    
+    // ✅ Skip jika search kosong dan sudah ada options
+    if (!searchTerm.trim() && data.subTopikOptions.length > 0) {
+      return;
+    }
+    
+    lastSubTopikSearch.current = searchTerm;
     
     if (subTopikSearchTimeout.current) {
       clearTimeout(subTopikSearchTimeout.current);
@@ -574,7 +615,7 @@ const BulkQuestionItem: React.FC<{
     }, 300);
   };
 
-  // ✅ FIXED: Fetch Passages when hasPassage is true
+  // ✅ Fetch Passages when hasPassage is true
   useEffect(() => {
     if (!data.hasPassage) {
       hasInitiallyFetchedPassage.current = false;
@@ -582,7 +623,6 @@ const BulkQuestionItem: React.FC<{
       return;
     }
 
-    // ✅ Prevent double fetch
     if (isFetchingPassage.current) {
       return;
     }
@@ -628,7 +668,7 @@ const BulkQuestionItem: React.FC<{
     };
   }, [data.hasPassage]);
 
-  // ✅ FIXED: Search handler for Passage
+  // ✅ Search handler for Passage
   const handlePassageSearch = (searchTerm: string) => {
     if (!data.hasPassage) return;
     
@@ -910,6 +950,9 @@ const BulkQuestionItem: React.FC<{
                   topikOptions: [],
                   subTopikOptions: [],
                 });
+                // ✅ Reset last searches saat bidang berubah
+                lastTopikSearch.current = '';
+                lastSubTopikSearch.current = '';
               }}
               onInputChange={handleBidangSearch}
               isLoading={data.isLoadingBidang}
@@ -932,6 +975,8 @@ const BulkQuestionItem: React.FC<{
                   subTopik: null,
                   subTopikOptions: [],
                 });
+                // ✅ Reset last subtopik search saat topik berubah
+                lastSubTopikSearch.current = '';
               }}
               onInputChange={handleTopikSearch}
               isLoading={data.isLoadingTopik}
@@ -1553,6 +1598,8 @@ const BulkQuestionItem: React.FC<{
     </>
   );
 };
+
+// ... (rest of CreateQuestionBulk component remains the same - continuing from line 1200 in the previous code)
 
 const CreateQuestionBulk: React.FC = () => {
   const router = useRouter();
