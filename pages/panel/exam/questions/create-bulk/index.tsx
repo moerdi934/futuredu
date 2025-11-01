@@ -81,6 +81,9 @@ interface QuestionData {
   newPassageTitle: string;
   newPassageContent: string;
   showPassageModal: boolean;
+  importPassageMode: boolean;
+  passageJsonInput: string;
+  passageImportError: string;
   questionType: string;
   options: string[];
   correctAnswer: number[];
@@ -110,6 +113,9 @@ const initialQuestionData: QuestionData = {
   newPassageTitle: '',
   newPassageContent: '',
   showPassageModal: false,
+  importPassageMode: false,
+  passageJsonInput: '',
+  passageImportError: '',
   questionType: 'single-choice',
   options: [''],
   correctAnswer: [],
@@ -196,11 +202,33 @@ const parseTableMarkup = (content: string): string => {
   return content;
 };
 
+// ✅ FIXED: Fungsi untuk normalize paragraf spacing
+const normalizeParagraphSpacing = (content: string): string => {
+  if (!content) return content;
+  
+  // Remove excessive newlines between tags (like \n\n between </p> and <p>)
+  let normalized = content.replace(/\n\n+/g, '\n');
+  
+  // Add margin-bottom to <p> tags for better spacing
+  normalized = normalized.replace(/<p>/g, '<p style="margin-bottom: 1em;">');
+  
+  // Also handle <p> tags that already have style attribute
+  normalized = normalized.replace(/<p\s+style="([^"]*)"/g, (match, existingStyle) => {
+    if (existingStyle.includes('margin-bottom')) {
+      return match; // Keep existing margin-bottom
+    }
+    return `<p style="${existingStyle}; margin-bottom: 1em;"`;
+  });
+  
+  return normalized;
+};
+
 const processContent = (content: string): string => {
   if (!content) return content;
   
   let processed = parseEquationTags(content);
   processed = parseTableMarkup(processed);
+  processed = normalizeParagraphSpacing(processed); // ✅ ADD: Normalize spacing
   
   return processed;
 };
@@ -221,41 +249,33 @@ const BulkQuestionItem: React.FC<{
   const [individualJsonInput, setIndividualJsonInput] = useState('');
   const [individualImportError, setIndividualImportError] = useState('');
   
-  // ✅ Ref untuk menyimpan latest data
   const latestDataRef = useRef(data);
   
-  // ✅ Update ref setiap data berubah
   useEffect(() => {
     latestDataRef.current = data;
   }, [data]);
   
-  // Refs for debounce timeouts
   const bidangSearchTimeout = useRef<NodeJS.Timeout>();
   const topikSearchTimeout = useRef<NodeJS.Timeout>();
   const subTopikSearchTimeout = useRef<NodeJS.Timeout>();
   const passageSearchTimeout = useRef<NodeJS.Timeout>();
   
-  // Track if initial fetch has been done
   const hasInitiallyFetchedBidang = useRef(false);
   const hasInitiallyFetchedTopik = useRef(false);
   const hasInitiallyFetchedSubTopik = useRef(false);
   const hasInitiallyFetchedPassage = useRef(false);
   
-  // ✅ Track if currently fetching
   const isFetchingBidang = useRef(false);
   const isFetchingTopik = useRef(false);
   const isFetchingSubTopik = useRef(false);
   const isFetchingPassage = useRef(false);
   
-  // Track the last topik value to detect when it changes
   const lastTopikValue = useRef<any>(null);
   
-  // ✅ Track last search term untuk prevent duplicate searches
   const lastBidangSearch = useRef<string>('');
   const lastTopikSearch = useRef<string>('');
   const lastSubTopikSearch = useRef<string>('');
 
-  // ✅ Fetch Bidang only once on mount
   useEffect(() => {
     if (hasInitiallyFetchedBidang.current) return;
     hasInitiallyFetchedBidang.current = true;
@@ -306,14 +326,11 @@ const BulkQuestionItem: React.FC<{
     };
   }, []);
 
-  // ✅ FIXED: Search handler for Bidang dengan guard condition
   const handleBidangSearch = (searchTerm: string) => {
-    // ✅ Skip jika search term sama dengan yang terakhir (prevent duplicate)
     if (searchTerm === lastBidangSearch.current) {
       return;
     }
     
-    // ✅ Skip jika search kosong dan sudah ada options (prevent unnecessary fetch saat re-render)
     if (!searchTerm.trim() && data.bidangOptions.length > 0) {
       return;
     }
@@ -358,7 +375,6 @@ const BulkQuestionItem: React.FC<{
     }, 300);
   };
 
-  // ✅ Fetch Topik when bidang changes
   useEffect(() => {
     if (!data.bidang) {
       hasInitiallyFetchedTopik.current = false;
@@ -418,16 +434,13 @@ const BulkQuestionItem: React.FC<{
     };
   }, [data.bidang?.value]);
 
-  // ✅ FIXED: Search handler for Topik dengan guard condition
   const handleTopikSearch = (searchTerm: string) => {
     if (!data.bidang) return;
     
-    // ✅ Skip jika search term sama dengan yang terakhir
     if (searchTerm === lastTopikSearch.current) {
       return;
     }
     
-    // ✅ Skip jika search kosong dan sudah ada options
     if (!searchTerm.trim() && data.topikOptions.length > 0) {
       return;
     }
@@ -472,7 +485,6 @@ const BulkQuestionItem: React.FC<{
     }, 300);
   };
 
-  // ✅ Fetch SubTopik when topik changes
   useEffect(() => {
     if (!data.topik) {
       hasInitiallyFetchedSubTopik.current = false;
@@ -552,16 +564,13 @@ const BulkQuestionItem: React.FC<{
     };
   }, [data.topik?.value]);
 
-  // ✅ FIXED: Search handler for SubTopik dengan guard condition
   const handleSubTopikSearch = (searchTerm: string) => {
     if (!data.topik) return;
     
-    // ✅ Skip jika search term sama dengan yang terakhir
     if (searchTerm === lastSubTopikSearch.current) {
       return;
     }
     
-    // ✅ Skip jika search kosong dan sudah ada options
     if (!searchTerm.trim() && data.subTopikOptions.length > 0) {
       return;
     }
@@ -615,7 +624,6 @@ const BulkQuestionItem: React.FC<{
     }, 300);
   };
 
-  // ✅ Fetch Passages when hasPassage is true
   useEffect(() => {
     if (!data.hasPassage) {
       hasInitiallyFetchedPassage.current = false;
@@ -668,7 +676,6 @@ const BulkQuestionItem: React.FC<{
     };
   }, [data.hasPassage]);
 
-  // ✅ Search handler for Passage
   const handlePassageSearch = (searchTerm: string) => {
     if (!data.hasPassage) return;
     
@@ -702,6 +709,39 @@ const BulkQuestionItem: React.FC<{
         }
       }
     }, 500);
+  };
+
+  const handleImportPassage = () => {
+    try {
+      onChange(index, {
+        ...latestDataRef.current,
+        passageImportError: '',
+      });
+      
+      const parsedData = JSON.parse(data.passageJsonInput);
+      
+      if (!parsedData.passageTitle || !parsedData.passageText) {
+        throw new Error('Format JSON harus memiliki "passageTitle" dan "passageText"');
+      }
+      
+      const processedPassageText = processContent(parsedData.passageText);
+      
+      onChange(index, {
+        ...latestDataRef.current,
+        newPassageTitle: parsedData.passageTitle,
+        newPassageContent: processedPassageText,
+        importPassageMode: false,
+        passageJsonInput: '',
+        passageImportError: '',
+      });
+      
+      alert('Berhasil mengimport data bacaan! Silakan review dan simpan.');
+    } catch (error: any) {
+      onChange(index, {
+        ...latestDataRef.current,
+        passageImportError: `Error: ${error.message || 'Format JSON tidak valid'}`,
+      });
+    }
   };
 
   const createPassage = async () => {
@@ -747,6 +787,9 @@ const BulkQuestionItem: React.FC<{
           ...latestDataRef.current,
           showPassageModal: false,
           createNewPassage: false,
+          importPassageMode: false,
+          passageJsonInput: '',
+          passageImportError: '',
         });
       },
     },
@@ -836,7 +879,6 @@ const BulkQuestionItem: React.FC<{
     },
   ];
 
-  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (bidangSearchTimeout.current) clearTimeout(bidangSearchTimeout.current);
@@ -950,7 +992,6 @@ const BulkQuestionItem: React.FC<{
                   topikOptions: [],
                   subTopikOptions: [],
                 });
-                // ✅ Reset last searches saat bidang berubah
                 lastTopikSearch.current = '';
                 lastSubTopikSearch.current = '';
               }}
@@ -975,7 +1016,6 @@ const BulkQuestionItem: React.FC<{
                   subTopik: null,
                   subTopikOptions: [],
                 });
-                // ✅ Reset last subtopik search saat topik berubah
                 lastSubTopikSearch.current = '';
               }}
               onInputChange={handleTopikSearch}
@@ -1436,10 +1476,13 @@ const BulkQuestionItem: React.FC<{
             ...latestDataRef.current,
             showPassageModal: false,
             createNewPassage: false,
+            importPassageMode: false,
+            passageJsonInput: '',
+            passageImportError: '',
           });
         }}
         title="Buat Bacaan Baru"
-        subtitle="Buat bacaan baru untuk soal"
+        subtitle="Buat bacaan baru untuk soal atau import dari JSON"
         icon={<BookOpen className="tw-w-5 tw-h-5" />}
         size="lg"
         width="95vw"
@@ -1448,35 +1491,145 @@ const BulkQuestionItem: React.FC<{
         bottomButtons={passageModalButtons}
         preventCloseOnOutsideClick={false}
       >
-        <div className="tw-space-y-3 sm:tw-space-y-4 tw-w-full">
-          <div className="tw-w-full tw-min-w-0">
-            <ShortFormField
-              label="Judul Bacaan"
-              value={data.newPassageTitle}
-              onChange={(e) => {
-                onChange(index, {
-                  ...latestDataRef.current,
-                  newPassageTitle: e.target.value,
-                });
-              }}
-              required
-            />
-          </div>
-          
-          <div className="tw-w-full tw-min-w-0">
-            <label className="tw-text-purple-700 tw-font-medium tw-text-sm sm:tw-text-base tw-mb-2 tw-block">
-              Isi Bacaan <span className="tw-text-red-500">*</span>
-            </label>
-            <div className="tw-bg-gray-50 tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-shadow-sm tw-w-full">
-              <SuperEditor
-                onChange={(html) => {
-                  onChange(index, { ...latestDataRef.current, newPassageContent: html });
+        <div className="tw-space-y-4 tw-w-full">
+          <div className="tw-flex tw-flex-col sm:tw-flex-row tw-gap-3 tw-mb-4">
+            <div className="tw-flex-1">
+              <ButtonGradient
+                action={!data.importPassageMode ? 'apply' : 'custom'}
+                customText="Input Manual"
+                customIcon={<FileText className="tw-w-4 tw-h-4" />}
+                onClick={() => {
+                  onChange(index, {
+                    ...latestDataRef.current,
+                    importPassageMode: false,
+                    passageJsonInput: '',
+                    passageImportError: '',
+                  });
                 }}
-                initialValue="<p>Mulai mengetik bacaan di sini...</p>"
-                height="300px"
+                size="md"
+                className="tw-w-full"
+              />
+            </div>
+            <div className="tw-flex-1">
+              <ButtonGradient
+                action={data.importPassageMode ? 'apply' : 'custom'}
+                customText="Import JSON"
+                customIcon={<FileJson className="tw-w-4 tw-h-4" />}
+                onClick={() => {
+                  onChange(index, {
+                    ...latestDataRef.current,
+                    importPassageMode: true,
+                  });
+                }}
+                size="md"
+                className="tw-w-full"
               />
             </div>
           </div>
+
+          {!data.importPassageMode ? (
+            <>
+              <div className="tw-w-full tw-min-w-0">
+                <ShortFormField
+                  label="Judul Bacaan"
+                  value={data.newPassageTitle}
+                  onChange={(e) => {
+                    onChange(index, {
+                      ...latestDataRef.current,
+                      newPassageTitle: e.target.value,
+                    });
+                  }}
+                  required
+                />
+              </div>
+              
+              <div className="tw-w-full tw-min-w-0">
+                <label className="tw-text-purple-700 tw-font-medium tw-text-sm sm:tw-text-base tw-mb-2 tw-block">
+                  Isi Bacaan <span className="tw-text-red-500">*</span>
+                </label>
+                <div className="tw-bg-gray-50 tw-rounded-lg tw-border-2 tw-border-purple-200 tw-p-2 tw-shadow-sm tw-w-full">
+                  <SuperEditor
+                    onChange={(html) => {
+                      onChange(index, { ...latestDataRef.current, newPassageContent: html });
+                    }}
+                    initialValue={data.newPassageContent || "<p>Mulai mengetik bacaan di sini...</p>"}
+                    editorId={`passage-editor-${index}`}
+                    height="300px"
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="tw-bg-gradient-to-r tw-from-blue-50 tw-to-indigo-50 tw-border-2 tw-border-blue-200 tw-rounded-lg tw-p-4">
+                <h4 className="tw-text-blue-800 tw-font-semibold tw-mb-2 tw-flex tw-items-center tw-gap-2">
+                  <FileJson className="tw-w-5 tw-h-5" />
+                  Format JSON untuk Passage
+                </h4>
+                <p className="tw-text-blue-700 tw-text-sm tw-mb-3">
+                  Paste JSON dengan format berikut. Gunakan <code className="tw-bg-blue-100 tw-px-1 tw-rounded">\n</code> untuk baris baru akan otomatis dikonversi menjadi paragraf terpisah:
+                </p>
+                <pre className="tw-bg-white tw-border tw-border-blue-300 tw-rounded tw-p-3 tw-text-xs tw-overflow-x-auto">
+{`{
+  "passageTitle": "Judul Bacaan",
+  "passageText": "<p>Paragraf 1 dengan <equation>\\\\frac{1}{2}</equation></p>\\n\\n<p>Paragraf 2 dengan spacing yang baik</p>"
+}`}
+                </pre>
+                <p className="tw-text-blue-600 tw-text-xs tw-mt-2">
+                  <strong>💡 Tips:</strong> Tag <code className="tw-bg-blue-100 tw-px-1 tw-rounded">&lt;p&gt;</code> akan otomatis mendapat margin-bottom 1em untuk spacing yang lebih baik antar paragraf.
+                </p>
+              </div>
+
+              <div className="tw-w-full">
+                <label className="tw-text-purple-700 tw-font-medium tw-mb-2 tw-block tw-flex tw-items-center tw-gap-2">
+                  <FileJson className="tw-w-4 tw-h-4" />
+                  JSON Data <span className="tw-text-red-500">*</span>
+                </label>
+                <textarea
+                  value={data.passageJsonInput}
+                  onChange={(e) => {
+                    onChange(index, {
+                      ...latestDataRef.current,
+                      passageJsonInput: e.target.value,
+                    });
+                  }}
+                  className="tw-w-full tw-h-64 tw-p-3 tw-border-2 tw-border-purple-300 tw-rounded-lg tw-font-mono tw-text-sm focus:tw-border-purple-500 focus:tw-outline-none"
+                  placeholder='Paste JSON object di sini...'
+                />
+              </div>
+
+              {data.passageImportError && (
+                <div className="tw-bg-red-50 tw-border-2 tw-border-red-300 tw-rounded-lg tw-p-4">
+                  <p className="tw-text-red-700 tw-text-sm tw-font-medium">
+                    {data.passageImportError}
+                  </p>
+                </div>
+              )}
+
+              <div className="tw-w-full">
+                <ButtonGradient
+                  action="save"
+                  customText="Import ke Form"
+                  customIcon={<Upload className="tw-w-4 tw-h-4" />}
+                  onClick={handleImportPassage}
+                  size="md"
+                  className="tw-w-full"
+                />
+              </div>
+
+              <div className="tw-bg-yellow-50 tw-border-2 tw-border-yellow-200 tw-rounded-lg tw-p-4">
+                <h4 className="tw-text-yellow-800 tw-font-semibold tw-mb-2">
+                  💡 Cara Kerja Import
+                </h4>
+                <ul className="tw-text-yellow-700 tw-text-sm tw-space-y-1 tw-list-disc tw-list-inside">
+                  <li>Data JSON akan di-parse dan diisi ke form input manual</li>
+                  <li>Equation dalam tag <code className="tw-bg-yellow-100 tw-px-1 tw-rounded">&lt;equation&gt;</code> akan di-render dengan KaTeX</li>
+                  <li>Tag <code className="tw-bg-yellow-100 tw-px-1 tw-rounded">&lt;p&gt;</code> akan mendapat margin-bottom otomatis untuk spacing paragraf</li>
+                  <li>Setelah import, review data lalu klik "Simpan Bacaan"</li>
+                </ul>
+              </div>
+            </>
+          )}
         </div>
       </LearningModal>
 
@@ -1591,6 +1744,7 @@ const BulkQuestionItem: React.FC<{
               <li><strong>Replace mode:</strong> Bidang, Topik, Subtopik yang sudah dipilih akan tetap dipertahankan</li>
               <li><strong>Insert mode:</strong> Soal baru akan ditambahkan dengan Bidang, Topik, Subtopik kosong</li>
               <li>Equation akan otomatis dirender dengan KaTeX</li>
+              <li>Tag <code className="tw-bg-yellow-100 tw-px-1 tw-rounded">&lt;p&gt;</code> mendapat margin-bottom otomatis</li>
             </ul>
           </div>
         </div>
@@ -1599,9 +1753,13 @@ const BulkQuestionItem: React.FC<{
   );
 };
 
-// ... (rest of CreateQuestionBulk component remains the same - continuing from line 1200 in the previous code)
+// Sisanya sama dengan kode sebelumnya (CreateQuestionBulk component)
+// Karena sudah terlalu panjang, saya hanya menampilkan bagian yang berubah
 
 const CreateQuestionBulk: React.FC = () => {
+  // ... (rest of the code remains the same)
+  // Silakan copy paste bagian CreateQuestionBulk dari kode sebelumnya
+  
   const router = useRouter();
   const [questions, setQuestions] = useState<QuestionData[]>([{ ...initialQuestionData }]);
   const [isSubmitting, setIsSubmitting] = useState(false);

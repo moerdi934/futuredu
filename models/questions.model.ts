@@ -873,12 +873,31 @@ export const updatePassage = async (id: number, passageData: QuestionPassage, up
 
 export const verifyIdCodePairs = async (pairs: VerificationPair[]): Promise<VerificationSummary> => {
   const client = await pool.connect();
-  
+  console.log(pairs)
   try {
     const results: VerificationResult[] = [];
     
     for (const pair of pairs) {
-      const { id, code } = pair;
+      let { id, code } = pair;
+      
+      // Clean and parse the ID - remove extra quotes and convert to integer
+      let cleanedId = id.toString().trim().replace(/^["']+|["']+$/g, '');
+      const parsedId = parseInt(cleanedId, 10);
+      
+      // Clean the code - remove extra quotes
+      let cleanedCode = code.toString().trim().replace(/^["']+|["']+$/g, '');
+      
+      // Validate the parsed ID
+      if (isNaN(parsedId) || parsedId <= 0) {
+        results.push({
+          id: id,
+          code: code,
+          status: 'id_not_found',
+          found_code: null,
+          is_match: false
+        });
+        continue;
+      }
       
       const selectQuery = `
         SELECT id, code 
@@ -886,7 +905,7 @@ export const verifyIdCodePairs = async (pairs: VerificationPair[]): Promise<Veri
         WHERE id = $1
       `;
       
-      const result = await client.query(selectQuery, [id]);
+      const result = await client.query(selectQuery, [parsedId]);
       
       if (result.rows.length === 0) {
         results.push({
@@ -898,7 +917,8 @@ export const verifyIdCodePairs = async (pairs: VerificationPair[]): Promise<Veri
         });
       } else {
         const foundQuestion = result.rows[0];
-        const isMatch = foundQuestion.code === code;
+        // Compare cleaned code with database code
+        const isMatch = foundQuestion.code === cleanedCode;
         
         results.push({
           id: id,

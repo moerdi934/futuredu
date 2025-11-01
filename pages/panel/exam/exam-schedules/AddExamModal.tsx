@@ -201,27 +201,60 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({
   };
 
   /* ------------------------ CSV Functions ----------------------------- */
-  const parseCSV = (csvText: string): CSVQuestion[] => {
-    const lines = csvText.trim().split('\n');
-    const questions: CSVQuestion[] = [];
+/* ------------------------ CSV Functions ----------------------------- */
+const parseCSV = (csvText: string): CSVQuestion[] => {
+  const lines = csvText.trim().split('\n');
+  const questions: CSVQuestion[] = [];
+  
+  // Helper function to parse CSV line with quoted fields
+  const parseCSVLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
     
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
       
-      const [id, code, question_type, level] = line.split(',');
-      if (id && code) {
-        questions.push({
-          id: id.trim(),
-          code: code.trim(),
-          question_type: question_type?.trim() || '',
-          level: level?.trim() || ''
-        });
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
       }
     }
     
-    return questions;
+    // Push the last field
+    result.push(current.trim());
+    
+    return result;
   };
+  
+  // Skip header (line 0) and parse data rows
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    
+    const fields = parseCSVLine(line);
+    
+    // CSV format: No, ID Soal, Kode Soal, Bidang, Topik, Sub Topik, Level, Tipe Soal, Teks Soal, Status
+    // We need: fields[1] = ID Soal, fields[2] = Kode Soal
+    const idSoal = fields[1];
+    const kodeSoal = fields[2];
+    
+    if (idSoal && kodeSoal) {
+      questions.push({
+        id: idSoal,
+        code: kodeSoal,
+        question_type: fields[7] || '', // Tipe Soal
+        level: fields[6] || ''           // Level
+      });
+    }
+  }
+  
+  return questions;
+};
 
   const handleCSVFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

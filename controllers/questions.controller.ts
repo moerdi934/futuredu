@@ -711,29 +711,53 @@ export const updatePassage = async (req: AuthenticatedRequest, res: NextApiRespo
 export const verifyCsv = async (req: NextApiRequest, res: NextApiResponse) => {
   try {
     const payload = req.body;
+    console.log(payload)
 
     if (!Array.isArray(payload) || payload.length === 0) {
       return res.status(400).json({ 
         error: 'Payload harus berupa array dan tidak boleh kosong',
-        example: [{"id":"194","code":"LOGFRPR0152"},{"id":"195","code":"LOGFRPR0153"}]
+        example: [
+          {"ID Soal":"311","Kode Soal":"LOGFRPR0165"},
+          {"ID Soal":"312","Kode Soal":"LOGVSSP0139"}
+        ]
       });
     }
 
-    const invalidItems = payload.filter(item => 
-      !item.id || !item.code || 
-      typeof item.id !== 'string' || 
-      typeof item.code !== 'string'
-    );
+    // Extract only ID Soal and Kode Soal, map to id and code
+    const pairs = payload.map((item, index) => {
+      const idSoal = item['ID Soal'] || item['id'] || item['Id'] || item['ID'];
+      const kodeSoal = item['Kode Soal'] || item['code'] || item['Code'] || item['kode'];
+      
+      if (!idSoal || !kodeSoal) {
+        throw new Error(
+          `Baris ${index + 1}: Data tidak lengkap. Pastikan setiap baris memiliki "ID Soal" dan "Kode Soal"`
+        );
+      }
+      
+      // Clean the values - remove quotes and trim
+      const cleanedId = idSoal.toString().trim().replace(/^["']+|["']+$/g, '');
+      const cleanedCode = kodeSoal.toString().trim().replace(/^["']+|["']+$/g, '');
+      
+      return {
+        id: cleanedId,
+        code: cleanedCode
+      };
+    });
 
-    if (invalidItems.length > 0) {
+    // Validate that we have valid pairs
+    if (pairs.length === 0) {
       return res.status(400).json({ 
-        error: 'Setiap item harus memiliki property id dan code yang valid',
-        invalidItems: invalidItems,
-        example: {"id":"194","code":"LOGFRPR0152"}
+        error: 'Tidak ada data valid yang dapat diproses',
+        example: [
+          {"ID Soal":"311","Kode Soal":"LOGFRPR0165"},
+          {"ID Soal":"312","Kode Soal":"LOGVSSP0139"}
+        ]
       });
     }
 
-    const verificationResult = await questionModel.verifyIdCodePairs(payload);
+    console.log('Cleaned pairs:', pairs); // For debugging
+
+    const verificationResult = await questionModel.verifyIdCodePairs(pairs);
 
     const matchedPairs = verificationResult.results.filter(r => r.is_match);
     const notFoundIds = verificationResult.results.filter(r => r.status === 'id_not_found');
