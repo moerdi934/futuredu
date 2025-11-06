@@ -1,0 +1,345 @@
+[
+  {
+    "no": 1,
+    "level": 4,
+    "questionType": "single-choice",
+    "questionText": "<p>Dua kelas masing-masing berisi 20 siswa. Dari setiap kelas diambil satu siswa secara acak. Diketahui peluang bahwa kedua siswa yang terpilih adalah perempuan sebesar <equation>\\frac{10}{25}</equation>. Tentukan peluang bahwa <strong>paling sedikit satu siswa yang terpilih adalah perempuan</strong>.</p>",
+    "options": [
+      "<equation>\\frac{30}{55}</equation>",
+      "<equation>\\frac{29}{56}</equation>",
+      "<equation>\\frac{39}{50}</equation>",
+      "<equation>\\frac{40}{100}</equation>",
+      "<equation>\\frac{56}{78}</equation>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>Kita misalkan banyaknya siswa perempuan di kelas A adalah <equation>P_1</equation> dan di kelas B adalah <equation>P_2</equation>. Peluang kedua siswa terpilih adalah perempuan diberikan oleh <equation>P(P_1 \\cap P_2) = P(P_1) \\times P(P_2)</equation>. Diketahui <equation>\\frac{10}{25} = \\frac{P_1}{20} \\times \\frac{P_2}{20}</equation>, sehingga <equation>P_1 \\times P_2 = 160</equation>. Kombinasi yang mungkin adalah <equation>(P_1, P_2) = (10,16)</equation> atau <equation>(16,10)</equation>.</p>\n\n<p>Peluang terpilihnya paling sedikit satu perempuan sama dengan peluang salah satu atau keduanya perempuan, yaitu:</p>\n\n<p><equation>P = P(P_1) \\times P(L_2) + P(L_1) \\times P(P_2) + P(P_1) \\times P(P_2)</equation></p>\n\n<p>Dengan substitusi nilai:</p>\n\n<p><equation>P = \\frac{10}{20} \\times \\frac{5}{20} + \\frac{15}{20} \\times \\frac{10}{20} + \\frac{10}{25}</equation></p>\n\n<p>Setelah disederhanakan, hasilnya adalah <equation>\\frac{39}{50}</equation>.</p>\n\n<p>Jadi, peluang bahwa paling sedikit satu siswa perempuan terpilih adalah <strong><equation>\\frac{39}{50}</equation></strong>.</p>",
+    "hasImage": true,
+    "topic": "Statistik dan Peluang",
+    "subtopic": "Peluang Gabungan dan Komplemen"
+  },
+  {
+    "no": 2,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Perusahaan A mampu memproduksi 1000 barang dalam waktu 10 jam dengan 100 orang pekerja. Pada suatu hari, 25% dari karyawan tidak masuk kerja. Berapa waktu yang dibutuhkan agar tetap dapat menghasilkan 1000 barang?</p>",
+    "options": [
+      "<p>13 jam 20 menit</p>",
+      "<p>12 jam 30 menit</p>",
+      "<p>13 jam 40 menit</p>",
+      "<p>13 jam</p>",
+      "<p>14 jam 20 menit</p>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<p>Diketahui bahwa dengan 100 pekerja, perusahaan dapat menghasilkan 1000 barang dalam waktu 10 jam. Artinya, total <strong>jam-kerja</strong> yang dibutuhkan adalah:</p>\n\n<p><equation>100 \\text{ pekerja} \\times 10 \\text{ jam} = 1000 \\text{ jam-kerja}</equation></p>\n\n<p>Jika 25% pekerja tidak masuk, maka jumlah pekerja yang tersedia adalah:</p>\n\n<p><equation>100 - (25\\% \\times 100) = 75 \\text{ pekerja}</equation></p>\n\n<p>Untuk menghasilkan 1000 barang dengan jumlah jam-kerja sama, waktu yang dibutuhkan menjadi:</p>\n\n<p><equation>\\text{Waktu baru} = \\frac{1000}{75} = 13\\frac{1}{3} \\text{ jam}</equation></p>\n\n<p>Jika diubah ke satuan jam dan menit, hasilnya adalah <strong>13 jam 20 menit</strong>.</p>\n\n<p>Jadi, waktu yang diperlukan untuk memproduksi 1000 barang dengan 75 pekerja adalah <strong>13 jam 20 menit</strong>.</p>",
+    "hasImage": true,
+    "topic": "Aritmetika",
+    "subtopic": "Perbandingan dan Proporsionalitas"
+  },
+  {
+    "no": 3,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Bangun <strong>ACEF</strong> berbentuk persegi panjang dengan luas <equation>48 \\text{ cm}^2</equation>. Titik <strong>D</strong> dan <strong>B</strong> masing-masing merupakan titik tengah dari sisi <strong>EC</strong> dan <strong>FE</strong>. Tentukan luas daerah yang diarsir pada gambar berikut:</p>",
+    "options": [
+      "<p>14 cm²</p>",
+      "<p>15 cm²</p>",
+      "<p>17 cm²</p>",
+      "<p>18 cm²</p>",
+      "<p>24 cm²</p>"
+    ],
+    "correctAnswer": [4],
+    "explanation": "<p>Diketahui bangun <strong>ACEF</strong> adalah persegi panjang dengan luas <equation>48 \\text{ cm}^2</equation> dan tinggi <equation>AF = 8 \\text{ cm}</equation>. Maka panjang <equation>AC</equation> dapat ditentukan sebagai:</p>\n\n<p><equation>\\text{Luas} = \\text{panjang} \\times \\text{lebar}</equation></p>\n<p><equation>48 = AC \\times 8</equation></p>\n<p><equation>AC = 6 \\text{ cm}</equation></p>\n\n<p>Titik <strong>D</strong> merupakan titik tengah <strong>EC</strong>, sehingga <equation>ED = DC = 4 \\text{ cm}</equation>. Titik <strong>B</strong> merupakan titik tengah <strong>FE</strong>, maka <equation>FB = BE = 3 \\text{ cm}</equation>.</p>\n\n<p>Luas arsiran diperoleh dari luas persegi panjang dikurangi luas dua segitiga, yaitu <triangle>ACD</triangle> dan <triangle>ABF</triangle>:</p>\n\n<p><equation>\\text{L}_{arsir} = \\text{L}_{ACEF} - \\frac{1}{2} (AC \\times CD) - \\frac{1}{2} (AF \\times FB)</equation></p>\n\n<p>Substitusi nilai:</p>\n<p><equation>\\text{L}_{arsir} = 48 - \\frac{1}{2}(6 \\times 4) - \\frac{1}{2}(8 \\times 3)</equation></p>\n<p><equation>\\text{L}_{arsir} = 48 - 12 - 12 = 24</equation></p>\n\n<p>Dengan demikian, luas daerah arsiran adalah <strong>24 cm²</strong>.</p>",
+    "hasImage": true,
+    "topic": "Geometri",
+    "subtopic": "Luas Bangun Datar dan Titik Tengah"
+  },
+  {
+    "no": 4,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Pengendara A berangkat dari Kota Zeta dengan kecepatan <equation>60 \\text{ km/jam}</equation>. Setelah 1 jam, Pengendara B berangkat dari kota yang sama dan menempuh jalur yang sama dengan kecepatan <equation>80 \\text{ km/jam}</equation>. Jika setelah 2 jam sejak keberangkatan Pengendara B keduanya masih terus berkendara tanpa berhenti, apakah Pengendara B telah berhasil menyusul Pengendara A? Jika belum, berapakah jarak di antara keduanya pada saat itu?</p>",
+    "options": [
+      "<p>Pengendara B belum menyusul, jarak keduanya 40 km</p>",
+      "<p>Pengendara B belum menyusul, jarak keduanya 20 km</p>",
+      "<p>Pengendara B tepat menyusul Pengendara A, jarak keduanya 0 km</p>",
+      "<p>Pengendara B telah menyusul Pengendara A, jarak keduanya 20 km</p>",
+      "<p>Pengendara B telah menyusul Pengendara A, jarak keduanya 40 km</p>"
+    ],
+    "correctAnswer": [1],
+    "explanation": "<p>Kecepatan Pengendara A adalah <equation>60 \\text{ km/jam}</equation> dan Pengendara B adalah <equation>80 \\text{ km/jam}</equation>.</p>\n\n<p>Selama 1 jam pertama, hanya Pengendara A yang bergerak, sehingga jarak yang telah ditempuhnya:</p>\n<p><equation>Jarak_A = 60 \\text{ km}</equation></p>\n\n<p>Ketika Pengendara B mulai berangkat, A sudah 60 km di depan. Setelah 2 jam berikutnya:</p>\n<p><equation>Jarak_A = 60 + (2 \\times 60) = 180 \\text{ km}</equation></p>\n<p><equation>Jarak_B = 0 + (2 \\times 80) = 160 \\text{ km}</equation></p>\n\n<p>Jarak antara keduanya adalah:</p>\n<p><equation>180 - 160 = 20 \\text{ km}</equation></p>\n\n<p>Karena Pengendara B belum menyusul (masih 20 km di belakang), maka jawabannya adalah <strong>Pengendara B belum berhasil menyusul, jarak keduanya 20 km</strong>.</p>\n\n<p>Jika ingin mengetahui kapan Pengendara B menyusul A, dapat digunakan persamaan:</p>\n<p><equation>60t = 80(t - 1)</equation> → <equation>t = 4 \\text{ jam}</equation></p>\n<p>Artinya, B akan menyusul A setelah 4 jam sejak A berangkat, atau 3 jam sejak B berangkat.</p>",
+    "hasImage": true,
+    "topic": "Aritmetika",
+    "subtopic": "Kecepatan, Jarak, dan Waktu"
+  },
+  {
+    "no": 5,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Sebuah bilangan bulat <strong>d</strong> merupakan hasil kali dari tiga bilangan bulat positif <strong>a</strong>, <strong>b</strong>, dan <strong>c</strong> dengan syarat <equation>1 < a < b < c</equation>. Jika bilangan <equation>233</equation> dibagi <equation>d</equation> menghasilkan sisa <equation>79</equation>, maka berapakah nilai dari <equation>a + c</equation>?</p>",
+    "options": [
+      "<p>7</p>",
+      "<p>9</p>",
+      "<p>13</p>",
+      "<p>14</p>",
+      "<p>15</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>Diketahui bahwa hasil bagi <equation>233</equation> terhadap <equation>d</equation> meninggalkan sisa <equation>79</equation>. Artinya, <equation>233 - 79 = 154</equation> harus habis dibagi oleh <equation>d</equation>.</p>\n\n<p>Faktor-faktor dari <equation>154</equation> adalah <equation>1, 2, 7, 11, 14, 22, 77,</equation> dan <equation>154</equation>. Karena nilai sisa (<equation>79</equation>) lebih kecil daripada <equation>d</equation>, maka <equation>d</equation> harus lebih besar dari <equation>79</equation>. Satu-satunya faktor yang memenuhi syarat tersebut adalah <equation>d = 154</equation>.</p>\n\n<p>Kemudian, karena <equation>d = a \\times b \\times c = 154</equation> dan kita perlu mencari tiga bilangan bulat berbeda dengan urutan <equation>1 < a < b < c</equation>, maka kita faktorkan <equation>154</equation>:</p>\n\n<p><equation>154 = 2 \\times 7 \\times 11</equation></p>\n\n<p>Sehingga diperoleh <equation>a = 2</equation>, <equation>b = 7</equation>, dan <equation>c = 11</equation>.</p>\n\n<p>Dengan demikian:</p>\n<p><equation>a + c = 2 + 11 = 13</equation></p>\n\n<p>Jadi, nilai dari <strong>a + c</strong> adalah <strong>13</strong>.</p>",
+    "hasImage": true,
+    "topic": "Aljabar",
+    "subtopic": "Teori Bilangan dan Faktorisasi"
+  },
+  {
+    "no": 6,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Sebuah garis pada bidang-XY melalui titik <equation>(3, 1)</equation> dan memiliki gradien <equation>\\frac{1}{3}</equation>. Manakah dari titik-titik berikut yang terletak pada garis tersebut?</p><table class='cte-table tw-w-full tw-border-collapse cte-table-bordered'><thead><tr><th class='tw-bg-purple-100 tw-font-semibold tw-p-2 tw-border tw-border-purple-300'>No</th><th class='tw-bg-purple-100 tw-font-semibold tw-p-2 tw-border tw-border-purple-300'>Titik</th></tr></thead><tbody><tr><td class='tw-p-2 tw-border tw-border-purple-300'>(1)</td><td class='tw-p-2 tw-border tw-border-purple-300'><equation>(-3, 0)</equation></td></tr><tr><td class='tw-p-2 tw-border tw-border-purple-300'>(2)</td><td class='tw-p-2 tw-border tw-border-purple-300'><equation>(0, 0)</equation></td></tr><tr><td class='tw-p-2 tw-border tw-border-purple-300'>(3)</td><td class='tw-p-2 tw-border tw-border-purple-300'><equation>(-6, 4)</equation></td></tr><tr><td class='tw-p-2 tw-border tw-border-purple-300'>(4)</td><td class='tw-p-2 tw-border tw-border-purple-300'><equation>(6, 2)</equation></td></tr></tbody></table>",
+    "options": [
+      "<p>(1), (2), dan (3) saja yang benar</p>",
+      "<p>(1), (3) saja yang benar</p>",
+      "<p>(2) dan (4) saja yang benar</p>",
+      "<p>Hanya (4) yang benar</p>",
+      "<p>Semua pilihan benar</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>Persamaan garis yang melalui titik <equation>(x_1, y_1) = (3, 1)</equation> dan memiliki gradien <equation>m = \\frac{1}{3}</equation> dapat ditulis sebagai:</p>\n\n<p><equation>y - 1 = \\frac{1}{3}(x - 3)</equation></p>\n\n<p>Kalikan kedua ruas dengan 3 untuk menghilangkan pecahan:</p>\n<p><equation>3(y - 1) = x - 3</equation></p>\n<p><equation>3y - 3 = x - 3</equation></p>\n<p><equation>x = 3y</equation></p>\n\n<p>Artinya, setiap titik <equation>(x, y)</equation> yang memenuhi <equation>x = 3y</equation> akan terletak pada garis tersebut.</p>\n\n<p>Periksa masing-masing titik:</p>\n<table class='cte-table tw-w-full tw-border-collapse cte-table-bordered'><thead><tr><th class='tw-bg-purple-100 tw-font-semibold tw-p-2 tw-border tw-border-purple-300'>Titik</th><th class='tw-bg-purple-100 tw-font-semibold tw-p-2 tw-border tw-border-purple-300'>Substitusi ke x = 3y</th><th class='tw-bg-purple-100 tw-font-semibold tw-p-2 tw-border tw-border-purple-300'>Hasil</th></tr></thead><tbody><tr><td class='tw-p-2 tw-border tw-border-purple-300'><equation>(-3, 0)</equation></td><td class='tw-p-2 tw-border tw-border-purple-300'><equation>-3 = 3(0)</equation></td><td class='tw-p-2 tw-border tw-border-purple-300'>Tidak benar</td></tr><tr><td class='tw-p-2 tw-border tw-border-purple-300'><equation>(0, 0)</equation></td><td class='tw-p-2 tw-border tw-border-purple-300'><equation>0 = 3(0)</equation></td><td class='tw-p-2 tw-border tw-border-purple-300'>Benar</td></tr><tr><td class='tw-p-2 tw-border tw-border-purple-300'><equation>(-6, 4)</equation></td><td class='tw-p-2 tw-border tw-border-purple-300'><equation>-6 = 3(4)</equation></td><td class='tw-p-2 tw-border tw-border-purple-300'>Tidak benar</td></tr><tr><td class='tw-p-2 tw-border tw-border-purple-300'><equation>(6, 2)</equation></td><td class='tw-p-2 tw-border tw-border-purple-300'><equation>6 = 3(2)</equation></td><td class='tw-p-2 tw-border tw-border-purple-300'>Benar</td></tr></tbody></table>\n\n<p>Maka titik yang berada pada garis tersebut adalah <equation>(0, 0)</equation> dan <equation>(6, 2)</equation>.</p>\n\n<p>Dengan demikian, jawaban yang benar adalah <strong>(2) dan (4) saja</strong>.</p>",
+    "hasImage": true,
+    "topic": "Aljabar",
+    "subtopic": "Persamaan Garis Lurus"
+  },
+  {
+    "no": 7,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Perhatikan dua persegi berikut, <em>ABCD</em> dan <em>PQRS</em>:</p><p>Persegi <em>ABCD</em> memiliki sisi <equation>12\\text{ cm}</equation>, sedangkan persegi <em>PQRS</em> memiliki sisi <equation>4\\text{ cm}</equation>. Jika titik <em>B</em> merupakan pusat simetri putar dari persegi <em>PQRS</em>, maka luas daerah perpotongan kedua persegi tersebut adalah ....</p>",
+    "options": [
+      "<equation>4\\text{ cm}^2</equation>",
+      "<equation>8\\text{ cm}^2</equation>",
+      "<equation>12\\text{ cm}^2</equation>",
+      "<equation>16\\text{ cm}^2</equation>",
+      "<equation>24\\text{ cm}^2</equation>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<p>Karena titik <em>B</em> merupakan pusat persegi <em>PQRS</em>, maka titik tersebut membagi persegi <em>PQRS</em> menjadi empat bagian kongruen yang sama besar.</p>\n\n<p>Artinya, daerah perpotongan antara persegi besar <em>ABCD</em> dengan persegi kecil <em>PQRS</em> hanya mencakup seperempat dari luas persegi kecil tersebut.</p>\n\n<p>Luas persegi <em>PQRS</em> adalah:</p>\n<p><equation>L = s^2 = 4^2 = 16\\text{ cm}^2</equation></p>\n\n<p>Karena yang berpotongan hanyalah seperempat bagiannya, maka:</p>\n<p><equation>L_{perpotongan} = \\frac{1}{4} \\times 16 = 4\\text{ cm}^2</equation></p>\n\n<p>Jadi, luas daerah perpotongan kedua persegi tersebut adalah <strong>4 cm²</strong>.</p>",
+    "hasImage": true,
+    "topic": "Geometri",
+    "subtopic": "Simetri dan Luas Perpotongan Bangun"
+  },
+  {
+    "no": 8,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Berikut merupakan data nilai pelajaran matematika dari 6 kelas (A, B, C, D, E, F) yang dikelompokkan berdasarkan tempat tinggal siswa:</p><table class='cte-table tw-w-full tw-border-collapse cte-table-bordered'><thead><tr><th class='tw-bg-purple-100 tw-font-semibold tw-p-2 tw-border tw-border-purple-300'>Kecamatan Y</th><th class='tw-bg-purple-100 tw-font-semibold tw-p-2 tw-border tw-border-purple-300'>Kecamatan Z</th></tr></thead><tbody><tr><td class='tw-p-2 tw-border tw-border-purple-300'>7, 7, 6, 8, 9, 7</td><td class='tw-p-2 tw-border tw-border-purple-300'>8, 9, 7, 8, 6, 6</td></tr><tr><td class='tw-p-2 tw-border tw-border-purple-300'>8, 9, 7, 9, 8, 8</td><td class='tw-p-2 tw-border tw-border-purple-300'>7, 8, 9, 6, 7, 8</td></tr><tr><td class='tw-p-2 tw-border tw-border-purple-300'>5, 9, 8, 9, 6, 8</td><td class='tw-p-2 tw-border tw-border-purple-300'>7, 8, 6, 7, 8, 7</td></tr></tbody></table><p>Jika setiap siswa yang memperoleh nilai <strong>di atas rata-rata daerahnya</strong> akan mendapatkan hadiah berupa tas sekolah, berapa jumlah tas yang akan diberikan pada siswa dari kedua kecamatan tersebut?</p>",
+    "options": [
+      "<p>Kecamatan Y = 5 tas, Kecamatan Z = 4 tas</p>",
+      "<p>Kecamatan Y = 5 tas, Kecamatan Z = 5 tas</p>",
+      "<p>Kecamatan Y = 6 tas, Kecamatan Z = 5 tas</p>",
+      "<p>Kecamatan Y = 9 tas, Kecamatan Z = 6 tas</p>",
+      "<p>Kecamatan Y = 6 tas, Kecamatan Z = 6 tas</p>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>Langkah pertama adalah mencari rata-rata nilai di masing-masing kecamatan.</p>\n\n<p><strong>Untuk Kecamatan Y:</strong></p>\n<p>Terdapat 15 nilai, yaitu: <equation>7 + 7 + 6 + 8 + 9 + 7 + 8 + 9 + 7 + 9 + 8 + 8 + 5 + 9 + 8 = 115</equation></p>\n<p>Sehingga rata-ratanya adalah <equation>\\bar{x}_Y = \\frac{115}{15} = 7{,}67</equation></p>\n\n<p>Artinya, nilai yang lebih besar dari 7,67 (dibulatkan menjadi ≥ 8) termasuk kategori <em>di atas rata-rata</em>.</p>\n<p>Hitung jumlah siswa yang nilainya 8 ke atas → terdapat 9 siswa.</p>\n\n<p><strong>Untuk Kecamatan Z:</strong></p>\n<p>Nilai-nilainya: <equation>8 + 9 + 7 + 8 + 6 + 6 + 7 + 8 + 9 + 6 + 7 + 8 + 7 + 8 + 7 = 109</equation></p>\n<p>Rata-ratanya <equation>\\bar{x}_Z = \\frac{109}{15} = 7{,}27</equation></p>\n<p>Sehingga nilai ≥ 8 dikategorikan di atas rata-rata.</p>\n<p>Jumlah siswa yang memiliki nilai ≥ 8 adalah 6 siswa.</p>\n\n<p><strong>Kesimpulan:</strong></p>\n<p>Kecamatan Y memiliki 9 siswa yang memperoleh tas, dan Kecamatan Z memiliki 6 siswa.</p>\n<p>Jadi total tas yang dibagikan adalah <strong>9 + 6 = 15 tas</strong>.</p>\n<p>Jawaban yang benar adalah <strong>D. Kecamatan Y = 9 tas, Kecamatan Z = 6 tas</strong>.</p>",
+    "hasImage": true,
+    "topic": "Statistik dan Peluang",
+    "subtopic": "Rata-rata dan Analisis Data"
+  },
+  {
+    "no": 9,
+    "level": 4,
+    "questionType": "single-choice",
+    "questionText": "<p>Bilangan palindrom adalah bilangan yang jika dibalik urutannya tetap sama nilainya. Sebagai contoh, <equation>121</equation> merupakan bilangan palindrom, sedangkan <equation>123</equation> bukan.</p><p>Banyaknya bilangan palindrom yang terdiri atas sebelas angka dan dibentuk dari digit 0, 2, 3, 4, dan 8, dengan syarat bahwa satu angka 0 selalu berada di tengah, adalah ....</p>",
+    "options": [
+      "<equation>5225</equation>",
+      "<equation>5000</equation>",
+      "<equation>2552</equation>",
+      "<equation>2500</equation>",
+      "<p>Tidak ada jawaban yang tepat</p>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>Bilangan palindrom memiliki sifat simetri, artinya separuh pertama angka akan mencerminkan separuh terakhir. Untuk bilangan dengan 11 digit, cukup menentukan 6 digit pertama (termasuk digit tengah), karena sisanya akan mengikuti pola yang sama saat dibalik.</p><p>Karena angka tengah selalu 0, maka posisi tersebut sudah ditentukan. Lima posisi pertama di sebelah kiri dapat diisi oleh angka dari himpunan {0, 2, 3, 4, 8}, tetapi angka pertama tidak boleh 0 agar tetap menjadi bilangan 11 digit yang sah. Jadi, kemungkinan kombinasi untuk tiap posisi adalah:</p><ul><li>Digit pertama: 4 pilihan (2, 3, 4, 8)</li><li>Digit ke-2 hingga ke-5: masing-masing 5 pilihan (0, 2, 3, 4, 8)</li><li>Digit ke-6 (tengah): tetap 0</li></ul><p>Maka banyaknya bilangan palindrom = <equation>4 × 5 × 5 × 5 × 5 × 1 = 2500</equation>.</p><p>Jadi, jawabannya adalah <strong>2500</strong>.</p>",
+    "hasImage": true,
+    "topic": "Aljabar",
+    "subtopic": "Kombinatorika dan Bilangan Palindrom"
+  },
+  {
+    "no": 10,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Diketahui dua bilangan real berbeda <em>a</em> dan <em>b</em> memenuhi sistem</p><p><equation>a^2 + 2 = 5a</equation></p><p><equation>b^2 + 2 = 5b</equation></p><p>Jika <em>a ≠ b</em>, maka nilai dari</p><p><equation>\frac{1}{a^2} + \frac{1}{b^2}</equation> adalah ....</p>",
+    "options": [
+      "<equation>\frac{23}{19}</equation>",
+      "<equation>\frac{7}{32}</equation>",
+      "<equation>\frac{3}{21}</equation>",
+      "<equation>\frac{21}{4}</equation>",
+      "<equation>\frac{4}{15}</equation>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>Langkah penyelesaian (penjabaran lengkap):</p>\n<p>1. Karena kedua bilangan memenuhi bentuk yang sama, lakukan eliminasi dengan mengurangkan persamaan untuk <em>a</em> dan <em>b</em>:</p>\n<p><equation>a^2 + 2 = 5a\quad(1)</equation></p>\n<p><equation>b^2 + 2 = 5b\quad(2)</equation></p>\n<p>Kurangkan (1)-(2):</p>\n<p><equation>a^2 - b^2 = 5a - 5b = 5(a-b).</equation></p>\n<p>Faktor kiri menjadi <equation>(a-b)(a+b)</equation>, sehingga</p>\n<p><equation>(a-b)(a+b) = 5(a-b).</equation></p>\n<p>Karena <em>a ≠ b</em>, maka <equation>a-b \ne 0</equation> dan kita dapat membagi kedua ruas dengan <equation>(a-b)</equation>, diperoleh</p>\n<p><equation>a + b = 5.</equation></p>\n\n<p>2. Jumlah kuadrat <equation>a^2 + b^2</equation> ditentukan dengan menjumlahkan (1) dan (2):</p>\n<p><equation>(a^2+2)+(b^2+2)=5a+5b\Rightarrow a^2+b^2+4=5(a+b).</equation></p>\n<p>Substitusi <equation>a+b=5</equation> memberi</p>\n<p><equation>a^2+b^2+4 = 5\cdot 5 = 25\Rightarrow a^2+b^2 = 25-4 = 21.</equation></p>\n\n<p>3. Cari <equation>ab</equation> dari identitas kuadrat jumlah:</p>\n<p><equation>(a+b)^2 = a^2 + b^2 + 2ab.</equation></p>\n<p>Substitusi <equation>a+b=5</equation> dan <equation>a^2+b^2=21</equation> menghasilkan</p>\n<p><equation>25 = 21 + 2ab\Rightarrow 2ab = 4\Rightarrow ab = 2.</equation></p>\n\n<p>4. Sekarang hitung ekspresi yang diminta:</p>\n<p><equation>\frac{1}{a^2} + \frac{1}{b^2} = \frac{a^2 + b^2}{(ab)^2}.</equation></p>\n<p>Substitusi <equation>a^2+b^2=21</equation> dan <equation>ab=2</equation> memberi</p>\n<p><equation>\frac{a^2 + b^2}{(ab)^2} = \frac{21}{2^2} = \frac{21}{4}.</equation></p>\n\n<p>Jadi nilai yang dicari adalah <equation>\dfrac{21}{4}.</equation></p>",
+    "topic": "Aljabar",
+    "subtopic": "Persamaan Kuadrat dan Identitas Simetris"
+  },
+  {
+    "no": 11,
+    "level": 4,
+    "questionType": "single-choice",
+    "questionText": "<p>Perhatikan gambar berikut yang menunjukkan sebuah jendela berbentuk persegi panjang yang dikelilingi oleh bingkai dengan lebar seragam. Diketahui bahwa rasio lebar terhadap panjang <strong>bingkai</strong> adalah <equation>3 : 4</equation>. Tentukan rasio lebar terhadap panjang <strong>jendela</strong> tersebut.</p><p>(1) Luas jendela sama dengan luas bingkai.</p><p>(2) Bingkai tersebut memiliki lebar <equation>1</equation>.</p>",
+    "options": [
+      "<p>Pernyataan (1) SAJA cukup untuk menjawab pertanyaan, tetapi pernyataan (2) SAJA tidak cukup.</p>",
+      "<p>Pernyataan (2) SAJA cukup untuk menjawab pertanyaan, tetapi pernyataan (1) SAJA tidak cukup.</p>",
+      "<p>KEDUA pernyataan BERSAMA-SAMA cukup untuk menjawab pertanyaan, tetapi SATU pernyataan SAJA tidak cukup.</p>",
+      "<p>Pernyataan (1) SAJA cukup untuk menjawab pertanyaan dan pernyataan (2) SAJA cukup.</p>",
+      "<p>Kedua pernyataan tersebut tidak cukup untuk menjawab pertanyaan.</p>"
+    ],
+    "correctAnswer": [0],
+    "hasImage": true,
+    "explanation": "<p>Misalkan ukuran luar bingkai adalah <equation>3 × 4</equation>. Maka luas total persegi panjang luar = <equation>12</equation>. Jika luas jendela sama dengan luas bingkai, maka luas jendela = <equation>6</equation>. Misalkan panjang dan lebar jendela masing-masing berkurang sebanyak <em>x</em> di setiap sisi (karena bingkai seragam), maka dimensi jendela adalah <equation>(4 − 2x)</equation> dan <equation>(3 − 2x)</equation>. Maka luas jendela = <equation>(4 − 2x)(3 − 2x) = 6</equation>.</p><p>Dari persamaan ini kita bisa menentukan nilai <em>x</em> dan menemukan bahwa rasio antara lebar terhadap panjang jendela menjadi <equation>2 : 3</equation>. Dengan demikian, pernyataan (1) saja sudah cukup untuk menentukan jawaban, tanpa perlu informasi dari pernyataan (2).</p><p>Namun, jika hanya diketahui bahwa bingkai memiliki lebar <equation>1</equation> (pernyataan (2)), maka kita tidak tahu hubungan antara luas jendela dan bingkai, sehingga rasio lebar terhadap panjang jendela dapat bervariasi. Jadi, pernyataan (2) saja tidak cukup.</p><p>Kesimpulan: <strong>Pernyataan (1) SAJA cukup</strong>.</p>",
+    "topic": "Geometri",
+    "subtopic": "Luas dan Dimensi Relatif"
+  },
+  {
+    "no": 12,
+    "level": 4,
+    "questionType": "single-choice",
+    "questionText": "<p>Diketahui koordinat suatu titik <equation>(x, y)</equation> terletak pada bidang <equation>-xy</equation> dengan <equation>x - y ≠ 0</equation>. Tentukan apakah <equation>x > y</equation> berdasarkan pernyataan berikut:</p><ol type='1'><li><equation>x^2 - 2xy + y^2 = 4(x - y)</equation></li><li><equation>2x = 2y - 6</equation></li></ol><p>Pilih kesimpulan yang benar tentang kecukupan pernyataan tersebut!</p>",
+    "options": [
+      "<p>Pernyataan (1) SAJA cukup untuk menjawab pertanyaan, tetapi pernyataan (2) SAJA tidak cukup.</p>",
+      "<p>Pernyataan (2) SAJA cukup untuk menjawab pertanyaan, tetapi pernyataan (1) SAJA tidak cukup.</p>",
+      "<p>Kedua pernyataan BERSAMA-SAMA cukup untuk menjawab pertanyaan, tetapi masing-masing pernyataan SAJA tidak cukup.</p>",
+      "<p>Pernyataan (1) SAJA cukup untuk menjawab pertanyaan, dan pernyataan (2) SAJA juga cukup.</p>",
+      "<p>Kedua pernyataan tersebut tidak cukup untuk menjawab pertanyaan.</p>"
+    ],
+    "correctAnswer": [3],
+    "hasImage": true,
+    "explanation": "<p>Pada pernyataan (1):</p><p><equation>x^2 - 2xy + y^2 = 4(x - y)</equation> dapat disederhanakan menjadi <equation>(x - y)^2 = 4(x - y)</equation>. Dengan mengeluarkan faktor <equation>(x - y)</equation>, diperoleh <equation>(x - y)[(x - y) - 4] = 0</equation>. Karena <equation>x - y ≠ 0</equation>, maka <equation>x - y = 4</equation>. Nilai ini jelas lebih besar dari 0, sehingga <equation>x > y</equation>. Jadi, pernyataan (1) saja sudah cukup untuk menentukan jawaban.</p><p>Pada pernyataan (2):</p><p>Dari <equation>2x = 2y - 6</equation> diperoleh <equation>x = y - 3</equation> sehingga <equation>x - y = -3</equation>. Karena hasilnya negatif, maka <equation>x < y</equation>. Ini berarti kita juga dapat menentukan hubungan antara x dan y hanya dengan pernyataan (2).</p><p>Kesimpulan: Masing-masing pernyataan (1) dan (2) sudah cukup untuk menentukan apakah <equation>x > y</equation> tanpa membutuhkan informasi tambahan. Oleh karena itu, jawaban yang benar adalah bahwa <strong>keduanya cukup secara terpisah</strong>.</p>",
+    "topic": "Aljabar",
+    "subtopic": "Analisis Kecukupan Pernyataan (Data Sufficiency)"
+  },
+  {
+    "no": 13,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Peningkatan hasil tangkapan ikan per hari berkisar antara <equation>0,2</equation> hingga <equation>0,4</equation> ton. Saat ini, total hasil tangkapan ikan adalah <equation>40</equation> ton. Tentukan hubungan antara kuantitas <strong>P</strong> dan <strong>Q</strong> berikut:</p><table class='cte-table tw-w-full tw-border-collapse cte-table-bordered'><thead><tr><th class='tw-bg-blue-100 tw-font-semibold tw-p-2 tw-border tw-border-blue-300'>Kuantitas</th><th class='tw-bg-blue-100 tw-font-semibold tw-p-2 tw-border tw-border-blue-300'>Keterangan</th></tr></thead><tbody><tr><td class='tw-p-2 tw-border tw-border-blue-300'>P</td><td class='tw-p-2 tw-border tw-border-blue-300'>6</td></tr><tr><td class='tw-p-2 tw-border tw-border-blue-300'>Q</td><td class='tw-p-2 tw-border tw-border-blue-300'>Jumlah hari yang dibutuhkan agar total tangkapan ikan mencapai <equation>42</equation> ton</td></tr></tbody></table>",
+    "options": [
+      "<p><equation>P > Q</equation></p>",
+      "<p><equation>Q > P</equation></p>",
+      "<p><equation>P = Q</equation></p>",
+      "<p>Informasi yang diberikan tidak cukup untuk menentukan hubungan antara P dan Q</p>"
+    ],
+    "correctAnswer": [1],
+    "hasImage": true,
+    "explanation": "<p>Peningkatan hasil tangkapan per hari berada di antara <equation>0,2</equation> dan <equation>0,4</equation> ton. Artinya, setiap hari hasil tangkapan bertambah sebanyak nilai dalam rentang tersebut.</p><p>Total kenaikan yang dibutuhkan dari <equation>40</equation> ton menjadi <equation>42</equation> ton adalah <equation>2</equation> ton.</p><p>Jika peningkatan paling kecil adalah <equation>0,2</equation> ton/hari, maka waktu maksimum yang dibutuhkan adalah <equation>2 ÷ 0,2 = 10</equation> hari.</p><p>Jika peningkatan paling besar adalah <equation>0,4</equation> ton/hari, maka waktu minimum yang dibutuhkan adalah <equation>2 ÷ 0,4 = 5</equation> hari.</p><p>Dengan demikian, waktu yang dibutuhkan (Q) berada antara <equation>5</equation> dan <equation>10</equation> hari. Karena <equation>P = 6</equation>, maka dapat disimpulkan bahwa <equation>Q</equation> bisa saja lebih besar atau lebih kecil dari <equation>P</equation> tergantung pada laju pertambahan yang digunakan.</p><p>Namun, jika kita perhatikan bahwa <equation>P = 6</equation> berada di dalam rentang <equation>5 < Q < 10</equation>, maka secara umum <strong>Q cenderung lebih besar dari P</strong> karena waktu minimalnya masih lebih kecil dari <equation>P</equation> dan bisa mencapai nilai yang lebih besar. Oleh sebab itu, hubungan yang paling tepat adalah <strong><equation>Q > P</equation></strong>.</p>",
+    "topic": "Aritmetika",
+    "subtopic": "Perbandingan dan Estimasi Rentang"
+  },
+  {
+    "no": 14,
+    "level": 2,
+    "questionType": "single-choice",
+    "questionText": "<p>Seorang pengusaha membeli sepeda bekas seharga Rp200.000,00. Ia mengeluarkan biaya perbaikan sebesar Rp40.000,00. Setelah diperbaiki, sepeda tersebut dijual dengan harga Rp300.000,00. Jika <em>P</em> menyatakan persentase keuntungan terhadap harga beli awal, dan <em>Q</em> menyatakan persentase keuntungan terhadap total biaya (harga beli + biaya perbaikan), manakah pernyataan yang benar mengenai hubungan antara <em>P</em> dan <em>Q</em>?</p>",
+    "options": [
+      "<p><em>P</em> > <em>Q</em></p>",
+      "<p><em>Q</em> > <em>P</em></p>",
+      "<p><em>P</em> = <em>Q</em></p>",
+      "<p>Hubungan tidak dapat ditentukan</p>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<p>Keuntungan yang diperoleh = harga jual – total biaya = 300.000 – (200.000 + 40.000) = Rp60.000,00.</p><p>Persentase keuntungan terhadap harga beli awal (<em>P</em>) = (60.000 ÷ 200.000) × 100% = 30%.</p><p>Persentase keuntungan terhadap total biaya (<em>Q</em>) = (60.000 ÷ 240.000) × 100% = 25%.</p><p>Karena 30% > 25%, maka <em>P</em> > <em>Q</em>. Dengan demikian, pernyataan yang benar adalah opsi pertama.</p>",
+    "topic": "Aritmetika",
+    "subtopic": "Persentase dan Keuntungan"
+  },
+  {
+    "no": 15,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Diketahui bahwa <em>x</em> dan <em>y</em> adalah bilangan real. Manakah di antara pernyataan berikut yang benar?</p><ol><li><equation>(x + y)^2 = x^2 + y^2</equation></li><li><equation>x^2 + y^2 = (x + y)^2 - 2xy</equation></li><li><equation>(x - y)^2 = x^2 + 2xy + y^2</equation></li><li><equation>x^2 - y^2 = (x + y)(x - y)</equation></li></ol><p>Pilih opsi yang paling tepat.</p>",
+    "options": [
+      "<p>Pernyataan 1, 2, dan 3 saja yang benar.</p>",
+      "<p>Pernyataan 1 dan 3 saja yang benar.</p>",
+      "<p>Pernyataan 2 dan 4 saja yang benar.</p>",
+      "<p>Hanya pernyataan 4 yang benar.</p>",
+      "<p>Semua pernyataan benar.</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>Perhatikan satu per satu:</p><p>Pernyataan 1: <equation>(x + y)^2 = x^2 + 2xy + y^2</equation>, bukan hanya <equation>x^2 + y^2</equation>. Jadi, pernyataan ini salah karena mengabaikan suku tengah <equation>2xy</equation>.</p><p>Pernyataan 2: Dari identitas <equation>(x + y)^2 = x^2 + 2xy + y^2</equation>, jika kita pindahkan <equation>2xy</equation> ke ruas kiri, maka <equation>x^2 + y^2 = (x + y)^2 - 2xy</equation>. Ini benar.</p><p>Pernyataan 3: <equation>(x - y)^2 = x^2 - 2xy + y^2</equation>, bukan <equation>x^2 + 2xy + y^2</equation>. Tanda pada suku tengah harus negatif. Jadi, pernyataan ini salah.</p><p>Pernyataan 4: Ini adalah rumus selisih kuadrat, yaitu <equation>x^2 - y^2 = (x + y)(x - y)</equation>. Ini merupakan identitas aljabar dasar yang selalu benar untuk semua bilangan real <em>x</em> dan <em>y</em>. Jadi, pernyataan ini benar.</p><p>Dengan demikian, hanya pernyataan 2 dan 4 yang benar, sehingga jawaban yang tepat adalah opsi C.</p>",
+    "topic": "Aljabar",
+    "subtopic": "Identitas Aljabar Dasar"
+  },
+  {
+    "no": 16,
+    "level": 4,
+    "questionType": "single-choice",
+    "questionText": "<p>Diketahui barisan bilangan real: 2, <em>a</em>, 8, ... . Apakah bilangan 16 merupakan salah satu suku dari barisan tersebut?</p><p>Pertimbangkan dua pernyataan berikut:</p><ol><li>Barisan ini adalah barisan aritmetika.</li><li>Barisan ini terdiri dari bilangan-bilangan positif saja.</li></ol><p>Manakah opsi yang paling tepat untuk menentukan apakah informasi dalam pernyataan (1) dan (2) cukup atau tidak untuk menjawab pertanyaan?</p>",
+    "options": [
+      "<p>(A) Pernyataan (1) SAJA cukup untuk menjawab pertanyaan, tetapi pernyataan (2) SAJA tidak cukup.</p>",
+      "<p>(B) Pernyataan (2) SAJA cukup untuk menjawab pertanyaan, tetapi pernyataan (1) SAJA tidak cukup.</p>",
+      "<p>(C) Pernyataan (1) dan (2) BERSAMA-SAMA cukup untuk menjawab pertanyaan, tetapi masing-masing SAJA tidak cukup.</p>",
+      "<p>(D) Masing-masing pernyataan SAJA sudah cukup untuk menjawab pertanyaan.</p>",
+      "<p>(E) Pernyataan (1) dan (2) BERSAMA-SAMA pun TIDAK cukup untuk menjawab pertanyaan.</p>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<p>Analisis pernyataan (1): Jika barisan 2, a, 8, ... adalah barisan aritmetika, maka selisih antar suku konstan. Selisih antara suku pertama dan ketiga adalah 8 - 2 = 6. Karena ada satu suku di tengah (a), maka selisih tiap suku adalah 3. Dengan demikian, barisan menjadi: 2, 5, 8, 11, 14, 17, ... . Bilangan 16 tidak muncul dalam barisan ini. Jadi, dengan hanya pernyataan (1), kita dapat menyimpulkan bahwa 16 bukan suku dari barisan tersebut. Artinya, pernyataan (1) SAJA cukup.</p><p>Analisis pernyataan (2): Barisan hanya terdiri dari bilangan positif. Ini tidak memberikan informasi tentang pola atau selisih antar suku. Barisan bisa jadi 2, 4, 8, 16, ... (geometri) atau 2, 6, 8, 16, ... (acak). Dalam kasus geometri, 16 adalah suku keempat. Dalam kasus lain, mungkin bukan. Jadi, pernyataan (2) SAJA tidak cukup untuk menentukan apakah 16 adalah suku dari barisan.</p><p>Kesimpulan: Pernyataan (1) SAJA cukup, sedangkan pernyataan (2) SAJA tidak cukup. Jawaban yang benar adalah A.</p>",
+    "topic": "Aljabar",
+    "subtopic": "Barisan Bilangan dan Analisis Kecukupan"
+  },
+  {
+    "no": 17,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Diketahui himpunan <equation>A = \\{1, 2, 3\\}</equation> dan <equation>B = \\{a, b, c\\}</equation>. Diberikan himpunan pasangan terurut: <equation>\\{(1,a), (2,b), (3,c), (a,1), (b,2), (c,3)\\}</equation>. Himpunan ini menyatakan hubungan antara elemen-elemen dari A dan B. Manakah pernyataan yang paling tepat menggambarkan sifat himpunan pasangan terurut tersebut?</p>",
+    "options": [
+      "<p>Fungsi dari A ke B.</p>",
+      "<p>Relasi dari A ke B, tetapi BUKAN fungsi dari A ke B.</p>",
+      "<p>Fungsi dari B ke A.</p>",
+      "<p>Relasi dari B ke A, tetapi BUKAN fungsi dari B ke A.</p>",
+      "<p>BUKAN relasi dari A ke B dan BUKAN relasi dari B ke A.</p>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<p>Untuk menentukan apakah suatu himpunan pasangan terurut merupakan fungsi dari himpunan A ke himpunan B, kita harus memeriksa dua hal: (1) setiap elemen di A harus memiliki pasangan di B, dan (2) setiap elemen di A hanya boleh dipasangkan dengan satu elemen di B (tidak boleh lebih dari satu).</p><p>Dalam himpunan pasangan terurut <equation>\\{(1,a), (2,b), (3,c), (a,1), (b,2), (c,3)\\}</equation>, kita lihat bahwa:</p><ul><li>Elemen 1 di A dipasangkan dengan a di B.</li><li>Elemen 2 di A dipasangkan dengan b di B.</li><li>Elemen 3 di A dipasangkan dengan c di B.</li></ul><p>Semua elemen di A memiliki pasangan di B, dan masing-masing hanya memiliki satu pasangan. Oleh karena itu, bagian dari himpunan ini yang melibatkan elemen dari A ke B membentuk sebuah fungsi dari A ke B.</p><p>Meskipun ada pasangan tambahan seperti (a,1), (b,2), (c,3) yang menghubungkan elemen dari B ke A, ini tidak membatalkan fakta bahwa subset {(1,a), (2,b), (3,c)} sudah memenuhi syarat sebagai fungsi dari A ke B. Jadi, secara keseluruhan, himpunan ini dapat dikatakan sebagai fungsi dari A ke B.</p><p>Oleh karena itu, jawaban yang benar adalah A.</p>",
+    "topic": "Aljabar",
+    "subtopic": "Relasi dan Fungsi"
+  },
+  {
+    "no": 18,
+    "level": 4,
+    "questionType": "single-choice",
+    "questionText": "<p>Diketahui dua fungsi, <em>f</em> dan <em>g</em>, yang saling terkait melalui hubungan: <equation>f(x) = g\\left(x^3 + 2x\\right)</equation>. Jika diketahui nilai turunan pertama fungsi <em>f</em> di titik nol adalah <equation>f'(0) = 10</equation>, maka berapakah nilai dari turunan pertama fungsi <em>g</em> di titik nol, yaitu <equation>g'(0)</equation>?</p>",
+    "options": [
+      "<p>5</p>",
+      "<p>7</p>",
+      "<p>10</p>",
+      "<p>12</p>",
+      "<p>13</p>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<p>Kita diberi hubungan antara dua fungsi: <equation>f(x) = g\\left(x^3 + 2x\\right)</equation>. Untuk mencari <equation>f'(x)</equation>, kita gunakan aturan rantai (chain rule).</p><p>Misalkan <equation>u(x) = x^3 + 2x</equation>, sehingga <equation>f(x) = g(u(x))</equation>.</p><p>Maka, turunan <equation>f'(x) = g'(u(x)) \\cdot u'(x)</equation>.</p><p>Turunan dari <equation>u(x) = x^3 + 2x</equation> adalah <equation>u'(x) = 3x^2 + 2</equation>.</p><p>Jadi, <equation>f'(x) = g'(x^3 + 2x) \\cdot (3x^2 + 2)</equation>.</p><p>Sekarang, substitusi <equation>x = 0</equation>:</p><p><equation>f'(0) = g'(0^3 + 2 \\cdot 0) \\cdot (3 \\cdot 0^2 + 2) = g'(0) \\cdot 2</equation>.</p><p>Diketahui bahwa <equation>f'(0) = 10</equation>, maka:</p><p><equation>10 = g'(0) \\cdot 2</equation></p><p>Dengan demikian, <equation>g'(0) = \\frac{10}{2} = 5</equation>.</p><p>Jadi, nilai dari <equation>g'(0)</equation> adalah 5.</p>",
+    "topic": "Kalkulus",
+    "subtopic": "Aturan Rantai Turunan"
+  },
+  {
+    "no": 19,
+    "level": 3,
+    "questionType": "number",
+    "questionText": "<p>Titik <equation>P(-1, 5)</equation> berada pada grafik fungsi <equation>f(x) = ax^2 + x + 3</equation>. Tentukan nilai <strong>a</strong> yang memenuhi kondisi tersebut!</p>",
+    "answer": "3",
+    "explanation": "<p>Diketahui titik <equation>P(-1, 5)</equation> terletak pada kurva <equation>f(x) = ax^2 + x + 3</equation>. Karena titik tersebut berada pada grafik, maka berlaku <equation>f(-1) = 5</equation>.</p><p>Substitusikan nilai <equation>x = -1</equation> ke dalam fungsi:</p><p><equation>5 = a(-1)^2 + (-1) + 3</equation></p><p><equation>5 = a - 1 + 3</equation> ⟹ <equation>5 = a + 2</equation></p><p>Sehingga diperoleh <equation>a = 5 - 2 = 3</equation>.</p><p>Jadi, nilai <strong>a</strong> yang sesuai adalah <strong>3</strong>.</p>",
+    "hasImage": true,
+    "topic": "Aljabar",
+    "subtopic": "Fungsi Kuadrat dan Substitusi"
+  },
+  {
+    "no": 20,
+    "level": 4,
+    "questionType": "true-false",
+    "questionText": "<p>Matriks <equation>M</equation> memiliki invers <equation>\\begin{bmatrix} a & 1 \\\\ 3 & 2 \\end{bmatrix}</equation> dan memenuhi <equation>\\begin{bmatrix} 6 & 3 \\\\ b & 14 \\end{bmatrix} \\times M = \\begin{bmatrix} -1 & 2 \\\\ 4 & 5 \\end{bmatrix}</equation>.</p><p>Berdasarkan informasi tersebut, tentukan apakah setiap pernyataan berikut <strong>BENAR</strong> atau <strong>SALAH</strong>!</p>",
+    "statements": [
+      "<p>I. <equation>a = 2</equation></p>",
+      "<p>II. <equation>a + b = 15</equation></p>",
+      "<p>III. Determinan dari matriks invers <equation>M</equation> adalah <equation>3</equation></p>"
+    ],
+    "correctAnswer": [false, true, false],
+    "hasImage": true,
+    "explanation": "<p>Diketahui <equation>M^{-1} = \\begin{bmatrix} a & 1 \\\\ 3 & 2 \\end{bmatrix}</equation> dan <equation>\\begin{bmatrix} 6 & 3 \\\\ b & 14 \\end{bmatrix} M = \\begin{bmatrix} -1 & 2 \\\\ 4 & 5 \\end{bmatrix}</equation>.</p><p>Dari hubungan <equation>A M = B</equation>, maka <equation>M = A^{-1}B</equation> dan <equation>M^{-1} = B^{-1}A</equation>.</p><p>Langkah-langkahnya:</p><ol><li>Hitung <equation>B^{-1}</equation>: <equation>B = \\begin{bmatrix} -1 & 2 \\\\ 4 & 5 \\end{bmatrix}</equation>, sehingga <equation>B^{-1} = \\frac{1}{(-1)(5) - (2)(4)} \\begin{bmatrix} 5 & -2 \\\\ -4 & -1 \\end{bmatrix} = \\frac{1}{-13} \\begin{bmatrix} 5 & -2 \\\\ -4 & -1 \\end{bmatrix}</equation>.</li><li>Kemudian <equation>M^{-1} = B^{-1}A = \\frac{-1}{13} \\begin{bmatrix} 5 & -2 \\\\ -4 & -1 \\end{bmatrix} \\begin{bmatrix} 6 & 3 \\\\ b & 14 \\end{bmatrix}</equation>.</li><li>Hasil perkalian: <equation>M^{-1} = \\frac{-1}{13} \\begin{bmatrix} 30 - 2b & 15 - 28 \\\\ 24 - b & 12 - 14 \\end{bmatrix} = \\frac{-1}{13} \\begin{bmatrix} 30 - 2b & -13 \\\\ 24 - b & -2 \\end{bmatrix}</equation>.</li><li>Samakan dengan <equation>M^{-1} = \\begin{bmatrix} a & 1 \\\\ 3 & 2 \\end{bmatrix}</equation>, maka:<br><equation>a = -\\frac{1}{13}(30 - 2b)</equation> dan <equation>3 = -\\frac{1}{13}(24 - b)</equation>.</li><li>Dari persamaan kedua: <equation>-39 = -24 - b</equation> → <equation>b = 15</equation>.<br>Substitusikan ke persamaan pertama: <equation>a = -\\frac{1}{13}(30 - 2(15)) = 0</equation>.</li></ol><p>Sehingga:</p><ul><li>Pernyataan I: <equation>a = 2</equation> → <strong>Salah</strong>.</li><li>Pernyataan II: <equation>a + b = 0 + 15 = 15</equation> → <strong>Benar</strong>.</li><li>Pernyataan III: determinan <equation>M^{-1} = (a)(2) - (1)(3) = (0)(2) - 3 = -3</equation>, bukan 3 → <strong>Salah</strong>.</li></ul><p>Kesimpulan akhir: <strong>I Salah, II Benar, III Salah.</strong></p>",
+    "topic": "Aljabar",
+    "subtopic": "Matriks dan Invers"
+  }
+]

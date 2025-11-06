@@ -1,0 +1,394 @@
+[
+  {
+    "no": 1,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Based on the passage, the primary purpose of possessing strong emotional intelligence in the workplace is to ...</p>",
+    "options": [
+      "<p>capture the manager's attention for a bonus</p>",
+      "<p>gain the ability to understand shortcomings and harshly criticize other employees</p>",
+      "<p>develop adequate problem-solving skills, maintain positive relationships with coworkers, and manage stress effectively</p>",
+      "<p>play an important role in the office hierarchy</p>",
+      "<p>understand office issues for casual afternoon conversation topics</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>The third paragraph explicitly states that researchers have suggested emotional intelligence affects how well employees interact with colleagues, manage stress, and navigate conflict. Option C directly synthesizes these three key functions mentioned in the text: problem-solving (implied by navigating conflict), relationship maintenance (interacting with colleagues), and stress management. The other options are either unsupported by the text, misrepresent the tone of the passage (e.g., 'harshly criticize'), or trivialize the concept ('casual conversation'). Therefore, option C is the most accurate and comprehensive answer based on the evidence provided in the passage.</p>",
+    "passageId": "Reading Passage: The Role of Emotional Intelligence in the Modern Workplace",
+    "topic": "Reading Comprehension",
+    "subtopic": "Main Idea and Purpose"
+  },
+  {
+    "no": 2,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>What is the primary intention of the writer in composing this passage?</p>",
+    "options": [
+      "<p>a. To secure a favorable performance review for a promotion.</p>",
+      "<p>b. To identify and publicly critique managerial flaws during company meetings.</p>",
+      "<p>c. To enhance the emotional connection between staff members and the internal audit department.</p>",
+      "<p>d. To shift employee focus away from traditional intelligence (IQ) toward other forms of intelligence.</p>",
+      "<p>e. To inform readers about one of the essential intelligences that employees are expected to develop.</p>"
+    ],
+    "correctAnswer": [4],
+    "explanation": "<p>The writer's primary intention is clearly stated in option (e). The entire passage functions as an informative overview of emotional intelligence (EI), its definition, its origins (Goleman, Salovey, Mayer), its practical applications in the workplace, and its recognized benefits for performance and satisfaction. The text does not contain any personal agenda (like seeking a promotion or criticizing managers), nor does it focus on a specific department like auditing. While it does mention EI being 'more than IQ' (option d), the core purpose is not merely to shift focus but to educate the reader on what EI is and why it is considered a crucial competency for employees. The passage systematically builds this case by defining EI, explaining its functions, and detailing its positive impacts on workplace dynamics, which aligns perfectly with the goal of informing readers about an essential skill for professional success.</p>",
+    "passageId": "Reading Passage: The Role of Emotional Intelligence in the Modern Workplace",
+    "topic": "Reading Comprehension",
+    "subtopic": "Author’s Purpose"
+  },
+  {
+    "no": 3,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>According to the second paragraph, emotional intelligence is best described as...</p>",
+    "options": [
+      "<p>the other important abilities besides IQ</p>",
+      "<p>the ability to find flaws in coworkers</p>",
+      "<p>the capability of managing work time properly</p>",
+      "<p>the capacity to perceive, understand, and manage emotions in oneself and others</p>",
+      "<p>the competence of finishing job descriptions appropriately</p>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>The second paragraph explicitly defines emotional intelligence as 'the capacity to perceive, understand, and manage emotions—both in oneself and in others.' This definition directly matches option D. The other choices either distort the meaning (e.g., 'find flaws') or introduce unrelated workplace skills (e.g., 'managing work time'). Therefore, the most accurate answer is option D.</p>",
+    "passageId": "Reading Passage: The Role of Emotional Intelligence in the Modern Workplace",
+    "topic": "Reading Comprehension",
+    "subtopic": "Detail Retrieval and Definition"
+  },
+  {
+    "no": 4,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>The author describes the effect of sports on mental health in paragraph...</p>",
+    "options": [
+      "<p>1</p>",
+      "<p>2</p>",
+      "<p>3</p>",
+      "<p>4</p>",
+      "<p>5</p>"
+    ],
+    "correctAnswer": [4],
+    "explanation": "<p>The question asks in which paragraph the author discusses the mental health effects of sports. Paragraph 5 specifically mentions that sports help reduce mental stress, alleviate depression, and bring happiness and peace of mind. These are clear indicators of psychological benefits, which means paragraph 5 focuses on mental well-being. Therefore, the correct answer is <strong>paragraph 5</strong>.</p>",
+    "passageId": "Teks Bacaan: The Importance of Sports in Life",
+    "topic": "Reading Comprehension",
+    "subtopic": "Detail Retrieval"
+  },
+  {
+    "no": 5,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>The authors would most likely agree that the relationship between sports and heart disease described in the passage is most similar to the relationship between...</p>",
+    "options": [
+      "<p>Players and their coach</p>",
+      "<p>Ambulance and hospital</p>",
+      "<p>Engine and cars</p>",
+      "<p>Vaccine and Covid-19</p>",
+      "<p>Windows and house</p>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>The passage explains that sports serve as a <strong>preventive factor</strong> against heart disease, helping to maintain heart health and reduce related risks. This relationship mirrors how a vaccine works to prevent infection from diseases such as Covid-19 — both act as preventive measures rather than cures. Meanwhile, the other options represent different kinds of associations (e.g., functional, part-whole, or instructional) that do not reflect prevention. Therefore, the most accurate analogy is <strong>'Vaccine and Covid-19'</strong>, as both highlight a protective or preventive relationship.</p>",
+    "passageId": "Teks Bacaan: The Importance of Sports in Life",
+    "topic": "Reading Comprehension",
+    "subtopic": "Analogy and Comparison"
+  },
+  {
+    "no": 6,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>The irrelevant statement in paragraph 3 is sentence ....</p>",
+    "options": [
+      "<p>1</p>",
+      "<p>2</p>",
+      "<p>3</p>",
+      "<p>4</p>",
+      "<p>5</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>Paragraph 3 mainly focuses on explaining the benefits of sports related to <strong>lung function and respiratory health</strong>. Sentences (1), (2), (4), and (5) all mention aspects of breathing, lung strength, and oxygen intake. However, sentence (3) — “Sports are particularly helpful in making our body fit and slim” — does not directly relate to lung capacity or respiration. It introduces a general physical benefit instead of supporting the specific topic of the paragraph. Therefore, the irrelevant statement is <strong>sentence (3)</strong>.</p>",
+    "passageId": "Teks Bacaan: The Importance of Sports in Life",
+    "topic": "Reading Comprehension",
+    "subtopic": "Text Coherence and Irrelevant Sentence"
+  },
+  {
+    "no": 7,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Regarding the advantages of sports to people's life, the more .... the less ....</p>",
+    "options": [
+      "<p>Time people spend for sports – life enjoyment they have</p>",
+      "<p>People inhale oxygen – possibility they suffer from lung diseases</p>",
+      "<p>Flexible the walls of their blood vessels are – fats people will have</p>",
+      "<p>People get involved in sports – people want to become punctual</p>",
+      "<p>Difficulties people face in playing sports – their interest to do sport will be</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>Dalam teks dijelaskan bahwa olahraga dapat membantu mengurangi kolesterol dan lemak tubuh karena meningkatkan kelenturan dinding pembuluh darah. Hubungan ini bersifat berbanding terbalik — semakin lentur pembuluh darah seseorang, semakin sedikit lemak yang menumpuk. Dengan kata lain, 'the more flexible the blood vessels are, the less fat people will have'. Pernyataan ini sesuai dengan penjelasan dalam paragraf kedua: <em>“Besides, they reduce the amount of cholesterol and fats in the body because of the increase of flexibility of the wall of the blood vessels.”</em></p>\n<p>Opsi lain tidak menggambarkan hubungan sebab-akibat yang logis sebagaimana yang dijelaskan dalam teks. Maka, jawaban yang paling tepat adalah <strong>opsi C</strong>.</p>",
+    "passageId": "Teks Bacaan: The Importance of Sports in Life",
+    "topic": "Reading Comprehension",
+    "subtopic": "Logical Inference and Cause-Effect"
+  },
+  {
+    "no": 8,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>The following sentences are taken from a paragraph that logically follows the passage above. Your task is to rearrange them into the most coherent and logical order.</p><p>a. Sport is an aspect of human life that is of paramount importance.</p><p>b. This is because it is as important as education.</p><p>c. Everyone must perform at least one sport activity on a regular basis.</p><p>d. It certainly increases the quality of human life.</p><p>e. Therefore, it must be made mandatory in schools.</p><p>What is the best sequence for these sentences?</p>",
+    "options": [
+      "<p>A. a-d-e-b-c</p>",
+      "<p>B. a-b-d-e-c</p>",
+      "<p>C. a-c-e-b-d</p>",
+      "<p>D. a-c-e-d-b</p>",
+      "<p>E. a-d-b-c-e</p>"
+    ],
+    "correctAnswer": [4],
+    "explanation": "<p>The correct order is E: a-d-b-c-e. Let's break down the logic:</p><ol><li><strong>Sentence 'a'</strong> serves as the topic sentence, establishing the main idea: 'Sport is an aspect of human life that is of paramount importance.' This is the natural starting point.</li><li><strong>Sentence 'd'</strong> provides immediate support by stating a key benefit: 'It certainly increases the quality of human life.' This directly elaborates on why it is 'paramount.'</li><li><strong>Sentence 'b'</strong> offers a comparative justification for its importance: 'This is because it is as important as education.' This elevates its status by comparing it to a universally valued institution.</li><li><strong>Sentence 'c'</strong> proposes a universal action based on the established importance: 'Everyone must perform at least one sport activity on a regular basis.' This is a logical consequence of its high value.</li><li><strong>Sentence 'e'</strong> concludes with a specific, actionable policy recommendation: 'Therefore, it must be made mandatory in schools.' This is the final step, suggesting a practical implementation of the preceding arguments.</li></ol><p>This sequence (a → d → b → c → e) creates a clear, persuasive argument: state the claim, provide evidence, justify its significance, propose a general action, and end with a specific institutional mandate. Other sequences, like A or B, place the conclusion ('e') too early or disrupt the logical flow between justification ('b') and action ('c').</p>",
+    "passageId": "Reading Passage: The Multifaceted Benefits of Sports",
+    "topic": "Reading Comprehension",
+    "subtopic": "Paragraph Rearrangement"
+  },
+  {
+    "no": 9,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Based on the passage, which of the following statements is INCORRECT?</p>",
+    "options": [
+      "<p>(A) Crop production is negatively impacted due to increased soil salinity resulting from seawater intrusion.</p>",
+      "<p>(B) The Dutch leveraged the region's naturally flood-prone geography to gain a tactical advantage over the Spanish.</p>",
+      "<p>(C) Swift reconstruction was identified as a critical component for the successful execution of the strategic flooding plan.</p>",
+      "<p>(D) The strategic flooding tactic directly impacted three major cities: Bruges, Ghent, and Antwerp.</p>",
+      "<p>(E) Landscape alteration caused by flood-induced erosion will inevitably change the topography.</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>The correct answer is (C). The passage explicitly states that strategic flooding 'can only be successful if there's a well-thought-out backup plan and a plan for fast repairs.' This indicates that a plan for rapid repairs is a *prerequisite* for success, not an outcome or a 'way to ensure success' after the fact. The text does not claim that 'fast restoration' itself ensured success; rather, it implies that without such a plan, the tactic would likely fail or cause unacceptable damage. Therefore, statement (C) misrepresents the text's meaning.</p><p>Let's validate the other options:</p><ul><li><strong>(A)</strong> is correct: The final paragraph confirms that seawater led to increased soil salinity, which 'affected agricultural yields' and was 'as damaging as floods caused by heavy rainfall or storm surges.'</li><li><strong>(B)</strong> is correct: The second paragraph states the Dutch rebels 'decided to use the lowly-ing, flood-prone landscape to their advantage,' directly supporting this.</li><li><strong>(D)</strong> is correct: The text mentions the rebels acted 'in an attempt to liberate Bruges, Ghent and Antwerp,' implying these cities were central to the strategy and thus affected.</li><li><strong>(E)</strong> is correct: The first paragraph clearly states that prolonged flooding 'can change the landscape through erosion and deposition, forming new tidal channels and creeks.' This aligns perfectly with the statement.</li></ul><p>In summary, while (A), (B), (D), and (E) are all directly supported by the text, (C) distorts the original message about the necessity of planning for repairs, making it the false statement.</p>",
+    "passageId": "Reading Passage: The Calculated Risk of Strategic Flooding in the Eighty Years' War",
+    "topic": "Reading Comprehension",
+    "subtopic": "Evaluating Statements (True/False/Incorrect)"
+  },
+  {
+    "no": 10,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>What is the primary intention or purpose of the author in composing this text?</p>",
+    "options": [
+      "<p>(A) To pose questions about the potential benefits of employing strategic flooding.</p>",
+      "<p>(B) To deliver practical guidance on managing disaster response and recovery.</p>",
+      "<p>(C) To present findings from recent research on security and defense strategies.</p>",
+      "<p>(D) To offer advice or tips for executing a successful strategic flooding operation.</p>",
+      "<p>(E) To advocate for specific policy measures regarding flood control and mitigation.</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>The author's main purpose is best described by option (C). The entire passage functions as a case study, detailing a specific historical event—the use of strategic flooding by Dutch rebels during the Eighty Years' War—to illustrate its outcomes, both tactical and environmental. The text presents factual information about the planning, execution, immediate effects, and long-term consequences of this military tactic. It does not merely raise questions (A), provide general disaster management advice (B), offer operational tips for future flooding (D), or push for new policies (E). Instead, it serves to inform the reader about a concrete example of how a particular defense strategy was applied and what its ramifications were, which aligns with presenting 'findings' or a historical analysis on the subject of security and defense.</p>",
+    "passageId": "Reading Passage: The Calculated Risk of Strategic Flooding in the Eighty Years' War",
+    "topic": "Reading Comprehension",
+    "subtopic": "Author’s Purpose"
+  },
+  {
+    "no": 11,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>In which academic discipline would this passage most likely be assigned as required reading?</p>",
+    "options": [
+      "<p>(A) Disaster Management</p>",
+      "<p>(B) Defense and Security Studies</p>",
+      "<p>(C) Risk Management</p>",
+      "<p>(D) Geography</p>",
+      "<p>(E) Geology</p>"
+    ],
+    "correctAnswer": [1],
+    "explanation": "<p>The most appropriate course for this passage is (B) Defense and Security Studies. The text's central theme revolves around a specific military tactic—strategic flooding—used as a tool of warfare during the Eighty Years' War. It details the tactical reasoning behind its use (to defend territory and liberate cities), the operational execution (destroying seawalls), and its strategic outcomes (creating a defensive line). While the passage touches on environmental consequences (which might relate to Geography or Geology) and the inherent risks (which might relate to Risk Management), its primary focus is on the application of a military strategy for defense and territorial control.</p>",
+    "passageId": "Reading Passage: The Calculated Risk of Strategic Flooding in the Eighty Years' War",
+    "topic": "Reading Comprehension",
+    "subtopic": "Genre and Academic Context"
+  },
+  {
+    "no": 12,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Based on the information provided in the passage, which of the following can be logically inferred about strategic flooding?</p>",
+    "options": [
+      "<p>(A) The consequences of strategically induced floods are easier to manage than those from natural flooding events.</p>",
+      "<p>(B) If implemented without thorough preparation, it places significant stress on the local food production system.</p>",
+      "<p>(C) It is a calculated military gamble that involves substantial danger but can yield worthwhile strategic gains.</p>",
+      "<p>(D) It ranks among the most significant inventions in Dutch history.</p>",
+      "<p>(E) It inevitably leads to very high concentrations of salt in the soil.</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>The correct inference is (C). The passage repeatedly emphasizes the dual nature of strategic flooding: it is a 'highly risky tactic' that 'can only be successful if there's a well-thought-out backup plan,' yet it was deliberately employed by the Dutch rebels because it offered a clear advantage against a powerful enemy. The text describes how it was used successfully to create a defensive line and liberate key cities, even though it came at a tremendous cost—the inundation of the countryside for over a century and the destruction of agricultural land. This combination of high risk ('danger') and potential for critical strategic benefit ('worthwhile') makes option (C) the most accurate logical inference.</p>",
+    "passageId": "Reading Passage: The Calculated Risk of Strategic Flooding in the Eighty Years' War",
+    "topic": "Reading Comprehension",
+    "subtopic": "Logical Inference"
+  },
+  {
+    "no": 13,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>What is the central theme or main idea of the passage?</p>",
+    "options": [
+      "<p>A. The negative consequences associated with the use of fabric softeners.</p>",
+      "<p>B. The widespread popularity of fabric softeners in the United States.</p>",
+      "<p>C. The specific harmful chemical compounds present in fabric softeners.</p>",
+      "<p>D. Strategies for overcoming the dependency on fabric softeners.</p>",
+      "<p>E. The environmental damage caused exclusively by fabric softeners.</p>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<p>The central theme of the passage is best captured by option (A). The text systematically outlines the various downsides of fabric softener usage... Therefore, option A provides the most comprehensive and accurate summary of the passage's primary message.</p>",
+    "passageId": "Reading Passage: The Hidden Costs of Fabric Softeners",
+    "topic": "Reading Comprehension",
+    "subtopic": "Main Idea"
+  },
+  {
+    "no": 14,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>In the third paragraph, the word '<strong>permeating</strong>' is most similar in meaning to ...</p>",
+    "options": [
+      "<p>A. filling</p>",
+      "<p>B. soaking</p>",
+      "<p>C. charging</p>",
+      "<p>D. attaining</p>",
+      "<p>E. absorbing</p>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<p>The correct answer is (A) 'filling'. In the context of the sentence, 'Special additives... ensure that the fragrance lingers for days, permeating wardrobes and drawers,' the word 'permeating' describes how the scent spreads throughout and fills the enclosed spaces...</p>",
+    "passageId": "Reading Passage: The Hidden Costs of Fabric Softeners",
+    "topic": "Vocabulary in Context",
+    "subtopic": "Word Meaning / Synonym"
+  },
+  {
+    "no": 15,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Based on the information presented in the passage, which of the following statements represents a reasonable hypothesis?</p>",
+    "options": [
+      "<p>A. 'Green' softeners were created specifically to cater to individuals who are psychologically dependent on fabric softeners.</p>",
+      "<p>B. In the future, manufacturers will completely transition their production lines to exclusively create 'green' fabric softener products.</p>",
+      "<p>C. A very small concentration of fabric softener chemicals in water bodies would have no detrimental effect on aquatic life.</p>",
+      "<p>D. The ability of certain fabrics to absorb liquids will decrease if they are laundered with fabric softeners.</p>",
+      "<p>E. Individuals suffering from respiratory issues might experience fewer symptoms if they use fabric softeners with a lower concentration of fragrance chemicals.</p>"
+    ],
+    "correctAnswer": [4],
+    "explanation": "<p>The most reasonable hypothesis is (E). The passage explicitly states that 'The regular off-gassing of perfume chemicals from fabric softeners can be a significant trigger for asthma and other breathing problems.'... Therefore, it is logical to hypothesize that reducing the amount of these triggering chemicals... would lead to a reduction in symptoms...</p>",
+    "passageId": "Reading Passage: The Hidden Costs of Fabric Softeners",
+    "topic": "Critical Reasoning",
+    "subtopic": "Hypothesis Formation"
+  },
+  {
+    "no": 16,
+    "level": 4,
+    "questionType": "single-choice",
+    "questionText": "<p>What can be inferred from the passage regarding the future of the Himalayan glaciers?</p>",
+    "options": [
+      "<p>(A) Climate change is causing the Himalayan glaciers to become more stable and solidified.</p>",
+      "<p>(B) The Mount Everest region is largely immune to the effects of global climate change.</p>",
+      "<p>(C) The scientists employed outdated techniques to study the impacts of climate change.</p>",
+      "<p>(D) It is highly probable that the Himalayan regions will eventually lose most or all of their glaciers.</p>",
+      "<p>(E) Experts have forecasted that populations near Mount Everest will face no agricultural challenges.</p>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>The correct inference is (D). The passage provides compelling evidence for a long-term, negative trajectory for the Himalayan glaciers... Therefore, it is logical to infer that... the Himalayan regions will likely become glacier-less in the foreseeable future.</p>",
+    "passageId": "Reading Passage: Climate Change and the Melting Glaciers of Mount Everest",
+    "topic": "Reading Comprehension",
+    "subtopic": "Logical Inference"
+  },
+  {
+    "no": 17,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>The sentence 'The visible debris-covered sections have increased by 17 percent since the 1960s' can be most accurately rephrased as ...</p>",
+    "options": [
+      "<p>(A) The debris-covered areas have been visibly increasing over 17 percent since the 1960s.</p>",
+      "<p>(B) Since the 1960s, the debris-covered areas have increased around 17 percent.</p>",
+      "<p>(C) Since the 1960s, the debris-covered areas have been seen to have widened less than 17 percent.</p>",
+      "<p>(D) The visibility of the debris-covered areas has increased below 17 percent since the 1960s.</p>",
+      "<p>(E) The increase of the debris-covered areas has exactly reached 17 percent since the 1960s.</p>"
+    ],
+    "correctAnswer": [1],
+    "explanation": "<p>The correct rephrasing is (B). The original sentence states that the 'visible debris-covered sections'... have grown in size by 17 percent since the 1960s... Option (B) captures this meaning precisely...</p>",
+    "passageId": "Reading Passage: Climate Change and the Melting Glaciers of Mount Everest",
+    "topic": "Reading Comprehension",
+    "subtopic": "Paraphrasing and Sentence Meaning"
+  },
+  {
+    "no": 18,
+    "level": 4,
+    "questionType": "single-choice",
+    "questionText": "<p>Which of the following statements best reveals the author's bias or perspective?</p>",
+    "options": [
+      "<p>(A) This statement denies the fact that their effort reflects religiosity to a certain extent.</p>",
+      "<p>(B) Upstream populations are dependent on the melted water for agriculture, drinking, and power production.</p>",
+      "<p>(C) The decline of snow and ice in the Everest region was a direct result of human-generated greenhouse gases.</p>",
+      "<p>(D) The glaciers that are smaller than 3 square kilometres are disappearing faster than other ice structures.</p>",
+      "<p>(E) The glaciers in the Mount Everest region have shrunk by 13 percent in the last two centuries.</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>The correct answer is (C). This option reveals the author's bias because it presents a causal claim as an established fact without presenting any counter-arguments... This selective presentation... demonstrates a perspective that aligns with a specific viewpoint on climate science.</p>",
+    "passageId": "Reading Passage: Climate Change and the Melting Glaciers of Mount Everest",
+    "topic": "Reading Comprehension",
+    "subtopic": "Author’s Bias and Perspective"
+  },
+  {
+    "no": 19,
+    "level": 4,
+    "questionType": "single-choice",
+    "questionText": "<p>After initially presenting the decrease in precipitation, what does the author do next?</p>",
+    "options": [
+      "<p>(A) Provides specific examples of how glacier areas are shrinking.</p>",
+      "<p>(B) Argues for an effective method to halt the reduction of glacier areas.</p>",
+      "<p>(C) Makes a prediction about what will occur in the next fifty years.</p>",
+      "<p>(D) Expresses a hope that the collected data will help alleviate water rights disputes.</p>",
+      "<p>(E) Gives examples of the technologies used to gather water-related data.</p>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>The correct answer is (D). The passage presents the decrease in precipitation in paragraph 6... Immediately following this... the author writes, 'From this study researchers are hoping to gather information that will help minimize water rights issues...' This sentence directly expresses... hope for the practical application of their findings.</p>",
+    "passageId": "Reading Passage: Climate Change and the Melting Glaciers of Mount Everest",
+    "topic": "Reading Comprehension",
+    "subtopic": "Text Structure and Author’s Progression"
+  },
+  {
+    "no": 20,
+    "level": 4,
+    "questionType": "single-choice",
+    "questionText": "<p>What is the author's overall attitude or tone toward the topic discussed in the passage?</p>",
+    "options": [
+      "<p>(A) Positive</p>",
+      "<p>(B) Sarcastic</p>",
+      "<p>(C) Concerned</p>",
+      "<p>(D) Cordial</p>",
+      "<p>(E) Courteous</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>The author's attitude is best described as (C) 'Concerned'. The entire passage is framed around alarming findings: glaciers shrinking by 13%, the snowline rising by 590 feet... The language used is serious and factual, highlighting negative trends and their consequences... which clearly conveys an attitude of concern.</p>",
+    "passageId": "Reading Passage: Climate Change and the Melting Glaciers of Mount Everest",
+    "topic": "Reading Comprehension",
+    "subtopic": "Author’s Tone and Attitude"
+  }
+]
+[
+  {
+    "passageId": "Reading Passage: Emotion Psychology and Emotional Intelligence in the Workplace",
+    "passageText": "<p>Interest in emotion psychology and the concept of emotional intelligence surged following the 1995 publication of Daniel Goleman's book, \"Emotional Intelligence: Why It Can Matter More Than IQ.\" Goleman contended that emotional intelligence serves as a critical predictor of success in life. He emphasized that emotional competencies play a particularly significant role within professional environments.</p>\n<p>According to leading researchers in the field, such as psychologists Peter Salovey and John D. Mayer, emotional intelligence is defined as the capacity to recognize and comprehend emotions in oneself and others. This emotional awareness, in turn, facilitates better decision-making, problem-solving, and interpersonal communication. Emotional intelligence is widely acknowledged as a valuable skill that enhances workplace communication, management, conflict resolution, and overall relationships among colleagues. Furthermore, researchers believe this skill can be developed and refined through targeted training and consistent practice.</p>\n<p>The concept rapidly captured the attention of human resource professionals and business executives. Studies have indicated that emotional intelligence influences how effectively employees interact with their peers, manage stress levels, and navigate workplace conflicts. It also impacts overall job performance. Additional research has even correlated higher emotional intelligence with greater job satisfaction.</p>\n<p>(source: <a href=\"https://www.verywellmind.com/utilizing-emotional-intelligence-in-the-workplace--4164713\">https://www.verywellmind.com/utilizing-emotional-intelligence-in-the-workplace--4164713</a>)</p>",
+    "usage": [1, 2, 3]
+  },
+  {
+    "passageId": "Teks Bacaan: The Importance of Sports in Life",
+    "passageText": "<p>Sport refers to an activity that involves physical skill and movement. Sports have become an inseparable part of human life and play a vital role in all aspects of living. They offer significant benefits both physically and mentally.</p>\n<p>From the physical perspective, sports help strengthen the heart. They act as a strong preventive measure against cardiovascular diseases, which leads to a longer lifespan. Physical activity from sports promotes better circulation and flexibility of blood vessels. Moreover, sports also reduce cholesterol and fat levels due to increased blood flow and muscular activity.</p>\n<p>Additionally, engaging in sports improves lung capacity and breathing quality. The lungs function more efficiently as oxygen intake increases, enhancing the oxygen supply to the blood. Consequently, this reduces the risk of respiratory diseases.</p>\n<p>On the other hand, from a mental point of view, sports help develop discipline and emotional resilience. They teach patience, teamwork, and the ability to handle failure gracefully. Sports also encourage people to respect time schedules, making them more punctual and responsible.</p>\n<p>Finally, sports are powerful stress relievers. People who exercise or play sports regularly tend to have lower levels of anxiety and depression. Sports bring joy, mental peace, and overall happiness to those who engage in them.</p>",
+    "usage": [4, 5, 6, 7]
+  },
+  {
+    "passageId": "Reading Passage: The Multifaceted Benefits of Sports",
+    "passageText": "<p>Sport is defined as an activity that combines physical exertion with skill. It is deeply woven into the fabric of human existence and holds significant value across all areas of life. Engaging in sports yields profound positive effects on both physical health and mental well-being.</p>\n<p>From a physiological perspective, sports significantly enhance cardiovascular health. They act as a powerful preventative tool against heart-related illnesses, thereby contributing to a longer and healthier lifespan. This is achieved through physical movement, which helps keep blood vessels clear and functional. Additionally, sports contribute to lowering cholesterol and fat levels in the body, partly due to the improved flexibility of blood vessel walls resulting from regular exercise. Furthermore, sports improve respiratory efficiency; they strengthen the lungs, increase lung capacity, and allow for greater oxygen intake into the bloodstream, which reduces the risk of developing pulmonary diseases.</p>\n<p>Equally important are the psychological benefits. Sports instill discipline and structure into daily life. They cultivate essential virtues such as dedication and patience. Moreover, they provide valuable lessons in coping with setbacks and failure, which are inherent in any athletic endeavor. The necessity of adhering to a schedule in sports also fosters punctuality and time management skills. Finally, sports serve as a potent antidote to mental stress. Participants often report lower levels of depression and anxiety, as physical activity promotes mental peace. Most importantly, sports are a source of genuine happiness and joy for those who engage in them.</p>",
+    "usage": [8]
+  },
+  {
+    "passageId": "Reading Passage: The Calculated Risk of Strategic Flooding in the Eighty Years' War",
+    "passageText": "<p>Strategic flooding is a high-stakes military maneuver. Its effectiveness hinges entirely on having a meticulously planned contingency strategy and a rapid-response repair protocol. Without these, the tactic can backfire catastrophically, leading to loss of life, destruction of property, and long-term environmental damage. When floodwaters linger for extended periods, they can reshape the land through erosion and sediment deposition, carving out new waterways like tidal channels and creeks.</p>\n<p>During the Eighty Years' War, as Spanish forces campaigned to reclaim territory in what is now northern Belgium and southwestern Netherlands in the late 1500s, Dutch insurgents under the leadership of William of Orange turned the region's naturally low-lying, water-rich terrain into a strategic asset. In their efforts to liberate the cities of Bruges, Ghent, and Antwerp from Spanish control and protect their own lands, the rebels systematically demolished seawalls at key locations between 1584 and 1586, intentionally triggering massive, controlled inundations.</p>\n<p>The flooded zones became a permanent defensive barrier during the conflict, with some areas remaining submerged for over a century. This had severe and lasting consequences for the local environment and economy. The countryside of northern Flanders, now known as Zeeland Flanders, bore the brunt of this sacrifice.</p>\n<p>Once the waters finally receded, a thick blanket of clay sediment covered all traces of infrastructure—buildings, roads, and fields. Because the flooding involved saltwater from the sea, the soil's salinity levels rose dramatically. This rendered the land unsuitable for conventional agriculture, causing crop yields to plummet. The damage inflicted by this saline flooding was just as devastating as that caused by natural disasters like heavy rainfall or storm surges.</p>",
+    "usage": [9, 10, 11, 12]
+  },
+  {
+    "passageId": "Reading Passage: The Hidden Costs of Fabric Softeners",
+    "passageText": "<p>In the United States, consumers collectively spend approximately $700 million annually on products designed to keep their laundry soft. Similarly, in the United Kingdom, the annual expenditure on fabric softeners reaches £200 million. A major industry player even boasts holding a commanding 50% market share. Despite this widespread consumer adoption, there is growing concern that these products pose significant risks—not only to human health but also to marine ecosystems where residual chemicals ultimately end up.</p>\n<p>Fabric softening agents, or surfactants, can be sourced from animal, plant, or mineral origins, including modern silicone-based compounds. There is minimal distinction between the chemical formulations used in fabric softeners and those found in hair conditioners. Regardless of their base, all such products function similarly: they coat textile fibers to enhance softness, minimize static electricity, and leave behind a pleasant scent.</p>\n<p>Special additives within both standard and premium conditioners ensure that the fragrance lingers for days, permeating clothing and storage spaces. However, the continuous release of these volatile chemicals can act as a potent trigger for respiratory conditions like asthma and other breathing difficulties. In the US, individuals with heightened chemical sensitivity report that, even after multiple wash cycles, the odor of fabric softeners persists in their washing machines and dryers.</p>\n<p>For those who find themselves reliant on fabric softeners, several companies now offer 'eco-friendly' or 'natural' alternatives. Yet, fundamentally, these substitutes are often redundant. They can still provoke adverse health reactions and may compromise the functional properties of certain textiles. For example, when applied to towels or cloth diapers, some softeners diminish absorbency, which is why it's commonly advised against washing reusable nappies with them. Once rinsed down the drain, these chemicals can become highly toxic to aquatic organisms. Given these cumulative drawbacks, perhaps it is time to reconsider and potentially break the habit of using fabric softeners altogether.</p>",
+    "usage": [13, 14, 15]
+  },
+  {
+    "passageId": "Reading Passage: Climate Change and the Melting Glaciers of Mount Everest",
+    "passageText": "<p>Scientific investigations have revealed that shifts in global climate patterns have profoundly affected the planet's highest peak. A recent study indicates that glaciers within the Mount Everest region have diminished by 13 percent over the past five decades. Researchers also observed that the snowline—the elevation where snow persists year-round—has risen by approximately 590 feet. The scientific team behind this research posits that the accelerating rate of snow and ice melt is further exacerbated by a concurrent decline in overall snowfall in the region, a trend that has been evident since the early 1990s.</p>\n<p>The researchers noted a concerning disparity: smaller glaciers, defined as those under one square kilometer in size, are vanishing at a more rapid pace than their larger counterparts. Since the 1960s, the surface area of these smaller ice formations has decreased by 43 percent.</p>\n<p>As the ice melts, it uncovers previously concealed geological features, including rock and debris. The extent of these exposed, debris-covered areas has grown by 17 percent since the 1960s.</p>\n<p>In a formal declaration, the research team stated they attribute the reduction of snow and ice in the Everest region directly to 'human-induced greenhouse gas emissions altering the global climate.' They assert a clear and direct link between the observed changes on the mountain and broader climatic shifts.</p>\n<p>Sudeep Thakuri, a doctoral candidate at the University of Milan in Italy who spearheaded the project, explained that his group leveraged satellite imagery and historical photographic records to reconstruct the glacial history of the Sagarmatha National Park area.</p>\n<p>To monitor temperature and precipitation trends, the team analyzed hydrometeorological data sourced from Nepal's Climate Observatory and the Department of Hydrology. Their analysis showed a 1.08-degree Fahrenheit rise in average temperatures and a 3.9-inch drop in annual precipitation since 1992. The researchers hope that this data will contribute to mitigating future water-related conflicts as regional warming continues.</p>\n<p>'The Himalayan glaciers and ice caps serve as a critical water reservoir for Asia, storing and releasing water downstream during dry periods,' stated Thakuri. 'Communities living downstream rely on this meltwater for essential needs such as agriculture, drinking, and hydroelectric power generation.'</p>",
+    "usage": [16, 17, 18, 19, 20]
+  }
+]

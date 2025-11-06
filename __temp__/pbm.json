@@ -1,0 +1,385 @@
+[
+  {
+    "no": 1,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Manakah judul yang paling tepat untuk melengkapi teks di atas?</p>",
+    "options": [
+      "<p>Seberapa Penting Reboisasi Dilaksanakan?</p>",
+      "<p>Karhutla dan Antisipasinya Berupa Reboisasi</p>",
+      "<p>Peran Reboisasi Memecahkan Masalah Karhutla</p>",
+      "<p>Pentingnya Peran Reboisasi Pasca Karhutla</p>",
+      "<p>Reboisasi Sendiri Kewajiban Pasca Karhutla</p>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>Judul yang baik harus mencerminkan inti pembahasan teks secara utuh. Teks ini menekankan pentingnya penanaman kembali pohon setelah terjadi kebakaran hutan dan lahan (karhutla) sebagai upaya pemulihan ekosistem jangka panjang. Pilihan D, 'Pentingnya Peran Reboisasi Pasca Karhutla', paling tepat karena secara eksplisit menyebut konteks 'pasca karhutla' dan menyoroti nilai strategis dari reboisasi. Pilihan lain kurang tepat: A terlalu umum, B terlalu fokus pada antisipasi (padahal reboisasi bersifat responsif), C terdengar seperti solusi tunggal, dan E mengandung diksi yang ambigu ('sendiri kewajiban'). Oleh karena itu, jawaban yang paling representatif adalah D.</p>",
+    "passageId": "PBM1-0001",
+    "topic": "Menentukan Judul Teks",
+    "subtopic": "Judul yang Mewakili Isi Secara Utuh"
+  },
+  {
+    "no": 2,
+    "level": 2,
+    "questionType": "single-choice",
+    "questionText": "<p>Kata berimbuhan yang penggunaannya <strong>tidak tepat</strong> pada paragraf pertama adalah ....</p>",
+    "options": [
+      "<p>dilakukan</p>",
+      "<p>kebakaran</p>",
+      "<p>bertanam</p>",
+      "<p>dinilai</p>",
+      "<p>disampaikan</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>Kata <em>bertanam</em> tidak tepat digunakan pada konteks kalimat di paragraf pertama karena imbuhan <em>ber-</em> pada kata tersebut membentuk verba intransitif (tidak memerlukan objek). Dalam kalimat (2), maknanya menuntut kata kerja yang memiliki objek, sehingga bentuk yang benar adalah <em>menanam</em>. Prefiks <em>men-</em> pada kata <em>menanam</em> membentuk verba transitif (memerlukan objek), sehingga lebih sesuai untuk kalimat yang menyebutkan penanaman sejumlah bibit pohon. Dengan demikian, kata berimbuhan yang tidak tepat adalah <strong>bertanam</strong>.</p>",
+    "passageId": "PBM1-0001",
+    "topic": "Ketepatan Penggunaan Kata Berimbuhan",
+    "subtopic": "Verba Transitif vs Intransitif"
+  },
+  {
+    "no": 3,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Konjungsi yang tepat untuk melengkapi paragraf kedua adalah ....</p>",
+    "options": [
+      "<p>dan, supaya, di samping itu</p>",
+      "<p>atau, agar, di samping itu</p>",
+      "<p>atau, supaya, sedangkan</p>",
+      "<p>s serta, agar, sementara itu</p>",
+      "<p>atau, sehingga, meski begitu</p>"
+    ],
+    "correctAnswer": [1],
+    "explanation": "<p>Pada paragraf kedua terdapat beberapa hubungan antarkalimat yang memerlukan kata penghubung (konjungsi) yang sesuai fungsi semantiknya. Konjungsi <em>atau</em> berfungsi menyatakan pilihan atau alternatif, <em>agar</em> berfungsi menunjukkan tujuan, dan <em>di samping itu</em> menyatakan tambahan keterangan dalam konteks yang sama. Ketiga konjungsi tersebut digunakan secara berurutan untuk menjaga alur makna paragraf agar tetap logis dan kohesif. Oleh karena itu, pilihan yang paling tepat adalah opsi <strong>B</strong>.</p>",
+    "passageId": "PBM1-0001",
+    "topic": "Ketepatan Konjungsi",
+    "subtopic": "Fungsi Semantik Konjungsi"
+  },
+  {
+    "no": 4,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Kata yang dirujuk oleh pronomina <strong><em>ini</em></strong> pada kalimat (11) adalah ....</p>",
+    "options": [
+      "<p>makhluk hidup</p>",
+      "<p>air</p>",
+      "<p>kebutuhan</p>",
+      "<p>pohon</p>",
+      "<p>tanah</p>"
+    ],
+    "correctAnswer": [1],
+    "explanation": "<p>Pronomina <em>ini</em> pada kalimat (11) digunakan sebagai kata rujukan terhadap kata yang sudah disebut sebelumnya. Dalam konteks teks, kalimat (11) berbunyi: “Air yang disimpan <em>ini</em> digunakan untuk memenuhi kebutuhan makhluk hidup lainnya.” Dengan demikian, kata <em>ini</em> merujuk pada <strong>air</strong> yang disebut pada bagian awal kalimat tersebut. Fungsi pronomina ini adalah untuk menghindari pengulangan kata yang sama dalam satu kalimat, sehingga menjaga keefektifan dan kelancaran bahasa. Karena itu, jawaban yang tepat adalah <strong>B. air</strong>.</p>",
+    "passageId": "PBM1-0001",
+    "topic": "Kohesi dan Koherensi Teks",
+    "subtopic": "Rujukan Kata (Pronomina)"
+  },
+  {
+    "no": 5,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Istilah yang tepat untuk melengkapi paragraf kelima adalah ....</p>",
+    "options": [
+      "<p>ekosistem, konservasi, edukasi</p>",
+      "<p>ekologi, konvensi, sosialisasi</p>",
+      "<p>ekosistem, konferensi, edukasi</p>",
+      "<p>biodiversitas, konservasi, persuasi</p>",
+      "<p>biodiversitas, konsensus, edukasi</p>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<p>Pada paragraf kelima, konteks kalimat mengarah pada pelestarian lingkungan hidup dan pembelajaran masyarakat. Oleh karena itu, istilah yang tepat digunakan adalah <strong>ekosistem</strong> untuk menggambarkan kesatuan antara makhluk hidup dan lingkungannya, <strong>konservasi</strong> yang bermakna upaya perlindungan dan pelestarian sumber daya alam, serta <strong>edukasi</strong> yang berarti proses penyadaran dan pembelajaran kepada masyarakat. Ketiga istilah ini saling berhubungan dalam konteks menjaga kelestarian alam dan meningkatkan kesadaran lingkungan. Dengan demikian, jawaban yang benar adalah <strong>A. ekosistem, konservasi, edukasi</strong>.</p>",
+    "passageId": "PBM1-0001",
+    "topic": "Ketepatan Istilah",
+    "subtopic": "Konteks Lingkungan dan Pendidikan"
+  },
+  {
+    "no": 6,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Bacaan di atas akan lebih sesuai jika diberi judul ....</p>",
+    "options": [
+      "<p>Tren jumlah penduduk miskin</p>",
+      "<p>Karakteristik penduduk miskin</p>",
+      "<p>Distribusi penduduk miskin</p>",
+      "<p>Tren dan karakteristik penduduk miskin</p>",
+      "<p>Tren dan distribusi penduduk miskin</p>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>Teks membahas dua hal utama, yaitu <em>perkembangan atau tren</em> jumlah penduduk miskin di Indonesia dari waktu ke waktu, dan <em>karakteristik</em> yang membedakan mereka berdasarkan pendidikan, ukuran keluarga, serta sumber penghasilan. Karena kedua aspek ini sama-sama dijelaskan secara mendalam, judul yang paling tepat dan mencakup keseluruhan isi teks adalah <strong>“Tren dan karakteristik penduduk miskin.”</strong> Judul lain hanya menyoroti sebagian isi bacaan, sehingga kurang representatif terhadap keseluruhan pembahasan.</p>",
+    "passageId": "PBM1-0002",
+    "topic": "Menentukan Judul Teks",
+    "subtopic": "Judul yang Mewakili Isi Secara Utuh"
+  },
+  {
+    "no": 7,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Bacaan tersebut termasuk jenis karangan ....</p>",
+    "options": [
+      "<p>eksposisi</p>",
+      "<p>argumentasi</p>",
+      "<p>narasi</p>",
+      "<p>deskripsi</p>",
+      "<p>persuasi</p>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<p>Teks di atas merupakan jenis karangan <strong>eksposisi</strong> karena berisi pemaparan fakta dan data mengenai tren serta karakteristik penduduk miskin di Indonesia. Tujuan utamanya adalah memberikan informasi kepada pembaca secara objektif, bukan untuk membujuk (persuasi), meyakinkan (argumentasi), ataupun menceritakan kejadian (narasi). Ciri lain dari eksposisi yang tampak adalah adanya penggunaan data statistik, seperti persentase penduduk miskin dan sumber pendapatan, yang memperkuat penyajian informasi secara faktual dan informatif.</p>",
+    "passageId": "PBM1-0002",
+    "topic": "Jenis Karangan",
+    "subtopic": "Eksposisi"
+  },
+  {
+    "no": 8,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Apabila teks tersebut dilanjutkan dengan paragraf kelima, gagasan utama yang paling tepat untuk melanjutkan isi bacaan adalah ....</p>",
+    "options": [
+      "<p>Sektor pertanian</p>",
+      "<p>Karakteristik dan distribusi sektor perdagangan</p>",
+      "<p>Karakteristik dan distribusi sektor pertanian</p>",
+      "<p>Karakteristik sektor industri dan jasa</p>",
+      "<p>Sektor jasa</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>Gagasan utama yang paling tepat untuk paragraf kelima adalah <strong>‘karakteristik dan distribusi sektor pertanian’</strong> karena paragraf keempat sebelumnya membahas bahwa sektor pertanian merupakan pusat kemiskinan di Indonesia. Dengan demikian, paragraf berikutnya secara logis akan menjelaskan lebih dalam mengenai kondisi dan persebaran kemiskinan pada sektor pertanian, seperti jenis pekerjaan, tingkat pendapatan, serta pola hidup masyarakat miskin di sektor tersebut. Pilihan lain kurang relevan karena belum ada pembahasan tentang sektor perdagangan, industri, maupun jasa dalam konteks lanjutan.</p>",
+    "passageId": "PBM1-0002",
+    "topic": "Pengembangan Paragraf",
+    "subtopic": "Gagasan Lanjutan yang Logis"
+  },
+  {
+    "no": 9,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Kata <em>‘tren’</em> pada paragraf pertama dapat diganti dengan kata yang memiliki makna serupa, yaitu ....</p>",
+    "options": [
+      "<p>pada umumnya</p>",
+      "<p>dominan</p>",
+      "<p>faktor penentu</p>",
+      "<p>terkonsentrasi</p>",
+      "<p>kecenderungan</p>"
+    ],
+    "correctAnswer": [4],
+    "explanation": "<p>Kata <em>‘tren’</em> bermakna <strong>kecenderungan</strong> atau arah perubahan yang terus berkembang dalam jangka waktu tertentu. Dalam konteks paragraf pertama, istilah tersebut digunakan untuk menggambarkan pola perubahan jumlah penduduk miskin dari waktu ke waktu antara wilayah desa dan kota. Pilihan lain seperti ‘dominan’ atau ‘terkonsentrasi’ tidak tepat karena lebih menggambarkan keadaan tetap, bukan perubahan yang berulang. Oleh karena itu, padanan yang paling sesuai adalah <strong>kecenderungan</strong>.</p>",
+    "passageId": "PBM1-0002",
+    "topic": "Makna Kata dalam Konteks",
+    "subtopic": "Sinonim Kontekstual"
+  },
+  {
+    "no": 10,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Kata hubung yang paling tepat untuk melengkapi titik-titik pada paragraf kedua adalah ....</p>",
+    "options": [
+      "<p>sedangkan</p>",
+      "<p>karena</p>",
+      "<p>sehingga</p>",
+      "<p>walaupun</p>",
+      "<p>meskipun</p>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<p>Kata hubung yang tepat untuk melengkapi kalimat pada paragraf kedua adalah <strong>‘sedangkan’</strong>. Kata ini berfungsi untuk menghubungkan dua klausa yang bersifat kontras atau memperbandingkan keadaan yang berbeda namun sejajar secara gramatikal. Dalam konteks bacaan, klausa pertama menjelaskan jumlah anggota keluarga miskin yang besar, sementara klausa kedua menjelaskan jumlah keluarga yang tidak miskin lebih kecil. Hubungan tersebut merupakan bentuk pertentangan sejajar, bukan sebab-akibat atau pengandaian. Oleh karena itu, kata hubung ‘sedangkan’ paling sesuai dibandingkan pilihan lain seperti ‘karena’ (sebab), ‘sehingga’ (akibat), atau ‘walaupun/meskipun’ (pengandaian).</p>",
+    "passageId": "PBM1-0002",
+    "topic": "Ketepatan Konjungsi",
+    "subtopic": "Konjungsi Perbandingan Kontrastif"
+  },
+  {
+    "no": 11,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Kata depan yang paling tepat untuk melengkapi bagian rumpang pada paragraf pertama adalah ....</p>",
+    "options": [
+      "<p>di</p>",
+      "<p>karena</p>",
+      "<p>ke</p>",
+      "<p>daripada</p>",
+      "<p>oleh</p>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>Kata yang tepat untuk melengkapi kalimat pada paragraf pertama adalah <strong>‘daripada’</strong>. Kata ini termasuk dalam kategori kata depan (preposisi) yang berfungsi untuk membandingkan dua hal. Dalam konteks kalimat 'selisih jumlah penduduk miskin di pedesaan cukup mencolok lebih banyak [...] mereka yang tinggal di kota', hubungan maknanya adalah perbandingan antara penduduk miskin di pedesaan dan di kota. Kata depan lain seperti 'di', 'ke', atau 'oleh' tidak menunjukkan makna perbandingan, sedangkan 'karena' menunjukkan sebab, bukan perbandingan. Oleh karena itu, penggunaan 'daripada' merupakan pilihan yang paling tepat secara gramatikal dan semantis.</p>",
+    "passageId": "PBM1-0002",
+    "topic": "Ketepatan Kata Depan (Preposisi)",
+    "subtopic": "Preposisi untuk Perbandingan"
+  },
+  {
+    "no": 12,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Kalimat berikut yang <strong>tidak</strong> mengandung kesalahan pemilihan kata berimbuhan adalah ...</p>",
+    "options": [
+      "<p>(1)</p>",
+      "<p>(2)</p>",
+      "<p>(3)</p>",
+      "<p>(4)</p>",
+      "<p>(5)</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>Pada kalimat (3) terdapat kesalahan penggunaan imbuhan 'di-', seharusnya menggunakan kata kerja aktif 'mengumpulkan'. Maka kalimat (3) salah, sedangkan yang lainnya benar.</p>",
+    "passageId": "PBM1-0003",
+    "topic": "Ketepatan Penggunaan Kata Berimbuhan",
+    "subtopic": "Prefiks Aktif vs Pasif"
+  },
+  {
+    "no": 13,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Kata penghubung yang paling tepat untuk melengkapi titik-titik pada kalimat ke-5 adalah ....</p>",
+    "options": [
+      "<p>Dan</p>",
+      "<p>Kemudian</p>",
+      "<p>Maka</p>",
+      "<p>Oleh karena itu</p>",
+      "<p>Lalu</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>Kata penghubung yang tepat adalah <strong>maka</strong>, karena menghubungkan antara sebab dan akibat secara logis. Dalam konteks kalimat 'Seiring dengan perkembangan metode konservasi, maka penyelamatan temuan dan konservasi di lapangan menjadi lebih beragam dan maju', kata 'maka' menunjukkan hasil atau konsekuensi dari kemajuan metode konservasi. Pilihan seperti 'dan', 'kemudian', atau 'lalu' hanya menyatakan urutan, sedangkan 'oleh karena itu' lebih cocok untuk kalimat awal paragraf kesimpulan. Jadi, kata 'maka' paling sesuai secara gramatikal dan maknawi.</p>",
+    "passageId": "PBM1-0003",
+    "topic": "Ketepatan Konjungsi",
+    "subtopic": "Hubungan Sebab-Akibat"
+  },
+  {
+    "no": 14,
+    "level": 1,
+    "questionType": "single-choice",
+    "questionText": "<p>Frasa yang paling tepat untuk melengkapi bagian rumpang pada kalimat keempat teks di atas adalah...</p>",
+    "options": [
+      "<p>Demikian</p>",
+      "<p>Oleh karena itu</p>",
+      "<p>Gigi gajah</p>",
+      "<p>Fosil tulang</p>",
+      "<p>Konservasi</p>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>Bagian yang rumpang pada kalimat keempat seharusnya diisi oleh frasa <strong>fosil tulang</strong>. Kalimat lengkapnya menjadi: “Fosil tulang yang rapuh biasanya dibiarkan karena kurangnya pengetahuan tentang teknik penanganan yang benar.” Frasa ini cocok karena menjelaskan subjek yang bersifat benda konkret, selaras dengan konteks paragraf yang membahas kesulitan pengumpulan fosil yang rapuh dan perbedaan antara jenis temuan yang kuat dan yang mudah hancur. Pilihan lain seperti <em>demikian</em> atau <em>oleh karena itu</em> bersifat konjungtif, tidak sesuai dengan struktur kalimat yang membutuhkan subjek berupa benda (nomina).</p>",
+    "passageId": "PBM1-0003",
+    "topic": "Kelengkapan Kalimat",
+    "subtopic": "Subjek Kalimat yang Tepat"
+  },
+  {
+    "no": 15,
+    "level": 1,
+    "questionType": "single-choice",
+    "questionText": "<p>Kata berimbuhan yang paling tepat untuk melengkapi kalimat pertama dalam teks di atas adalah...</p>",
+    "options": [
+      "<p>Menemukan</p>",
+      "<p>Mencari</p>",
+      "<p>Menggali</p>",
+      "<p>Pengumpulan</p>",
+      "<p>Koleksian</p>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>Kata berimbuhan yang sesuai adalah <strong>pengumpulan</strong>. Kalimatnya menjadi: “Riwayat pengumpulan fosil oleh para kolektor fosil di seluruh dunia telah dilakukan sejak abad ke-19 Masehi.” Kata ‘pengumpulan’ berasal dari dasar ‘kumpul’ yang mendapat imbuhan pe- dan -an, menunjukkan proses atau kegiatan untuk mengumpulkan sesuatu. Dalam konteks ini, ‘kolektor fosil’ berarti orang yang mengoleksi atau mengumpulkan benda langka seperti fosil. Pilihan lain seperti ‘menemukan’, ‘mencari’, atau ‘menggali’ lebih menekankan pada tindakan individual, bukan proses umum dan berulang.</p>",
+    "passageId": "PBM1-0003",
+    "topic": "Ketepatan Penggunaan Kata Berimbuhan",
+    "subtopic": "Nomina Abstrak dari Proses"
+  },
+  {
+    "no": 16,
+    "level": 1,
+    "questionType": "single-choice",
+    "questionText": "<p>Makna frasa <em>konservasi fosil</em> dalam konteks bacaan di atas adalah...</p>",
+    "options": [
+      "<p>Proses memperbanyak fosil agar dapat dipelajari lebih lanjut</p>",
+      "<p>Kegiatan melindungi dan merawat fosil agar tidak rusak</p>",
+      "<p>Usaha menggali fosil dari lapisan tanah yang dalam</p>",
+      "<p>Aktivitas mencari lokasi baru untuk penemuan fosil</p>",
+      "<p>Upaya meniru bentuk fosil dengan bahan sintetis</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>Makna frasa <strong>konservasi fosil</strong> mengacu pada <em>upaya melindungi, memperkuat, dan merawat fosil agar tidak rusak akibat faktor lingkungan maupun proses penanganan</em>. Dalam konteks bacaan, dijelaskan bahwa pada masa awal pengumpulan fosil, banyak temuan yang rusak karena kurangnya pengetahuan dan perlindungan yang memadai. Namun, setelah teknik konservasi berkembang, digunakan bahan-bahan seperti gipsum dan resin untuk menjaga keutuhan fosil. Artinya, konservasi di sini bukan sekadar mengumpulkan atau menggali, melainkan tindakan ilmiah yang bertujuan mempertahankan kondisi asli fosil agar dapat diteliti secara menyeluruh.</p>",
+    "passageId": "PBM1-0003",
+    "topic": "Makna Kata dalam Konteks",
+    "subtopic": "Makna Istilah Khusus"
+  },
+  {
+    "no": 17,
+    "level": 1,
+    "questionType": "single-choice",
+    "questionText": "<p>Penggunaan diksi yang kurang tepat terdapat pada kalimat ....</p>",
+    "options": [
+      "<p>(1)</p>",
+      "<p>(3)</p>",
+      "<p>(4)</p>",
+      "<p>(6)</p>",
+      "<p>(8)</p>"
+    ],
+    "correctAnswer": [1],
+    "explanation": "<p>Kata <em>degradasi</em> dalam kalimat (3) digunakan tidak tepat karena konteksnya seharusnya menyebut <strong>degradasi lingkungan</strong>, bukan sekadar degradasi lahan. Istilah <em>degradasi lingkungan</em> berarti penurunan kualitas ekosistem akibat aktivitas manusia, sedangkan degradasi lahan lebih spesifik pada kerusakan tanah. Jadi penggunaan katanya kurang sesuai dengan konteks kerusakan lingkungan secara menyeluruh.</p>",
+    "passageId": "PBM1-0004",
+    "topic": "Ketepatan Diksi",
+    "subtopic": "Kesesuaian Istilah dengan Cakupan Makna"
+  },
+  {
+    "no": 18,
+    "level": 1,
+    "questionType": "single-choice",
+    "questionText": "<p>Kalimat yang menggunakan diksi kurang tepat dalam teks bacaan di atas terdapat pada kalimat ....</p>",
+    "options": [
+      "<p>(1)</p>",
+      "<p>(3)</p>",
+      "<p>(4)</p>",
+      "<p>(6)</p>",
+      "<p>(8)</p>"
+    ],
+    "correctAnswer": [1],
+    "explanation": "<p>Kalimat (3) mengandung penggunaan diksi yang kurang tepat karena istilah <em>degradasi lahan</em> digunakan secara tidak proporsional dengan konteks kerusakan lingkungan secara menyeluruh. Istilah tersebut lebih spesifik mengacu pada penurunan kualitas tanah akibat aktivitas manusia, bukan menggambarkan keseluruhan kerusakan lingkungan yang disebutkan dalam paragraf. Dalam konteks ini, penggunaan diksi yang lebih sesuai adalah <strong>degradasi lingkungan</strong> atau <strong>kerusakan lingkungan</strong> agar mencerminkan cakupan yang lebih luas.</p>",
+    "passageId": "PBM1-0004",
+    "topic": "Ketepatan Diksi",
+    "subtopic": "Kesesuaian Istilah dengan Konteks"
+  },
+  {
+    "no": 19,
+    "level": 2,
+    "questionType": "single-choice",
+    "questionText": "<p>Apa penyebab utama terjadinya kerusakan lingkungan berdasarkan teks bacaan di atas?</p>",
+    "options": [
+      "<p>Manusia memanfaatkan alam secara bijak dan seimbang.</p>",
+      "<p>Adanya kesalahan cara pandang dan pemahaman manusia terhadap sistem lingkungan.</p>",
+      "<p>Kerusakan lingkungan disebabkan oleh bencana alam semata.</p>",
+      "<p>Ketidakseimbangan antara hewan dan tumbuhan di ekosistem.</p>",
+      "<p>Jumlah penduduk yang menurun secara drastis.</p>"
+    ],
+    "correctAnswer": [1],
+    "explanation": "<p>Penyebab utama kerusakan lingkungan dijelaskan pada kalimat (15) dan (16) teks, yaitu karena kesalahan cara pandang serta pemahaman manusia terhadap sistem ekologi yang membuatnya bertindak eksploitatif. Dengan pandangan tersebut, manusia lebih banyak mengambil keuntungan dari alam tanpa memperhatikan kelestarian dan keseimbangannya. Akibatnya, tindakan yang seharusnya mendukung keberlanjutan malah mempercepat kerusakan lingkungan secara global.</p>",
+    "passageId": "PBM1-0004",
+    "topic": "Pemahaman Isi Teks",
+    "subtopic": "Penyebab dan Faktor Utama"
+  },
+  {
+    "no": 20,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Berdasarkan bacaan di atas, apa inti pesan yang ingin disampaikan penulis mengenai hubungan antara manusia dan alam?</p>",
+    "options": [
+      "<p>Alam adalah sumber daya yang tak terbatas untuk memenuhi kebutuhan manusia.</p>",
+      "<p>Hubungan manusia dan alam bersifat seimbang jika manusia mampu mengelolanya secara bijak dan bertanggung jawab.</p>",
+      "<p>Krisis lingkungan sepenuhnya disebabkan oleh faktor alam, bukan oleh tindakan manusia.</p>",
+      "<p>Bencana ekologis tidak dapat dihindari meskipun manusia telah berusaha memperbaiki alam.</p>",
+      "<p>Perubahan iklim hanya menjadi tanggung jawab negara-negara besar di dunia.</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>Inti pesan utama dari bacaan ini adalah pentingnya kesadaran dan tanggung jawab manusia dalam menjaga keseimbangan hubungan dengan alam. Dalam teks dijelaskan bahwa krisis lingkungan yang terjadi merupakan akibat langsung dari perilaku manusia yang eksploitatif terhadap sumber daya alam. Penulis menekankan bahwa perubahan cara pandang manusia terhadap alam adalah kunci untuk mengatasi krisis ekologis global. Alam tidak bisa terus dieksploitasi tanpa batas, karena tindakan tersebut akan menimbulkan bencana yang justru merugikan manusia sendiri. Oleh karena itu, hubungan manusia dan alam harus bersifat timbal balik, di mana manusia menjaga alam agar alam tetap memberi kehidupan yang layak bagi manusia.</p>",
+    "passageId": "PBM1-0004",
+    "topic": "Pemahaman Isi Teks",
+    "subtopic": "Pesan Tersirat dan Sikap Penulis"
+  }
+
+]
+[
+  {
+    "passageId": "PBM1-0001",
+    "passageText": "<p>(1) Penanaman pohon secara masif pasca kebakaran hutan dan lahan (karhutla) di Jambi dinilai perlu dilakukan.\n(2) Hal tersebut disampaikan Danrem 042/Gapu, Kolonel Arh Elphis Rudy usai bertanam 100.000 bibit pohon di Kawasan Pemulihan PT Alam Bukit Tiga Puluh (ABT), Wilayah Kodim 0416/Bute, Jumat (28/2).\n(3) Danrem 042/Gapu, Kolonel Arh Elphis Rudy mengatakan bahwa reboisasi—penanaman kembali hutan yang rusak akibat kebakaran dan pembalakan liar—merupakan atensi Presiden Joko Widodo untuk mengembalikan ekosistem alam agar kembali lestari.\n(4) Penanaman pohon menjadi bagian dari solusi jangka panjang untuk menghasilkan kelestarian alam dan lingkungan yang asri.\n(5) Penanaman pohon akan dapat menambah sumber oksigen dan menjadi penyejuk di saat matahari bersinar dengan teriknya.\n(6) Selain itu, pohon mampu mengurangi dampak pemanasan global.\n(7) Ia melanjutkan, pohon memiliki kemampuan menyerap emisi karbon yang merupakan penyebab pemanasan global.\n(8) Penanaman pohon juga mampu menyimpan air dalam tanah.\n(9) Air yang disimpan ini digunakan untuk memenuhi kebutuhan makhluk hidup lainnya.\n(10) Bahkan, pohon mampu membantu mengurangi polusi udara dan memperindah lingkungan sekitar.\n(11) Adanya penanaman pohon ini diharapkan bisa mewujudkan Jambi yang hijau dan lestari secara berkelanjutan.\n(12) Dengan begitu, kelak 10 tahun yang akan datang akan mampu memberi kebermanfaatan bagi warga dunia.\n(13) Tak hanya itu, Kolonel Arh Elphis Rudy mengajak untuk selalu bersinergi dan bekerja sama kepada semua dinas atau instansi pemerintah, TNI-POLRI, dan masyarakat untuk mengembalikan serta melindungi satwa langka dan kelestarian alam.\n(14) Tidak kalah pentingnya, kita perlu memberikan edukasi kepada masyarakat tentang bahaya karhutla yang tidak terkendali dan dampaknya yang berpengaruh pada semua sektor kehidupan.\n(15) (Diadaptasi dari https://www.fin.co.id)</p>",
+    "usage": [1, 2, 3, 4, 5]
+  },
+  {
+    "passageId": "PBM1-0002",
+    "passageText": "<p>(1) Tren jumlah penduduk miskin di Indonesia mengalami perubahan dari waktu ke waktu, terutama antara wilayah pedesaan dan perkotaan. Pada periode 1970 hingga 1978, mayoritas penduduk miskin berada di daerah pedesaan. Namun, antara tahun 1980 hingga 1990, jumlah penduduk miskin lebih banyak ditemukan di kawasan perkotaan. Selanjutnya, pada tahun 1993 hingga 2000, proporsi penduduk miskin kembali meningkat di pedesaan. Bahkan pada tahun 1998, selisih antara penduduk miskin di desa dan kota sangat mencolok, dengan jumlah penduduk miskin di desa jauh lebih besar dibandingkan di kota.</p>\n<p>(2) Beberapa ciri penduduk miskin dapat diidentifikasi dari ukuran keluarga, tingkat pendidikan kepala keluarga, dan sumber penghasilan. Berdasarkan data BPS tahun 1993, rata-rata jumlah anggota keluarga miskin mencapai 5,9 orang. Jumlah ini menunjukkan bahwa semakin besar ukuran rumah tangga, semakin besar pula kemungkinan keluarga tersebut hidup di bawah garis kemiskinan. Kondisi ini menandakan bahwa kepala rumah tangga miskin menanggung beban ekonomi yang lebih berat dibandingkan mereka yang tidak miskin.</p>\n<p>(3) Di wilayah pedesaan, 72,00 persen penduduk miskin dipimpin oleh kepala rumah tangga yang tidak menamatkan pendidikan SD, sedangkan 24,30 persen dipimpin oleh mereka yang hanya tamat SD. Sementara itu, di wilayah perkotaan, 57,00 persen kepala keluarga miskin tidak tamat SD dan 31,80 persen hanya tamat SD. Data ini menunjukkan bahwa tingkat pendidikan rendah sangat berkorelasi dengan kemiskinan.</p>\n<p>(4) Faktor lain yang berpengaruh terhadap kemiskinan adalah sumber pendapatan. Sebagian besar penduduk miskin bergantung pada sektor pertanian dengan persentase 62,00 persen. Selebihnya bekerja di sektor perdagangan sebesar 10,40 persen, industri 7,40 persen, dan jasa 6,50 persen. Sisanya tersebar di sektor lainnya. Dengan demikian, sektor pertanian menjadi kantong utama kemiskinan di Indonesia.</p>\n<p>(Sumber: Gunawan Sumodiningrat, 2001)</p>",
+    "usage": [6, 7, 8, 9, 10, 11]
+  },
+  {
+    "passageId": "PBM1-0003",
+    "passageText": "<p>Riwayat penelitian fosil oleh para kolektor di berbagai belahan dunia telah berlangsung sejak abad ke-19 Masehi. Pada sekitar tahun 1800-an, upaya menyelamatkan fosil tulang yang rapuh dari masa Pleistosen menghadapi tantangan besar karena kurangnya pengetahuan dan teknologi konservasi. Akibatnya, sebagian besar fosil yang berhasil diselamatkan hanya berupa tulang dan gigi yang cukup kuat, sedangkan bagian yang rapuh sering kali rusak atau hilang karena penanganan yang tidak tepat. Fosil yang lebih kuat biasanya diangkut dengan cara sederhana tanpa perlindungan khusus (Carreck & Adams, 1969). Seiring dengan kemajuan metode konservasi, maka teknik penyelamatan dan pelestarian fosil di lapangan semakin beragam dan modern.</p>\n<p>(Disadur dari artikel Wahyu Widiyanta, “Jenis, Konteks Stratigrafi, dan Lingkungan Pengendapan Temuan Gajah Purba di Situs Banjarejo”).</p>",
+    "usage": [12, 13, 14, 15, 16]
+  },
+  {
+    "passageId": "PBM1-0004",
+    "passageText": "<p>(1) Dewasa ini ulah manusia telah menyebabkan kerusakan pada alam dan sistem lingkungan yang menopang kehidupan semakin parah. (2) Dampaknya, krisis lingkungan yang meluas pada skala nasional maupun global kini telah mencapai tahap serius yang mengancam keberlangsungan hidup manusia, hewan, serta tumbuhan di Bumi. (3) Salah satu tanda kerusakan lingkungan adalah adanya degradasi lahan yang terlihat nyata di sekitar kita. (4) Contohnya, banjir tahunan yang makin sering terjadi, sedimentasi sungai, tanah longsor, dan berkurangnya keanekaragaman hayati baik dari segi jumlah maupun kualitas. (5) Polusi udara dan air, pemanasan global, perubahan iklim, serta ancaman hama dan penyakit juga menjadi sinyal rusaknya keseimbangan ekosistem. (6) Berbagai fenomena tersebut berakar dari perilaku manusia yang abai dan tidak bertanggung jawab terhadap alam. (7) Di tingkat lokal, misalnya penebangan liar dan pembakaran hutan menyebabkan terganggunya keseimbangan lingkungan di berbagai wilayah Indonesia. (8) Dampaknya terlihat pada peristiwa banjir di banyak daerah. (9) Bahkan di kota besar seperti Jakarta, Surabaya, dan Semarang, banjir sudah menjadi peristiwa tahunan. (10) Peristiwa ini menyebabkan penderitaan, kerugian materi, hingga korban jiwa.</p>\n<p>Tabel Bencana Banjir, Korban, dan Kerugian Provinsi DKI Jakarta Tahun 2012</p>\n<table class='cte-table tw-w-full tw-border-collapse cte-table-bordered'>\n<thead>\n<tr>\n<th class='tw-bg-purple-100 tw-font-semibold tw-p-2 tw-border tw-border-purple-300'>Kota Madya</th>\n<th class='tw-bg-purple-100 tw-font-semibold tw-p-2 tw-border tw-border-purple-300'>Total Area Terendam (Ha)</th>\n<th class='tw-bg-purple-100 tw-font-semibold tw-p-2 tw-border tw-border-purple-300'>Korban (Jiwa)</th>\n<th class='tw-bg-purple-100 tw-font-semibold tw-p-2 tw-border tw-border-purple-300'>Perkiraan Kerugian (Rp)</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td class='tw-p-2 tw-border tw-border-purple-300'>Jakarta Selatan</td>\n<td class='tw-p-2 tw-border tw-border-purple-300'>1</td>\n<td class='tw-p-2 tw-border tw-border-purple-300'>Mengungsi: 8.911, Meninggal: 1</td>\n<td class='tw-p-2 tw-border tw-border-purple-300'>35.000.000.000,00</td>\n</tr>\n<tr>\n<td class='tw-p-2 tw-border tw-border-purple-300'>Jakarta Timur</td>\n<td class='tw-p-2 tw-border tw-border-purple-300'>1</td>\n<td class='tw-p-2 tw-border tw-border-purple-300'>Mengungsi: 3.700, Meninggal: 0</td>\n<td class='tw-p-2 tw-border tw-border-purple-300'>24.000.000.000,00</td>\n</tr>\n<tr>\n<td class='tw-p-2 tw-border tw-border-purple-300'>Jakarta Pusat</td>\n<td class='tw-p-2 tw-border tw-border-purple-300'>1</td>\n<td class='tw-p-2 tw-border tw-border-purple-300'>Mengungsi: 500, Meninggal: 0</td>\n<td class='tw-p-2 tw-border tw-border-purple-300'>20.000.000.000,00</td>\n</tr>\n<tr>\n<td class='tw-p-2 tw-border tw-border-purple-300'>Jakarta Barat</td>\n<td class='tw-p-2 tw-border tw-border-purple-300'>1</td>\n<td class='tw-p-2 tw-border tw-border-purple-300'>Mengungsi: 12.500, Meninggal: 2</td>\n<td class='tw-p-2 tw-border tw-border-purple-300'>85.000.000.000,00</td>\n</tr>\n<tr>\n<td class='tw-p-2 tw-border tw-border-purple-300'>Jakarta Utara</td>\n<td class='tw-p-2 tw-border tw-border-purple-300'>1</td>\n<td class='tw-p-2 tw-border tw-border-purple-300'>Mengungsi: 800, Meninggal: 1</td>\n<td class='tw-p-2 tw-border tw-border-purple-300'>15.000.000.000,00</td>\n</tr>\n</tbody>\n</table>\n<p>(11) Banyak bentuk kerusakan lingkungan di dunia, namun akar utamanya tetaplah perilaku manusia. (12) Lonjakan jumlah penduduk menyebabkan eksploitasi sumber daya alam yang berlebihan. (13) Penebangan hutan dan pertambangan tanpa kendali menjadi pemicu utama degradasi lahan. (14) Padahal alam berfungsi sebagai penyangga kehidupan seluruh makhluk. (15) Kesalahan pola pikir dan sikap manusia terhadap sistem lingkungan turut memperparah kerusakan tersebut. (16) Pola pikir eksploitatif itu menimbulkan tindakan tidak bertanggung jawab terhadap kelestarian bumi.</p>",
+    "usage": [17, 18, 19, 20]
+  }
+]
