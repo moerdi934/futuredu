@@ -1,0 +1,362 @@
+[
+  {
+    "no": 1,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Kelompok kata dalam bacaan tersebut yang memiliki pola makna yang sama dengan kata <em>nasi goreng</em> adalah ...</p>",
+    "options": [
+      "<p>kualitas pendidikan (kalimat 1)</p>",
+      "<p>tenaga pengajar (kalimat 3)</p>",
+      "<p>peserta didik (kalimat 5)</p>",
+      "<p>pengembangan pendidikan (kalimat 6)</p>",
+      "<p>keberhasilan program (kalimat 7)</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>Kata <em>nasi goreng</em> tersusun dari dua unsur kata, yaitu <strong>nasi</strong> sebagai kata benda (N) dan <strong>goreng</strong> sebagai kata kerja (V). Dengan demikian, pola pembentukan katanya adalah (N + V). Dari pilihan yang tersedia, hanya frasa <strong>peserta didik</strong> yang memiliki pola serupa, yaitu terdiri atas kata benda <em>peserta</em> (N) dan kata kerja <em>didik</em> (V). Sementara pilihan lainnya, seperti <em>kualitas pendidikan</em> atau <em>tenaga pengajar</em>, terbentuk dari dua kata benda (N + N) sehingga tidak sepadan dengan pola <em>nasi goreng</em>. Oleh karena itu, jawaban yang paling tepat adalah (C) <strong>peserta didik</strong>.</p>",
+    "passageId": "Teks Bacaan: Program Merdeka Belajar",
+    "topic": "Kosakata",
+    "subtopic": "Pola Pembentukan Kata"
+  },
+  {
+    "no": 2,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Kata <em>merata</em> dalam kalimat terakhir bacaan tersebut memiliki makna yang berlawanan dengan kata ...</p>",
+    "options": [
+      "<p>jomplang</p>",
+      "<p>terfokus</p>",
+      "<p>terurai</p>",
+      "<p>berbeda</p>",
+      "<p>terpusat</p>"
+    ],
+    "correctAnswer": [4],
+    "explanation": "<p>Kata <em>merata</em> dalam konteks kalimat yang membicarakan tentang 'pemerataan akses pendidikan di seluruh wilayah Indonesia' bermakna penyebaran yang seimbang atau tersebar secara adil di berbagai daerah. Artinya, pendidikan harus dapat diakses secara setara oleh seluruh masyarakat tanpa adanya perbedaan wilayah.</p><p>Untuk menentukan makna yang berlawanan, kita perlu melihat kata yang memiliki arti kebalikan dari penyebaran yang luas dan seimbang. Pilihan (A) <em>jomplang</em> lebih menekankan pada ketidakseimbangan kualitas, bukan distribusi. (B) <em>terfokus</em> berarti terkonsentrasi pada satu titik tertentu, namun tidak secara langsung menggambarkan lawan dari persebaran. (C) <em>terurai</em> berarti tercerai-berai atau terpisah, yang justru mengarah ke makna tersebar. (D) <em>berbeda</em> menunjukkan variasi, bukan lawan dari penyebaran.</p><p>Sementara itu, (E) <em>terpusat</em> memiliki arti segala sesuatu dikumpulkan atau difokuskan pada satu tempat atau area tertentu. Hal ini jelas berlawanan dengan makna <em>merata</em> yang menandakan penyebaran secara luas dan seimbang. Dengan demikian, jawaban yang paling tepat adalah (E) <strong>terpusat</strong>.</p>",
+    "passageId": "Teks Bacaan: Program Merdeka Belajar",
+    "topic": "Kosakata",
+    "subtopic": "Lawan Kata"
+  },
+  {
+    "no": 3,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Kalimat yang mengandung <strong>makna lain</strong> dari yang tertulis secara langsung adalah ....</p>",
+    "options": [
+      "<p>kalimat 1</p>",
+      "<p>kalimat 2</p>",
+      "<p>kalimat 4</p>",
+      "<p>kalimat 5</p>",
+      "<p>kalimat 6</p>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>Kalimat yang memiliki makna tersirat adalah <strong>kalimat 5</strong>, yaitu: \"Seiring berjalannya waktu, nasi goreng semakin dikenal luas sebagai makanan khas Indonesia.\" Secara eksplisit, kalimat tersebut menyatakan bahwa nasi goreng kini dianggap sebagai makanan khas Indonesia. Namun, makna yang lebih dalam menunjukkan bahwa nasi goreng telah melalui proses panjang asimilasi budaya dari Tiongkok hingga akhirnya menjadi bagian dari identitas kuliner nasional Indonesia. Hal ini mengandung pesan implisit mengenai akulturasi budaya dan penerimaan masyarakat terhadap pengaruh luar yang kemudian diolah menjadi bagian dari warisan lokal.</p><p>Pilihan lain seperti kalimat 1 dan 2 hanya menyampaikan fakta sejarah, sedangkan kalimat 4 dan 6 menjelaskan proses penyebaran dan perbedaan resep tanpa makna tersirat yang lebih dalam. Oleh karena itu, pilihan yang paling tepat adalah <strong>(D) kalimat 5</strong>.</p>",
+    "passageId": "Teks Bacaan: Asal Usul Nasi Goreng",
+    "topic": "Pemahaman Bacaan",
+    "subtopic": "Makna Tersirat"
+  },
+  {
+    "no": 4,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Kata yang paling tepat untuk menyimpulkan situasi dalam bacaan tersebut adalah ....</p>",
+    "options": [
+      "<p>optimis</p>",
+      "<p>kreatif</p>",
+      "<p>variatif</p>",
+      "<p>ekspresif</p>",
+      "<p>analogis</p>"
+    ],
+    "correctAnswer": [1],
+    "explanation": "<p>Bacaan tersebut menjelaskan proses panjang evolusi nasi goreng mulai dari asalnya di Tiongkok hingga menjadi bagian penting dari kuliner Indonesia. Dalam teks, terlihat bahwa masyarakat terus berinovasi dan beradaptasi terhadap kondisi yang ada, seperti menggoreng kembali nasi sisa agar tidak terbuang, kemudian menambahkan berbagai bahan lokal untuk menciptakan rasa baru. Proses adaptasi dan modifikasi ini menunjukkan adanya daya cipta dan kemampuan masyarakat dalam mengolah bahan yang sederhana menjadi hidangan yang khas dan bernilai tinggi.</p><p>Pilihan (A) <em>optimis</em> tidak mencerminkan konteks inovasi makanan, melainkan sikap mental terhadap masa depan. (C) <em>variatif</em> memang menggambarkan keragaman rasa dan cara memasak, tetapi tidak cukup menyoroti proses penciptaan ide baru. (D) <em>ekspresif</em> berkaitan dengan emosi dan seni, kurang relevan untuk konteks adaptasi resep. (E) <em>analogis</em> menunjukkan perbandingan atau kesepadanan, yang tidak sesuai dengan isi teks. Maka, kata yang paling tepat adalah (B) <strong>kreatif</strong>, karena teks menonjolkan kemampuan manusia untuk berinovasi dan memodifikasi makanan sesuai budaya dan selera lokal.</p>",
+    "passageId": "Teks Bacaan: Asal Usul dan Evolusi Nasi Goreng",
+    "topic": "Pemahaman Bacaan",
+    "subtopic": "Sikap Penulis"
+  },
+  {
+    "no": 5,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Kalimat (7) dalam bacaan tersebut akan menjadi utuh dan bermakna jika dilengkapi dengan kata-kata ...</p>",
+    "options": [
+      "<p>sajian; mendorong</p>",
+      "<p>resep; mendekatkan</p>",
+      "<p>menu; menggoda</p>",
+      "<p>hidangan; membuka</p>",
+      "<p>tampilan; menggugah</p>"
+    ],
+    "correctAnswer": [4],
+    "explanation": "<p>Kalimat (7) yang berbunyi: “Hal ini membuat [...] nasi goreng Indonesia identik dengan warna coklat yang [...] selera” mengisyaratkan bahwa bagian yang kosong harus diisi dengan kata-kata yang menjelaskan tampilan dan daya tarik makanan tersebut. Kata <em>tampilan</em> tepat digunakan karena menggambarkan aspek visual nasi goreng, sedangkan <em>menggugah</em> berkaitan dengan kemampuan makanan untuk membangkitkan selera makan. Maka, kalimat lengkapnya menjadi: “Hal ini membuat tampilan nasi goreng Indonesia identik dengan warna coklat yang menggugah selera.”</p><p>Pilihan lain seperti (A) <em>sajian; mendorong</em> dan (B) <em>resep; mendekatkan</em> tidak menjelaskan keterkaitan antara warna makanan dan selera makan. (C) <em>menu; menggoda</em> kurang tepat karena <em>menu</em> bukan bagian fisik dari makanan itu sendiri, sedangkan (D) <em>hidangan; membuka</em> terdengar kurang alami dalam konteks ini. Oleh karena itu, kombinasi paling sesuai adalah <strong>(E) tampilan; menggugah</strong>.</p>",
+    "passageId": "Teks Bacaan: Asal-Usul Nasi Goreng",
+    "topic": "Pemahaman Bacaan",
+    "subtopic": "Kelengkapan Kalimat"
+  },
+  {
+    "no": 6,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Kata berpasangan yang bersifat tetap dalam konteks bacaan tersebut adalah ....</p>",
+    "options": [
+      "<p>secara umum (kalimat 1)</p>",
+      "<p>paling bawah (kalimat 3)</p>",
+      "<p>sebuah penelitian (kalimat 5)</p>",
+      "<p>lingkar pinggang (kalimat 6)</p>",
+      "<p>program intensif (kalimat 7)</p>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>Pasangan kata tetap adalah gabungan dua kata yang digunakan secara konsisten dalam konteks tertentu dan tidak berubah meski digunakan di berbagai kalimat. Dalam bacaan ini, frasa <strong>‘lingkar pinggang’</strong> (kalimat 6) merupakan istilah teknis yang sering digunakan dalam bidang kesehatan dan kebugaran untuk mengukur tingkat lemak tubuh atau obesitas seseorang. Frasa tersebut memiliki makna yang tidak bisa diubah atau diganti susunannya tanpa kehilangan arti aslinya.</p><p>Pilihan (A) <em>secara umum</em> merupakan frasa yang umum digunakan tetapi tidak bersifat tetap karena bisa diganti dengan sinonim seperti ‘pada umumnya’. (B) <em>paling bawah</em> hanyalah frasa deskriptif yang bersifat relatif. (C) <em>sebuah penelitian</em> adalah frasa umum yang dapat diganti dengan ‘suatu penelitian’. (E) <em>program intensif</em> meskipun sering digunakan, sifatnya lebih fleksibel tergantung konteks. Karena itu, jawaban yang paling tepat adalah <strong>(D) lingkar pinggang</strong>.</p>",
+    "passageId": "Teks Bacaan: Manfaat Aqua Jogging",
+    "topic": "Kosakata",
+    "subtopic": "Pasangan Kata Tetap"
+  },
+  {
+    "no": 7,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Gagasan utama pada kalimat (2) dapat disampaikan kembali dengan kalimat berikut ini ....</p>",
+    "options": [
+      "<p>Ada beragam manfaat bagi kesehatan dan ketahanan tubuh yang diperoleh dari aktivitas ini.</p>",
+      "<p>Aktivitas ini tidak terbatas manfaatnya untuk kesehatan dan daya tahan tubuh manusia.</p>",
+      "<p>Aktivitas ini memiliki beberapa manfaat yang baik untuk kebugaran tubuh.</p>",
+      "<p>Ada banyak manfaat bagi tubuh dan kesehatan yang didapat dari kegiatan ini.</p>",
+      "<p>Aktivitas ini memiliki manfaat luar biasa bagi kesehatan dan ketahanan tubuh seseorang.</p>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<p>Kalimat (2) menyatakan bahwa <em>aktivitas ini memiliki berbagai manfaat bagi kesehatan dan ketahanan tubuh</em>. Gagasan tersebut dapat direformulasi tanpa mengubah maknanya dengan menggunakan frasa yang sepadan, yakni <strong>‘beragam manfaat bagi kesehatan dan ketahanan tubuh yang diperoleh dari aktivitas ini’</strong>. Kata ‘beragam’ mempertahankan makna ‘berbagai’, yang menunjukkan adanya banyak variasi manfaat tanpa menimbulkan kesan berlebihan.</p><p>Pilihan (B) dengan kata ‘tidak terbatas’ terdengar terlalu hiperbolis, seolah manfaatnya tanpa batas, sehingga tidak sesuai dengan maksud teks. (C) menggunakan kata ‘beberapa’ yang justru mengurangi intensitas makna asli. (D) menggunakan ‘banyak’ yang bersifat umum dan kurang menonjolkan nuansa variasi. Sedangkan (E) menggunakan kata ‘luar biasa’ yang menambahkan makna evaluatif yang tidak muncul dalam kalimat aslinya. Dengan demikian, pilihan yang paling tepat adalah <strong>(A)</strong>.</p>",
+    "passageId": "Teks Bacaan: Aqua Jogging dan Manfaatnya",
+    "topic": "Pemahaman Bacaan",
+    "subtopic": "Parafrasa Kalimat"
+  },
+  {
+    "no": 8,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Fungsi kata penghubung <strong>sehingga</strong> dalam kalimat (4) adalah ....</p>",
+    "options": [
+      "<p>memaparkan akibat</p>",
+      "<p>menyimpulkan pernyataan</p>",
+      "<p>menjelaskan gagasan</p>",
+      "<p>menyiapkan informasi</p>",
+      "<p>menggambarkan gagasan</p>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<p>Kata penghubung <em>sehingga</em> berfungsi untuk menghubungkan dua klausa dalam kalimat dengan menampilkan hubungan sebab-akibat antara keduanya. Dalam konteks kalimat (4), klausa pertama menjelaskan sebab, yaitu kaki tidak menanggung seluruh beban tubuh, sedangkan klausa kedua menjelaskan akibatnya, yaitu gerakan menjadi lebih ringan dan fleksibel. Oleh karena itu, fungsi utama kata <em>sehingga</em> di sini adalah <strong>memaparkan akibat</strong> dari situasi yang dijelaskan sebelumnya.</p><p>Pilihan (B) <em>menyimpulkan pernyataan</em> salah karena <em>sehingga</em> tidak menyimpulkan melainkan menjelaskan hasil. Pilihan (C) dan (E) hanya menggambarkan ide tanpa hubungan kausal, sedangkan (D) <em>menyiapkan informasi</em> tidak relevan karena kata penghubung ini tidak digunakan untuk pengantar atau penyiapan ide baru. Dengan demikian, jawaban yang paling tepat adalah <strong>(A) memaparkan akibat</strong>.</p>",
+    "passageId": "Teks Bacaan: Aqua Jogging untuk Kebugaran Tubuh",
+    "topic": "Tata Bahasa",
+    "subtopic": "Fungsi Konjungsi"
+  },
+  {
+    "no": 9,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Gagasan utama paragraf pertama dalam bacaan tersebut adalah ....</p>",
+    "options": [
+      "<p>Indonesia perlu mengoptimalkan potensi kelautan untuk mempercepat pertumbuhan ekonomi nasional.</p>",
+      "<p>Ada berbagai alasan yang menjadikan sumber daya kelautan Indonesia sebagai aset penting pembangunan nasional.</p>",
+      "<p>Potensi wilayah pesisir Indonesia sangat besar untuk dikembangkan sebagai sektor ekonomi baru.</p>",
+      "<p>Letak geografis Indonesia memungkinkan pengembangan sumber daya alam dan jasa lingkungan laut.</p>",
+      "<p>Pembangunan ekonomi Indonesia harus berfokus pada eksplorasi dan investasi di wilayah laut.</p>"
+    ],
+    "correctAnswer": [1],
+    "explanation": "<p>Paragraf pertama menjelaskan alasan-alasan yang mendukung pandangan bahwa sumber daya kelautan Indonesia adalah aset penting bagi pembangunan nasional. Kalimat pertama memperkenalkan ide pokok tentang pentingnya sumber daya kelautan sebagai aset pembangunan. Kalimat-kalimat berikutnya mendukung ide tersebut dengan menyebutkan dua alasan utama, yaitu (1) kondisi geografis Indonesia sebagai negara kepulauan besar, dan (2) potensi sumber daya laut yang belum dikelola secara optimal. Oleh karena itu, gagasan utama paragraf pertama adalah <strong>(B) Ada berbagai alasan yang menjadikan sumber daya kelautan Indonesia sebagai aset penting pembangunan nasional</strong>.</p>",
+    "passageId": "Teks Bacaan: Potensi dan Pengelolaan Sumber Daya Kelautan Indonesia",
+    "topic": "Pemahaman Bacaan",
+    "subtopic": "Gagasan Utama"
+  },
+  {
+    "no": 10,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Hubungan antara paragraf 1 dan paragraf 2 dalam teks tersebut adalah ....</p>",
+    "options": [
+      "<p>Paragraf 2 merupakan kelanjutan dari paragraf 1</p>",
+      "<p>Paragraf 2 merupakan akibat dari paragraf 1</p>",
+      "<p>Paragraf 1 berfungsi sebagai pembanding bagi paragraf 2</p>",
+      "<p>Paragraf 1 mendukung ide utama paragraf 2</p>",
+      "<p>Paragraf 2 melengkapi informasi dari paragraf 1</p>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>Paragraf pertama menjelaskan pentingnya dan potensi besar sumber daya kelautan Indonesia sebagai aset pembangunan ekonomi nasional, sementara paragraf kedua membahas langkah-langkah pengelolaan dan pengembangan potensi tersebut oleh pemerintah. Hubungan ini menunjukkan bahwa isi paragraf pertama digunakan untuk memperkuat dan mendukung penjelasan utama pada paragraf kedua, yaitu tentang perlunya pengelolaan yang tepat dan perencanaan strategis dalam memanfaatkan sumber daya kelautan. Dengan demikian, hubungan antara keduanya bersifat <strong>pendukung terhadap ide utama paragraf 2</strong>, sehingga jawaban yang benar adalah <strong>(D) Paragraf 1 mendukung ide utama paragraf 2</strong>.</p>",
+    "passageId": "Teks Bacaan: Potensi dan Pengelolaan Sumber Daya Kelautan Indonesia",
+    "topic": "Struktur Teks",
+    "subtopic": "Hubungan Antarparagraf"
+  },
+  {
+    "no": 11,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Salah satu kelemahan dari paragraf kedua dalam teks di atas adalah ....</p>",
+    "options": [
+      "<p>Gagasan utamanya terletak di tengah paragraf</p>",
+      "<p>Gagasan utamanya lebih dari satu</p>",
+      "<p>Terdapat kalimat sumbang</p>",
+      "<p>Kalimat penjelas tidak jelas letaknya</p>",
+      "<p>Deskripsi diletakkan di bagian akhir</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>Kelemahan utama paragraf kedua adalah adanya kalimat yang tidak mendukung fokus pembahasan atau disebut <strong>kalimat sumbang</strong>. Kalimat ketiga, yaitu yang membahas tentang kebutuhan akan sosok pemimpin yang memahami sektor kelautan, dianggap tidak relevan dengan konteks paragraf yang membicarakan tentang pengelolaan sumber daya dan tujuan artikel secara ilmiah. Kalimat ini memiliki gaya naratif yang tidak selaras dengan bagian lain yang bersifat analitis dan objektif. Oleh karena itu, kalimat tersebut dikategorikan sebagai kalimat sumbang karena tidak sejalan dengan ide pokok dan pendekatan ilmiah paragraf.</p>",
+    "passageId": "Teks Bacaan: Potensi dan Pengelolaan Sumber Daya Kelautan Indonesia",
+    "topic": "Evaluasi Teks",
+    "subtopic": "Kelemahan Paragraf"
+  },
+  {
+    "no": 12,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Pikiran utama paragraf pertama dalam teks tersebut adalah ....</p>",
+    "options": [
+      "<p>Air merupakan penyusun utama tubuh makhluk hidup.</p>",
+      "<p>Air berperan penting dalam kelangsungan hidup makhluk hidup.</p>",
+      "<p>Kehidupan baru dimulai melalui keberadaan air.</p>",
+      "<p>Air adalah unsur penting bagi manusia.</p>",
+      "<p>Semua makhluk hidup tidak bisa hidup tanpa air.</p>"
+    ],
+    "correctAnswer": [1],
+    "explanation": "<p>Pikiran utama paragraf pertama menegaskan bahwa air memiliki peran vital dalam menopang kehidupan di bumi. Kalimat pembuka secara eksplisit menyatakan bahwa <strong>air berperan penting dalam kelangsungan hidup makhluk hidup di bumi</strong>, yang kemudian dijabarkan oleh kalimat-kalimat penjelas berikutnya, seperti air sebagai penyusun tubuh dan sumber kehidupan. Oleh karena itu, pilihan yang paling tepat adalah <strong>B</strong>.</p>",
+    "passageId": "Teks Bacaan: Siklus Hidrologi",
+    "topic": "Pemahaman Bacaan",
+    "subtopic": "Gagasan Utama"
+  },
+  {
+    "no": 13,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Makna istilah <em>siklus</em> pada kalimat (7) dalam teks tersebut adalah ....</p>",
+    "options": [
+      "<p>Suatu peristiwa yang terus berulang dan saling berkaitan.</p>",
+      "<p>Perubahan yang berkembang secara dinamis.</p>",
+      "<p>Beragam kejadian yang berulang tanpa keteraturan.</p>",
+      "<p>Rangkaian kejadian yang berulang secara tetap dan teratur.</p>",
+      "<p>Perputaran waktu yang terjadi secara terus-menerus.</p>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>Kata <em>siklus</em> mengandung makna <strong>rangkaian peristiwa yang terjadi berulang secara tetap dan teratur</strong>. Dalam konteks teks, istilah tersebut menggambarkan proses air yang terus berputar dari bumi ke atmosfer dan kembali lagi ke bumi melalui tahapan-tahapan tertentu yang berulang secara teratur. Karena itu, pilihan yang paling tepat adalah <strong>D</strong>.</p>",
+    "passageId": "Teks Bacaan: Siklus Hidrologi",
+    "topic": "Kosakata",
+    "subtopic": "Makna Istilah"
+  },
+  {
+    "no": 14,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Kalimat manakah yang memiliki makna sepadan dengan kata <strong>melimpah</strong> pada kalimat (18)?</p>",
+    "options": [
+      "<p>Hujan deras semalam menyebabkan banyak genangan air di beberapa jalan utama kota.</p>",
+      "<p>Panen jeruk tahun ini meningkat hingga tiga kali lipat dari hasil biasanya.</p>",
+      "<p>Kopi buatan nenek sangat nikmat hingga membuatku ingin menambah lagi.</p>",
+      "<p>Setiap bulan ia menabung sebagian besar penghasilannya untuk disumbangkan.</p>",
+      "<p>Pembangunan perumahan baru menyebabkan permintaan semen meningkat pesat.</p>"
+    ],
+    "correctAnswer": [1],
+    "explanation": "<p>Kata <strong>melimpah</strong> berarti jumlahnya sangat banyak atau berlebihan hingga melebihi kapasitas yang seharusnya. Dalam konteks kalimat (18), kata tersebut menggambarkan kondisi ketika air tersedia dalam jumlah sangat banyak. Kalimat yang memiliki makna sepadan adalah <strong>B. Panen jeruk tahun ini meningkat hingga tiga kali lipat dari hasil biasanya</strong>, karena menunjukkan situasi hasil yang sangat banyak atau berlebih. Pilihan lain tidak menunjukkan makna 'berlebihan dalam jumlah', melainkan hanya menyatakan keadaan umum, kenikmatan, atau tindakan.</p>",
+    "passageId": "Teks Bacaan: Siklus Hidrologi",
+    "topic": "Kosakata",
+    "subtopic": "Sinonim Kontekstual"
+  },
+  {
+    "no": 15,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Tujuan utama penulisan teks tersebut adalah untuk ....</p>",
+    "options": [
+      "<p>Memberikan informasi tentang pengertian, proses, dan manfaat dari siklus hidrologi.</p>",
+      "<p>Menjelaskan secara rinci tahapan-tahapan terjadinya siklus hidrologi dari evaporasi hingga presipitasi.</p>",
+      "<p>Menguraikan proses terjadinya siklus hidrologi mulai dari evaporasi, kondensasi, hingga presipitasi.</p>",
+      "<p>Mengedukasi masyarakat agar memahami pentingnya menjaga keseimbangan air di bumi.</p>",
+      "<p>Menyampaikan peristiwa-peristiwa penting yang berkaitan dengan fenomena hidrologi di bumi.</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>Teks tersebut berjenis eksplanasi karena isinya menjelaskan proses terjadinya suatu fenomena alam, yaitu <strong>siklus hidrologi</strong>. Penulis secara sistematis menguraikan tahapan-tahapan yang terjadi, dimulai dari penguapan (evaporasi), pembentukan awan (kondensasi), hingga turunnya hujan (presipitasi). Tujuan utamanya bukan sekadar memberi informasi umum, melainkan menjelaskan urutan proses secara ilmiah agar pembaca memahami bagaimana air mengalami perputaran di alam. Oleh karena itu, jawaban yang paling tepat adalah <strong>C</strong>.</p>",
+    "passageId": "Teks Bacaan: Siklus Hidrologi",
+    "topic": "Pemahaman Bacaan",
+    "subtopic": "Tujuan Penulisan"
+  },
+  {
+    "no": 16,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Simpulan utama dari teks di atas adalah ....</p>",
+    "options": [
+      "<p>Hidrologi memiliki tahapan yang kompleks, dimulai dari evaporasi, kondensasi, hingga presipitasi.</p>",
+      "<p>Kehidupan di bumi bergantung pada ketersediaan air, sehingga air harus dikelola dengan bijak agar tidak terjadi kekeringan.</p>",
+      "<p>Proses hidrologi menjamin ketersediaan air di bumi agar kehidupan dapat terus berlangsung.</p>",
+      "<p>Air sangat penting bagi kelangsungan makhluk hidup, sehingga manusia perlu mengenal proses siklus hidrologi dan menggunakannya dengan bijaksana.</p>",
+      "<p>Banjir dan kekeringan terjadi karena perubahan siklus air yang tidak teratur di alam.</p>"
+    ],
+    "correctAnswer": [3],
+    "explanation": "<p>Teks tersebut berfokus pada pentingnya air bagi makhluk hidup serta penjelasan tentang bagaimana siklus hidrologi menjaga keseimbangan air di bumi. Selain menjelaskan prosesnya (evaporasi, kondensasi, presipitasi), teks juga menekankan bahwa manusia harus menggunakan air dengan bijak agar keseimbangan tetap terjaga. Oleh karena itu, simpulan paling tepat adalah <strong>D</strong>, karena kalimat tersebut mencakup dua gagasan utama: peran penting air dalam kehidupan dan perlunya manusia mengenal serta mengelola air dengan bijaksana.</p>",
+    "passageId": "Teks Bacaan: Siklus Hidrologi",
+    "topic": "Pemahaman Bacaan",
+    "subtopic": "Simpulan Utama"
+  },
+  {
+    "no": 17,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Hubungan isi antara paragraf pertama dan kedua pada teks di atas adalah ....</p>",
+    "options": [
+      "<p>Paragraf kedua berfungsi sebagai penjelasan rinci dari paragraf pertama.</p>",
+      "<p>Paragraf kedua memberikan penguatan terhadap isi paragraf pertama.</p>",
+      "<p>Paragraf kedua menambahkan informasi baru yang tidak berkaitan dengan paragraf pertama.</p>",
+      "<p>Paragraf kedua berisi perbandingan dengan isi paragraf pertama.</p>",
+      "<p>Paragraf kedua merupakan kelanjutan dari paragraf pertama.</p>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<p>Paragraf pertama berisi penjelasan umum tentang burung murai batu, mencakup nama ilmiah, habitat, serta sebaran wilayahnya. Paragraf kedua kemudian memberikan penjabaran lebih detail mengenai ciri-ciri fisik burung tersebut seperti warna bulu, bentuk ekor, dan perbedaan antara jantan dan betina. Dengan demikian, hubungan antara kedua paragraf tersebut adalah <strong>perincian</strong> atau penjelasan lebih mendetail dari isi paragraf pertama, sehingga jawaban yang benar adalah <strong>A</strong>.</p>",
+    "passageId": "Teks Bacaan: Burung Murai Batu",
+    "topic": "Struktur Teks",
+    "subtopic": "Hubungan Antarparagraf"
+  },
+  {
+    "no": 18,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Makna kata <em>kompetisi</em> pada kalimat (15) dalam teks di atas adalah ....</p>",
+    "options": [
+      "<p>Persaingan yang bertujuan untuk mendapatkan hadiah.</p>",
+      "<p>Perlombaan yang diikuti oleh para peserta.</p>",
+      "<p>Pertandingan yang memperebutkan gelar juara.</p>",
+      "<p>Pertandingan untuk memenangkan sayembara.</p>",
+      "<p>Kegiatan yang mengharuskan adanya persaingan.</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<p>Kata <em>kompetisi</em> dalam konteks kalimat (15) menunjukkan kegiatan lomba atau pertandingan burung murai batu yang diikuti oleh berbagai peserta dengan tujuan memperoleh gelar juara. Berdasarkan KBBI, <em>kompetisi</em> bermakna 'pertandingan untuk memperebutkan gelar juara' atau 'persaingan dalam bidang tertentu untuk menjadi yang terbaik'. Dalam teks, kata tersebut digunakan dalam konteks lomba kicau burung, yang bertujuan menentukan burung terbaik berdasarkan kualitas suara. Oleh karena itu, makna yang paling tepat adalah <strong>pertandingan untuk memperebutkan gelar juara</strong>.</p>",
+    "passageId": "Teks Bacaan: Burung Murai Batu",
+    "topic": "Kosakata",
+    "subtopic": "Makna Kata"
+  },
+  {
+    "no": 19,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Kalimat yang berisi <strong>fakta</strong> pada paragraf keempat ditandai dengan nomor ....</p>",
+    "options": [
+      "<p>(11) dan (12)</p>",
+      "<p>(12) dan (13)</p>",
+      "<p>(13) dan (14)</p>",
+      "<p>(13) dan (15)</p>",
+      "<p>(14) dan (15)</p>"
+    ],
+    "correctAnswer": [1],
+    "explanation": "<p>Fakta merupakan pernyataan yang dapat dibuktikan kebenarannya melalui pengamatan atau data yang nyata. Pada paragraf keempat, kalimat (12) dan (13) menjelaskan tindakan konkret yang dilakukan dalam merawat burung murai batu, yakni pemberian pakan secara teratur dan memandikan burung setiap hari agar bulunya tetap mengilap. Kedua kalimat tersebut menggambarkan kegiatan nyata yang bisa diamati langsung, bukan opini atau pendapat. Sementara kalimat (14) dan (15) bersifat opini karena menyampaikan hasil atau pendapat yang bisa berbeda tergantung situasi. Oleh sebab itu, kalimat yang berisi fakta adalah <strong>(12) dan (13)</strong>.</p>",
+    "passageId": "Teks Bacaan: Burung Murai Batu",
+    "topic": "Evaluasi Teks",
+    "subtopic": "Fakta vs Opini"
+  },
+  {
+    "no": 20,
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Kalimat yang mengandung <strong>opini</strong> pada paragraf kelima ditandai dengan nomor ....</p>",
+    "options": [
+      "<p>(16) dan (17)</p>",
+      "<p>(17) dan (18)</p>",
+      "<p>(16) dan (18)</p>",
+      "<p>(18) dan (19)</p>",
+      "<p>(19) dan (20)</p>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<p>Kalimat opini adalah kalimat yang mengandung pendapat atau pemikiran penulis yang belum tentu benar karena tidak dapat dibuktikan secara langsung. Pada paragraf kelima, kalimat (16) dan (17) termasuk opini karena menggunakan ungkapan seperti <em>sepertinya</em> dan <em>dirasa cukup besar</em> yang menunjukkan ketidakpastian atau subjektivitas penulis. Sementara kalimat (18), (19), dan (20) berisi data konkret berupa harga dan fakta ekonomi, sehingga bersifat faktual. Jadi, kalimat opini terdapat pada nomor <strong>(16) dan (17)</strong>.</p>",
+    "passageId": "Teks Bacaan: Burung Murai Batu",
+    "topic": "Evaluasi Teks",
+    "subtopic": "Fakta vs Opini"
+  }
+]

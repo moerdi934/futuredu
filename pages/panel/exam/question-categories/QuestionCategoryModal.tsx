@@ -90,29 +90,31 @@ const QuestionCategoryModal: React.FC<QuestionCategoryModalProps> = ({
     }
   };
 
-  const loadTopik = async () => {
-    setLoadingOptions(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/exam-types/kind-options?kind=2', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setTopikOptions(data.map((item: any) => ({
-          value: item.id,
-          label: `${item.code} - ${item.name}`
-        })));
+const loadTopik = async () => {
+  setLoadingOptions(true);
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('/api/exam-types/kind-options?kind=2', {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
-    } catch (error) {
-      console.error('Error loading topik:', error);
-    } finally {
-      setLoadingOptions(false);
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      setTopikOptions(data.map((item: any) => ({
+        value: item.id,
+        label: item.parent_code 
+          ? `${item.code} - ${item.name} (${item.parent_code})`
+          : `${item.code} - ${item.name}`
+      })));
     }
-  };
+  } catch (error) {
+    console.error('Error loading topik:', error);
+  } finally {
+    setLoadingOptions(false);
+  }
+};
 
   useEffect(() => {
     if (category) {

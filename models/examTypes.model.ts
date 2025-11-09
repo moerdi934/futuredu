@@ -432,10 +432,47 @@ const getSubtopicsInfo = async (subtopicIds: string[]): Promise<SubtopicInfo[]> 
 // Get hierarchy data for filters
 const getKindOptions = async (kind: number): Promise<ExamType[]> => {
   try {
-    const result = await pool.query(
-      `SELECT id, name, code FROM exam_types WHERE kind = $1 ORDER BY name ASC`,
-      [kind]
-    );
+    let query = '';
+    
+    if (kind === 2) {
+      // For Topik (kind=2), include Bidang Studi code
+      query = `
+        SELECT 
+          et.id, 
+          et.name, 
+          et.code,
+          parent.code as parent_code,
+          parent.name as parent_name
+        FROM exam_types et
+        LEFT JOIN exam_types parent ON et.master_id = parent.id
+        WHERE et.kind = $1
+        ORDER BY et.name ASC
+      `;
+    } else if (kind === 3) {
+      // For Subtopik (kind=3), include Topik code (bisa ditambahkan nanti jika perlu)
+      query = `
+        SELECT 
+          et.id, 
+          et.name, 
+          et.code,
+          parent.code as parent_code,
+          parent.name as parent_name
+        FROM exam_types et
+        LEFT JOIN exam_types parent ON et.master_id = parent.id
+        WHERE et.kind = $1
+        ORDER BY et.name ASC
+      `;
+    } else {
+      // For Bidang Studi (kind=1) or default
+      query = `
+        SELECT id, name, code 
+        FROM exam_types 
+        WHERE kind = $1 
+        ORDER BY name ASC
+      `;
+    }
+    
+    const result = await pool.query(query, [kind]);
     return result.rows;
   } catch (error) {
     console.error('Error getting kind options:', error);
