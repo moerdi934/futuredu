@@ -12,10 +12,10 @@
       "<p>keberhasilan program (kalimat 7)</p>"
     ],
     "correctAnswer": [2],
-    "explanation": "<p>Kata <em>nasi goreng</em> tersusun dari dua unsur kata, yaitu <strong>nasi</strong> sebagai kata benda (N) dan <strong>goreng</strong> sebagai kata kerja (V). Dengan demikian, pola pembentukan katanya adalah (N + V). Dari pilihan yang tersedia, hanya frasa <strong>peserta didik</strong> yang memiliki pola serupa, yaitu terdiri atas kata benda <em>peserta</em> (N) dan kata kerja <em>didik</em> (V). Sementara pilihan lainnya, seperti <em>kualitas pendidikan</em> atau <em>tenaga pengajar</em>, terbentuk dari dua kata benda (N + N) sehingga tidak sepadan dengan pola <em>nasi goreng</em>. Oleh karena itu, jawaban yang paling tepat adalah (C) <strong>peserta didik</strong>.</p>",
+    "explanation": "<p>Kata <em>nasi goreng</em> tersusun dari dua unsur kata, yaitu <strong>nasi</strong> sebagai kata benda (N) dan <strong>goreng</strong> sebagai kata kerja (V). Dengan demikian, pola pembentukan katanya adalah (N + V). Dari pilihan yang tersedia, hanya frasa <strong>peserta didik</strong> yang memiliki pola serupa...</p>",
     "passageId": "Teks Bacaan: Program Merdeka Belajar",
     "topic": "Kosakata",
-    "subtopic": "Pola Pembentukan Kata"
+    "subtopic": "Pola Kata"
   },
   {
     "no": 2,
@@ -30,10 +30,10 @@
       "<p>terpusat</p>"
     ],
     "correctAnswer": [4],
-    "explanation": "<p>Kata <em>merata</em> dalam konteks kalimat yang membicarakan tentang 'pemerataan akses pendidikan di seluruh wilayah Indonesia' bermakna penyebaran yang seimbang atau tersebar secara adil di berbagai daerah. Artinya, pendidikan harus dapat diakses secara setara oleh seluruh masyarakat tanpa adanya perbedaan wilayah.</p><p>Untuk menentukan makna yang berlawanan, kita perlu melihat kata yang memiliki arti kebalikan dari penyebaran yang luas dan seimbang. Pilihan (A) <em>jomplang</em> lebih menekankan pada ketidakseimbangan kualitas, bukan distribusi. (B) <em>terfokus</em> berarti terkonsentrasi pada satu titik tertentu, namun tidak secara langsung menggambarkan lawan dari persebaran. (C) <em>terurai</em> berarti tercerai-berai atau terpisah, yang justru mengarah ke makna tersebar. (D) <em>berbeda</em> menunjukkan variasi, bukan lawan dari penyebaran.</p><p>Sementara itu, (E) <em>terpusat</em> memiliki arti segala sesuatu dikumpulkan atau difokuskan pada satu tempat atau area tertentu. Hal ini jelas berlawanan dengan makna <em>merata</em> yang menandakan penyebaran secara luas dan seimbang. Dengan demikian, jawaban yang paling tepat adalah (E) <strong>terpusat</strong>.</p>",
+    "explanation": "<p>Kata <em>merata</em> bermakna penyebaran yang seimbang... lawannya adalah <em>terpusat</em>...</p>",
     "passageId": "Teks Bacaan: Program Merdeka Belajar",
     "topic": "Kosakata",
-    "subtopic": "Lawan Kata"
+    "subtopic": "Makna Kata"
   },
   {
     "no": 3,
@@ -48,7 +48,7 @@
       "<p>kalimat 6</p>"
     ],
     "correctAnswer": [3],
-    "explanation": "<p>Kalimat yang memiliki makna tersirat adalah <strong>kalimat 5</strong>, yaitu: \"Seiring berjalannya waktu, nasi goreng semakin dikenal luas sebagai makanan khas Indonesia.\" Secara eksplisit, kalimat tersebut menyatakan bahwa nasi goreng kini dianggap sebagai makanan khas Indonesia. Namun, makna yang lebih dalam menunjukkan bahwa nasi goreng telah melalui proses panjang asimilasi budaya dari Tiongkok hingga akhirnya menjadi bagian dari identitas kuliner nasional Indonesia. Hal ini mengandung pesan implisit mengenai akulturasi budaya dan penerimaan masyarakat terhadap pengaruh luar yang kemudian diolah menjadi bagian dari warisan lokal.</p><p>Pilihan lain seperti kalimat 1 dan 2 hanya menyampaikan fakta sejarah, sedangkan kalimat 4 dan 6 menjelaskan proses penyebaran dan perbedaan resep tanpa makna tersirat yang lebih dalam. Oleh karena itu, pilihan yang paling tepat adalah <strong>(D) kalimat 5</strong>.</p>",
+    "explanation": "<p>Kalimat 5 mengandung makna tersirat tentang akulturasi budaya...</p>",
     "passageId": "Teks Bacaan: Asal Usul Nasi Goreng",
     "topic": "Pemahaman Bacaan",
     "subtopic": "Makna Tersirat"
@@ -66,8 +66,8 @@
       "<p>analogis</p>"
     ],
     "correctAnswer": [1],
-    "explanation": "<p>Bacaan tersebut menjelaskan proses panjang evolusi nasi goreng mulai dari asalnya di Tiongkok hingga menjadi bagian penting dari kuliner Indonesia. Dalam teks, terlihat bahwa masyarakat terus berinovasi dan beradaptasi terhadap kondisi yang ada, seperti menggoreng kembali nasi sisa agar tidak terbuang, kemudian menambahkan berbagai bahan lokal untuk menciptakan rasa baru. Proses adaptasi dan modifikasi ini menunjukkan adanya daya cipta dan kemampuan masyarakat dalam mengolah bahan yang sederhana menjadi hidangan yang khas dan bernilai tinggi.</p><p>Pilihan (A) <em>optimis</em> tidak mencerminkan konteks inovasi makanan, melainkan sikap mental terhadap masa depan. (C) <em>variatif</em> memang menggambarkan keragaman rasa dan cara memasak, tetapi tidak cukup menyoroti proses penciptaan ide baru. (D) <em>ekspresif</em> berkaitan dengan emosi dan seni, kurang relevan untuk konteks adaptasi resep. (E) <em>analogis</em> menunjukkan perbandingan atau kesepadanan, yang tidak sesuai dengan isi teks. Maka, kata yang paling tepat adalah (B) <strong>kreatif</strong>, karena teks menonjolkan kemampuan manusia untuk berinovasi dan memodifikasi makanan sesuai budaya dan selera lokal.</p>",
-    "passageId": "Teks Bacaan: Asal Usul dan Evolusi Nasi Goreng",
+    "explanation": "<p>Teks menonjolkan kemampuan berinovasi masyarakat dalam memodifikasi nasi goreng → sikap <strong>kreatif</strong>...</p>",
+    "passageId": "Teks Bacaan: Asal Usul Nasi Goreng",
     "topic": "Pemahaman Bacaan",
     "subtopic": "Sikap Penulis"
   },
@@ -84,8 +84,8 @@
       "<p>tampilan; menggugah</p>"
     ],
     "correctAnswer": [4],
-    "explanation": "<p>Kalimat (7) yang berbunyi: “Hal ini membuat [...] nasi goreng Indonesia identik dengan warna coklat yang [...] selera” mengisyaratkan bahwa bagian yang kosong harus diisi dengan kata-kata yang menjelaskan tampilan dan daya tarik makanan tersebut. Kata <em>tampilan</em> tepat digunakan karena menggambarkan aspek visual nasi goreng, sedangkan <em>menggugah</em> berkaitan dengan kemampuan makanan untuk membangkitkan selera makan. Maka, kalimat lengkapnya menjadi: “Hal ini membuat tampilan nasi goreng Indonesia identik dengan warna coklat yang menggugah selera.”</p><p>Pilihan lain seperti (A) <em>sajian; mendorong</em> dan (B) <em>resep; mendekatkan</em> tidak menjelaskan keterkaitan antara warna makanan dan selera makan. (C) <em>menu; menggoda</em> kurang tepat karena <em>menu</em> bukan bagian fisik dari makanan itu sendiri, sedangkan (D) <em>hidangan; membuka</em> terdengar kurang alami dalam konteks ini. Oleh karena itu, kombinasi paling sesuai adalah <strong>(E) tampilan; menggugah</strong>.</p>",
-    "passageId": "Teks Bacaan: Asal-Usul Nasi Goreng",
+    "explanation": "<p>Kalimat membutuhkan frasa yang menggambarkan aspek visual dan daya tarik → <em>tampilan; menggugah</em>...</p>",
+    "passageId": "Teks Bacaan: Asal Usul Nasi Goreng",
     "topic": "Pemahaman Bacaan",
     "subtopic": "Kelengkapan Kalimat"
   },
@@ -102,10 +102,10 @@
       "<p>program intensif (kalimat 7)</p>"
     ],
     "correctAnswer": [3],
-    "explanation": "<p>Pasangan kata tetap adalah gabungan dua kata yang digunakan secara konsisten dalam konteks tertentu dan tidak berubah meski digunakan di berbagai kalimat. Dalam bacaan ini, frasa <strong>‘lingkar pinggang’</strong> (kalimat 6) merupakan istilah teknis yang sering digunakan dalam bidang kesehatan dan kebugaran untuk mengukur tingkat lemak tubuh atau obesitas seseorang. Frasa tersebut memiliki makna yang tidak bisa diubah atau diganti susunannya tanpa kehilangan arti aslinya.</p><p>Pilihan (A) <em>secara umum</em> merupakan frasa yang umum digunakan tetapi tidak bersifat tetap karena bisa diganti dengan sinonim seperti ‘pada umumnya’. (B) <em>paling bawah</em> hanyalah frasa deskriptif yang bersifat relatif. (C) <em>sebuah penelitian</em> adalah frasa umum yang dapat diganti dengan ‘suatu penelitian’. (E) <em>program intensif</em> meskipun sering digunakan, sifatnya lebih fleksibel tergantung konteks. Karena itu, jawaban yang paling tepat adalah <strong>(D) lingkar pinggang</strong>.</p>",
-    "passageId": "Teks Bacaan: Manfaat Aqua Jogging",
+    "explanation": "<p>‘Lingkar pinggang’ adalah istilah teknis tetap dalam bidang kesehatan...</p>",
+    "passageId": "Teks Bacaan: Aqua Jogging",
     "topic": "Kosakata",
-    "subtopic": "Pasangan Kata Tetap"
+    "subtopic": "Pola Kata"
   },
   {
     "no": 7,
@@ -120,10 +120,10 @@
       "<p>Aktivitas ini memiliki manfaat luar biasa bagi kesehatan dan ketahanan tubuh seseorang.</p>"
     ],
     "correctAnswer": [0],
-    "explanation": "<p>Kalimat (2) menyatakan bahwa <em>aktivitas ini memiliki berbagai manfaat bagi kesehatan dan ketahanan tubuh</em>. Gagasan tersebut dapat direformulasi tanpa mengubah maknanya dengan menggunakan frasa yang sepadan, yakni <strong>‘beragam manfaat bagi kesehatan dan ketahanan tubuh yang diperoleh dari aktivitas ini’</strong>. Kata ‘beragam’ mempertahankan makna ‘berbagai’, yang menunjukkan adanya banyak variasi manfaat tanpa menimbulkan kesan berlebihan.</p><p>Pilihan (B) dengan kata ‘tidak terbatas’ terdengar terlalu hiperbolis, seolah manfaatnya tanpa batas, sehingga tidak sesuai dengan maksud teks. (C) menggunakan kata ‘beberapa’ yang justru mengurangi intensitas makna asli. (D) menggunakan ‘banyak’ yang bersifat umum dan kurang menonjolkan nuansa variasi. Sedangkan (E) menggunakan kata ‘luar biasa’ yang menambahkan makna evaluatif yang tidak muncul dalam kalimat aslinya. Dengan demikian, pilihan yang paling tepat adalah <strong>(A)</strong>.</p>",
-    "passageId": "Teks Bacaan: Aqua Jogging dan Manfaatnya",
+    "explanation": "<p>Pilihan A paling akurat merefleksikan makna ‘berbagai manfaat’ tanpa hiperbola...</p>",
+    "passageId": "Teks Bacaan: Aqua Jogging",
     "topic": "Pemahaman Bacaan",
-    "subtopic": "Parafrasa Kalimat"
+    "subtopic": "Parafrasa"
   },
   {
     "no": 8,
@@ -138,10 +138,10 @@
       "<p>menggambarkan gagasan</p>"
     ],
     "correctAnswer": [0],
-    "explanation": "<p>Kata penghubung <em>sehingga</em> berfungsi untuk menghubungkan dua klausa dalam kalimat dengan menampilkan hubungan sebab-akibat antara keduanya. Dalam konteks kalimat (4), klausa pertama menjelaskan sebab, yaitu kaki tidak menanggung seluruh beban tubuh, sedangkan klausa kedua menjelaskan akibatnya, yaitu gerakan menjadi lebih ringan dan fleksibel. Oleh karena itu, fungsi utama kata <em>sehingga</em> di sini adalah <strong>memaparkan akibat</strong> dari situasi yang dijelaskan sebelumnya.</p><p>Pilihan (B) <em>menyimpulkan pernyataan</em> salah karena <em>sehingga</em> tidak menyimpulkan melainkan menjelaskan hasil. Pilihan (C) dan (E) hanya menggambarkan ide tanpa hubungan kausal, sedangkan (D) <em>menyiapkan informasi</em> tidak relevan karena kata penghubung ini tidak digunakan untuk pengantar atau penyiapan ide baru. Dengan demikian, jawaban yang paling tepat adalah <strong>(A) memaparkan akibat</strong>.</p>",
-    "passageId": "Teks Bacaan: Aqua Jogging untuk Kebugaran Tubuh",
+    "explanation": "<p>‘Sehingga’ menunjukkan hubungan sebab-akibat → memaparkan akibat...</p>",
+    "passageId": "Teks Bacaan: Aqua Jogging",
     "topic": "Tata Bahasa",
-    "subtopic": "Fungsi Konjungsi"
+    "subtopic": "Konjungsi"
   },
   {
     "no": 9,
@@ -156,8 +156,8 @@
       "<p>Pembangunan ekonomi Indonesia harus berfokus pada eksplorasi dan investasi di wilayah laut.</p>"
     ],
     "correctAnswer": [1],
-    "explanation": "<p>Paragraf pertama menjelaskan alasan-alasan yang mendukung pandangan bahwa sumber daya kelautan Indonesia adalah aset penting bagi pembangunan nasional. Kalimat pertama memperkenalkan ide pokok tentang pentingnya sumber daya kelautan sebagai aset pembangunan. Kalimat-kalimat berikutnya mendukung ide tersebut dengan menyebutkan dua alasan utama, yaitu (1) kondisi geografis Indonesia sebagai negara kepulauan besar, dan (2) potensi sumber daya laut yang belum dikelola secara optimal. Oleh karena itu, gagasan utama paragraf pertama adalah <strong>(B) Ada berbagai alasan yang menjadikan sumber daya kelautan Indonesia sebagai aset penting pembangunan nasional</strong>.</p>",
-    "passageId": "Teks Bacaan: Potensi dan Pengelolaan Sumber Daya Kelautan Indonesia",
+    "explanation": "<p>Paragraf menyajikan dua alasan utama → gagasan utamanya adalah bahwa sumber daya kelautan adalah aset penting...</p>",
+    "passageId": "Teks Bacaan: Sumber Daya Kelautan Indonesia",
     "topic": "Pemahaman Bacaan",
     "subtopic": "Gagasan Utama"
   },
@@ -174,10 +174,10 @@
       "<p>Paragraf 2 melengkapi informasi dari paragraf 1</p>"
     ],
     "correctAnswer": [3],
-    "explanation": "<p>Paragraf pertama menjelaskan pentingnya dan potensi besar sumber daya kelautan Indonesia sebagai aset pembangunan ekonomi nasional, sementara paragraf kedua membahas langkah-langkah pengelolaan dan pengembangan potensi tersebut oleh pemerintah. Hubungan ini menunjukkan bahwa isi paragraf pertama digunakan untuk memperkuat dan mendukung penjelasan utama pada paragraf kedua, yaitu tentang perlunya pengelolaan yang tepat dan perencanaan strategis dalam memanfaatkan sumber daya kelautan. Dengan demikian, hubungan antara keduanya bersifat <strong>pendukung terhadap ide utama paragraf 2</strong>, sehingga jawaban yang benar adalah <strong>(D) Paragraf 1 mendukung ide utama paragraf 2</strong>.</p>",
-    "passageId": "Teks Bacaan: Potensi dan Pengelolaan Sumber Daya Kelautan Indonesia",
+    "explanation": "<p>Paragraf 1 memberikan landasan (mengapa penting), paragraf 2 membahas tindakan → paragraf 1 mendukung ide utama paragraf 2...</p>",
+    "passageId": "Teks Bacaan: Sumber Daya Kelautan Indonesia",
     "topic": "Struktur Teks",
-    "subtopic": "Hubungan Antarparagraf"
+    "subtopic": "Hubungan Paragraf"
   },
   {
     "no": 11,
@@ -192,10 +192,10 @@
       "<p>Deskripsi diletakkan di bagian akhir</p>"
     ],
     "correctAnswer": [2],
-    "explanation": "<p>Kelemahan utama paragraf kedua adalah adanya kalimat yang tidak mendukung fokus pembahasan atau disebut <strong>kalimat sumbang</strong>. Kalimat ketiga, yaitu yang membahas tentang kebutuhan akan sosok pemimpin yang memahami sektor kelautan, dianggap tidak relevan dengan konteks paragraf yang membicarakan tentang pengelolaan sumber daya dan tujuan artikel secara ilmiah. Kalimat ini memiliki gaya naratif yang tidak selaras dengan bagian lain yang bersifat analitis dan objektif. Oleh karena itu, kalimat tersebut dikategorikan sebagai kalimat sumbang karena tidak sejalan dengan ide pokok dan pendekatan ilmiah paragraf.</p>",
-    "passageId": "Teks Bacaan: Potensi dan Pengelolaan Sumber Daya Kelautan Indonesia",
+    "explanation": "<p>Kalimat tentang ‘kebutuhan pemimpin’ tidak relevan dengan fokus paragraf (pengelolaan sumber daya) → kalimat sumbang...</p>",
+    "passageId": "Teks Bacaan: Sumber Daya Kelautan Indonesia",
     "topic": "Evaluasi Teks",
-    "subtopic": "Kelemahan Paragraf"
+    "subtopic": "Kelemahan Teks"
   },
   {
     "no": 12,
@@ -210,7 +210,7 @@
       "<p>Semua makhluk hidup tidak bisa hidup tanpa air.</p>"
     ],
     "correctAnswer": [1],
-    "explanation": "<p>Pikiran utama paragraf pertama menegaskan bahwa air memiliki peran vital dalam menopang kehidupan di bumi. Kalimat pembuka secara eksplisit menyatakan bahwa <strong>air berperan penting dalam kelangsungan hidup makhluk hidup di bumi</strong>, yang kemudian dijabarkan oleh kalimat-kalimat penjelas berikutnya, seperti air sebagai penyusun tubuh dan sumber kehidupan. Oleh karena itu, pilihan yang paling tepat adalah <strong>B</strong>.</p>",
+    "explanation": "<p>Kalimat pembuka menyatakan peran air secara umum → gagasan utama: air penting untuk kelangsungan hidup...</p>",
     "passageId": "Teks Bacaan: Siklus Hidrologi",
     "topic": "Pemahaman Bacaan",
     "subtopic": "Gagasan Utama"
@@ -228,10 +228,10 @@
       "<p>Perputaran waktu yang terjadi secara terus-menerus.</p>"
     ],
     "correctAnswer": [3],
-    "explanation": "<p>Kata <em>siklus</em> mengandung makna <strong>rangkaian peristiwa yang terjadi berulang secara tetap dan teratur</strong>. Dalam konteks teks, istilah tersebut menggambarkan proses air yang terus berputar dari bumi ke atmosfer dan kembali lagi ke bumi melalui tahapan-tahapan tertentu yang berulang secara teratur. Karena itu, pilihan yang paling tepat adalah <strong>D</strong>.</p>",
+    "explanation": "<p>‘Siklus hidrologi’ menggambarkan proses berulang yang teratur → pilihan D paling tepat...</p>",
     "passageId": "Teks Bacaan: Siklus Hidrologi",
     "topic": "Kosakata",
-    "subtopic": "Makna Istilah"
+    "subtopic": "Makna Kata"
   },
   {
     "no": 14,
@@ -246,10 +246,10 @@
       "<p>Pembangunan perumahan baru menyebabkan permintaan semen meningkat pesat.</p>"
     ],
     "correctAnswer": [1],
-    "explanation": "<p>Kata <strong>melimpah</strong> berarti jumlahnya sangat banyak atau berlebihan hingga melebihi kapasitas yang seharusnya. Dalam konteks kalimat (18), kata tersebut menggambarkan kondisi ketika air tersedia dalam jumlah sangat banyak. Kalimat yang memiliki makna sepadan adalah <strong>B. Panen jeruk tahun ini meningkat hingga tiga kali lipat dari hasil biasanya</strong>, karena menunjukkan situasi hasil yang sangat banyak atau berlebih. Pilihan lain tidak menunjukkan makna 'berlebihan dalam jumlah', melainkan hanya menyatakan keadaan umum, kenikmatan, atau tindakan.</p>",
+    "explanation": "<p>‘Melimpah’ = jumlah sangat banyak → panen meningkat 3x lipat mencerminkan kelimpahan...</p>",
     "passageId": "Teks Bacaan: Siklus Hidrologi",
     "topic": "Kosakata",
-    "subtopic": "Sinonim Kontekstual"
+    "subtopic": "Makna Kata"
   },
   {
     "no": 15,
@@ -264,10 +264,10 @@
       "<p>Menyampaikan peristiwa-peristiwa penting yang berkaitan dengan fenomena hidrologi di bumi.</p>"
     ],
     "correctAnswer": [2],
-    "explanation": "<p>Teks tersebut berjenis eksplanasi karena isinya menjelaskan proses terjadinya suatu fenomena alam, yaitu <strong>siklus hidrologi</strong>. Penulis secara sistematis menguraikan tahapan-tahapan yang terjadi, dimulai dari penguapan (evaporasi), pembentukan awan (kondensasi), hingga turunnya hujan (presipitasi). Tujuan utamanya bukan sekadar memberi informasi umum, melainkan menjelaskan urutan proses secara ilmiah agar pembaca memahami bagaimana air mengalami perputaran di alam. Oleh karena itu, jawaban yang paling tepat adalah <strong>C</strong>.</p>",
+    "explanation": "<p>Teks berjenis eksplanasi yang menguraikan proses siklus hidrologi → tujuan utamanya adalah menjelaskan proses tersebut...</p>",
     "passageId": "Teks Bacaan: Siklus Hidrologi",
     "topic": "Pemahaman Bacaan",
-    "subtopic": "Tujuan Penulisan"
+    "subtopic": "Tujuan Penulis"
   },
   {
     "no": 16,
@@ -282,10 +282,10 @@
       "<p>Banjir dan kekeringan terjadi karena perubahan siklus air yang tidak teratur di alam.</p>"
     ],
     "correctAnswer": [3],
-    "explanation": "<p>Teks tersebut berfokus pada pentingnya air bagi makhluk hidup serta penjelasan tentang bagaimana siklus hidrologi menjaga keseimbangan air di bumi. Selain menjelaskan prosesnya (evaporasi, kondensasi, presipitasi), teks juga menekankan bahwa manusia harus menggunakan air dengan bijak agar keseimbangan tetap terjaga. Oleh karena itu, simpulan paling tepat adalah <strong>D</strong>, karena kalimat tersebut mencakup dua gagasan utama: peran penting air dalam kehidupan dan perlunya manusia mengenal serta mengelola air dengan bijaksana.</p>",
+    "explanation": "<p>Simpulan mencakup dua gagasan: pentingnya air + perlunya pengelolaan bijak...</p>",
     "passageId": "Teks Bacaan: Siklus Hidrologi",
     "topic": "Pemahaman Bacaan",
-    "subtopic": "Simpulan Utama"
+    "subtopic": "Simpulan"
   },
   {
     "no": 17,
@@ -300,10 +300,10 @@
       "<p>Paragraf kedua merupakan kelanjutan dari paragraf pertama.</p>"
     ],
     "correctAnswer": [0],
-    "explanation": "<p>Paragraf pertama berisi penjelasan umum tentang burung murai batu, mencakup nama ilmiah, habitat, serta sebaran wilayahnya. Paragraf kedua kemudian memberikan penjabaran lebih detail mengenai ciri-ciri fisik burung tersebut seperti warna bulu, bentuk ekor, dan perbedaan antara jantan dan betina. Dengan demikian, hubungan antara kedua paragraf tersebut adalah <strong>perincian</strong> atau penjelasan lebih mendetail dari isi paragraf pertama, sehingga jawaban yang benar adalah <strong>A</strong>.</p>",
+    "explanation": "<p>Paragraf 1: pengenalan umum → paragraf 2: ciri fisik rinci → hubungan: perincian...</p>",
     "passageId": "Teks Bacaan: Burung Murai Batu",
     "topic": "Struktur Teks",
-    "subtopic": "Hubungan Antarparagraf"
+    "subtopic": "Hubungan Paragraf"
   },
   {
     "no": 18,
@@ -318,7 +318,7 @@
       "<p>Kegiatan yang mengharuskan adanya persaingan.</p>"
     ],
     "correctAnswer": [2],
-    "explanation": "<p>Kata <em>kompetisi</em> dalam konteks kalimat (15) menunjukkan kegiatan lomba atau pertandingan burung murai batu yang diikuti oleh berbagai peserta dengan tujuan memperoleh gelar juara. Berdasarkan KBBI, <em>kompetisi</em> bermakna 'pertandingan untuk memperebutkan gelar juara' atau 'persaingan dalam bidang tertentu untuk menjadi yang terbaik'. Dalam teks, kata tersebut digunakan dalam konteks lomba kicau burung, yang bertujuan menentukan burung terbaik berdasarkan kualitas suara. Oleh karena itu, makna yang paling tepat adalah <strong>pertandingan untuk memperebutkan gelar juara</strong>.</p>",
+    "explanation": "<p>Konteks: lomba kicau burung → ‘kompetisi’ = pertandingan memperebutkan gelar juara...</p>",
     "passageId": "Teks Bacaan: Burung Murai Batu",
     "topic": "Kosakata",
     "subtopic": "Makna Kata"
@@ -336,10 +336,10 @@
       "<p>(14) dan (15)</p>"
     ],
     "correctAnswer": [1],
-    "explanation": "<p>Fakta merupakan pernyataan yang dapat dibuktikan kebenarannya melalui pengamatan atau data yang nyata. Pada paragraf keempat, kalimat (12) dan (13) menjelaskan tindakan konkret yang dilakukan dalam merawat burung murai batu, yakni pemberian pakan secara teratur dan memandikan burung setiap hari agar bulunya tetap mengilap. Kedua kalimat tersebut menggambarkan kegiatan nyata yang bisa diamati langsung, bukan opini atau pendapat. Sementara kalimat (14) dan (15) bersifat opini karena menyampaikan hasil atau pendapat yang bisa berbeda tergantung situasi. Oleh sebab itu, kalimat yang berisi fakta adalah <strong>(12) dan (13)</strong>.</p>",
+    "explanation": "<p>Kalimat (12) dan (13) menyatakan tindakan nyata (memberi makan, memandikan) → bersifat faktual...</p>",
     "passageId": "Teks Bacaan: Burung Murai Batu",
     "topic": "Evaluasi Teks",
-    "subtopic": "Fakta vs Opini"
+    "subtopic": "Fakta dan Opini"
   },
   {
     "no": 20,
@@ -354,9 +354,41 @@
       "<p>(19) dan (20)</p>"
     ],
     "correctAnswer": [0],
-    "explanation": "<p>Kalimat opini adalah kalimat yang mengandung pendapat atau pemikiran penulis yang belum tentu benar karena tidak dapat dibuktikan secara langsung. Pada paragraf kelima, kalimat (16) dan (17) termasuk opini karena menggunakan ungkapan seperti <em>sepertinya</em> dan <em>dirasa cukup besar</em> yang menunjukkan ketidakpastian atau subjektivitas penulis. Sementara kalimat (18), (19), dan (20) berisi data konkret berupa harga dan fakta ekonomi, sehingga bersifat faktual. Jadi, kalimat opini terdapat pada nomor <strong>(16) dan (17)</strong>.</p>",
+    "explanation": "<p>Kalimat (16) dan (17) menggunakan kata seperti ‘sepertinya’ dan ‘dirasa’ → menunjukkan opini...</p>",
     "passageId": "Teks Bacaan: Burung Murai Batu",
     "topic": "Evaluasi Teks",
-    "subtopic": "Fakta vs Opini"
+    "subtopic": "Fakta dan Opini"
+  }
+]
+[
+  {
+    "passageId": "Teks Bacaan: Program Merdeka Belajar",
+    "passageText": "<p>Sejak pertama kali diluncurkan, program Merdeka Belajar berhasil mempercepat peningkatan kualitas pendidikan di Indonesia. Melalui program ini, Kementerian Pendidikan, Kebudayaan, Riset, dan Teknologi berupaya memperkuat berbagai aspek pendidikan mulai dari kurikulum, pemberdayaan siswa, peningkatan kompetensi tenaga pengajar, hingga pemberian bantuan pendidikan bagi sekolah dan peserta didik. Pendekatan Merdeka Belajar memberikan kebebasan kepada peserta didik untuk memilih mata pelajaran yang sesuai dengan minat dan bakat mereka, sehingga potensi setiap individu dapat berkembang secara optimal.</p><p>Program ini dirancang agar peserta didik mampu mengasah kemampuan sesuai dengan bidang yang mereka sukai, serta dapat memberikan kontribusi terbaik bagi masyarakat. Selain itu, Merdeka Belajar juga merupakan strategi pembelajaran yang mengajak semua pihak terkait, seperti guru, keluarga, lembaga pendidikan, dan dunia industri untuk berperan aktif dalam pengembangan sistem pendidikan yang adaptif terhadap perubahan zaman.</p><p>Terdapat tiga indikator utama keberhasilan program ini, yaitu partisipasi aktif peserta didik dalam kegiatan pembelajaran, pemerataan akses pendidikan di seluruh wilayah Indonesia, serta terciptanya proses belajar yang efektif tanpa kesenjangan antar siswa. Dengan demikian, Merdeka Belajar menjadi tonggak penting dalam membentuk generasi Indonesia yang mandiri, kreatif, dan berdaya saing tinggi di masa depan.</p>",
+    "usage": [1, 2]
+  },
+  {
+    "passageId": "Teks Bacaan: Asal Usul Nasi Goreng",
+    "passageText": "<p>Berdasarkan catatan sejarah, nasi goreng bermula dari kebiasaan masyarakat Tionghoa yang tidak menyukai makanan dingin. Karena mereka tidak diperbolehkan membuang makanan yang tersisa, nasi yang sudah dingin digoreng kembali dengan tambahan bumbu dan bahan, hingga dikenal sebagai nasi goreng. Masakan ini kemudian menyebar ke wilayah Asia Tenggara dibawa oleh para perantau Tionghoa. Di setiap wilayah, para perantau tersebut membuat nasi goreng dengan cita rasa khas dan teknik memasak yang berbeda.</p><p>Seiring berjalannya waktu, nasi goreng semakin dikenal luas sebagai makanan khas Indonesia. Perbedaan nasi goreng Indonesia dengan versi aslinya di Tiongkok terletak pada penggunaan kecap manis, yang memberikan warna cokelat khas dan cita rasa gurih. Selain itu, nasi goreng Indonesia cenderung menggunakan berbagai rempah seperti bawang putih, cabai, dan terasi yang memperkaya aroma serta rasa. Racikan bumbu yang beragam tersebut membuat nasi goreng menjadi simbol kuliner yang mewakili kekayaan cita rasa Nusantara.</p>",
+    "usage": [3, 4, 5]
+  },
+  {
+    "passageId": "Teks Bacaan: Aqua Jogging",
+    "passageText": "<p>Aqua jogging merupakan perpaduan antara aktivitas berlari dan berenang yang secara umum dapat meningkatkan kebugaran fisik seseorang. Latihan ini dikenal memiliki berbagai manfaat bagi kesehatan serta daya tahan tubuh. Aqua jogging dapat menurunkan risiko ketegangan otot kaki, terutama pada bagian tubuh bawah yang lebih rentan terhadap cedera. Ketika berlatih, kaki tidak menanggung beban penuh sehingga tubuh terasa lebih ringan untuk bergerak. Berdasarkan sebuah penelitian, disebutkan bahwa olahraga dalam air ini dapat membantu mengurangi kemungkinan cedera bagi orang yang memiliki berat badan berlebih. Selama melakukan latihan aqua jogging secara teratur setiap minggu, penderita obesitas juga mengalami penurunan lingkar pinggang dan penurunan kadar lemak tubuh. Penelitian lain menjelaskan bahwa program intensif aqua jogging selama 12 minggu dapat meningkatkan kekuatan otot bagian atas tubuh. Selain itu, tekanan darah sistolik atau kontraksi otot jantung juga dapat menurun setelah mengikuti latihan ini.</p>",
+    "usage": [6, 7, 8]
+  },
+  {
+    "passageId": "Teks Bacaan: Sumber Daya Kelautan Indonesia",
+    "passageText": "<p>Sumber daya kelautan Indonesia merupakan salah satu aset pembangunan yang sangat penting dan memiliki peluang besar untuk menjadi penggerak pertumbuhan ekonomi nasional. Setidaknya terdapat dua alasan utama yang mendasari hal ini. Pertama, secara geografis Indonesia adalah negara kepulauan terbesar di dunia dengan 17.508 pulau dan sekitar 81.000 km garis pantai, di mana 70% wilayahnya berupa lautan. Kedua, di wilayah pesisir dan lautan yang luas ini tersimpan potensi sumber daya alam dan jasa lingkungan yang belum dimanfaatkan secara optimal.</p><p>Karena potensi tersebut, sumber daya kelautan harus dikelola secara bijak oleh pemerintah. Departemen Kelautan dan Perikanan memiliki tanggung jawab untuk mendorong pemanfaatan sumber daya laut dan perikanan secara berkelanjutan. Upaya ini memerlukan kepemimpinan yang memahami permasalahan sektor kelautan dan mampu mengoordinasikan berbagai kegiatan ekonomi yang berkaitan dengannya. Artikel ini bertujuan untuk, pertama, mengidentifikasi sektor-sektor prioritas di bidang kelautan dan perikanan yang berpotensi besar dalam pertumbuhan ekonomi. Kedua, mencari peluang investasi dari pelaku ekonomi potensial di sektor tersebut. Ketiga, menyusun kebijakan insentif guna mendorong investasi dan pengembangan ekonomi di bidang kelautan.</p>",
+    "usage": [9, 10, 11]
+  },
+  {
+    "passageId": "Teks Bacaan: Siklus Hidrologi",
+    "passageText": "<p>Air berperan penting dalam kelangsungan hidup makhluk hidup di bumi. Sebagian besar penyusun tubuh makhluk hidup adalah air. Melalui air pulalah, maka suatu kehidupan baru akan dimulai. Dengan kata lain, manusia dan makhluk hidup tak bisa hidup tanpa air.</p><p>Setiap hari, aktivitas makhluk hidup tak lepas dari penggunaan air. Artinya, penting untuk mempertahankan kualitas dan kuantitas air. Dalam hal ini, kita mengenal suatu proses yang disebut siklus hidrologi.</p><p>Siklus hidrologi berarti sirkulasi air yang bergerak terus-menerus dari atmosfer ke bumi dan kembali ke atmosfer, melalui proses evaporasi, kondensasi, dan presipitasi.</p><p>Walaupun siklus air berlangsung terus-menerus, jumlah air di bumi tidak selalu stabil. Ketika curah hujan berlebihan, dapat terjadi banjir; sedangkan jika curah hujan rendah, maka terjadi kekeringan. Oleh karena itu, manusia harus menggunakan air secara bijak agar tidak kesulitan saat kekeringan datang.</p>",
+    "usage": [12, 13, 14, 15, 16]
+  },
+  {
+    "passageId": "Teks Bacaan: Burung Murai Batu",
+    "passageText": "<p>Burung murai batu memiliki nama ilmiah <em>Copsychus malabaricus</em>. Burung ini tergolong dalam genus <em>Copsychus</em>. Di Indonesia, burung murai batu tersebar di berbagai daerah seperti Sumatra, Kalimantan, dan Jawa. Setiap wilayah memiliki burung murai dengan bentuk tubuh, suara, serta karakteristik yang sedikit berbeda. Burung ini terkenal karena kicauannya yang merdu dan sering dijadikan burung lomba.</p><p>Warna bulu burung murai batu umumnya hitam berkilau, tetapi beberapa jenis memiliki kombinasi warna kebiruan atau kecokelatan pada bagian tertentu. Ekor burung ini biasanya berwarna putih di tepiannya dan membentuk huruf W saat mengembang. Burung murai jantan memiliki warna bulu yang lebih cerah dan mengilap dibandingkan betina. Selain itu, suara kicauan jantan lebih panjang dan merdu.</p><p>Merawat burung murai batu tidaklah mudah. Burung ini perlu diberi makan secara teratur setiap hari, biasanya dua kali, serta diberikan vitamin dan suplemen tambahan agar bulunya tetap berkilau. Burung ini juga perlu dimandikan setiap pagi agar tetap sehat dan aktif berkicau.</p><p>Saat ini, burung murai batu menjadi salah satu jenis burung paling populer di Indonesia. Tidak hanya sebagai hobi, pemeliharaan burung murai juga dapat memberikan keuntungan ekonomi. Harga seekor burung murai batu dapat mencapai jutaan rupiah tergantung pada kualitas kicauan dan panjang ekornya.</p>",
+    "usage": [17, 18, 19, 20]
   }
 ]

@@ -27,6 +27,10 @@ import {
   Upload,
   FileJson,
   AlertCircle,
+  Calendar,
+  Eye,
+  EyeOff,
+  Clock,
 } from 'lucide-react';
 import axios from 'axios';
 import SuperEditor from '../../../../../components/supereditor/SuperEditor';
@@ -41,6 +45,13 @@ import {
 import { LearningModal, ModalButton } from '../../../../../components/modal/ModalTemplate';
 import { ButtonGradient } from '../../../../../components/button/ButtonTemplate';
 import CreateBulkModal from './CreateBulkModal';
+import {
+  processBulkImport,
+  validateImportJSON,
+  ImportResult,
+  ImportedQuestion
+} from '../../../../../utils/bulkQuestionImport';
+import { ImportResultModal } from '../../../../../components/modal/ImportResultModal';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
@@ -126,6 +137,7 @@ const initialQuestionData: QuestionData = {
   explanationContent: '',
 };
 
+// Custom Accordion Component
 const CustomAccordionItem: React.FC<{
   eventKey: string;
   activeKey: string | null;
@@ -176,6 +188,7 @@ const CustomAccordionItem: React.FC<{
   );
 };
 
+// Helper functions
 const parseEquationTags = (content: string): string => {
   if (!content) return content;
   
@@ -202,20 +215,14 @@ const parseTableMarkup = (content: string): string => {
   return content;
 };
 
-// ✅ FIXED: Fungsi untuk normalize paragraf spacing
 const normalizeParagraphSpacing = (content: string): string => {
   if (!content) return content;
   
-  // Remove excessive newlines between tags (like \n\n between </p> and <p>)
   let normalized = content.replace(/\n\n+/g, '\n');
-  
-  // Add margin-bottom to <p> tags for better spacing
   normalized = normalized.replace(/<p>/g, '<p style="margin-bottom: 1em;">');
-  
-  // Also handle <p> tags that already have style attribute
   normalized = normalized.replace(/<p\s+style="([^"]*)"/g, (match, existingStyle) => {
     if (existingStyle.includes('margin-bottom')) {
-      return match; // Keep existing margin-bottom
+      return match;
     }
     return `<p style="${existingStyle}; margin-bottom: 1em;"`;
   });
@@ -228,11 +235,12 @@ const processContent = (content: string): string => {
   
   let processed = parseEquationTags(content);
   processed = parseTableMarkup(processed);
-  processed = normalizeParagraphSpacing(processed); // ✅ ADD: Normalize spacing
+  processed = normalizeParagraphSpacing(processed);
   
   return processed;
 };
 
+// Bulk Question Item Component
 const BulkQuestionItem: React.FC<{
   index: number;
   data: QuestionData;
@@ -276,6 +284,7 @@ const BulkQuestionItem: React.FC<{
   const lastTopikSearch = useRef<string>('');
   const lastSubTopikSearch = useRef<string>('');
 
+  // Fetch Bidang on mount
   useEffect(() => {
     if (hasInitiallyFetchedBidang.current) return;
     hasInitiallyFetchedBidang.current = true;
@@ -327,13 +336,8 @@ const BulkQuestionItem: React.FC<{
   }, []);
 
   const handleBidangSearch = (searchTerm: string) => {
-    if (searchTerm === lastBidangSearch.current) {
-      return;
-    }
-    
-    if (!searchTerm.trim() && data.bidangOptions.length > 0) {
-      return;
-    }
+    if (searchTerm === lastBidangSearch.current) return;
+    if (!searchTerm.trim() && data.bidangOptions.length > 0) return;
     
     lastBidangSearch.current = searchTerm;
     
@@ -375,6 +379,7 @@ const BulkQuestionItem: React.FC<{
     }, 300);
   };
 
+  // Fetch Topik when Bidang changes
   useEffect(() => {
     if (!data.bidang) {
       hasInitiallyFetchedTopik.current = false;
@@ -383,9 +388,7 @@ const BulkQuestionItem: React.FC<{
       return;
     }
 
-    if (isFetchingTopik.current) {
-      return;
-    }
+    if (isFetchingTopik.current) return;
 
     const controller = new AbortController();
 
@@ -436,14 +439,8 @@ const BulkQuestionItem: React.FC<{
 
   const handleTopikSearch = (searchTerm: string) => {
     if (!data.bidang) return;
-    
-    if (searchTerm === lastTopikSearch.current) {
-      return;
-    }
-    
-    if (!searchTerm.trim() && data.topikOptions.length > 0) {
-      return;
-    }
+    if (searchTerm === lastTopikSearch.current) return;
+    if (!searchTerm.trim() && data.topikOptions.length > 0) return;
     
     lastTopikSearch.current = searchTerm;
     
@@ -485,6 +482,7 @@ const BulkQuestionItem: React.FC<{
     }, 300);
   };
 
+  // Fetch SubTopik when Topik changes
   useEffect(() => {
     if (!data.topik) {
       hasInitiallyFetchedSubTopik.current = false;
@@ -497,13 +495,8 @@ const BulkQuestionItem: React.FC<{
     const topikChanged = lastTopikValue.current !== data.topik.value;
     lastTopikValue.current = data.topik.value;
 
-    if (!topikChanged && hasInitiallyFetchedSubTopik.current) {
-      return;
-    }
-
-    if (isFetchingSubTopik.current) {
-      return;
-    }
+    if (!topikChanged && hasInitiallyFetchedSubTopik.current) return;
+    if (isFetchingSubTopik.current) return;
 
     const controller = new AbortController();
 
@@ -566,14 +559,8 @@ const BulkQuestionItem: React.FC<{
 
   const handleSubTopikSearch = (searchTerm: string) => {
     if (!data.topik) return;
-    
-    if (searchTerm === lastSubTopikSearch.current) {
-      return;
-    }
-    
-    if (!searchTerm.trim() && data.subTopikOptions.length > 0) {
-      return;
-    }
+    if (searchTerm === lastSubTopikSearch.current) return;
+    if (!searchTerm.trim() && data.subTopikOptions.length > 0) return;
     
     lastSubTopikSearch.current = searchTerm;
     
@@ -624,6 +611,7 @@ const BulkQuestionItem: React.FC<{
     }, 300);
   };
 
+  // Fetch Passages when hasPassage changes
   useEffect(() => {
     if (!data.hasPassage) {
       hasInitiallyFetchedPassage.current = false;
@@ -631,9 +619,7 @@ const BulkQuestionItem: React.FC<{
       return;
     }
 
-    if (isFetchingPassage.current) {
-      return;
-    }
+    if (isFetchingPassage.current) return;
 
     const controller = new AbortController();
 
@@ -1021,7 +1007,6 @@ const BulkQuestionItem: React.FC<{
               onInputChange={handleTopikSearch}
               isLoading={data.isLoadingTopik}
               required
-              disabled={!data.bidang}
             />
           </div>
 
@@ -1039,7 +1024,6 @@ const BulkQuestionItem: React.FC<{
               onInputChange={handleSubTopikSearch}
               isLoading={data.isLoadingSubTopik}
               required
-              disabled={!data.topik}
             />
           </div>
 
@@ -1469,6 +1453,7 @@ const BulkQuestionItem: React.FC<{
         </div>
       </CustomAccordionItem>
 
+      {/* Passage Modal */}
       <LearningModal
         show={data.showPassageModal}
         onHide={() => {
@@ -1567,17 +1552,14 @@ const BulkQuestionItem: React.FC<{
                   Format JSON untuk Passage
                 </h4>
                 <p className="tw-text-blue-700 tw-text-sm tw-mb-3">
-                  Paste JSON dengan format berikut. Gunakan <code className="tw-bg-blue-100 tw-px-1 tw-rounded">\n</code> untuk baris baru akan otomatis dikonversi menjadi paragraf terpisah:
+                  Paste JSON dengan format berikut:
                 </p>
                 <pre className="tw-bg-white tw-border tw-border-blue-300 tw-rounded tw-p-3 tw-text-xs tw-overflow-x-auto">
 {`{
   "passageTitle": "Judul Bacaan",
-  "passageText": "<p>Paragraf 1 dengan <equation>\\\\frac{1}{2}</equation></p>\\n\\n<p>Paragraf 2 dengan spacing yang baik</p>"
+  "passageText": "<p>Paragraf 1 dengan <equation>\\\\frac{1}{2}</equation></p>\\n\\n<p>Paragraf 2</p>"
 }`}
                 </pre>
-                <p className="tw-text-blue-600 tw-text-xs tw-mt-2">
-                  <strong>💡 Tips:</strong> Tag <code className="tw-bg-blue-100 tw-px-1 tw-rounded">&lt;p&gt;</code> akan otomatis mendapat margin-bottom 1em untuk spacing yang lebih baik antar paragraf.
-                </p>
               </div>
 
               <div className="tw-w-full">
@@ -1616,23 +1598,12 @@ const BulkQuestionItem: React.FC<{
                   className="tw-w-full"
                 />
               </div>
-
-              <div className="tw-bg-yellow-50 tw-border-2 tw-border-yellow-200 tw-rounded-lg tw-p-4">
-                <h4 className="tw-text-yellow-800 tw-font-semibold tw-mb-2">
-                  💡 Cara Kerja Import
-                </h4>
-                <ul className="tw-text-yellow-700 tw-text-sm tw-space-y-1 tw-list-disc tw-list-inside">
-                  <li>Data JSON akan di-parse dan diisi ke form input manual</li>
-                  <li>Equation dalam tag <code className="tw-bg-yellow-100 tw-px-1 tw-rounded">&lt;equation&gt;</code> akan di-render dengan KaTeX</li>
-                  <li>Tag <code className="tw-bg-yellow-100 tw-px-1 tw-rounded">&lt;p&gt;</code> akan mendapat margin-bottom otomatis untuk spacing paragraf</li>
-                  <li>Setelah import, review data lalu klik "Simpan Bacaan"</li>
-                </ul>
-              </div>
             </>
           )}
         </div>
       </LearningModal>
 
+      {/* Individual Import Modal */}
       <LearningModal
         show={showIndividualImport}
         onHide={() => {
@@ -1671,7 +1642,7 @@ const BulkQuestionItem: React.FC<{
   "level": 2,
   "questionType": "single-choice",
   "questionText": "Soal...",
-  "options": ["A", "B", "C"],
+  "options": ["A", "B"],
   "correctAnswer": [0]
 }`}
                 </pre>
@@ -1687,32 +1658,12 @@ const BulkQuestionItem: React.FC<{
                 </p>
                 <pre className="tw-bg-gray-100 tw-border tw-border-gray-300 tw-rounded tw-p-2 tw-text-xs tw-overflow-x-auto">
 {`[
-  {
-    "level": 2,
-    "questionText": "Soal 1...",
-    ...
-  },
-  {
-    "level": 3,
-    "questionText": "Soal 2...",
-    ...
-  }
+  { "level": 2, ... },
+  { "level": 3, ... }
 ]`}
                 </pre>
               </div>
             </div>
-          </div>
-
-          <div className="tw-bg-blue-50 tw-border-2 tw-border-blue-200 tw-rounded-lg tw-p-4">
-            <h4 className="tw-text-blue-800 tw-font-semibold tw-mb-2">
-              💡 Equation & Table Support
-            </h4>
-            <p className="tw-text-blue-700 tw-text-sm">
-              Gunakan tag <code className="tw-bg-blue-100 tw-px-1 tw-rounded">&lt;equation&gt;&lt;/equation&gt;</code> untuk equation:
-            </p>
-            <pre className="tw-bg-white tw-border tw-border-blue-300 tw-rounded tw-p-2 tw-text-xs tw-mt-2 tw-overflow-x-auto">
-{`"questionText": "Hitung <equation>\\\\frac{1}{2}</equation>"`}
-            </pre>
           </div>
 
           <div className="tw-w-full">
@@ -1735,31 +1686,14 @@ const BulkQuestionItem: React.FC<{
               </p>
             </div>
           )}
-
-          <div className="tw-bg-yellow-50 tw-border-2 tw-border-yellow-200 tw-rounded-lg tw-p-4">
-            <h4 className="tw-text-yellow-800 tw-font-semibold tw-mb-2">
-              ⚠️ Catatan Penting
-            </h4>
-            <ul className="tw-text-yellow-700 tw-text-sm tw-space-y-1 tw-list-disc tw-list-inside">
-              <li><strong>Replace mode:</strong> Bidang, Topik, Subtopik yang sudah dipilih akan tetap dipertahankan</li>
-              <li><strong>Insert mode:</strong> Soal baru akan ditambahkan dengan Bidang, Topik, Subtopik kosong</li>
-              <li>Equation akan otomatis dirender dengan KaTeX</li>
-              <li>Tag <code className="tw-bg-yellow-100 tw-px-1 tw-rounded">&lt;p&gt;</code> mendapat margin-bottom otomatis</li>
-            </ul>
-          </div>
         </div>
       </LearningModal>
     </>
   );
 };
 
-// Sisanya sama dengan kode sebelumnya (CreateQuestionBulk component)
-// Karena sudah terlalu panjang, saya hanya menampilkan bagian yang berubah
-
+// Main Component
 const CreateQuestionBulk: React.FC = () => {
-  // ... (rest of the code remains the same)
-  // Silakan copy paste bagian CreateQuestionBulk dari kode sebelumnya
-  
   const router = useRouter();
   const [questions, setQuestions] = useState<QuestionData[]>([{ ...initialQuestionData }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1775,6 +1709,11 @@ const CreateQuestionBulk: React.FC = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [jsonInput, setJsonInput] = useState('');
   const [importError, setImportError] = useState('');
+  
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [showImportResultModal, setShowImportResultModal] = useState(false);
+  const [pendingImportData, setPendingImportData] = useState<ImportedQuestion[] | null>(null);
+  const [isProcessingImport, setIsProcessingImport] = useState(false);
 
   const addQuestion = () => {
     setQuestions([...questions, { ...initialQuestionData }]);
@@ -1809,48 +1748,78 @@ const CreateQuestionBulk: React.FC = () => {
     setShowSuccessModal(false);
   };
 
-  const handleImportJSON = () => {
+  const handleImportJSON = async () => {
     try {
       setImportError('');
+      setIsProcessingImport(true);
       
       const parsedData = JSON.parse(jsonInput);
       
-      if (!Array.isArray(parsedData)) {
-        throw new Error('JSON harus berupa array dari objek soal');
+      const validation = validateImportJSON(parsedData);
+      if (!validation.valid) {
+        setImportError(validation.error || 'Format JSON tidak valid');
+        setIsProcessingImport(false);
+        return;
       }
       
-      const importedQuestions: QuestionData[] = parsedData.map((item: any) => {
-        const processedQuestionText = processContent(item.questionText || item.question || '');
-        const processedOptions = (item.options || ['']).map((opt: string) => processContent(opt));
-        const processedExplanation = processContent(item.explanation || item.explanationContent || '');
-        
-        return {
-          ...initialQuestionData,
-          bidang: null,
-          topik: null,
-          subTopik: null,
-          level: item.level || null,
-          hasPassage: false,
-          questionType: item.questionType || item.type || 'single-choice',
-          questionText: processedQuestionText,
-          options: processedOptions,
-          correctAnswer: item.correctAnswer || item.correct || [],
-          statements: item.statements || [''],
-          answer: item.answer || '',
-          hasExplanation: !!(item.explanation || item.explanationContent),
-          explanationContent: processedExplanation,
-        };
-      });
+      setPendingImportData(parsedData);
       
-      setQuestions(importedQuestions);
-      setOpenIndex(0);
+      const result = await processBulkImport(parsedData);
+      setImportResult(result);
+      
       setShowImportModal(false);
       setJsonInput('');
+      setShowImportResultModal(true);
       
-      alert(`Berhasil mengimport ${importedQuestions.length} soal! Silakan lengkapi Bidang, Topik, dan Sub Topik untuk setiap soal.`);
     } catch (error: any) {
       setImportError(`Error: ${error.message || 'Format JSON tidak valid'}`);
+    } finally {
+      setIsProcessingImport(false);
     }
+  };
+
+  const handleProceedWithImport = () => {
+    if (!importResult) return;
+    
+    const completeQuestions = importResult.questions
+      .filter(q => q.isComplete)
+      .map(q => q.data);
+    
+    if (completeQuestions.length === 0) {
+      alert('Tidak ada soal yang lengkap untuk ditambahkan');
+      return;
+    }
+    
+    setQuestions(completeQuestions);
+    setOpenIndex(0);
+    setShowImportResultModal(false);
+    setImportResult(null);
+    setPendingImportData(null);
+    
+    alert(`Berhasil menambahkan ${completeQuestions.length} soal lengkap!`);
+  };
+
+  const handleRetryImport = async () => {
+    if (!pendingImportData) return;
+    
+    setIsProcessingImport(true);
+    setShowImportResultModal(false);
+    
+    try {
+      const result = await processBulkImport(pendingImportData);
+      setImportResult(result);
+      setShowImportResultModal(true);
+    } catch (error: any) {
+      alert(`Error saat retry: ${error.message}`);
+    } finally {
+      setIsProcessingImport(false);
+    }
+  };
+
+  const handleCancelImport = () => {
+    setShowImportResultModal(false);
+    setImportResult(null);
+    setPendingImportData(null);
   };
 
   const validateQuestion = (q: QuestionData): boolean => {
@@ -2069,11 +2038,12 @@ const CreateQuestionBulk: React.FC = () => {
         setShowImportModal(false);
         setJsonInput('');
         setImportError('');
+        setPendingImportData(null);
       },
     },
     {
       action: 'save',
-      text: 'Import Soal',
+      text: isProcessingImport ? 'Memproses...' : 'Import Soal',
       onClick: handleImportJSON,
     },
   ];
@@ -2322,12 +2292,14 @@ const CreateQuestionBulk: React.FC = () => {
         </div>
       </div>
       
+      {/* Import JSON Modal */}
       <LearningModal
         show={showImportModal}
         onHide={() => {
           setShowImportModal(false);
           setJsonInput('');
           setImportError('');
+          setPendingImportData(null);
         }}
         title="Import Soal dari JSON"
         subtitle="Paste JSON data untuk mengimport soal secara bulk"
@@ -2346,27 +2318,28 @@ const CreateQuestionBulk: React.FC = () => {
               Format JSON
             </h4>
             <p className="tw-text-blue-700 tw-text-sm tw-mb-3">
-              Paste JSON array dengan format berikut. Bidang, Topik, dan Sub Topik akan dikosongkan dan harus diisi manual:
+              Paste JSON array dengan format berikut:
             </p>
             <pre className="tw-bg-white tw-border tw-border-blue-300 tw-rounded tw-p-3 tw-text-xs tw-overflow-x-auto">
 {`[
   {
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Aritmetika",
+    "topic_code": "AR",
+    "subtopic": "Operasi Dasar",
+    "subtopic_code": "OD",
+    "subtopic_id": 195,
     "level": 2,
+    "passageTitle": "Teks Bacaan: ...",
     "questionType": "single-choice",
-    "questionText": "Hitung <equation>\\\\frac{1}{2} + \\\\frac{1}{3}</equation>",
-    "options": [
-      "<equation>\\\\frac{5}{6}</equation>",
-      "<equation>\\\\frac{2}{5}</equation>",
-      "<equation>\\\\frac{1}{6}</equation>"
-    ],
+    "questionText": "<p>Soal...</p>",
+    "options": ["<p>A</p>", "<p>B</p>"],
     "correctAnswer": [0],
-    "explanation": "Jawaban adalah <equation>\\\\frac{5}{6}</equation>"
+    "explanation": "<p>Pembahasan...</p>"
   }
 ]`}
             </pre>
-            <p className="tw-text-blue-600 tw-text-xs tw-mt-2">
-              <strong>Tips:</strong> Gunakan tag <code className="tw-bg-blue-100 tw-px-1 tw-rounded">&lt;equation&gt;&lt;/equation&gt;</code> untuk equation dan format HTML untuk table.
-            </p>
           </div>
 
           <div className="tw-w-full">
@@ -2394,15 +2367,25 @@ const CreateQuestionBulk: React.FC = () => {
               ⚠️ Perhatian
             </h4>
             <ul className="tw-text-yellow-700 tw-text-sm tw-space-y-1 tw-list-disc tw-list-inside">
-              <li>Bidang, Topik, dan Sub Topik akan dikosongkan dan <strong>harus diisi manual</strong></li>
-              <li>Bacaan (passage) tidak akan diimport - silakan atur manual jika diperlukan</li>
-              <li>Pastikan format JSON valid sebelum import</li>
+              <li>System akan mencari Bidang, Topik, Subtopik berdasarkan code/name</li>
+              <li>Bacaan akan dicari berdasarkan passageTitle</li>
+              <li>Jika ada yang tidak ditemukan, akan muncul di laporan hasil</li>
               <li>Equation akan otomatis dirender dengan KaTeX</li>
             </ul>
           </div>
         </div>
       </LearningModal>
 
+      {/* Import Result Modal */}
+      <ImportResultModal
+        show={showImportResultModal}
+        result={importResult}
+        onClose={handleCancelImport}
+        onProceed={handleProceedWithImport}
+        onRetry={handleRetryImport}
+      />
+
+      {/* Error Modal */}
       <LearningModal
         show={showErrorModal}
         onHide={() => {
@@ -2411,7 +2394,7 @@ const CreateQuestionBulk: React.FC = () => {
           setErrorDetails([]);
         }}
         title="Gagal Membuat Soal"
-        subtitle="Terjadi kesalahan saat membuat soal. Mohon perbaiki masalah berikut:"
+        subtitle="Terjadi kesalahan saat membuat soal"
         icon={<AlertCircle className="tw-w-5 tw-h-5 tw-text-red-500" />}
         size="lg"
         width="90vw"
@@ -2446,21 +2429,10 @@ const CreateQuestionBulk: React.FC = () => {
               </ul>
             </div>
           )}
-
-          <div className="tw-bg-yellow-50 tw-border-2 tw-border-yellow-200 tw-rounded-lg tw-p-4">
-            <h4 className="tw-text-yellow-800 tw-font-semibold tw-mb-2">
-              💡 Saran
-            </h4>
-            <ul className="tw-text-yellow-700 tw-text-sm tw-space-y-1 tw-list-disc tw-list-inside">
-              <li>Periksa kembali field yang belum terisi</li>
-              <li>Pastikan semua soal memiliki jawaban benar</li>
-              <li>Untuk tipe number dan text, pastikan jawaban diisi</li>
-              <li>Perbaiki soal yang bermasalah lalu coba submit kembali</li>
-            </ul>
-          </div>
         </div>
       </LearningModal>
 
+      {/* Success Modal */}
       <CreateBulkModal
         show={showSuccessModal}
         onHide={() => setShowSuccessModal(false)}
@@ -2470,6 +2442,24 @@ const CreateQuestionBulk: React.FC = () => {
         onExport={() => downloadCSV(successData)}
         onNavigate={() => router.push('/panel/exam/questions')}
       />
+
+      {/* Loading Overlay */}
+      {isProcessingImport && (
+        <div className="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-flex tw-items-center tw-justify-center tw-z-[10000]">
+          <div className="tw-bg-white tw-rounded-xl tw-p-8 tw-shadow-2xl tw-max-w-md tw-w-full tw-mx-4">
+            <div className="tw-flex tw-flex-col tw-items-center tw-gap-4">
+              <div className="tw-w-16 tw-h-16 tw-border-4 tw-border-purple-200 tw-border-t-purple-600 tw-rounded-full tw-animate-spin"></div>
+              <h3 className="tw-text-xl tw-font-bold tw-text-purple-800">
+                Memproses Import...
+              </h3>
+              <p className="tw-text-gray-600 tw-text-center">
+                Sedang mencari dan mencocokkan data dari database.<br />
+                Mohon tunggu sebentar.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </MainLayout>
   );
 };
