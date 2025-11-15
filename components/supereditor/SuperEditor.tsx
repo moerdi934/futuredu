@@ -47,6 +47,7 @@ const TableButton = dynamic(() => import('./Toolbars/Table/Table').then(mod => (
 const TableModal = dynamic(() => import('./Toolbars/Table/Table').then(mod => ({ default: mod.TableModal })), { ssr: false });
 
 const KeyConceptButton = dynamic(() => import('./Toolbars/Other/KeyConcept').then(mod => ({ default: mod.KeyConceptButton })), { ssr: false });
+const KeyConceptStyleModal = dynamic(() => import('./Toolbars/Other/KeyConcept').then(mod => ({ default: mod.KeyConceptStyleModal })), { ssr: false });
 
 const BulletListButton = dynamic(() => import('./Toolbars/List/List').then(mod => ({ default: mod.BulletListButton })), { ssr: false });
 const NumberedListButton = dynamic(() => import('./Toolbars/List/List').then(mod => ({ default: mod.NumberedListButton })), { ssr: false });
@@ -57,6 +58,10 @@ const HelpModal = dynamic(() => import('./Toolbars/Help/Help').then(mod => ({ de
 
 const PracticeButton = dynamic(() => import('./Toolbars/Practice/Practice').then(mod => ({ default: mod.PracticeButton })), { ssr: false });
 const PracticeModal = dynamic(() => import('./Toolbars/Practice/Practice').then(mod => ({ default: mod.PracticeModal })), { ssr: false });
+
+// Import Key Concept utilities
+import { insertKeyConceptWithStyle } from './Toolbars/Other/KeyConcept';
+import type { KeyConceptStyle } from './Toolbars/Other/KeyConcept';
 
 // Portal component for high z-index elements
 const Portal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -193,7 +198,6 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
     handleTableInsertion?: any;
     updateTableInEditor?: any;
     getTableStyles?: any;
-    insertKeyConceptBlock?: any;
     getKeyConceptStyles?: any;
     getListStyles?: any;
     insertPracticeQuestion?: any;
@@ -215,6 +219,7 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
   const [showCodeModal, setShowCodeModal] = useState<boolean>(false);
   const [showTableModal, setShowTableModal] = useState<boolean>(false);
   const [showPracticeModal, setShowPracticeModal] = useState<boolean>(false);
+  const [showKeyConceptModal, setShowKeyConceptModal] = useState<boolean>(false);
   const [currentTextColor, setCurrentTextColor] = useState<string>('#000000');
   const [currentBackgroundColor, setCurrentBackgroundColor] = useState<string>('#ffffff');
   const [editingEquation, setEditingEquation] = useState<any>(null);
@@ -285,7 +290,6 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
 
       // Load key concept helpers
       import('./Toolbars/Other/KeyConcept').then(module => {
-        helpersRef.current.insertKeyConceptBlock = module.insertKeyConceptBlock;
         helpersRef.current.getKeyConceptStyles = module.getKeyConceptStyles;
         setComponentsLoaded(prev => ({ ...prev, keyConcept: true }));
       }).catch(console.error);
@@ -382,8 +386,7 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
               const walker = document.createTreeWalker(
                 editorRef.current!,
                 NodeFilter.SHOW_TEXT,
-                null,
-                false
+                null
               );
               
               let currentOffset = 0;
@@ -780,20 +783,16 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
   }, [execCommand]);
 
   const handleKeyConceptShortcut = useCallback(() => {
-    if (componentsLoaded.keyConcept && helpersRef.current.insertKeyConceptBlock) {
-      try {
-        helpersRef.current.insertKeyConceptBlock({ editorRef, handleChange });
-      } catch (error) {
-        console.warn('Error inserting key concept:', error);
-      }
-    }
-  }, [handleChange, componentsLoaded.keyConcept]);
+    saveSelection();
+    setShowKeyConceptModal(true);
+  }, [saveSelection]);
 
   const handleEscapeKey = useCallback(() => {
     setShowColorPicker(false);
     setShowBackgroundColorPicker(false);
     setShowTableModal(false);
     setShowHelpModal(false);
+    setShowKeyConceptModal(false);
     setDropdownStates({
       fontSize: false,
       fontName: false,
@@ -1003,50 +1002,49 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
   }, [content, handleChange, componentsLoaded]);
 
   // Initialize editor content with preservation
-// Handle initial content AND external updates safely
-useEffect(() => {
-  if (!editorRef.current || typeof document === 'undefined') return;
+  useEffect(() => {
+    if (!editorRef.current || typeof document === 'undefined') return;
 
-  // Only set content if:
-  // 1. It's the first load (contentRef is empty), OR
-  // 2. Editor is NOT focused (user is not typing)
-  const isEditorFocused = document.activeElement === editorRef.current;
-  
-  if (
-    (contentRef.current === '' && initialValue !== '') ||
-    (!isEditorFocused && editorRef.current.innerHTML !== initialValue)
-  ) {
-    contentRef.current = initialValue;
-    editorRef.current.innerHTML = initialValue;
+    // Only set content if:
+    // 1. It's the first load (contentRef is empty), OR
+    // 2. Editor is NOT focused (user is not typing)
+    const isEditorFocused = document.activeElement === editorRef.current;
+    
+    if (
+      (contentRef.current === '' && initialValue !== '') ||
+      (!isEditorFocused && editorRef.current.innerHTML !== initialValue)
+    ) {
+      contentRef.current = initialValue;
+      editorRef.current.innerHTML = initialValue;
 
-    // Re-apply all handlers
-    const timer = setTimeout(() => {
-      if (componentsLoaded.code && helpersRef.current.refreshAllCodeBlockHighlighting) {
-        helpersRef.current.refreshAllCodeBlockHighlighting(editorRef);
-      }
-      if (componentsLoaded.table && helpersRef.current.setupTableHandlers) {
-        helpersRef.current.setupTableHandlers(editorRef);
-      }
-      if (componentsLoaded.practice && helpersRef.current.setupPracticeQuestionHandlers) {
-        helpersRef.current.setupPracticeQuestionHandlers(editorRef);
-      }
-      if (componentsLoaded.imageModal && helpersRef.current.setupImageResizeHandlers) {
-        helpersRef.current.setupImageResizeHandlers(editorRef, handleChange);
-      }
-      if (helpersRef.current.EquationUtils) {
-        helpersRef.current.EquationUtils.setupEquationHandlers(
-          editorRef,
-          setEditingEquation,
-          setIsEditingEquation,
-          setShowEquationModal,
-          handleChange
-        );
-      }
-    }, 50);
+      // Re-apply all handlers
+      const timer = setTimeout(() => {
+        if (componentsLoaded.code && helpersRef.current.refreshAllCodeBlockHighlighting) {
+          helpersRef.current.refreshAllCodeBlockHighlighting(editorRef);
+        }
+        if (componentsLoaded.table && helpersRef.current.setupTableHandlers) {
+          helpersRef.current.setupTableHandlers(editorRef);
+        }
+        if (componentsLoaded.practice && helpersRef.current.setupPracticeQuestionHandlers) {
+          helpersRef.current.setupPracticeQuestionHandlers(editorRef);
+        }
+        if (componentsLoaded.imageModal && helpersRef.current.setupImageResizeHandlers) {
+          helpersRef.current.setupImageResizeHandlers(editorRef, handleChange);
+        }
+        if (helpersRef.current.EquationUtils) {
+          helpersRef.current.EquationUtils.setupEquationHandlers(
+            editorRef,
+            setEditingEquation,
+            setIsEditingEquation,
+            setShowEquationModal,
+            handleChange
+          );
+        }
+      }, 50);
 
-    return () => clearTimeout(timer);
-  }
-}, [initialValue, componentsLoaded]);
+      return () => clearTimeout(timer);
+    }
+  }, [initialValue, componentsLoaded, handleChange]);
 
   // Event handlers
   const handleTextColor = useCallback((color: string) => {
@@ -1231,14 +1229,29 @@ useEffect(() => {
   }, [editingTable, savedSelection, handleChange, componentsLoaded.table]);
 
   const handleKeyConceptInsert = useCallback(() => {
-    if (componentsLoaded.keyConcept && helpersRef.current.insertKeyConceptBlock) {
+    saveSelection();
+    setShowKeyConceptModal(true);
+  }, [saveSelection]);
+
+  const handleKeyConceptStyleSelect = useCallback((style: KeyConceptStyle) => {
+    // Restore selection if saved
+    if (savedSelection) {
+      restoreSelectionRange(savedSelection);
+    }
+    
+    // Insert with selected style
+    if (componentsLoaded.keyConcept) {
       try {
-        helpersRef.current.insertKeyConceptBlock({ editorRef, handleChange });
+        insertKeyConceptWithStyle(editorRef, handleChange, style);
       } catch (error) {
         console.warn('Error inserting key concept:', error);
       }
     }
-  }, [handleChange, componentsLoaded.keyConcept]);
+    
+    // Close modal
+    setShowKeyConceptModal(false);
+    setSavedSelection(null);
+  }, [savedSelection, restoreSelectionRange, handleChange, componentsLoaded.keyConcept]);
 
   const handlePracticeInsert = useCallback((questionData: any) => {
     if (savedSelection) {
@@ -2092,6 +2105,18 @@ useEffect(() => {
           onInsert={handleTableSubmit}
           initialTable={editingTable ? editingTable.outerHTML : null}
           isEditing={!!editingTable}
+        />
+      )}
+      
+      {/* Key Concept Style Modal */}
+      {showKeyConceptModal && (
+        <KeyConceptStyleModal
+          isOpen={showKeyConceptModal}
+          onClose={() => {
+            setShowKeyConceptModal(false);
+            setSavedSelection(null);
+          }}
+          onSelect={handleKeyConceptStyleSelect}
         />
       )}
       

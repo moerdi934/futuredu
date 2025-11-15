@@ -3,9 +3,8 @@
 
 import React from 'react';
 import { Table } from 'react-bootstrap';
-import { List, Plus, Download, ArrowRight } from 'lucide-react';
+import { List, Plus, Download, ArrowRight, FileJson } from 'lucide-react';
 import { ReportSuiteModal, ModalButton } from '../../../../../components/modal/ModalTemplate';
-import NavigationBar from '@/ components/layout/NavigationBar';
 
 interface CreateBulkModalProps {
   show: boolean;
@@ -76,10 +75,6 @@ const CreateBulkModal: React.FC<CreateBulkModalProps> = ({
   ];
 
   return (
-    <>
-        <NavigationBar>
-
-    </NavigationBar>
     <ReportSuiteModal
       show={show}
       onHide={onHide}
@@ -97,6 +92,26 @@ const CreateBulkModal: React.FC<CreateBulkModalProps> = ({
         <p className="tw-text-emerald-700 tw-font-medium tw-flex tw-items-center tw-gap-2">
           <span className="tw-flex tw-w-2 tw-h-2 tw-bg-emerald-500 tw-rounded-full tw-animate-pulse"></span>
           Berhasil membuat <span className="tw-font-bold tw-text-emerald-800">{data.length} soal</span>
+        </p>
+      </div>
+      
+      {/* CSV Format Info */}
+      <div className="tw-bg-gradient-to-r tw-from-blue-50 tw-to-indigo-50 tw-border-2 tw-border-blue-200 tw-rounded-lg tw-p-4 tw-mb-5">
+        <h4 className="tw-text-blue-800 tw-font-semibold tw-mb-2 tw-flex tw-items-center tw-gap-2">
+          <FileJson className="tw-w-5 tw-h-5" />
+          Format Export CSV
+        </h4>
+        <p className="tw-text-blue-700 tw-text-sm tw-mb-3">
+          File CSV berisi format siap import ke <strong>Buat Ujian</strong>:
+        </p>
+        <pre className="tw-bg-white tw-border tw-border-blue-300 tw-rounded tw-p-3 tw-text-xs tw-overflow-x-auto">
+{`No,ID Soal,Kode Soal,Level,Tipe Soal
+1,12345,PM1-AR-OD-001,2,single-choice
+2,12346,PM1-AL-PK-002,3,multiple-choice`}
+        </pre>
+        <p className="tw-text-blue-600 tw-text-xs tw-mt-2 tw-flex tw-items-center tw-gap-1">
+          <span className="tw-text-lg">💡</span>
+          <span>File ini dapat langsung diupload ke menu <strong>"Buat Ujian" → Import CSV</strong></span>
         </p>
       </div>
       
@@ -168,8 +183,6 @@ const CreateBulkModal: React.FC<CreateBulkModalProps> = ({
         </div>
       </div>
     </ReportSuiteModal>
-    </>
-
   );
 };
 

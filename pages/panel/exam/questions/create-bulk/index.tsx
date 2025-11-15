@@ -1977,6 +1977,7 @@ const CreateQuestionBulk: React.FC = () => {
     }
   };
 
+  // MODIFIED downloadCSV function - Only 5 columns now
   const downloadCSV = (data: any[]) => {
     const successfulQuestions = data.filter((d) => d.success);
 
@@ -1985,40 +1986,33 @@ const CreateQuestionBulk: React.FC = () => {
       return;
     }
 
+    // Header kolom - HANYA yang digunakan untuk import
     const headers = [
       'No',
       'ID Soal',
       'Kode Soal',
-      'Bidang',
-      'Topik',
-      'Sub Topik',
       'Level',
       'Tipe Soal',
-      'Teks Soal',
-      'Status',
     ];
 
+    // Mapping data ke rows
     const rows = successfulQuestions.map((q) => {
-      const questionTextPlain = q.data.question_text.replace(/<[^>]*>/g, '').substring(0, 100);
       return [
-        q.index,
-        q.data.id,
-        q.code,
-        q.data.bidang,
-        q.data.topik,
-        q.data.subTopik,
-        q.data.level,
-        q.data.question_type,
-        questionTextPlain,
-        'Berhasil',
+        q.index,                    // No urut
+        q.data.id,                  // ID dari database
+        q.code,                     // Kode soal (misal: PM1-AR-OD-001)
+        q.data.level,               // Level 1-5
+        q.data.question_type,       // single-choice, dll
       ];
     });
 
+    // Gabungkan header + rows menjadi CSV
     const csvContent = [
       headers.join(','),
       ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
     ].join('\n');
 
+    // Download file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);

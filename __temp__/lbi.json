@@ -1,7 +1,7 @@
 [
   {
-    "no": 1,
-    "level": 3,
+    "key": 1,
+    "passageTitle": "LBI1-1",
     "questionType": "single-choice",
     "questionText": "<p>Pernyataan manakah yang <strong>TIDAK</strong> relevan dengan keseluruhan isi teks di atas?</p>",
     "options": [
@@ -12,14 +12,19 @@
       "<p><em>Fast food</em> sama dengan <em>junk food</em> karena sama-sama berbahan dasar sederhana.</p>"
     ],
     "correctAnswer": [0],
-    "explanation": "<p>Pernyataan A dianggap tidak relevan karena meskipun kalimat 'pemberian garam merupakan salah satu teknik pengawetan alami' memang terdapat dalam teks, ide tersebut tidak sejalan dengan topik utama bacaan. Paragraf pertama dan kedua berfokus pada pengertian, ciri-ciri, serta dampak negatif dari makanan cepat saji terhadap kesehatan, bukan pada proses pengawetannya. Kalimat tersebut juga tidak mendukung ide pokok tentang hubungan antara makanan cepat saji dan makanan sampah (<em>junk food</em>). Dengan demikian, pernyataan tersebut tidak koheren dengan keseluruhan isi teks.</p><p>Sementara itu, pilihan B, C, D, dan E semuanya masih sesuai dengan isi bacaan. Pilihan B menjelaskan dampak negatif yang sudah dijelaskan pada paragraf kedua. Pilihan C sesuai dengan bagian yang membahas teknik memasak. Pilihan D mendukung penjelasan tentang risiko bagi penderita diabetes dan hipertensi. Pilihan E sesuai dengan pernyataan Agung Budiharto bahwa <em>fast food</em> dan <em>junk food</em> memiliki makna serupa.</p><p>Oleh karena itu, jawaban yang paling tepat adalah <strong>A</strong>.</p>",
-    "passageId": "Teks Bacaan: Makanan Cepat Saji atau Makanan Sampah",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Pernyataan yang Tidak Relevan"
+    "level": 3,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Relevansi",
+    "subtopic_code": "RV",
+    "subtopic_id": 213,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Pernyataan A dianggap tidak relevan karena meskipun kalimat 'pemberian garam merupakan salah satu teknik pengawetan alami' memang terdapat dalam teks, ide tersebut tidak sejalan dengan topik utama bacaan. Paragraf pertama dan kedua berfokus pada pengertian, ciri-ciri, serta dampak negatif dari makanan cepat saji terhadap kesehatan, bukan pada proses pengawetannya. Kalimat tersebut juga tidak mendukung ide pokok tentang hubungan antara makanan cepat saji dan makanan sampah (<em>junk food</em>). Dengan demikian, pernyataan tersebut tidak koheren dengan keseluruhan isi teks.</p><p>Sementara itu, pilihan B, C, D, dan E semuanya masih sesuai dengan isi bacaan. Pilihan B menjelaskan dampak negatif yang sudah dijelaskan pada paragraf kedua. Pilihan C sesuai dengan bagian yang membahas teknik memasak. Pilihan D mendukung penjelasan tentang risiko bagi penderita diabetes dan hipertensi. Pilihan E sesuai dengan pernyataan Agung Budiharto bahwa <em>fast food</em> dan <em>junk food</em> memiliki makna serupa.</p><p>Oleh karena itu, jawaban yang paling tepat adalah <strong>A</strong>.</p>"
   },
   {
-    "no": 2,
-    "level": 3,
+    "key": 2,
+    "passageTitle": "LBI1-1",
     "questionType": "single-choice",
     "questionText": "<p>Dari bacaan di atas, manakah simpulan yang <strong>tidak logis</strong> berdasarkan isi teks <em>Makanan Cepat Saji atau Makanan Sampah</em>?</p>",
     "options": [
@@ -30,14 +35,19 @@
       "<p>Penyebutan makanan dengan kadar garam tinggi</p>"
     ],
     "correctAnswer": [2],
-    "explanation": "<p>Pilihan C adalah simpulan yang keliru karena menyamakan <em>fast food</em> dengan <em>junk food</em> secara langsung tidak didukung oleh penalaran yang sahih. Dalam teks dijelaskan bahwa keduanya memang sama-sama cepat saji, namun memiliki perbedaan dalam hal kandungan gizi dan bahan pembuatannya. Penalaran bahwa keduanya sama karena memiliki kesamaan dalam kecepatan penyajian merupakan kekeliruan logika, seperti halnya menyimpulkan bahwa 'rumah Rudi sama dengan kamar Ani karena keduanya dibangun dengan cepat'.</p><p><em>Fast food</em> memiliki kadar garam tinggi karena digunakan sebagai pengawet, sedangkan <em>junk food</em> tidak hanya tinggi garam, tapi juga lemak dan gula serta rendah nutrisi. Maka, menyamakan keduanya adalah simpulan yang tidak sahih.</p><p>Pilihan A dan B hanya merupakan bentuk penerjemahan dan perbandingan, bukan simpulan. Sedangkan D dan E hanya menyebut fakta dari teks tanpa menyimpulkan. Oleh karena itu, jawaban yang benar adalah <strong>C</strong>.</p>",
-    "passageId": "Makanan Cepat Saji atau Makanan Sampah",
-    "topic": "Menilai Logika dan Argumen",
-    "subtopic": "Simpulan yang Tidak Logis"
+    "level": 3,
+    "topic": "Logika Argumen",
+    "topic_code": "LA",
+    "subtopic": "Logika",
+    "subtopic_code": "LO",
+    "subtopic_id": 217,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Pilihan C adalah simpulan yang keliru karena menyamakan <em>fast food</em> dengan <em>junk food</em> secara langsung tidak didukung oleh penalaran yang sahih. Dalam teks dijelaskan bahwa keduanya memang sama-sama cepat saji, namun memiliki perbedaan dalam hal kandungan gizi dan bahan pembuatannya. Penalaran bahwa keduanya sama karena memiliki kesamaan dalam kecepatan penyajian merupakan kekeliruan logika, seperti halnya menyimpulkan bahwa 'rumah Rudi sama dengan kamar Ani karena keduanya dibangun dengan cepat'.</p><p><em>Fast food</em> memiliki kadar garam tinggi karena digunakan sebagai pengawet, sedangkan <em>junk food</em> tidak hanya tinggi garam, tapi juga lemak dan gula serta rendah nutrisi. Maka, menyamakan keduanya adalah simpulan yang tidak sahih.</p><p>Pilihan A dan B hanya merupakan bentuk penerjemahan dan perbandingan, bukan simpulan. Sedangkan D dan E hanya menyebut fakta dari teks tanpa menyimpulkan. Oleh karena itu, jawaban yang benar adalah <strong>C</strong>.</p>"
   },
   {
-    "no": 3,
-    "level": 3,
+    "key": 3,
+    "passageTitle": "LBI1-1",
     "questionType": "single-choice",
     "questionText": "<p>Berdasarkan bacaan <strong>'Makanan Cepat Saji atau Makanan Sampah'</strong>, apa perbedaan utama antara <em>fast food</em> dan <em>junk food</em>?</p>",
     "options": [
@@ -48,14 +58,19 @@
       "<p><em>Fast food</em> disajikan dalam waktu 5–10 menit, sedangkan <em>junk food</em> memerlukan waktu lebih lama untuk disajikan.</p>"
     ],
     "correctAnswer": [3],
-    "explanation": "<p>Menurut teks, <em>fast food</em> didefinisikan berdasarkan kecepatan dalam penyajiannya, yaitu makanan yang bisa disajikan dengan cepat menggunakan bahan sederhana. Sementara itu, <em>junk food</em> lebih menyoroti kandungan gizinya yang rendah serta kadar lemak, gula, dan garam yang tinggi. Oleh karena itu, perbedaan utama di antara keduanya terletak pada dasar pengelompokannya: <em>fast food</em> menekankan aspek waktu penyajian, sedangkan <em>junk food</em> pada nilai gizinya yang rendah. Jadi, jawaban yang paling tepat adalah <strong>D</strong>.</p>",
-    "passageId": "Teks Bacaan: Makanan Cepat Saji atau Makanan Sampah",
-    "topic": "Menilai Logika dan Argumen",
-    "subtopic": "Perbedaan Konsep"
+    "level": 3,
+    "topic": "Logika Argumen",
+    "topic_code": "LA",
+    "subtopic": "Perbedaan Konsep",
+    "subtopic_code": "PK",
+    "subtopic_id": 216,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Menurut teks, <em>fast food</em> didefinisikan berdasarkan kecepatan dalam penyajiannya, yaitu makanan yang bisa disajikan dengan cepat menggunakan bahan sederhana. Sementara itu, <em>junk food</em> lebih menyoroti kandungan gizinya yang rendah serta kadar lemak, gula, dan garam yang tinggi. Oleh karena itu, perbedaan utama di antara keduanya terletak pada dasar pengelompokannya: <em>fast food</em> menekankan aspek waktu penyajian, sedangkan <em>junk food</em> pada nilai gizinya yang rendah. Jadi, jawaban yang paling tepat adalah <strong>D</strong>.</p>"
   },
   {
-    "no": 4,
-    "level": 3,
+    "key": 4,
+    "passageTitle": "LBI1-2",
     "questionType": "single-choice",
     "questionText": "<p>Berdasarkan teks bacaan di atas, manakah pernyataan berikut yang paling tepat menggambarkan makna kalimat <em>“Perilaku kita terhadap lingkungan akan menjadi cerminan citra diri”</em>?</p>",
     "options": [
@@ -66,14 +81,19 @@
       "<p>Perilaku baik seseorang hanya bisa terlihat apabila dilihat oleh orang lain.</p>"
     ],
     "correctAnswer": [0],
-    "explanation": "<p>Pernyataan tersebut menunjukkan hubungan antara sikap pribadi dan perilaku terhadap lingkungan. Seseorang yang peduli dengan kebersihan diri cenderung juga menjaga lingkungan sekitar, misalnya dengan membuang sampah pada tempatnya dan menjaga kebersihan rumah. Hal ini sejalan dengan makna kalimat bahwa cara kita memperlakukan lingkungan mencerminkan bagaimana kita menilai diri sendiri.</p>",
-    "passageId": "Teks Bacaan: Pentingnya Tidak Membuang Sampah Sembarangan",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Makna Kalimat"
+    "level": 3,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Relevansi",
+    "subtopic_code": "RV",
+    "subtopic_id": 214,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Pernyataan tersebut menunjukkan hubungan antara sikap pribadi dan perilaku terhadap lingkungan. Seseorang yang peduli dengan kebersihan diri cenderung juga menjaga lingkungan sekitar, misalnya dengan membuang sampah pada tempatnya dan menjaga kebersihan rumah. Hal ini sejalan dengan makna kalimat bahwa cara kita memperlakukan lingkungan mencerminkan bagaimana kita menilai diri sendiri.</p>"
   },
   {
-    "no": 5,
-    "level": 3,
+    "key": 5,
+    "passageTitle": "LBI1-2",
     "questionType": "single-choice",
     "questionText": "<p>Jika lingkungan tempat tinggalmu sedang mengikuti program kebersihan dan kamu diminta untuk memberikan gagasan, ide apa yang paling tepat untuk disampaikan?</p>",
     "options": [
@@ -84,14 +104,19 @@
       "<p>Mengadakan kerja bakti sebulan sekali dan ronda untuk memantau pembuang sampah sembarangan.</p>"
     ],
     "correctAnswer": [2],
-    "explanation": "<p>Pilihan yang paling tepat adalah menyediakan petugas kebersihan dua kali seminggu serta tempat sampah organik dan anorganik setiap 100 meter. Langkah ini lebih sistematis dan berkelanjutan, karena memudahkan masyarakat dalam memilah sampah serta memastikan pengelolaan yang lebih efisien. Penambahan contoh gambar pada tempat sampah juga membantu masyarakat memahami cara pemilahan yang benar.</p>",
-    "passageId": "Teks Bacaan: Kesadaran Membuang Sampah dengan Benar",
+    "level": 3,
     "topic": "Menanggapi Teks",
-    "subtopic": "Solusi atas Masalah dalam Teks"
+    "topic_code": "MT",
+    "subtopic": "Solusi",
+    "subtopic_code": "SL",
+    "subtopic_id": 225,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Pilihan yang paling tepat adalah menyediakan petugas kebersihan dua kali seminggu serta tempat sampah organik dan anorganik setiap 100 meter. Langkah ini lebih sistematis dan berkelanjutan, karena memudahkan masyarakat dalam memilah sampah serta memastikan pengelolaan yang lebih efisien. Penambahan contoh gambar pada tempat sampah juga membantu masyarakat memahami cara pemilahan yang benar.</p>"
   },
   {
-    "no": 6,
-    "level": 3,
+    "key": 6,
+    "passageTitle": "LBI1-2",
     "questionType": "single-choice",
     "questionText": "<p>Berdasarkan bacaan tersebut, salah satu cara yang dapat kamu lakukan di sekolah atau kampus untuk membantu mengubah kebiasaan membuang sampah sembarangan yang sudah menjadi budaya adalah ....</p>",
     "options": [
@@ -102,14 +127,19 @@
       "<p>Membiarkan kebiasaan membuang sampah sembarangan agar orang lain sadar sendiri dari perilakunya.</p>"
     ],
     "correctAnswer": [1],
-    "explanation": "<p>Jawaban yang paling tepat adalah <strong>membuang sampah pada tempatnya</strong>. Dengan konsisten melakukan kebiasaan baik ini, kita memberikan contoh nyata kepada orang lain. Perubahan perilaku masyarakat dimulai dari diri sendiri; ketika seseorang terus melakukannya secara rutin, orang lain yang melihat akan terdorong untuk meniru. Hal ini sejalan dengan teori perilaku sosial bahwa kebiasaan baik dapat menular melalui pengamatan dan contoh positif di lingkungan sekitar.</p>",
-    "passageId": "Teks Bacaan: Kesadaran Membuang Sampah dengan Benar",
+    "level": 3,
     "topic": "Menanggapi Teks",
-    "subtopic": "Tindakan yang Sesuai dengan Isi Teks"
+    "topic_code": "MT",
+    "subtopic": "Tindakan",
+    "subtopic_code": "TN",
+    "subtopic_id": 224,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Jawaban yang paling tepat adalah <strong>membuang sampah pada tempatnya</strong>. Dengan konsisten melakukan kebiasaan baik ini, kita memberikan contoh nyata kepada orang lain. Perubahan perilaku masyarakat dimulai dari diri sendiri; ketika seseorang terus melakukannya secara rutin, orang lain yang melihat akan terdorong untuk meniru. Hal ini sejalan dengan teori perilaku sosial bahwa kebiasaan baik dapat menular melalui pengamatan dan contoh positif di lingkungan sekitar.</p>"
   },
   {
-    "no": 7,
-    "level": 3,
+    "key": 7,
+    "passageTitle": "LBI1-3",
     "questionType": "single-choice",
     "questionText": "<p>Apa faktor utama yang menyebabkan turunnya harga komoditas di beberapa daerah menurut bacaan di atas?</p>",
     "options": [
@@ -120,14 +150,19 @@
       "<p>Peningkatan produksi pesawat</p>"
     ],
     "correctAnswer": [2],
-    "explanation": "<p>Jawaban yang tepat adalah <strong>implementasi program tol laut</strong>. Dalam paragraf keempat disebutkan bahwa adanya tol laut menyebabkan penurunan harga komoditas, terutama di wilayah Indonesia Timur seperti Namlea. Hal ini terjadi karena tol laut memperlancar distribusi barang dan menekan biaya logistik, sehingga harga barang menjadi lebih terjangkau bagi masyarakat.</p>",
-    "passageId": "Teks Bacaan: Peran Strategis Jasa Transportasi Nasional",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Informasi Rinci"
+    "level": 3,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Informasi Rinci",
+    "subtopic_code": "IR",
+    "subtopic_id": 212,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Jawaban yang tepat adalah <strong>implementasi program tol laut</strong>. Dalam paragraf keempat disebutkan bahwa adanya tol laut menyebabkan penurunan harga komoditas, terutama di wilayah Indonesia Timur seperti Namlea. Hal ini terjadi karena tol laut memperlancar distribusi barang dan menekan biaya logistik, sehingga harga barang menjadi lebih terjangkau bagi masyarakat.</p>"
   },
   {
-    "no": 8,
-    "level": 3,
+    "key": 8,
+    "passageTitle": "LBI1-3",
     "questionType": "single-choice",
     "questionText": "<p>Gagasan utama dari paragraf pertama dalam bacaan tersebut adalah ....</p>",
     "options": [
@@ -138,14 +173,19 @@
       "<p>Kebutuhan transportasi meningkat akibat pertumbuhan ekonomi masyarakat</p>"
     ],
     "correctAnswer": [1],
-    "explanation": "<p>Jawaban yang benar adalah <strong>pentingnya kesinambungan penyediaan layanan transportasi karena transportasi telah menjadi kebutuhan dasar masyarakat</strong>. Paragraf pertama menyoroti bahwa jasa transportasi kini dianggap kebutuhan dasar dan perlu dijaga keberlangsungannya agar dapat terus mendukung aktivitas produksi, konsumsi, dan distribusi. Hal ini menunjukkan fokus utama paragraf tersebut adalah pada urgensi menjaga kesinambungan layanan transportasi bagi masyarakat secara berkelanjutan.</p>",
-    "passageId": "Teks Bacaan: Peran Penting Transportasi Nasional",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Gagasan Utama"
+    "level": 3,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Gagasan Utama",
+    "subtopic_code": "GU",
+    "subtopic_id": 211,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Jawaban yang benar adalah <strong>pentingnya kesinambungan penyediaan layanan transportasi karena transportasi telah menjadi kebutuhan dasar masyarakat</strong>. Paragraf pertama menyoroti bahwa jasa transportasi kini dianggap kebutuhan dasar dan perlu dijaga keberlangsungannya agar dapat terus mendukung aktivitas produksi, konsumsi, dan distribusi. Hal ini menunjukkan fokus utama paragraf tersebut adalah pada urgensi menjaga kesinambungan layanan transportasi bagi masyarakat secara berkelanjutan.</p>"
   },
   {
-    "no": 9,
-    "level": 2,
+    "key": 9,
+    "passageTitle": "LBI1-3",
     "questionType": "single-choice",
     "questionText": "<p>Mengapa Indonesia dijuluki sebagai negara maritim?</p>",
     "options": [
@@ -156,14 +196,19 @@
       "<p>Karena Indonesia berfokus pada sektor pariwisata pantai</p>"
     ],
     "correctAnswer": [3],
-    "explanation": "<p>Pada paragraf terakhir dijelaskan bahwa Indonesia memiliki potensi besar di bidang maritim, terlihat dari luas wilayah lautnya sekitar 5,8 juta km² dan jumlah pulau yang mencapai 17.508. Hal tersebut menunjukkan bahwa Indonesia memiliki lautan yang sangat luas serta ribuan pulau, sehingga secara geografis dan ekonomi layak disebut sebagai negara maritim.</p>",
-    "passageId": "Teks Bacaan: (KODE LBI1-9)",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Informasi Rinci"
+    "level": 2,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Informasi Rinci",
+    "subtopic_code": "IR",
+    "subtopic_id": 212,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Pada paragraf terakhir dijelaskan bahwa Indonesia memiliki potensi besar di bidang maritim, terlihat dari luas wilayah lautnya sekitar 5,8 juta km² dan jumlah pulau yang mencapai 17.508. Hal tersebut menunjukkan bahwa Indonesia memiliki lautan yang sangat luas serta ribuan pulau, sehingga secara geografis dan ekonomi layak disebut sebagai negara maritim.</p>"
   },
   {
-    "no": 10,
-    "level": 3,
+    "key": 10,
+    "passageTitle": "LBI1-4",
     "questionType": "single-choice",
     "questionText": "<p>Bacaan di atas terdiri atas sejumlah kalimat yang membahas kontribusi media sosial terhadap kesehatan mental masyarakat Indonesia. Informasi yang terdapat dalam bacaan saling berhubungan, termasuk antara kalimat (2) dan kalimat (3). Setelah mencermati dengan saksama, hubungan apa yang dapat ditemukan antara kedua kalimat tersebut?</p>",
     "options": [
@@ -174,14 +219,19 @@
       "<p>Hubungan penjelasan yang memperluas informasi terkait jumlah partisipan survei, yakni 22.423 individu berusia 20 tahun ke atas yang menggunakan media sosial seperti Facebook, Twitter, dan lainnya.</p>"
     ],
     "correctAnswer": [4],
-    "explanation": "<p>Kalimat (2) menyajikan informasi tentang <strong>jumlah responden</strong> dan <strong>rentang usia</strong> mereka, yakni 22.423 individu berusia 20 tahun ke atas yang menggunakan media sosial daring. Sementara itu, kalimat (3) menyampaikan hasil dari penelitian tersebut, yaitu bahwa penggunaan media sosial terbukti dapat membahayakan kesehatan mental individu dewasa. Dengan demikian, hubungan antara kedua kalimat ini bersifat <em>penjelasan dan hasil</em>, di mana kalimat (2) memberikan rincian mengenai subjek penelitian, dan kalimat (3) menjelaskan temuan utama yang diperoleh dari data tersebut. Oleh karena itu, jawaban yang paling tepat adalah <strong>opsi E</strong>.</p>",
-    "passageId": "Teks Bacaan: Dampak Media Sosial terhadap Kesehatan Mental",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Hubungan Antar Kalimat"
+    "level": 3,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Informasi Rinci",
+    "subtopic_code": "IR",
+    "subtopic_id": 213,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Kalimat (2) menyajikan informasi tentang <strong>jumlah responden</strong> dan <strong>rentang usia</strong> mereka, yakni 22.423 individu berusia 20 tahun ke atas yang menggunakan media sosial daring. Sementara itu, kalimat (3) menyampaikan hasil dari penelitian tersebut, yaitu bahwa penggunaan media sosial terbukti dapat membahayakan kesehatan mental individu dewasa. Dengan demikian, hubungan antara kedua kalimat ini bersifat <em>penjelasan dan hasil</em>, di mana kalimat (2) memberikan rincian mengenai subjek penelitian, dan kalimat (3) menjelaskan temuan utama yang diperoleh dari data tersebut. Oleh karena itu, jawaban yang paling tepat adalah <strong>opsi E</strong>.</p>"
   },
   {
-    "no": 11,
-    "level": 3,
+    "key": 11,
+    "passageTitle": "LBI1-4",
     "questionType": "single-choice",
     "questionText": "<p>Bagaimana sikap penulis terhadap fenomena yang dijelaskan dalam bacaan tersebut?</p>",
     "options": [
@@ -192,14 +242,19 @@
       "<p>Resah terhadap meningkatnya jumlah pengguna media sosial yang tidak menyadari dampak buruknya.</p>"
     ],
     "correctAnswer": [3],
-    "explanation": "<p>Penulis dalam bacaan bersikap <strong>cemas</strong> terhadap hasil penelitian yang menunjukkan bahwa penggunaan media sosial berhubungan dengan meningkatnya risiko gangguan mental. Sikap cemas ini terlihat dari nada peringatan dan ajakan agar masyarakat lebih bijak dalam bermedia sosial. Penulis tidak hanya menyajikan data penelitian, tetapi juga menekankan pentingnya kesadaran dan tanggung jawab dalam menggunakan media sosial agar dampaknya terhadap kesehatan mental tidak semakin memburuk.</p>",
-    "passageId": "Teks Bacaan: Dampak Media Sosial terhadap Kesehatan Mental",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Sikap/Pandangan Penulis"
+    "level": 3,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Sikap dan Dampak",
+    "subtopic_code": "SD",
+    "subtopic_id": 214,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Penulis dalam bacaan bersikap <strong>cemas</strong> terhadap hasil penelitian yang menunjukkan bahwa penggunaan media sosial berhubungan dengan meningkatnya risiko gangguan mental. Sikap cemas ini terlihat dari nada peringatan dan ajakan agar masyarakat lebih bijak dalam bermedia sosial. Penulis tidak hanya menyajikan data penelitian, tetapi juga menekankan pentingnya kesadaran dan tanggung jawab dalam menggunakan media sosial agar dampaknya terhadap kesehatan mental tidak semakin memburuk.</p>"
   },
   {
-    "no": 12,
-    "level": 3,
+    "key": 12,
+    "passageTitle": "LBI1-4",
     "questionType": "single-choice",
     "questionText": "<p>Berdasarkan teks bacaan tersebut, dampak yang paling besar kemungkinan terjadi jika penggunaan media sosial terus meningkat adalah ....</p>",
     "options": [
@@ -210,14 +265,19 @@
       "<p>Masyarakat menjadi tidak memahami dampak negatif dari penggunaan media sosial</p>"
     ],
     "correctAnswer": [2],
-    "explanation": "<p>Pada paragraf pertama dan kedua dijelaskan bahwa penggunaan media sosial berlebihan memiliki hubungan langsung dengan peningkatan skor gejala depresi (CES-D) serta meningkatnya jumlah penderita gangguan jiwa hingga 11,8 juta orang. Ini menunjukkan bahwa penggunaan media sosial yang tidak terkendali berpotensi meningkatkan risiko gangguan mental di masyarakat, sehingga opsi yang paling tepat adalah <strong>C</strong>.</p>",
-    "passageId": "Teks Bacaan: (KODE LBI1-10)",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Dampak dan Akibat"
+    "level": 3,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Sikap dan Dampak",
+    "subtopic_code": "SD",
+    "subtopic_id": 214,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Pada paragraf pertama dan kedua dijelaskan bahwa penggunaan media sosial berlebihan memiliki hubungan langsung dengan peningkatan skor gejala depresi (CES-D) serta meningkatnya jumlah penderita gangguan jiwa hingga 11,8 juta orang. Ini menunjukkan bahwa penggunaan media sosial yang tidak terkendali berpotensi meningkatkan risiko gangguan mental di masyarakat, sehingga opsi yang paling tepat adalah <strong>C</strong>.</p>"
   },
   {
-    "no": 13,
-    "level": 3,
+    "key": 13,
+    "passageTitle": "LBI1-5",
     "questionType": "single-choice",
     "questionText": "<p>Apakah inti dari kalimat (4)?</p>",
     "options": [
@@ -228,14 +288,19 @@
       "<p>Indikator yang jelas dapat digunakan untuk memantau pelaksanaan kebijakan penurunan emisi.</p>"
     ],
     "correctAnswer": [1],
-    "explanation": "<p>Kalimat (4) menekankan bahwa berbagai kebijakan dan langkah operasional yang dijalankan oleh pemerintah Indonesia memiliki dampak langsung terhadap penurunan emisi gas rumah kaca. Rinciannya seperti moratorium, restorasi gambut, dan pencegahan kebakaran hanyalah penjelas atau contoh dari kebijakan tersebut, sehingga inti kalimatnya terletak pada <strong>dampak langsung kebijakan terhadap penurunan emisi</strong>. Oleh karena itu, pilihan yang paling tepat adalah <strong>B</strong>.</p>",
-    "passageId": "Teks Bacaan: (KODE LBI1-12)",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Inti Kalimat"
+    "level": 3,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Inti Kalimat",
+    "subtopic_code": "IK",
+    "subtopic_id": 214,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Kalimat (4) menekankan bahwa berbagai kebijakan dan langkah operasional yang dijalankan oleh pemerintah Indonesia memiliki dampak langsung terhadap penurunan emisi gas rumah kaca. Rinciannya seperti moratorium, restorasi gambut, dan pencegahan kebakaran hanyalah penjelas atau contoh dari kebijakan tersebut, sehingga inti kalimatnya terletak pada <strong>dampak langsung kebijakan terhadap penurunan emisi</strong>. Oleh karena itu, pilihan yang paling tepat adalah <strong>B</strong>.</p>"
   },
   {
-    "no": 14,
-    "level": 3,
+    "key": 14,
+    "passageTitle": "LBI1-5",
     "questionType": "single-choice",
     "questionText": "<p>Pernyataan manakah yang <strong>tidak sesuai</strong> dengan isi bacaan di atas?</p>",
     "options": [
@@ -246,14 +311,19 @@
       "<p>Upaya penurunan emisi merupakan pelaksanaan amanat dari peraturan perundang-undangan.</p>"
     ],
     "correctAnswer": [2],
-    "explanation": "<p>Pilihan <strong>C</strong> merupakan pernyataan yang tidak sesuai dengan isi bacaan. Dalam teks, dijelaskan bahwa kebijakan penurunan emisi <strong>bukan</strong> dilakukan demi menyenangkan atau memenuhi kepentingan negara lain, melainkan sebagai bagian dari amanat undang-undang yang bertujuan meningkatkan kesejahteraan rakyat Indonesia. Sementara pernyataan lainnya sesuai dengan isi teks, karena menegaskan keseriusan pemerintah, tujuan sosial-ekonomi, dan langkah nyata dalam menjaga lingkungan.</p>",
-    "passageId": "Teks Bacaan: (KODE LBI1-12)",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Pernyataan yang Tidak Sesuai"
+    "level": 3,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Relevansi",
+    "subtopic_code": "RV",
+    "subtopic_id": 213,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Pilihan <strong>C</strong> merupakan pernyataan yang tidak sesuai dengan isi bacaan. Dalam teks, dijelaskan bahwa kebijakan penurunan emisi <strong>bukan</strong> dilakukan demi menyenangkan atau memenuhi kepentingan negara lain, melainkan sebagai bagian dari amanat undang-undang yang bertujuan meningkatkan kesejahteraan rakyat Indonesia. Sementara pernyataan lainnya sesuai dengan isi teks, karena menegaskan keseriusan pemerintah, tujuan sosial-ekonomi, dan langkah nyata dalam menjaga lingkungan.</p>"
   },
   {
-    "no": 15,
-    "level": 3,
+    "key": 15,
+    "passageTitle": "LBI1-5",
     "questionType": "single-choice",
     "questionText": "<p>Apa pesan tersirat yang ingin disampaikan oleh penulis melalui teks di atas?</p>",
     "options": [
@@ -264,14 +334,19 @@
       "<p>Masyarakat perlu memahami dampak deforestasi terhadap peningkatan emisi gas rumah kaca.</p>"
     ],
     "correctAnswer": [1],
-    "explanation": "<p>Pesan utama teks ini adalah bahwa seluruh kebijakan penurunan emisi yang dilakukan pemerintah memiliki tujuan akhir untuk <strong>meningkatkan kesejahteraan rakyat</strong>. Hal ini ditegaskan dalam kalimat (2) dan (6) yang menyebutkan bahwa penurunan emisi bukan untuk menyenangkan pihak lain, melainkan sebagai amanat hukum bagi kesejahteraan masyarakat. Oleh karena itu, pilihan yang paling tepat adalah <strong>B</strong>.</p>",
-    "passageId": "Teks Bacaan: (KODE LBI1-12)",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Pesan Tersirat"
+    "level": 3,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Sikap dan Dampak",
+    "subtopic_code": "SD",
+    "subtopic_id": 214,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Pesan utama teks ini adalah bahwa seluruh kebijakan penurunan emisi yang dilakukan pemerintah memiliki tujuan akhir untuk <strong>meningkatkan kesejahteraan rakyat</strong>. Hal ini ditegaskan dalam kalimat (2) dan (6) yang menyebutkan bahwa penurunan emisi bukan untuk menyenangkan pihak lain, melainkan sebagai amanat hukum bagi kesejahteraan masyarakat. Oleh karena itu, pilihan yang paling tepat adalah <strong>B</strong>.</p>"
   },
   {
-    "no": 16,
-    "level": 2,
+    "key": 16,
+    "passageTitle": "LBI1-6",
     "questionType": "single-choice",
     "questionText": "<p>Kata yang penulisannya tidak mengikuti kaidah ejaan terdapat pada kalimat ....</p>",
     "options": [
@@ -282,14 +357,19 @@
       "<p>(10)</p>"
     ],
     "correctAnswer": [1],
-    "explanation": "<p>Kata <strong>daripada</strong> pada kalimat (2) seharusnya tidak digunakan untuk membandingkan dua hal yang sejajar secara pilihan, karena fungsi utama kata tersebut adalah untuk menyatakan perbandingan yang bersifat negatif atau lebih baik. Dalam konteks ini, kalimat ‘lebih memilih kontrasepsi jangka pendek, seperti pil, daripada kontrasepsi jangka panjang’ kurang tepat secara ejaan dan makna, sebab bentuk pembanding sudah cukup dengan kata ‘dibanding’. Maka, kalimat (2) dianggap tidak mengikuti kaidah ejaan yang benar.</p>",
-    "passageId": "Teks Bacaan: (KODE LBI1-16)",
-    "topic": "Menganalisis Struktur dan Bahasa Teks",
-    "subtopic": "Ketepatan Ejaan"
+    "level": 2,
+    "topic": "Struktur Bahasa",
+    "topic_code": "SB",
+    "subtopic": "Ejaan",
+    "subtopic_code": "EJ",
+    "subtopic_id": 220,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Kata <strong>daripada</strong> pada kalimat (2) seharusnya tidak digunakan untuk membandingkan dua hal yang sejajar secara pilihan, karena fungsi utama kata tersebut adalah untuk menyatakan perbandingan yang bersifat negatif atau lebih baik. Dalam konteks ini, kalimat ‘lebih memilih kontrasepsi jangka pendek, seperti pil, daripada kontrasepsi jangka panjang’ kurang tepat secara ejaan dan makna, sebab bentuk pembanding sudah cukup dengan kata ‘dibanding’. Maka, kalimat (2) dianggap tidak mengikuti kaidah ejaan yang benar.</p>"
   },
   {
-    "no": 17,
-    "level": 2,
+    "key": 17,
+    "passageTitle": "LBI1-6",
     "questionType": "single-choice",
     "questionText": "<p>Penggunaan konjungsi yang <strong>tidak tepat</strong> terdapat pada kalimat ....</p>",
     "options": [
@@ -300,14 +380,19 @@
       "<p>(10)</p>"
     ],
     "correctAnswer": [1],
-    "explanation": "<p>Pada kalimat (2) terdapat konjungsi <em>daripada</em> yang digunakan untuk menyatakan perbandingan, padahal dalam konteks kalimat tersebut sudah terdapat bentuk perbandingan yang cukup dengan kata <em>dibanding</em> atau struktur tanpa konjungsi tersebut. Penggunaan <em>daripada</em> dalam kalimat itu menyebabkan struktur kalimat menjadi tidak efektif dan tidak sesuai dengan kaidah ejaan bahasa Indonesia. Oleh karena itu, konjungsi pada kalimat (2) dianggap tidak tepat.</p>",
-    "passageId": "Teks Bacaan: (KODE LBI1-17)",
-    "topic": "Menganalisis Struktur dan Bahasa Teks",
-    "subtopic": "Ketepatan Penggunaan Konjungsi"
+    "level": 2,
+    "topic": "Struktur Bahasa",
+    "topic_code": "SB",
+    "subtopic": "Konjungsi",
+    "subtopic_code": "KJ",
+    "subtopic_id": 221,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Pada kalimat (2) terdapat konjungsi <em>daripada</em> yang digunakan untuk menyatakan perbandingan, padahal dalam konteks kalimat tersebut sudah terdapat bentuk perbandingan yang cukup dengan kata <em>dibanding</em> atau struktur tanpa konjungsi tersebut. Penggunaan <em>daripada</em> dalam kalimat itu menyebabkan struktur kalimat menjadi tidak efektif dan tidak sesuai dengan kaidah ejaan bahasa Indonesia. Oleh karena itu, konjungsi pada kalimat (2) dianggap tidak tepat.</p>"
   },
   {
-    "no": 18,
-    "level": 1,
+    "key": 18,
+    "passageTitle": "LBI1-6",
     "questionType": "single-choice",
     "questionText": "<p>Ide pokok paragraf pertama teks tersebut adalah ....</p>",
     "options": [
@@ -318,14 +403,19 @@
       "<p>Implan dan spiral sebagai alat kontrasepsi jangka panjang</p>"
     ],
     "correctAnswer": [2],
-    "explanation": "<p>Paragraf pertama menjelaskan bahwa banyak perempuan memilih alat kontrasepsi karena mengikuti orang di sekitarnya, bukan berdasarkan kebutuhan pribadi. Hal ini menunjukkan bahwa fokus paragraf tersebut adalah alasan di balik pemilihan kontrasepsi oleh perempuan.</p>",
-    "passageId": "Teks Bacaan: Pemilihan Alat Kontrasepsi oleh Perempuan",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Gagasan Utama"
+    "level": 1,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Gagasan Utama",
+    "subtopic_code": "GU",
+    "subtopic_id": 211,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Paragraf pertama menjelaskan bahwa banyak perempuan memilih alat kontrasepsi karena mengikuti orang di sekitarnya, bukan berdasarkan kebutuhan pribadi. Hal ini menunjukkan bahwa fokus paragraf tersebut adalah alasan di balik pemilihan kontrasepsi oleh perempuan.</p>"
   },
   {
-    "no": 19,
-    "level": 2,
+    "key": 19,
+    "passageTitle": "LBI1-6",
     "questionType": "single-choice",
     "questionText": "<p>Berdasarkan isi teks, pernyataan yang <strong>sesuai</strong> dengan bacaan di atas adalah ....</p>",
     "options": [
@@ -336,14 +426,19 @@
       "<p>Pemakaian alat kontrasepsi jangka pendek tidak perlu disosialisasikan lagi.</p>"
     ],
     "correctAnswer": [1],
-    "explanation": "<p>Pernyataan yang sesuai dengan isi teks adalah bahwa banyak perempuan beralih dari alat kontrasepsi jangka pendek ke jangka panjang. Hal ini dibuktikan oleh kalimat pada akhir bacaan yang menjelaskan peningkatan penggunaan kontrasepsi jangka panjang, terutama implan, di beberapa wilayah antara tahun 2013–2016. Jadi, perubahan perilaku tersebut menunjukkan adanya peralihan dari metode jangka pendek ke jangka panjang setelah adanya sosialisasi dari BKKBN.</p>",
-    "passageId": "Teks Bacaan: (LBI1-19)",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Pernyataan yang Sesuai"
+    "level": 2,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Relevansi",
+    "subtopic_code": "RV",
+    "subtopic_id": 213,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Pernyataan yang sesuai dengan isi teks adalah bahwa banyak perempuan beralih dari alat kontrasepsi jangka pendek ke jangka panjang. Hal ini dibuktikan oleh kalimat pada akhir bacaan yang menjelaskan peningkatan penggunaan kontrasepsi jangka panjang, terutama implan, di beberapa wilayah antara tahun 2013–2016. Jadi, perubahan perilaku tersebut menunjukkan adanya peralihan dari metode jangka pendek ke jangka panjang setelah adanya sosialisasi dari BKKBN.</p>"
   },
   {
-    "no": 20,
-    "level": 3,
+    "key": 20,
+    "passageTitle": "LBI1-7",
     "questionType": "single-choice",
     "questionText": "<p>Berdasarkan isi teks, pernyataan yang paling <strong>tepat</strong> terkait dengan bacaan di atas adalah ....</p>",
     "options": [
@@ -354,14 +449,19 @@
       "<p>Penyewaan properti dan pembuatan karya buku dapat meningkatkan penghasilan tambahan di luar penghasilan aktif.</p>"
     ],
     "correctAnswer": [4],
-    "explanation": "<p>Pernyataan yang paling sesuai dengan isi bacaan adalah bahwa penyewaan properti dan pembuatan karya buku dapat meningkatkan penghasilan tambahan di luar penghasilan dari pekerjaan utama. Hal ini dijelaskan pada bagian akhir teks yang mencontohkan pemilik rumah yang memperoleh penghasilan pasif dari sewa dan penulis yang mendapatkan royalti dari hasil karya tulisnya. Strategi ini termasuk dalam upaya menambah pemasukan melalui sumber pendapatan pasif. Pilihan lain kurang tepat karena membahas hal yang tidak sejalan dengan isi teks atau memutarbalikkan makna pengelolaan keuangan pribadi.</p>",
-    "passageId": "Teks Bacaan: (LBI1-20)",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Pernyataan yang Paling Tepat"
+    "level": 3,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Relevansi",
+    "subtopic_code": "RV",
+    "subtopic_id": 213,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Pernyataan yang paling sesuai dengan isi bacaan adalah bahwa penyewaan properti dan pembuatan karya buku dapat meningkatkan penghasilan tambahan di luar penghasilan dari pekerjaan utama. Hal ini dijelaskan pada bagian akhir teks yang mencontohkan pemilik rumah yang memperoleh penghasilan pasif dari sewa dan penulis yang mendapatkan royalti dari hasil karya tulisnya. Strategi ini termasuk dalam upaya menambah pemasukan melalui sumber pendapatan pasif. Pilihan lain kurang tepat karena membahas hal yang tidak sejalan dengan isi teks atau memutarbalikkan makna pengelolaan keuangan pribadi.</p>"
   },
   {
-    "no": 21,
-    "level": 2,
+    "key": 21,
+    "passageTitle": "LBI1-7",
     "questionType": "single-choice",
     "questionText": "<p>Pengelolaan keuangan pribadi yang ditujukan siswa sekolah dasar adalah ....</p>",
     "options": [
@@ -372,14 +472,19 @@
       "<p>Menahan untuk membeli barang-barang yang tidak prioritas.</p>"
     ],
     "correctAnswer": [4],
-    "explanation": "<p>Soal ini menanyakan cara pengelolaan keuangan yang sesuai untuk anak sekolah dasar. Berdasarkan teks, strategi penghematan menekankan pentingnya menahan diri agar tidak membeli barang-barang yang tidak prioritas dan konsumtif. Anak sekolah dasar masih bergantung pada orang tua untuk memenuhi kebutuhan, sehingga bentuk pengelolaan keuangan yang tepat adalah belajar menahan diri dari pengeluaran yang tidak penting. Oleh karena itu, jawaban yang benar adalah <strong>menahan untuk membeli barang-barang yang tidak prioritas</strong>.</p><p><strong>Pilihan A</strong> tidak tepat karena membuat anggaran pemasukan memerlukan perencanaan kompleks, sedangkan anak sekolah dasar belum memiliki pendapatan sendiri.</p><p><strong>Pilihan B</strong> tidak tepat karena anak sekolah dasar belum memenuhi syarat untuk memiliki kartu kredit.</p><p><strong>Pilihan C</strong> tidak tepat karena investasi membutuhkan modal dan pemahaman finansial yang belum dimiliki anak SD.</p><p><strong>Pilihan D</strong> tidak tepat karena menyewakan barang orang tua tidak sesuai dengan prinsip pengelolaan uang pribadi anak.</p><p>Jadi, jawaban yang tepat adalah <strong>E</strong>.</p>",
-    "passageId": "Teks Bacaan: Strategi Pengelolaan Keuangan Pribadi",
+    "level": 2,
     "topic": "Menanggapi Teks",
-    "subtopic": "Penerapan Prinsip dalam Kehidupan Sehari-hari"
+    "topic_code": "MT",
+    "subtopic": "Penerapan",
+    "subtopic_code": "PN",
+    "subtopic_id": 223,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Soal ini menanyakan cara pengelolaan keuangan yang sesuai untuk anak sekolah dasar. Berdasarkan teks, strategi penghematan menekankan pentingnya menahan diri agar tidak membeli barang-barang yang tidak prioritas dan konsumtif. Anak sekolah dasar masih bergantung pada orang tua untuk memenuhi kebutuhan, sehingga bentuk pengelolaan keuangan yang tepat adalah belajar menahan diri dari pengeluaran yang tidak penting. Oleh karena itu, jawaban yang benar adalah <strong>menahan untuk membeli barang-barang yang tidak prioritas</strong>.</p><p><strong>Pilihan A</strong> tidak tepat karena membuat anggaran pemasukan memerlukan perencanaan kompleks, sedangkan anak sekolah dasar belum memiliki pendapatan sendiri.</p><p><strong>Pilihan B</strong> tidak tepat karena anak sekolah dasar belum memenuhi syarat untuk memiliki kartu kredit.</p><p><strong>Pilihan C</strong> tidak tepat karena investasi membutuhkan modal dan pemahaman finansial yang belum dimiliki anak SD.</p><p><strong>Pilihan D</strong> tidak tepat karena menyewakan barang orang tua tidak sesuai dengan prinsip pengelolaan uang pribadi anak.</p><p>Jadi, jawaban yang tepat adalah <strong>E</strong>.</p>"
   },
   {
-    "no": 22,
-    "level": 1,
+    "key": 22,
+    "passageTitle": "LBI1-8",
     "questionType": "single-choice",
     "questionText": "<p>Apa ide pokok paragraf ketiga dari teks tersebut?</p>",
     "options": [
@@ -390,14 +495,19 @@
       "<p>Prinsip dasar restorative justice.</p>"
     ],
     "correctAnswer": [4],
-    "explanation": "<p>Paragraf ketiga membahas prinsip utama dari restorative justice, yaitu pemulihan kepada korban melalui berbagai bentuk kesepakatan seperti ganti rugi, perdamaian, atau kerja sosial. Kalimat tersebut menegaskan dasar dari konsep restorative justice, bukan sekadar manfaat atau peran pihak-pihaknya. Oleh karena itu, jawaban yang tepat adalah <strong>prinsip dasar restorative justice</strong>.</p><p><strong>Pilihan A</strong> tidak tepat karena peran para tokoh dijelaskan pada paragraf pertama, bukan ketiga. <strong>Pilihan B</strong> membahas makna restorative justice yang telah dijelaskan di paragraf awal. <strong>Pilihan C</strong> dan <strong>D</strong> juga tidak sesuai karena tidak menjadi fokus isi paragraf ketiga.</p>",
-    "passageId": "Teks Bacaan: Restorative Justice",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Gagasan Utama"
+    "level": 2,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Gagasan Utama",
+    "subtopic_code": "GU",
+    "subtopic_id": 211,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Paragraf ketiga membahas prinsip utama dari restorative justice, yaitu pemulihan kepada korban melalui berbagai bentuk kesepakatan seperti ganti rugi, perdamaian, atau kerja sosial. Kalimat tersebut menegaskan dasar dari konsep restorative justice, bukan sekadar manfaat atau peran pihak-pihaknya. Oleh karena itu, jawaban yang tepat adalah <strong>prinsip dasar restorative justice</strong>.</p><p><strong>Pilihan A</strong> tidak tepat karena peran para tokoh dijelaskan pada paragraf pertama, bukan ketiga. <strong>Pilihan B</strong> membahas makna restorative justice yang telah dijelaskan di paragraf awal. <strong>Pilihan C</strong> dan <strong>D</strong> juga tidak sesuai karena tidak menjadi fokus isi paragraf ketiga.</p>"
   },
   {
-    "no": 23,
-    "level": 2,
+    "key": 23,
+    "passageTitle": "LBI1-8",
     "questionType": "single-choice",
     "questionText": "<p>Penjelasan yang paling tepat untuk melengkapi paragraf ketiga adalah ...</p>",
     "options": [
@@ -408,14 +518,19 @@
       "<p><em>Restorative justice</em> menjadi solusi penegakan hukum yang sangat relevan pada masa kini.</p>"
     ],
     "correctAnswer": [1],
-    "explanation": "<p>Pilihan (B) paling sesuai untuk melengkapi paragraf ketiga karena kalimat tersebut menjelaskan peran kejaksaan sebagai pihak penengah atau fasilitator dalam proses mediasi antara korban dan pelaku. Hal ini sejalan dengan prinsip <em>restorative justice</em> yang menekankan penyelesaian damai melalui dialog dan kesepakatan bersama, bukan hukuman semata.</p>",
-    "passageId": "Teks Bacaan: Restorative Justice",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Melengkapi Paragraf"
+    "level": 2,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Melengkapi Paragraf",
+    "subtopic_code": "MP",
+    "subtopic_id": 211,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Pilihan (B) paling sesuai untuk melengkapi paragraf ketiga karena kalimat tersebut menjelaskan peran kejaksaan sebagai pihak penengah atau fasilitator dalam proses mediasi antara korban dan pelaku. Hal ini sejalan dengan prinsip <em>restorative justice</em> yang menekankan penyelesaian damai melalui dialog dan kesepakatan bersama, bukan hukuman semata.</p>"
   },
   {
-    "no": 24,
-    "level": 3,
+    "key": 24,
+    "passageTitle": "LBI1-8",
     "questionType": "true-false",
     "questionText": "<p>Berdasarkan teks bacaan, tentukan pernyataan berikut termasuk <strong>Sesuai (S)</strong> atau <strong>Tidak Sesuai (TS)</strong>!</p>",
     "statements": [
@@ -426,14 +541,19 @@
       "<p>Masyarakat dan aparat hukum tidak dilibatkan dalam proses keadilan restoratif.</p>"
     ],
     "correctAnswer": [true, true, false, true, false],
-    "explanation": "<p>Dari teks dapat disimpulkan bahwa <em>restorative justice</em> menekankan keterlibatan seluruh pihak yang terkait, termasuk masyarakat dan aparat penegak hukum. Pasal 1 huruf 3 Peraturan Polri Nomor 8 Tahun 2021 menjelaskan dasar hukumnya. Prosesnya dilakukan melalui dialog (<em>dialogue</em>), bukan monolog, karena melibatkan komunikasi dua arah. Prinsip utamanya adalah pemulihan dan rekonsiliasi antara pelaku dan korban, bukan penghukuman. Oleh karena itu, pernyataan pertama, kedua, dan keempat benar, sedangkan ketiga dan kelima salah.</p>",
-    "passageId": "Teks Bacaan: Restorative Justice",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Menilai Kebenaran Pernyataan"
+    "level": 3,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Relevansi",
+    "subtopic_code": "RV",
+    "subtopic_id": 213,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Dari teks dapat disimpulkan bahwa <em>restorative justice</em> menekankan keterlibatan seluruh pihak yang terkait, termasuk masyarakat dan aparat penegak hukum. Pasal 1 huruf 3 Peraturan Polri Nomor 8 Tahun 2021 menjelaskan dasar hukumnya. Prosesnya dilakukan melalui dialog (<em>dialogue</em>), bukan monolog, karena melibatkan komunikasi dua arah. Prinsip utamanya adalah pemulihan dan rekonsiliasi antara pelaku dan korban, bukan penghukuman. Oleh karena itu, pernyataan pertama, kedua, dan keempat benar, sedangkan ketiga dan kelima salah.</p>"
   },
   {
-    "no": 25,
-    "level": 3,
+    "key": 25,
+    "passageTitle": "LBI1-8",
     "questionType": "single-choice",
     "questionText": "<p>Berdasarkan teks bacaan, hal yang akan terjadi apabila <em>restorative justice</em> diterapkan di Indonesia adalah ...</p>",
     "options": [
@@ -444,14 +564,19 @@
       "<p>Tidak ada persidangan.</p>"
     ],
     "correctAnswer": [3],
-    "explanation": "<p>Jawaban yang tepat adalah <strong>D) Kembali pada keadaan semula</strong>. Berdasarkan teks, prinsip utama <em>restorative justice</em> adalah memulihkan keadaan seperti sebelum tindak pidana terjadi. Tujuannya bukan semata memberikan hukuman, tetapi memperbaiki kerugian dan mengembalikan hubungan sosial antara pelaku dan korban ke kondisi semula. Dengan penerapan prinsip ini, diharapkan keseimbangan dan kedamaian sosial dapat dipulihkan secara menyeluruh.</p>",
-    "passageId": "Teks Bacaan: Restorative Justice",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Dampak dan Akibat"
+    "level": 3,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Sikap dan Dampak",
+    "subtopic_code": "SD",
+    "subtopic_id": 214,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Jawaban yang tepat adalah <strong>D) Kembali pada keadaan semula</strong>. Berdasarkan teks, prinsip utama <em>restorative justice</em> adalah memulihkan keadaan seperti sebelum tindak pidana terjadi. Tujuannya bukan semata memberikan hukuman, tetapi memperbaiki kerugian dan mengembalikan hubungan sosial antara pelaku dan korban ke kondisi semula. Dengan penerapan prinsip ini, diharapkan keseimbangan dan kedamaian sosial dapat dipulihkan secara menyeluruh.</p>"
   },
   {
-    "no": 26,
-    "level": 3,
+    "key": 26,
+    "passageTitle": "LBI1-8",
     "questionType": "single-choice",
     "questionText": "<p>Ringkasan yang paling tepat berdasarkan teks di atas adalah ...</p>",
     "options": [
@@ -462,14 +587,19 @@
       "<p><em>Restorative justice</em> adalah alternatif penyelesaian perkara yang menekankan pemulihan hubungan sosial agar kembali seperti semula.</p>"
     ],
     "correctAnswer": [4],
-    "explanation": "<p>Jawaban yang benar adalah <strong>(E)</strong>. Teks tersebut menegaskan bahwa <em>restorative justice</em> berfokus pada pemulihan keadaan dan hubungan sosial antara pelaku dan korban agar kembali seperti semula. Pendekatan ini melibatkan mediasi dan dialog untuk mencari solusi damai, bukan menitikberatkan pada hukuman. Karena itu, pilihan (E) mencerminkan inti atau ringkasan dari keseluruhan bacaan.</p>",
-    "passageId": "Teks Bacaan: Restorative Justice",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Ringkasan Teks"
+    "level": 3,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Gagasan Utama",
+    "subtopic_code": "GU",
+    "subtopic_id": 211,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Jawaban yang benar adalah <strong>(E)</strong>. Teks tersebut menegaskan bahwa <em>restorative justice</em> berfokus pada pemulihan keadaan dan hubungan sosial antara pelaku dan korban agar kembali seperti semula. Pendekatan ini melibatkan mediasi dan dialog untuk mencari solusi damai, bukan menitikberatkan pada hukuman. Karena itu, pilihan (E) mencerminkan inti atau ringkasan dari keseluruhan bacaan.</p>"
   },
   {
-    "no": 27,
-    "level": 3,
+    "key": 27,
+    "passageTitle": "LBI1-9",
     "questionType": "single-choice",
     "questionText": "<p>Topik utama yang dibahas dalam teks tersebut adalah ...</p>",
     "options": [
@@ -480,14 +610,19 @@
       "<p>Pentingnya studi genetika untuk melestarikan spesies <em>Shorea parvifolia</em>.</p>"
     ],
     "correctAnswer": [1],
-    "explanation": "<p>Jawaban yang tepat adalah <strong>(B)</strong>. Teks bacaan secara keseluruhan berfokus pada hasil penelitian yang mengungkapkan bahwa <em>Shorea parvifolia</em> mengalami ekspansi populasi baru di wilayah Borneo. Kalimat (2) dan (9) secara eksplisit menyebutkan hal ini sebagai temuan utama penelitian. Paragraf-paragraf lainnya menjelaskan latar belakang ilmiah, metode penelitian, serta dampak ekspansi tersebut terhadap keanekaragaman genetik spesies. Dengan demikian, inti pembahasan teks adalah tentang ekspansi populasi <em>Shorea parvifolia</em> berdasarkan hasil penelitian terbaru, bukan sekadar perubahan umum atau metodologi penelitian genetika.</p>",
-    "passageId": "Teks Bacaan: Shorea parvifolia dan Ekspansi Populasi",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Topik Utama"
+    "level": 3,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Gagasan Utama",
+    "subtopic_code": "GU",
+    "subtopic_id": 211,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Jawaban yang tepat adalah <strong>(B)</strong>. Teks bacaan secara keseluruhan berfokus pada hasil penelitian yang mengungkapkan bahwa <em>Shorea parvifolia</em> mengalami ekspansi populasi baru di wilayah Borneo. Kalimat (2) dan (9) secara eksplisit menyebutkan hal ini sebagai temuan utama penelitian. Paragraf-paragraf lainnya menjelaskan latar belakang ilmiah, metode penelitian, serta dampak ekspansi tersebut terhadap keanekaragaman genetik spesies. Dengan demikian, inti pembahasan teks adalah tentang ekspansi populasi <em>Shorea parvifolia</em> berdasarkan hasil penelitian terbaru, bukan sekadar perubahan umum atau metodologi penelitian genetika.</p>"
   },
   {
-    "no": 28,
-    "level": 3,
+    "key": 28,
+    "passageTitle": "LBI1-9",
     "questionType": "single-choice",
     "questionText": "<p>Kalimat yang dicetak miring pada paragraf ke-2 memiliki makna yang sama dengan ...</p>",
     "options": [
@@ -498,14 +633,19 @@
       "<p>Untuk penelitian genetika, para ilmuwan mengambil daun pohon dari populasi alami yang meliputi semua daerah persebaran <em>S. parvifolia</em>.</p>"
     ],
     "correctAnswer": [3],
-    "explanation": "<p>Jawaban yang benar adalah <strong>(D)</strong>. Kalimat yang dicetak miring pada teks aslinya menyatakan bahwa para peneliti mengumpulkan sampel daun dari berbagai populasi alami yang mencakup hampir seluruh rentang persebaran <em>Shorea parvifolia</em>. Pilihan (D) menyampaikan makna yang sama dengan struktur kalimat yang logis dan lengkap — menjelaskan subjek (para peneliti), objek (daun dari pohon), serta tujuan (untuk diperiksa genetika-nya). Pilihan lain mengandung makna serupa tetapi tidak setepat struktur atau fokus kalimat asli.</p>",
-    "passageId": "Teks Bacaan: Shorea parvifolia dan Ekspansi Populasi",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Paraphrasing dan Makna Kalimat"
+    "level": 3,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Relevansi",
+    "subtopic_code": "RV",
+    "subtopic_id": 214,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Jawaban yang benar adalah <strong>(D)</strong>. Kalimat yang dicetak miring pada teks aslinya menyatakan bahwa para peneliti mengumpulkan sampel daun dari berbagai populasi alami yang mencakup hampir seluruh rentang persebaran <em>Shorea parvifolia</em>. Pilihan (D) menyampaikan makna yang sama dengan struktur kalimat yang logis dan lengkap — menjelaskan subjek (para peneliti), objek (daun dari pohon), serta tujuan (untuk diperiksa genetika-nya). Pilihan lain mengandung makna serupa tetapi tidak setepat struktur atau fokus kalimat asli.</p>"
   },
   {
-    "no": 29,
-    "level": 1,
+    "key": 29,
+    "passageTitle": "LBI1-10",
     "questionType": "single-choice",
     "questionText": "<p>Gagasan utama yang dijelaskan pada paragraf pertama adalah ...</p>",
     "options": [
@@ -516,14 +656,19 @@
       "<p>Manfaat teripang laut bagi manusia</p>"
     ],
     "correctAnswer": [2],
-    "explanation": "<p>Jawaban yang benar adalah <strong>(C)</strong>. Paragraf pertama menjelaskan secara rinci mengenai bentuk tubuh teripang laut, mulai dari struktur fisiknya yang silindris, posisi mulut dan anus, hingga ciri-ciri permukaan tubuh dan variasi warnanya. Tidak ada pembahasan tentang habitat, jenis, atau manfaatnya pada paragraf ini. Oleh karena itu, pokok pikiran utama paragraf pertama adalah deskripsi bentuk dan ciri fisik teripang laut.</p>",
-    "passageId": "Teks Bacaan: Teripang Laut atau Holothuroidea",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Gagasan Utama"
+    "level": 1,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Gagasan Utama",
+    "subtopic_code": "GU",
+    "subtopic_id": 211,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Jawaban yang benar adalah <strong>(C)</strong>. Paragraf pertama menjelaskan secara rinci mengenai bentuk tubuh teripang laut, mulai dari struktur fisiknya yang silindris, posisi mulut dan anus, hingga ciri-ciri permukaan tubuh dan variasi warnanya. Tidak ada pembahasan tentang habitat, jenis, atau manfaatnya pada paragraf ini. Oleh karena itu, pokok pikiran utama paragraf pertama adalah deskripsi bentuk dan ciri fisik teripang laut.</p>"
   },
   {
-    "no": 30,
-    "level": 1,
+    "key": 30,
+    "passageTitle": "LBI1-10",
     "questionType": "single-choice",
     "questionText": "<p>Berdasarkan bacaan, pernyataan yang <strong>tidak sesuai</strong> dengan bentuk tubuh teripang laut adalah ...</p>",
     "options": [
@@ -534,101 +679,14 @@
       "<p>Tubuhnya berlemak, tipis, namun terasa kasar</p>"
     ],
     "correctAnswer": [4],
-    "explanation": "<p>Jawaban yang tepat adalah <strong>(E)</strong>. Dalam teks dijelaskan bahwa teripang memiliki tubuh yang berlemak, tipis atau tebal, serta permukaannya bisa licin maupun berbintil. Tidak ada keterangan bahwa tubuh teripang bersifat kasar. Dengan demikian, pernyataan pada opsi (E) bertentangan dengan deskripsi dalam bacaan. Pilihan lainnya justru sesuai dengan ciri-ciri tubuh teripang laut yang dijelaskan di paragraf pertama, seperti bentuk silindris, warna tubuh bervariasi, dan adanya tentakel bercabang di sekitar mulut.</p>",
-    "passageId": "Teks Bacaan: Teripang Laut atau Holothuroidea",
-    "topic": "Memahami Isi Teks",
-    "subtopic": "Pernyataan yang Tidak Sesuai"
-  }
-]
-[
-  {
-    "passageId": "Teks Bacaan: Makanan Cepat Saji atau Makanan Sampah",
-    "passageText": "<p><strong>Makanan Cepat Saji atau Makanan Sampah</strong></p><p>Makanan cepat saji (<em>fast food</em>) adalah jenis makanan yang sudah dipersiapkan sebelumnya dan dapat disajikan dalam waktu singkat, sekitar 5–10 menit setelah dipesan. Menurut Executive Chef Hotel Santika Mega City Bekasi, Agung Budiharto, makanan cepat saji identik dengan makanan sampah (<em>junk food</em>), karena keduanya memiliki sifat yang sama. Agung juga menambahkan bahwa makanan cepat saji umumnya dibuat dari bahan sederhana dan tidak terlalu banyak macamnya. Selain itu, proses penyajian makanan cepat saji juga sederhana karena tidak memerlukan <em>garnish</em> (hiasan makanan) maupun <em>plating</em> (penyajian di piring) yang rumit. Teknik memasak yang sering digunakan adalah menggoreng dan memanggang.</p><p>Agung menjelaskan bahwa banyak makanan cepat saji dibuat dengan kadar garam yang cukup tinggi untuk memperpanjang masa simpan. Hal ini membuat cita rasanya gurih dan cenderung asin. Penggunaan garam yang berlebihan juga merupakan salah satu bentuk pengawetan alami. Makanan cepat saji umumnya mengandung tinggi lemak, gula, dan garam sehingga terasa lezat, tetapi juga tinggi kalori. Kandungan tersebut dapat meningkatkan risiko penyakit seperti diabetes dan hipertensi. Selain itu, makanan cepat saji mengandung sedikit nutrisi penting seperti protein, serat, vitamin, dan mineral, sehingga disebut sebagai makanan sampah karena nilai gizinya yang rendah.</p><p>(Disarikan dari: Tiofani, Krisda. 2021. “Apa Itu Makanan Cepat Saji, Hidangan Praktis yang Digoreng?”. Kompas.com, diakses 13 September 2022)</p>",
-    "usage": [1, 2, 3]
-  },
-  {
-    "passageId": "Teks Bacaan: Pentingnya Tidak Membuang Sampah Sembarangan",
-    "passageText": "<p>Semua orang, termasuk kita, tentu pernah melihat tulisan seperti “Buanglah sampah pada tempatnya” atau “Jangan buang sampah sembarangan” di berbagai tempat umum seperti sekolah, universitas, kantor, rumah sakit, kafe, restoran, tempat wisata, dan lain-lain.</p>\n<p>Kita juga telah mempelajari alasan mengapa penting untuk tidak membuang sampah sembarangan, karena perilaku tersebut dapat merusak lingkungan serta meningkatkan risiko terhadap kesehatan manusia.</p>\n<p>Indonesia menghasilkan sekitar <equation>11.330 \\text{ ton}</equation> sampah organik dan anorganik setiap hari. Bayangkan jika sampah tersebut tidak dikelola dengan baik akibat perilaku membuang sampah sembarangan.</p>\n<p>Sebelum membahas solusi untuk masalah sampah di Indonesia, kita perlu memahami terlebih dahulu alasan mengapa masih banyak orang yang belum disiplin dalam membuang sampah.</p>\n<ul>\n<li><strong>Anggapan Bahwa Sampah Tidak Bernilai Sehingga Tidak Perlu Diperhatikan</strong><br>Menurut sosiolog Universitas Sebelas Maret, Drajat Tri Kartono, banyak orang yang menganggap sampah tidak memiliki nilai. Padahal, jika dikelola dengan benar, sampah bisa diolah menjadi sesuatu yang bermanfaat seperti kompos atau barang daur ulang.</li>\n<li><strong>Merasa Bahwa Sampah Bukan Tanggung Jawab Pribadi</strong><br>Banyak orang berpikir bahwa kebersihan tempat umum adalah tanggung jawab petugas kebersihan atau pemerintah, bukan dirinya sendiri. Padahal, menjaga kebersihan lingkungan merupakan tanggung jawab bersama.</li>\n<li><strong>Kebiasaan Membuang Sampah Sembarangan yang Sudah Melekat</strong><br>Kebiasaan membuang sampah sembarangan sulit diubah karena telah menjadi bagian dari perilaku sehari-hari. Jika di lingkungan sekitar banyak yang membuang sampah sembarangan, individu cenderung mengikuti perilaku itu juga.</li>\n<li><strong>Tidak Peduli terhadap Perilaku Sendiri</strong><br>Sebagian orang bersikap acuh terhadap dampak perbuatannya pada lingkungan. Padahal, cara kita memperlakukan lingkungan mencerminkan bagaimana kita menghargai diri sendiri.</li>\n<li><strong>Yakin Tidak Ada Konsekuensi dari Membuang Sampah Sembarangan</strong><br>Masih banyak yang berpikir tidak ada akibat jika membuang sampah sembarangan. Namun, jika setiap orang berpikir demikian, maka sampah akan menumpuk dan menyebabkan bencana seperti banjir yang rutin terjadi setiap tahun.</li>\n</ul>\n<p>Sebenarnya, Undang-Undang Nomor 18 Tahun 2008 tentang Pengelolaan Sampah telah mengatur bahwa setiap orang dilarang membuang sampah tidak pada tempat yang disediakan, dan sanksinya dapat diatur lebih lanjut oleh pemerintah daerah masing-masing.</p>",
-    "usage": [4]
-  },
-  {
-    "passageId": "Teks Bacaan: Kesadaran Membuang Sampah dengan Benar",
-    "passageText": "<p>Semua orang pasti pernah membaca tulisan seperti 'Buanglah sampah pada tempatnya' atau 'Jangan membuang sampah sembarangan' yang sering kita temui di sekolah, universitas, kantor, rumah sakit, restoran, maupun tempat wisata.</p>\n<p>Kita sudah memahami pentingnya menjaga kebersihan dengan tidak membuang sampah sembarangan karena dapat mencemari lingkungan dan menimbulkan berbagai risiko kesehatan.</p>\n<p>Setiap hari, Indonesia menghasilkan sekitar <strong>11.330 ton</strong> sampah organik dan anorganik. Bayangkan jika semua itu tidak dikelola dengan benar, tentu akan menimbulkan berbagai masalah lingkungan.</p>\n<p>Sebelum membahas solusi pengelolaan sampah, penting untuk memahami penyebab utama masyarakat masih sering membuang sampah sembarangan, antara lain:</p>\n<ul>\n<li>Anggapan bahwa sampah tidak memiliki nilai, padahal dapat didaur ulang menjadi barang bermanfaat seperti kompos atau bahan daur ulang lainnya.</li>\n<li>Merasa bahwa menjaga kebersihan bukan tanggung jawab pribadi, melainkan tugas petugas kebersihan.</li>\n<li>Pola pikir membuang sampah sembarangan yang sudah menjadi kebiasaan turun-temurun.</li>\n<li>Tidak peduli terhadap perilaku sendiri terhadap lingkungan.</li>\n<li>Yakin bahwa tidak akan ada konsekuensi atau hukuman bila membuang sampah sembarangan.</li>\n</ul>\n<p>Padahal, pemerintah telah mengatur pengelolaan sampah dalam <strong>UU Nomor 18 Tahun 2008</strong> tentang Pengelolaan Sampah. Dalam Pasal 29 Ayat (1), disebutkan bahwa setiap orang dilarang membuang sampah tidak pada tempat yang telah ditentukan. Hal ini menunjukkan bahwa persoalan sampah menjadi tanggung jawab bersama seluruh lapisan masyarakat.</p>",
-    "usage": [5, 6]
-  },
-  {
-    "passageId": "Teks Bacaan: Peran Strategis Jasa Transportasi Nasional",
-    "passageText": "<p>Jasa transportasi kini telah menjadi kebutuhan dasar bagi masyarakat. Oleh karena itu, kesinambungan penyediaan layanan transportasi untuk memenuhi kebutuhan aktivitas produksi, konsumsi, dan distribusi harus terus diperhatikan secara berkelanjutan. Hal ini disampaikan oleh Menteri Perhubungan Budi Karya Sumadi dalam acara bertajuk <em>Industri Pilihan Dalam Kerangka Strategi Industrialisasi Indonesia 2045</em> yang diselenggarakan oleh Komite Ekonomi dan Industri Nasional (KEIN) bersama Universitas Diponegoro di Hotel Gumaya, Rabu (22/2).</p>\n<p>Menurut Menhub, ketersediaan transportasi yang merata di seluruh wilayah Indonesia merupakan hal mutlak karena memiliki fungsi strategis dalam menjaga stabilitas dan kesinambungan kegiatan masyarakat maupun roda pemerintahan.</p>\n<p>Dalam pidatonya, Menhub menegaskan bahwa Kementerian Perhubungan memiliki peran penting sebagai penghubung antarwilayah, salah satunya dengan mengembangkan tol laut dan tol udara. Program tersebut telah terbukti memberikan dampak nyata bagi masyarakat, terutama dalam menekan biaya logistik dan harga kebutuhan pokok di berbagai daerah.</p>\n<p>Data dari Kemenko Maritim menunjukkan bahwa keberadaan tol laut berkontribusi terhadap penurunan harga komoditas. Penurunan paling signifikan terjadi di wilayah Indonesia Timur, tepatnya di Namlea, yang mencapai 49 persen.</p>\n<p>Menhub juga menambahkan bahwa Indonesia memiliki potensi besar di sektor industri maritim. Dengan luas wilayah laut sekitar 5,8 juta km² dan lebih dari 17.000 pulau, Indonesia sangat pantas disebut sebagai negara maritim.</p>",
-    "usage": [7]
-  },
-  {
-    "passageId": "Teks Bacaan: Peran Penting Transportasi Nasional",
-    "passageText": "<p>Jasa transportasi kini menjadi salah satu kebutuhan dasar bagi masyarakat. Karena itu, keberlangsungan layanan transportasi dalam memenuhi aktivitas produksi, konsumsi, dan distribusi perlu dijaga secara konsisten. Hal ini disampaikan oleh Menteri Perhubungan Budi Karya Sumadi ketika menjadi pembicara utama dalam acara bertema <em>Industri Pilihan Dalam Kerangka Strategi Industrialisasi Indonesia 2045</em> yang diselenggarakan oleh Komite Ekonomi dan Industri Nasional (KEIN) bersama Universitas Diponegoro di Hotel Gumaya, Rabu (22/2).</p>\n<p>Menurut Menhub, kesinambungan ketersediaan jasa transportasi di seluruh wilayah Indonesia adalah hal yang sangat penting karena memiliki peran strategis dalam menjaga stabilitas kegiatan masyarakat serta roda pemerintahan agar tetap berjalan dengan baik.</p>\n<p>Dalam sambutannya, Menhub menjelaskan bahwa Kementerian Perhubungan memiliki peran vital sebagai penghubung antarwilayah melalui pengembangan tol laut dan tol udara. Program ini terbukti memberikan dampak positif langsung kepada masyarakat, terutama dalam menekan biaya logistik dan menurunkan harga kebutuhan pokok di berbagai daerah.</p>\n<p>Berdasarkan data dari Kemenko Maritim, pelaksanaan tol laut terbukti membantu menurunkan harga berbagai komoditas. Penurunan paling besar terjadi di kawasan Indonesia Timur, tepatnya di Namlea, yang mencapai hingga 49 persen.</p>\n<p>Lebih jauh, Menhub menambahkan bahwa Indonesia memiliki potensi besar di bidang industri maritim. Dengan luas laut sekitar 5,8 juta km² dan jumlah pulau mencapai 17.508, Indonesia layak disebut sebagai negara maritim yang memiliki peluang besar untuk mengembangkan sektor transportasi laut.</p>",
-    "usage": [8]
-  },
-  {
-    "passageId": "Teks Bacaan: (KODE LBI1-9)",
-    "passageText": "<p>Jasa transportasi telah menjadi kebutuhan utama masyarakat. Karena itu, keberlanjutan ketersediaan layanan transportasi dalam menunjang aktivitas produksi, konsumsi, dan distribusi perlu diperhatikan secara terus-menerus. Hal ini disampaikan oleh Menteri Perhubungan Budi Karya Sumadi dalam acara bertajuk <em>Industri Pilihan Dalam Kerangka Strategi Industrialisasi Indonesia 2045</em> yang difasilitasi oleh Komite Ekonomi dan Industri Nasional (KEIN) serta Universitas Diponegoro di Hotel Gumaya pada hari Rabu (22/2).</p>\n<p>Menurut Menhub, ketersediaan layanan transportasi di seluruh wilayah merupakan hal yang esensial karena transportasi berperan strategis dalam menjaga stabilitas dan keberlangsungan aktivitas masyarakat serta roda pemerintahan.</p>\n<p>Dalam pidatonya, Menhub menjelaskan bahwa Kementerian Perhubungan berperan sebagai penghubung atau konektor pembangunan lewat jalur darat dan laut, seperti program <em>tol laut</em>. Melalui data Kemenko Maritim, dijelaskan bahwa keberadaan tol laut menurunkan harga komoditas, terutama di wilayah Indonesia Timur. Penurunan terbesar terjadi di Namlea, yaitu sebesar 49 persen.</p>\n<p>Lebih lanjut, Menhub menambahkan bahwa Indonesia memiliki potensi besar dalam industri maritim. Hal tersebut tampak dari luas wilayah laut Indonesia yang mencapai sekitar 5,8 juta km² dan jumlah pulau mencapai 17.508. Oleh karena itu, Indonesia pantas disebut sebagai negara maritim.</p>",
-    "usage": [9]
-  },
-  {
-    "passageId": "Teks Bacaan: Dampak Media Sosial terhadap Kesehatan Mental",
-    "passageText": "<p>(1) Sebuah penelitian dari University of Manchester mengungkapkan bahwa penggunaan media sosial berkontribusi terhadap kesehatan mental yang buruk di Indonesia. (2) Para peneliti menyurvei <strong>22.423 individu</strong> berusia 20 tahun ke atas yang menggunakan media sosial daring seperti Facebook, Twitter, dan platform lainnya. (3) Hasil penelitian ini menunjukkan bahwa penggunaan media sosial dapat membahayakan kesehatan mental orang dewasa. (4) Peningkatan satu standar deviasi dalam penggunaan media sosial oleh orang dewasa setara dengan peningkatan <strong>9 persen</strong> dalam skor CES-D (Center for Epidemiologic Studies Depression Scale), yang digunakan untuk mengukur tingkat depresi.</p>\n<p>(5) Berdasarkan survei Riset Kesehatan Dasar Indonesia terbaru, prevalensi individu dengan gangguan jiwa akibat penggunaan media sosial di tanah air diperkirakan mencapai <strong>11,8 juta orang</strong>. (6) Data ini mengindikasikan bahwa kemajuan teknologi tidak selalu memberikan dampak positif terhadap kesejahteraan psikologis masyarakat. (7) Oleh karena itu, para pejabat dan tenaga kesehatan masyarakat perlu berupaya mencari strategi yang efektif agar masyarakat lebih sadar terhadap konsekuensi negatif media sosial. (8) Penggunaan media sosial daring yang bijak sangat diperlukan untuk mencegah meningkatnya kasus gangguan mental di kalangan masyarakat.</p>",
-    "usage": [10, 11]
-  },
-  {
-    "passageId": "Teks Bacaan: (KODE LBI1-10)",
-    "passageText": "<p>(1) Sebuah penelitian yang dilakukan oleh University of Manchester menyatakan bahwa penggunaan media sosial berdampak pada menurunnya kesehatan mental masyarakat di Indonesia. (2) Penelitian tersebut melibatkan 22.423 responden berusia 20 tahun ke atas yang aktif menggunakan berbagai platform seperti Facebook, Twitter, dan lain-lain. (3) Hasilnya menunjukkan bahwa penggunaan media sosial secara berlebihan dapat mengganggu keseimbangan mental individu dewasa. (4) Setiap peningkatan satu standar deviasi dalam frekuensi penggunaan media sosial berkorelasi dengan kenaikan 9 persen dalam skor CES-D (Center for Epidemiologic Studies Depression Scale), yang digunakan sebagai alat ukur gejala depresi.</p>\n<p>(5) Berdasarkan hasil Riset Kesehatan Dasar Indonesia terbaru, jumlah individu dengan gangguan jiwa akibat penggunaan media sosial diperkirakan mencapai 11,8 juta orang. (6) Fakta ini menunjukkan bahwa kemajuan teknologi memiliki sisi negatif yang perlu diwaspadai. (7) Oleh karena itu, pihak berwenang di bidang kesehatan diharapkan dapat mengedukasi masyarakat agar memahami dampak penggunaan media sosial yang tidak terkontrol. (8) Di sisi lain, masyarakat juga diimbau untuk lebih bijak dan selektif dalam menggunakan media sosial supaya dapat meminimalkan risiko gangguan kesehatan mental.</p>",
-    "usage": [12]
-  },
-  {
-    "passageId": "Teks Bacaan: (KODE LBI1-12)",
-    "passageText": "<p>(1) Menteri Lingkungan Hidup dan Kehutanan menegaskan komitmen kuat Pemerintah Indonesia untuk menurunkan emisi gas rumah kaca. (2) Upaya penurunan emisi tersebut diarahkan demi kesejahteraan rakyat. (3) Dalam Kesepakatan Paris, setiap negara berjanji menjaga agar kenaikan suhu global tidak melebihi dua derajat dibandingkan masa praindustri. (4) Sepanjang tahun 2016, Indonesia melaksanakan berbagai kebijakan dan langkah operasional yang berpengaruh langsung terhadap penurunan emisi, seperti moratorium dan restorasi lahan gambut, pengendalian kebakaran hutan, serta pencegahan deforestasi yang seluruhnya memiliki indikator kinerja yang jelas dan dapat dipantau. (5) Apakah kita akan terus membiarkan pembakaran hutan terjadi setiap tahun? (6) Kebijakan penurunan emisi yang dilakukan Indonesia bukanlah untuk menyenangkan negara lain, melainkan sebagai pelaksanaan amanat peraturan perundangan demi kesejahteraan rakyat.</p>",
-    "usage": [13, 14, 15]
-  },
-  {
-    "passageId": "Teks Bacaan: (KODE LBI1-16)",
-    "passageText": "<p>(1) Pilihan kontrasepsi masih didasarkan pada kontrasepsi yang dipakai keluarga, teman, atau tetangga dekat, bukan disesuaikan dengan kebutuhan dan kondisi individu.</p>\n<p>(2) Karena hanya mengikuti orang lain, maka sebagian besar perempuan lebih memilih kontrasepsi jangka pendek, seperti pil, daripada kontrasepsi jangka panjang seperti implan (susuk) dan spiral.</p>\n<p>(3) Implan dan spiral belum menjadi pilihan utama kontrasepsi perempuan.</p>\n<p>(4) Selain itu, ketakutan memakai implan dan spiral karena kontrasepsi tersebut dimasukkan ke tubuh masih tinggi.</p>\n<p>(5) Belum lagi informasi yang salah tentang kontrasepsi masih beredar.</p>\n<p>(6) Tiap kontrasepsi mempunyai kelebihan dan kelemahan.</p>\n<p>(7) Informasi manfaat ataupun dampak tiap kontrasepsi perlu terus disampaikan.</p>\n<p>(8) Badan Kependudukan dan Keluarga Berencana Nasional (BKKBN) pun terus menyosialisasikan implan dan spiral, tidak hanya mengampanyekan slogan dua anak cukup.</p>\n<p>(9) Hasilnya cukup menggembirakan dengan kenaikan rata-rata penggunaan kontrasepsi jangka panjang.</p>\n<p>(10) Di Jawa Timur dan Nusa Tenggara Barat pada tahun 2013–2016 terjadi peningkatan rerata penggunaan kontrasepsi jangka panjang, khususnya implan.</p>",
-    "usage": [16]
-  },
-  {
-    "passageId": "Teks Bacaan: (KODE LBI1-17)",
-    "passageText": "<p>(1) Pilihan kontrasepsi masih didasarkan pada kontrasepsi yang digunakan keluarga, teman, atau tetangga dekat, bukan disesuaikan dengan kebutuhan dan kondisi individu.</p>\n<p>(2) Karena hanya meniru orang lain, sebagian besar perempuan lebih memilih kontrasepsi jangka pendek, seperti pil, daripada kontrasepsi jangka panjang seperti implan (susuk) dan spiral.</p>\n<p>(3) Implan dan spiral belum menjadi pilihan utama kontrasepsi perempuan.</p>\n<p>(4) Selain itu, kekhawatiran memakai implan dan spiral karena alat tersebut dimasukkan ke dalam tubuh masih tinggi.</p>\n<p>(5) Belum lagi informasi yang salah mengenai kontrasepsi masih beredar.</p>\n<p>(6) Tiap jenis kontrasepsi memiliki kelebihan dan kekurangan.</p>\n<p>(7) Informasi mengenai manfaat dan efek samping kontrasepsi perlu terus disosialisasikan.</p>\n<p>(8) Badan Kependudukan dan Keluarga Berencana Nasional (BKKBN) juga terus menyosialisasikan penggunaan implan dan spiral, tidak hanya mengampanyekan slogan dua anak cukup.</p>\n<p>(9) Hasilnya cukup positif dengan meningkatnya penggunaan kontrasepsi jangka panjang.</p>\n<p>(10) Di Jawa Timur dan Nusa Tenggara Barat pada tahun 2013–2016, terjadi peningkatan rata-rata penggunaan kontrasepsi jangka panjang, khususnya implan.</p>",
-    "usage": [17]
-  },
-  {
-    "passageId": "Teks Bacaan: Pemilihan Alat Kontrasepsi oleh Perempuan",
-    "passageText": "<p>(1) Pemilihan kontrasepsi masih banyak didasarkan pada alat yang digunakan oleh keluarga, teman, atau tetangga sekitar, bukan disesuaikan dengan kebutuhan dan kondisi masing-masing individu.</p>\n<p>(2) Karena hanya mengikuti pilihan orang lain, banyak perempuan cenderung memilih kontrasepsi jangka pendek, seperti pil, daripada metode jangka panjang seperti implan atau spiral.</p>\n<p>(3) Implan dan spiral belum menjadi pilihan utama karena masih ada kekhawatiran untuk menggunakannya, sebab alat tersebut dipasang di dalam tubuh.</p>\n<p>(4) Selain itu, minimnya informasi yang akurat juga memperkuat keraguan terhadap kontrasepsi jangka panjang.</p>\n<p>(5) Padahal, setiap metode kontrasepsi memiliki kelebihan dan kekurangan masing-masing. Oleh karena itu, informasi manfaat dan risiko tiap metode perlu terus disosialisasikan oleh pihak terkait, seperti BKKBN.</p>\n<p>(6) Sosialisasi tersebut telah menunjukkan hasil positif, terlihat dari meningkatnya penggunaan kontrasepsi jangka panjang, khususnya implan, di beberapa daerah seperti Jawa Timur dan Nusa Tenggara Barat pada tahun 2013–2016.</p>",
-    "usage": [18]
-  },
-  {
-    "passageId": "Teks Bacaan: (LBI1-19)",
-    "passageText": "<p>(1) Pilihan kontrasepsi masih didasarkan pada kontrasepsi yang digunakan keluarga, teman, atau tetangga dekat, bukan disesuaikan dengan kebutuhan dan kondisi individu.</p>\n<p>(2) Karena hanya meniru orang lain, sebagian besar perempuan lebih memilih kontrasepsi jangka pendek, seperti pil, daripada kontrasepsi jangka panjang seperti implan (susuk) dan spiral.</p>\n<p>(3) Implan dan spiral belum menjadi pilihan utama kontrasepsi perempuan.</p>\n<p>(4) Selain itu, ketakutan pemakaian implan dan spiral karena kontrasepsi tersebut dimasukkan ke tubuh masih kuat.</p>\n<p>(5) Belum lagi informasi yang salah tentang kontrasepsi masih beredar.</p>\n<p>(6) Tiap kontrasepsi mempunyai kelebihan dan kelemahan.</p>\n<p>(7) Informasi manfaat ataupun dampak tiap kontrasepsi perlu terus disampaikan.</p>\n<p>(8) Badan Kependudukan dan Keluarga Berencana Nasional (BKKBN) pun terus menyosialisasikan implan dan spiral, tidak hanya mengampanyekan slogan dua anak cukup.</p>\n<p>(9) Hasilnya cukup menggembirakan dengan kenaikan rata-rata penggunaan kontrasepsi jangka panjang.</p>\n<p>(10) Di Jawa Timur dan Nusa Tenggara Barat pada tahun 2013–2016 terjadi peningkatan rata-rata penggunaan kontrasepsi jangka panjang, khususnya implan.</p>",
-    "usage": [19]
-  },
-  {
-    "passageId": "Teks Bacaan: (LBI1-20)",
-    "passageText": "<p>Setiap orang tentu ingin mencapai kesejahteraan finansial. Sayangnya, tidak semua orang memahami cara mengatur keuangan pribadi secara tepat. Padahal, pengelolaan keuangan pribadi yang baik dapat membantu kita mewujudkan kesejahteraan hidup. Ada empat strategi utama dalam mengelola keuangan pribadi untuk mencapai kemakmuran finansial.</p>\n<p>Strategi pertama adalah menabung dan berinvestasi secara rutin. Di era sekarang, penghasilan tidak seharusnya hanya ditabung, tetapi juga dialokasikan untuk investasi. Dengan investasi yang terarah, kita bisa memperoleh keuntungan signifikan dalam jangka waktu tertentu.</p>\n<p>Strategi kedua yaitu melakukan penghematan. Salah satu bentuk penghematan yang mendukung kesejahteraan finansial adalah mengurangi pengeluaran tidak perlu, khususnya yang bersifat konsumtif. Penghematan juga dapat dilakukan dengan cara membandingkan harga serta kualitas produk sebelum membeli, termasuk dalam memilih produk keuangan seperti kartu kredit atau pinjaman. Dengan begitu, kita bisa memastikan bahwa setiap pengeluaran benar-benar efisien.</p>\n<p>Strategi ketiga adalah menyusun anggaran. Banyak orang belum memahami pentingnya perencanaan anggaran dalam mengatur arus keluar-masuk uang. Robert T. Kiyosaki berpendapat bahwa baik orang kaya, menengah, maupun miskin tetap memerlukan anggaran untuk mengatur keuangan mereka. Dengan membuat anggaran, kita bisa mengendalikan pengeluaran dan mengelola pemasukan dengan lebih baik.</p>\n<p>Strategi keempat adalah menambah sumber pemasukan. Selain dari pekerjaan utama (pendapatan aktif), kita dapat memperoleh penghasilan tambahan melalui sumber lain, seperti pendapatan pasif. Contohnya, pemilik rumah yang menyewakan propertinya akan mendapatkan pemasukan tambahan. Begitu pula penulis buku yang memperoleh royalti dari hasil penjualan karyanya.</p>",
-    "usage": [20]
-  },
-  {
-    "passageId": "Teks Bacaan: Strategi Pengelolaan Keuangan Pribadi",
-    "passageText": "<p>Setiap orang tentunya ingin sejahtera secara keuangan. Sayangnya, tidak semua orang mengetahui cara mengelola keuangan pribadi yang benar. Padahal, pengelolaan keuangan pribadi yang benar tentu akan mempermudah kita untuk mencapai kesejahteraan keuangan. Terdapat empat strategi pengelolaan keuangan pribadi yang dapat dilakukan untuk meraih kekayaan secara finansial.</p>\n<p>Strategi pertama adalah menabung dan berinvestasi setiap bulan. Era sekarang ini kita harus memprioritaskan penghasilan yang didapatkan tidak hanya untuk ditabung, tetapi juga untuk diinvestasikan. Melalui investasi yang baik, kita bisa mendapatkan keuntungan besar dalam waktu singkat.</p>\n<p>Strategi kedua adalah penghematan. Salah satu bentuk penghematan yang dapat meningkatkan kesejahteraan adalah mengurangi pengeluaran. Namun, penghematan yang dilakukan lebih kepada pengeluaran yang bersifat konsumtif. Jika diharuskan membeli barang konsumtif, penghematan dapat dilakukan dengan membandingkan harga dan kualitas produk sebelum membeli. Ketika akan membeli produk keuangan (kartu kredit dan jenis kredit lainnya), kita pun harus membandingkannya terlebih dahulu.</p>\n<p>Strategi ketiga adalah membuat anggaran. Banyak orang belum menyadari fungsi dan manfaat anggaran. Robert T. Kiyosaki berpendapat bahwa orang kaya, orang kelas menengah, dan orang miskin perlu membuat anggaran. Jadi, jika perlu membuat anggaran keuangan untuk mengelola keluar masuknya uang dari kantong kita.</p>\n<p>Strategi keempat adalah menambah pemasukan. Selain penghasilan yang didapat dari kerja aktif, kita perlu menambah penghasilan dari sumber lain atau bisa disebut dengan pendapatan pasif. Contohnya, pemilik rumah kos yang mendapat pendapatan dari penyewaan kamar. Kemudian pengarang atau penulis buku yang mendapat royalti atas karya dan hasil penjualan bukunya.</p>",
-    "usage": [21]
-  },
-  {
-    "passageId": "Teks Bacaan: Restorative Justice",
-    "passageText": "<p><strong>Restorative justice</strong> merupakan penyelesaian perkara pidana dengan melibatkan pelaku, korban, keluarga pelaku, keluarga korban, tokoh masyarakat, tokoh adat, tokoh agama, serta pihak lain yang berkepentingan. Tujuannya adalah mencari solusi penyelesaian yang adil melalui musyawarah, dengan mengedepankan perdamaian dan pemulihan keadaan seperti semula, bukan sekadar pemidanaan.</p>\n<p>Berdasarkan Pasal 1 huruf 3 Peraturan Polri Nomor 8 Tahun 2021, keadilan restoratif didefinisikan sebagai alternatif penyelesaian perkara yang berfokus pada dialog dan mediasi antarpihak yang terlibat. Prinsip dasarnya menekankan pemulihan korban dan tanggung jawab pelaku, misalnya melalui ganti rugi, permintaan maaf, atau kesepakatan lain yang disetujui bersama.</p>\n<p>Pelaksanaan <em>restorative justice</em> menuntut kerja sama semua pihak. Aparat hukum berperan sebagai penengah, masyarakat menjaga perdamaian, dan pelaku bersama korban berupaya memperbaiki hubungan sosial yang rusak akibat tindak pidana. Dengan demikian, pendekatan ini menekankan rekonsiliasi, bukan pembalasan.</p>",
-    "usage": [22, 23, 24, 25, 26]
-  },
-  {
-    "passageId": "Teks Bacaan: Shorea parvifolia dan Ekspansi Populasi",
-    "passageText": "<p>(1) Para peneliti asal Jepang menemukan bahwa, dalam skala waktu geologis, salah satu spesies pohon hutan tropis mengalami banyak perubahan. (2) Berdasarkan penelitian terbaru dari University of Tsukuba, diketahui bahwa <em>Shorea parvifolia</em> — salah satu jenis pohon hutan hujan tropis — menunjukkan ekspansi populasi yang pesat di wilayah Borneo. (3) Hal ini menegaskan pentingnya memahami sejarah kehidupan spesies untuk memprediksi kelangsungannya di masa depan.</p>\n<p>(4) Profesor Yoshihiko Tsumura, seperti dilansir EurekAlert, menyatakan bahwa <em>Shorea parvifolia</em> tersebar luas di Asia Tenggara. (5) Struktur genetiknya dipengaruhi oleh perubahan iklim global yang terjadi berulang kali. (6) Analisis genetik memberikan wawasan untuk memastikan keberlanjutan spesies tersebut di masa depan. (7) Dalam penelitiannya, tim ilmuwan mengambil sampel daun dari berbagai populasi alami yang mencakup hampir seluruh wilayah penyebaran spesies ini. (8) Mereka menganalisis DNA nukleus dan DNA kloroplas untuk meneliti struktur genetiknya. (9) Hasil penelitian mengungkapkan bahwa <em>S. parvifolia</em> mengalami perluasan populasi di Borneo. (10) Spesies ini diduga bermigrasi dari Semenanjung Malaya ke Borneo, lalu berkembang pesat hingga menghasilkan keragaman genetik yang tinggi.</p>",
-    "usage": [27, 28]
-  },
-  {
-    "passageId": "Teks Bacaan: Teripang Laut atau Holothuroidea",
-    "passageText": "<p>Teripang laut atau <em>Holothuroidea</em> merupakan hewan laut yang tubuhnya berbentuk silinder memanjang, dengan mulut di satu ujung dan anus di ujung lainnya. Karena bentuknya menyerupai mentimun, teripang laut juga dikenal dengan sebutan <em>sea cucumber</em>. Mulutnya dikelilingi oleh tentakel atau alat peraba yang bercabang, sedangkan tubuhnya bertekstur lembek, bisa licin atau berbintil, dan memiliki warna bervariasi seperti hitam, cokelat, maupun abu-abu.</p>\n<p>Teripang biasanya berada di sisi tertentu dari dasar laut, terutama di bagian yang berwarna lebih terang. Beberapa jenis dapat bersembunyi di dalam pasir. Hewan ini bergerak sangat lambat dan melindungi diri dari ancaman dengan mengeluarkan lendir beracun. Pada kondisi terdesak, jenis tertentu seperti <em>Holothurian vagabunda</em> akan menyemprotkan cairan lengket dari anusnya untuk mengusir musuh.</p>\n<p>Teripang juga dapat dimanfaatkan sebagai bahan pangan apabila diolah dengan benar. Beberapa jenis yang umum dikonsumsi antara lain teripang lontong (<em>Holothurian nobilis</em>), teripang pasir (<em>Holothurian scabra</em>), dan teripang nanas (<em>Sticopus ananas</em>).</p>",
-    "usage": [29, 30]
+    "level": 1,
+    "topic": "Pemahaman Teks",
+    "topic_code": "PT",
+    "subtopic": "Relevansi",
+    "subtopic_code": "RV",
+    "subtopic_id": 213,
+    "bidang": "Literasi Bahasa Indonesia",
+    "bidang_code": "LBI",
+    "explanation": "<p>Jawaban yang tepat adalah <strong>(E)</strong>. Dalam teks dijelaskan bahwa teripang memiliki tubuh yang berlemak, tipis atau tebal, serta permukaannya bisa licin maupun berbintil. Tidak ada keterangan bahwa tubuh teripang bersifat kasar. Dengan demikian, pernyataan pada opsi (E) bertentangan dengan deskripsi dalam bacaan. Pilihan lainnya justru sesuai dengan ciri-ciri tubuh teripang laut yang dijelaskan di paragraf pertama, seperti bentuk silindris, warna tubuh bervariasi, dan adanya tentakel bercabang di sekitar mulut.</p>"
   }
 ]

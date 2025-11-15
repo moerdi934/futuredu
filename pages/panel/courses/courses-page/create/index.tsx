@@ -138,59 +138,90 @@ const CreateCourse: React.FC = () => {
   }, [courseTitle, courseDescription, courseImageUrl, learningPoints, sections, mounted]);
 
   // Load from autosave
-  const loadFromAutosave = useCallback(async (): Promise<void> => {
-    try {
-      const saved = await courseDB.getAutosave(AUTOSAVE_KEY);
-      if (saved) {
-        setCourseTitle(saved.courseTitle);
-        setCourseDescription(saved.courseDescription);
-        setCourseImageUrl(saved.courseImageUrl);
-        setLearningPoints(saved.learningPoints);
-        setSections(saved.sections);
-        setLastSaved(new Date(saved.lastSaved));
-        console.log('Loaded from autosave:', new Date(saved.lastSaved).toLocaleTimeString());
-      }
-    } catch (error) {
-      console.error('Failed to load from autosave:', error);
+const loadFromAutosave = useCallback(async (): Promise<void> => {
+  try {
+    const saved = await courseDB.getAutosave(AUTOSAVE_KEY);
+    if (saved) {
+      // Ensure all materials have content
+      const sectionsWithContent = saved.sections.map(section => ({
+        ...section,
+        topics: section.topics.map(topic => ({
+          ...topic,
+          materials: topic.materials.map(material => ({
+            ...material,
+            content: material.content || '<p>Mulai menulis konten materi...</p>'
+          }))
+        }))
+      }));
+
+      setCourseTitle(saved.courseTitle);
+      setCourseDescription(saved.courseDescription);
+      setCourseImageUrl(saved.courseImageUrl);
+      setLearningPoints(saved.learningPoints);
+      setSections(sectionsWithContent);
+      setLastSaved(new Date(saved.lastSaved));
+      
+      console.log('Loaded from autosave:', new Date(saved.lastSaved).toLocaleTimeString());
+      console.log('Materials with content:', sectionsWithContent);
     }
-  }, []);
+  } catch (error) {
+    console.error('Failed to load from autosave:', error);
+  }
+}, []);
 
   // Import from JSON
-  const importFromJSON = useCallback(async (): Promise<void> => {
-    try {
-      const importedData = sessionStorage.getItem('importedCourseData');
-      if (importedData) {
-        sessionStorage.removeItem('importedCourseData');
+const importFromJSON = useCallback(async (): Promise<void> => {
+  try {
+    const importedData = sessionStorage.getItem('importedCourseData');
+    if (importedData) {
+      sessionStorage.removeItem('importedCourseData');
+      
+      const parsed = importCourseFromJSON(importedData);
+      if (parsed) {
+        // Ensure all materials have content
+        const sectionsWithContent = parsed.sections.map(section => ({
+          ...section,
+          topics: section.topics.map(topic => ({
+            ...topic,
+            materials: topic.materials.map(material => ({
+              ...material,
+              content: material.content || '<p>Mulai menulis konten materi...</p>'
+            }))
+          }))
+        }));
+
+        setCourseTitle(parsed.courseTitle);
+        setCourseDescription(parsed.courseDescription);
+        setCourseImageUrl(parsed.courseImageUrl);
+        setLearningPoints(parsed.learningPoints);
+        setSections(sectionsWithContent);
+        setHasUnsavedChanges(true);
         
-        const parsed = importCourseFromJSON(importedData);
-        if (parsed) {
-          setCourseTitle(parsed.courseTitle);
-          setCourseDescription(parsed.courseDescription);
-          setCourseImageUrl(parsed.courseImageUrl);
-          setLearningPoints(parsed.learningPoints);
-          setSections(parsed.sections);
+        // Save imported data to autosave
+        await courseDB.saveAutosave(AUTOSAVE_KEY, {
+          courseTitle: parsed.courseTitle,
+          courseDescription: parsed.courseDescription,
+          courseImageUrl: parsed.courseImageUrl,
+          learningPoints: parsed.learningPoints,
+          sections: sectionsWithContent,
+          mode: 'create'
+        });
+        
+        // Force re-render after a short delay
+        setTimeout(() => {
           setHasUnsavedChanges(true);
-          
-          // Save imported data to autosave
-          await courseDB.saveAutosave(AUTOSAVE_KEY, {
-            courseTitle: parsed.courseTitle,
-            courseDescription: parsed.courseDescription,
-            courseImageUrl: parsed.courseImageUrl,
-            learningPoints: parsed.learningPoints,
-            sections: parsed.sections,
-            mode: 'create'
-          });
-          
-          alert('Data berhasil diimport dari JSON!');
-        } else {
-          alert('Format JSON tidak valid atau data corrupt.');
-        }
+        }, 100);
+        
+        alert('Data berhasil diimport dari JSON!');
+      } else {
+        alert('Format JSON tidak valid atau data corrupt.');
       }
-    } catch (error) {
-      console.error('Import failed:', error);
-      alert('Gagal mengimport data JSON.');
     }
-  }, []);
+  } catch (error) {
+    console.error('Import failed:', error);
+    alert('Gagal mengimport data JSON.');
+  }
+}, []);
 
   // Initialize component
   useEffect(() => {
@@ -256,53 +287,70 @@ const CreateCourse: React.FC = () => {
   };
 
   // Import JSON from file
-  const handleImportJSON = (): void => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          try {
-            const jsonString = event.target?.result as string;
-            const parsed = importCourseFromJSON(jsonString);
-            
-            if (parsed) {
-              if (confirm('Import akan mengganti semua data yang ada. Lanjutkan?')) {
-                setCourseTitle(parsed.courseTitle);
-                setCourseDescription(parsed.courseDescription);
-                setCourseImageUrl(parsed.courseImageUrl);
-                setLearningPoints(parsed.learningPoints);
-                setSections(parsed.sections);
+const handleImportJSON = (): void => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const jsonString = event.target?.result as string;
+          const parsed = importCourseFromJSON(jsonString);
+          
+          if (parsed) {
+            if (confirm('Import akan mengganti semua data yang ada. Lanjutkan?')) {
+              // Ensure all materials have content
+              const sectionsWithContent = parsed.sections.map(section => ({
+                ...section,
+                topics: section.topics.map(topic => ({
+                  ...topic,
+                  materials: topic.materials.map(material => ({
+                    ...material,
+                    content: material.content || '<p>Mulai menulis konten materi...</p>'
+                  }))
+                }))
+              }));
+
+              setCourseTitle(parsed.courseTitle);
+              setCourseDescription(parsed.courseDescription);
+              setCourseImageUrl(parsed.courseImageUrl);
+              setLearningPoints(parsed.learningPoints);
+              setSections(sectionsWithContent);
+              setHasUnsavedChanges(true);
+              
+              // Save imported data to autosave
+              await courseDB.saveAutosave(AUTOSAVE_KEY, {
+                courseTitle: parsed.courseTitle,
+                courseDescription: parsed.courseDescription,
+                courseImageUrl: parsed.courseImageUrl,
+                learningPoints: parsed.learningPoints,
+                sections: sectionsWithContent,
+                mode: 'create'
+              });
+              
+              // Force re-render
+              setTimeout(() => {
                 setHasUnsavedChanges(true);
-                
-                // Save imported data to autosave
-                await courseDB.saveAutosave(AUTOSAVE_KEY, {
-                  courseTitle: parsed.courseTitle,
-                  courseDescription: parsed.courseDescription,
-                  courseImageUrl: parsed.courseImageUrl,
-                  learningPoints: parsed.learningPoints,
-                  sections: parsed.sections,
-                  mode: 'create'
-                });
-                
-                alert('Data berhasil diimport dari JSON!');
-              }
-            } else {
-              alert('Format JSON tidak valid atau data corrupt.');
+              }, 100);
+              
+              alert('Data berhasil diimport dari JSON!');
             }
-          } catch (error) {
-            console.error('Import failed:', error);
-            alert('Gagal mengimport data JSON.');
+          } else {
+            alert('Format JSON tidak valid atau data corrupt.');
           }
-        };
-        reader.readAsText(file);
-      }
-    };
-    input.click();
+        } catch (error) {
+          console.error('Import failed:', error);
+          alert('Gagal mengimport data JSON.');
+        }
+      };
+      reader.readAsText(file);
+    }
   };
+  input.click();
+};
 
   // Clear autosave
   const handleClearAutosave = async (): Promise<void> => {
@@ -441,7 +489,7 @@ const addMaterial = (sectionId: number, topicId: number): void => {
                     videoType: 'upload',
                     videoFile: null,
                     videoUrl: '',
-                    content: '<p>Mulai menulis konten materi...</p>'  // ← INI SUDAH ADA
+                    content: '<p>Mulai menulis konten materi...</p>'
                   }]
                 }
               : topic
@@ -570,9 +618,27 @@ const addMaterial = (sectionId: number, topicId: number): void => {
     updateMaterial(sectionId, topicId, materialId, 'videoFile', file);
   };
 
-  const handleEditorChange = (sectionId: number, topicId: number, materialId: number) => (content: string): void => {
-    updateMaterial(sectionId, topicId, materialId, 'content', content);
-  };
+const handleEditorChange = (sectionId: number, topicId: number, materialId: number) => (content: string): void => {
+  setSections(prevSections => prevSections.map(section => 
+    section.id === sectionId 
+      ? {
+          ...section,
+          topics: section.topics.map(topic => 
+            topic.id === topicId 
+              ? {
+                  ...topic,
+                  materials: topic.materials.map(material =>
+                    material.id === materialId 
+                      ? { ...material, content } 
+                      : material
+                  )
+                }
+              : topic
+          )
+        }
+      : section
+  ));
+};
 
   const scrollToElement = (elementId: string): void => {
     if (typeof window === 'undefined') return;
@@ -1226,16 +1292,17 @@ const addMaterial = (sectionId: number, topicId: number): void => {
                                                         </div>
                                                       )}
 
-                                                      <div className="tw-mb-3">
-                                                        <label className="tw-block tw-text-sm tw-text-purple-700 tw-mb-2">
-                                                          Konten Materi
-                                                        </label>
-                                                        <SuperEditor
-                                                          key={`${topic.id}-${material.id}`}
-                                                          onChange={handleEditorChange(section.id, topic.id, material.id)}
-                                                          initialValue="<p>Mulai mengetik pembahasan disini...</p>"
-                                                        />
-                                                      </div>
+<div className="tw-mb-3">
+  <label className="tw-block tw-text-sm tw-text-purple-700 tw-mb-2">
+    Konten Materi
+  </label>
+  <SuperEditor
+    key={`editor-${section.id}-${topic.id}-${material.id}-${material.content.substring(0, 20)}`}
+    onChange={handleEditorChange(section.id, topic.id, material.id)}
+    initialValue={material.content || '<p>Mulai mengetik pembahasan disini...</p>'}
+    editorId={`material-${material.id}`}
+  />
+</div>
 
                                                       <div className="tw-mt-3">
                                                         <h6 className="tw-text-sm tw-text-purple-700 tw-mb-2">Preview Konten</h6>
