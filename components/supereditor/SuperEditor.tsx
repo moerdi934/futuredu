@@ -49,6 +49,12 @@ const TableModal = dynamic(() => import('./Toolbars/Table/Table').then(mod => ({
 const KeyConceptButton = dynamic(() => import('./Toolbars/Other/KeyConcept').then(mod => ({ default: mod.KeyConceptButton })), { ssr: false });
 const KeyConceptStyleModal = dynamic(() => import('./Toolbars/Other/KeyConcept').then(mod => ({ default: mod.KeyConceptStyleModal })), { ssr: false });
 
+const StyledListButton = dynamic(() => import('./Toolbars/Other/StyledList').then(mod => ({ default: mod.StyledListButton })), { ssr: false });
+const StyledListModal = dynamic(() => import('./Toolbars/Other/StyledList').then(mod => ({ default: mod.StyledListModal })), { ssr: false });
+
+const CardGridButton = dynamic(() => import('./Toolbars/Other/CardGrid').then(mod => ({ default: mod.CardGridButton })), { ssr: false });
+const CardGridModal = dynamic(() => import('./Toolbars/Other/CardGrid').then(mod => ({ default: mod.CardGridModal })), { ssr: false });
+
 const BulletListButton = dynamic(() => import('./Toolbars/List/List').then(mod => ({ default: mod.BulletListButton })), { ssr: false });
 const NumberedListButton = dynamic(() => import('./Toolbars/List/List').then(mod => ({ default: mod.NumberedListButton })), { ssr: false });
 const MultilevelListButton = dynamic(() => import('./Toolbars/List/List').then(mod => ({ default: mod.MultilevelListButton })), { ssr: false });
@@ -59,9 +65,13 @@ const HelpModal = dynamic(() => import('./Toolbars/Help/Help').then(mod => ({ de
 const PracticeButton = dynamic(() => import('./Toolbars/Practice/Practice').then(mod => ({ default: mod.PracticeButton })), { ssr: false });
 const PracticeModal = dynamic(() => import('./Toolbars/Practice/Practice').then(mod => ({ default: mod.PracticeModal })), { ssr: false });
 
-// Import Key Concept utilities
+// Import utilities
 import { insertKeyConceptWithStyle } from './Toolbars/Other/KeyConcept';
 import type { KeyConceptStyle } from './Toolbars/Other/KeyConcept';
+import { insertStyledListWithStyle } from './Toolbars/Other/StyledList';
+import type { StyledListStyle } from './Toolbars/Other/StyledList';
+import { insertCardGridWithStyle } from './Toolbars/Other/CardGrid';
+import type { CardGridStyle } from './Toolbars/Other/CardGrid';
 
 // Portal component for high z-index elements
 const Portal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -166,6 +176,8 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
     code: boolean;
     table: boolean;
     keyConcept: boolean;
+    styledList: boolean;
+    cardGrid: boolean;
     listComponent: boolean;
     help: boolean;
     practice: boolean;
@@ -177,6 +189,8 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
     code: false,
     table: false,
     keyConcept: false,
+    styledList: false,
+    cardGrid: false,
     listComponent: false,
     help: false,
     practice: false
@@ -199,6 +213,8 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
     updateTableInEditor?: any;
     getTableStyles?: any;
     getKeyConceptStyles?: any;
+    getStyledListStyles?: any;
+    getCardGridStyles?: any;
     getListStyles?: any;
     insertPracticeQuestion?: any;
     getPracticeQuestionStyles?: any;
@@ -220,6 +236,8 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
   const [showTableModal, setShowTableModal] = useState<boolean>(false);
   const [showPracticeModal, setShowPracticeModal] = useState<boolean>(false);
   const [showKeyConceptModal, setShowKeyConceptModal] = useState<boolean>(false);
+  const [showStyledListModal, setShowStyledListModal] = useState<boolean>(false);
+  const [showCardGridModal, setShowCardGridModal] = useState<boolean>(false);
   const [currentTextColor, setCurrentTextColor] = useState<string>('#000000');
   const [currentBackgroundColor, setCurrentBackgroundColor] = useState<string>('#ffffff');
   const [editingEquation, setEditingEquation] = useState<any>(null);
@@ -292,6 +310,18 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
       import('./Toolbars/Other/KeyConcept').then(module => {
         helpersRef.current.getKeyConceptStyles = module.getKeyConceptStyles;
         setComponentsLoaded(prev => ({ ...prev, keyConcept: true }));
+      }).catch(console.error);
+
+      // Load styled list helpers
+      import('./Toolbars/Other/StyledList').then(module => {
+        helpersRef.current.getStyledListStyles = module.getStyledListStyles;
+        setComponentsLoaded(prev => ({ ...prev, styledList: true }));
+      }).catch(console.error);
+
+      // Load card grid helpers
+      import('./Toolbars/Other/CardGrid').then(module => {
+        helpersRef.current.getCardGridStyles = module.getCardGridStyles;
+        setComponentsLoaded(prev => ({ ...prev, cardGrid: true }));
       }).catch(console.error);
 
       // Load list helpers
@@ -787,12 +817,24 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
     setShowKeyConceptModal(true);
   }, [saveSelection]);
 
+  const handleStyledListShortcut = useCallback(() => {
+    saveSelection();
+    setShowStyledListModal(true);
+  }, [saveSelection]);
+
+  const handleCardGridShortcut = useCallback(() => {
+    saveSelection();
+    setShowCardGridModal(true);
+  }, [saveSelection]);
+
   const handleEscapeKey = useCallback(() => {
     setShowColorPicker(false);
     setShowBackgroundColorPicker(false);
     setShowTableModal(false);
     setShowHelpModal(false);
     setShowKeyConceptModal(false);
+    setShowStyledListModal(false);
+    setShowCardGridModal(false);
     setDropdownStates({
       fontSize: false,
       fontName: false,
@@ -831,9 +873,25 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
     'ctrl+shift+e': () => !dropdownStates.numberedList && (saveSelection(), setDropdownStates(prev => ({ ...prev, numberedList: true, bulletList: false, multilevelList: false }))),
     'ctrl+shift+m': () => !dropdownStates.multilevelList && (saveSelection(), setDropdownStates(prev => ({ ...prev, multilevelList: true, bulletList: false, numberedList: false }))),
     'ctrl+shift+k': () => handleKeyConceptShortcut(),
+    'ctrl+alt+l': () => handleStyledListShortcut(),
+    'ctrl+alt+g': () => handleCardGridShortcut(),
     'alt+e': () => skipToEditor(),
     'escape': () => handleEscapeKey()
-  }), [showHelpModal, dropdownStates, showColorPicker, showBackgroundColorPicker, showTableModal, saveSelection, execCommand, handleHyperlinkShortcut, handleKeyConceptShortcut, handleEscapeKey, skipToEditor]);
+  }), [
+    showHelpModal,
+    dropdownStates,
+    showColorPicker,
+    showBackgroundColorPicker,
+    showTableModal,
+    saveSelection,
+    execCommand,
+    handleHyperlinkShortcut,
+    handleKeyConceptShortcut,
+    handleStyledListShortcut,
+    handleCardGridShortcut,
+    handleEscapeKey,
+    skipToEditor
+  ]);
 
   // Create key combination string
   const getKeyCombo = useCallback((event: KeyboardEvent): string => {
@@ -1253,6 +1311,56 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
     setSavedSelection(null);
   }, [savedSelection, restoreSelectionRange, handleChange, componentsLoaded.keyConcept]);
 
+  const handleStyledListInsert = useCallback(() => {
+    saveSelection();
+    setShowStyledListModal(true);
+  }, [saveSelection]);
+
+  const handleStyledListStyleSelect = useCallback((style: StyledListStyle, itemCount: number) => {
+    // Restore selection if saved
+    if (savedSelection) {
+      restoreSelectionRange(savedSelection);
+    }
+    
+    // Insert with selected style
+    if (componentsLoaded.styledList) {
+      try {
+        insertStyledListWithStyle(editorRef, handleChange, style, itemCount);
+      } catch (error) {
+        console.warn('Error inserting styled list:', error);
+      }
+    }
+    
+    // Close modal
+    setShowStyledListModal(false);
+    setSavedSelection(null);
+  }, [savedSelection, restoreSelectionRange, handleChange, componentsLoaded.styledList]);
+
+  const handleCardGridInsert = useCallback(() => {
+    saveSelection();
+    setShowCardGridModal(true);
+  }, [saveSelection]);
+
+  const handleCardGridStyleSelect = useCallback((style: CardGridStyle, cardCount: number, columns: number) => {
+    // Restore selection if saved
+    if (savedSelection) {
+      restoreSelectionRange(savedSelection);
+    }
+    
+    // Insert with selected style
+    if (componentsLoaded.cardGrid) {
+      try {
+        insertCardGridWithStyle(editorRef, handleChange, style, cardCount, columns);
+      } catch (error) {
+        console.warn('Error inserting card grid:', error);
+      }
+    }
+    
+    // Close modal
+    setShowCardGridModal(false);
+    setSavedSelection(null);
+  }, [savedSelection, restoreSelectionRange, handleChange, componentsLoaded.cardGrid]);
+
   const handlePracticeInsert = useCallback((questionData: any) => {
     if (savedSelection) {
       restoreSelectionRange(savedSelection);
@@ -1522,6 +1630,16 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
           tabIndex={-1}
         />
         
+        <StyledListButton 
+          onClick={handleStyledListInsert}
+          tabIndex={-1}
+        />
+        
+        <CardGridButton 
+          onClick={handleCardGridInsert}
+          tabIndex={-1}
+        />
+        
         <PracticeButton 
           onClick={() => {
             saveSelection();
@@ -1550,7 +1668,9 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
     handleBackgroundColorClick,
     currentBackgroundColor,
     saveSelection,
-    handleKeyConceptInsert
+    handleKeyConceptInsert,
+    handleStyledListInsert,
+    handleCardGridInsert
   ]);
 
   // Dynamic styles
@@ -1935,6 +2055,22 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
     }
 
     try {
+      if (componentsLoaded.styledList && helpersRef.current.getStyledListStyles) {
+        additionalStyles += helpersRef.current.getStyledListStyles() || '';
+      }
+    } catch (error) {
+      console.warn('Error getting styled list styles:', error);
+    }
+
+    try {
+      if (componentsLoaded.cardGrid && helpersRef.current.getCardGridStyles) {
+        additionalStyles += helpersRef.current.getCardGridStyles() || '';
+      }
+    } catch (error) {
+      console.warn('Error getting card grid styles:', error);
+    }
+
+    try {
       if (componentsLoaded.practice && helpersRef.current.getPracticeQuestionStyles) {
         additionalStyles += helpersRef.current.getPracticeQuestionStyles() || '';
       }
@@ -2117,6 +2253,30 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
             setSavedSelection(null);
           }}
           onSelect={handleKeyConceptStyleSelect}
+        />
+      )}
+      
+      {/* Styled List Modal */}
+      {showStyledListModal && (
+        <StyledListModal
+          isOpen={showStyledListModal}
+          onClose={() => {
+            setShowStyledListModal(false);
+            setSavedSelection(null);
+          }}
+          onSelect={handleStyledListStyleSelect}
+        />
+      )}
+      
+      {/* Card Grid Modal */}
+      {showCardGridModal && (
+        <CardGridModal
+          isOpen={showCardGridModal}
+          onClose={() => {
+            setShowCardGridModal(false);
+            setSavedSelection(null);
+          }}
+          onSelect={handleCardGridStyleSelect}
         />
       )}
       
