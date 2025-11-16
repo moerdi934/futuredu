@@ -9,6 +9,7 @@ import { useSearchParams } from 'next/navigation';
 import MainLayout from '../../../../../components/layout/DashboardLayout';
 import { ButtonGradient } from '../../../../../components/button/ButtonTemplate';
 import { courseDB, exportCourseToJSON, importCourseFromJSON, downloadJSONFile, type CourseAutoSaveData } from '../../../../../utils/courseIndexedDB';
+import { parseCustomContent, applySyntaxHighlighting } from '../../../../../utils/SuperEditorImportHandler';
 
 // Dynamic imports with loading states and no SSR
 const SuperEditor = dynamic(() => import('../../../../../components/supereditor/SuperEditor'), { 
@@ -111,6 +112,38 @@ const CreateCourse: React.FC = () => {
     return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
   };
 
+  // Parse material content using SuperEditorImportHandler
+  const parseMaterialContent = (content: string): string => {
+    try {
+      // Parse custom tags to HTML
+      const parsedContent = parseCustomContent(content);
+      
+      // Apply syntax highlighting after a short delay
+      setTimeout(() => {
+        applySyntaxHighlighting();
+      }, 100);
+      
+      return parsedContent;
+    } catch (error) {
+      console.error('Error parsing material content:', error);
+      return content;
+    }
+  };
+
+  // Process sections with parsed content
+  const processSectionsContent = (sectionsData: Section[]): Section[] => {
+    return sectionsData.map(section => ({
+      ...section,
+      topics: section.topics.map(topic => ({
+        ...topic,
+        materials: topic.materials.map(material => ({
+          ...material,
+          content: parseMaterialContent(material.content || '<p>Mulai menulis konten materi...</p>')
+        }))
+      }))
+    }));
+  };
+
   // Auto save functionality
   const saveToAutosave = useCallback(async (): Promise<void> => {
     if (!mounted) return;
@@ -138,90 +171,71 @@ const CreateCourse: React.FC = () => {
   }, [courseTitle, courseDescription, courseImageUrl, learningPoints, sections, mounted]);
 
   // Load from autosave
-const loadFromAutosave = useCallback(async (): Promise<void> => {
-  try {
-    const saved = await courseDB.getAutosave(AUTOSAVE_KEY);
-    if (saved) {
-      // Ensure all materials have content
-      const sectionsWithContent = saved.sections.map(section => ({
-        ...section,
-        topics: section.topics.map(topic => ({
-          ...topic,
-          materials: topic.materials.map(material => ({
-            ...material,
-            content: material.content || '<p>Mulai menulis konten materi...</p>'
-          }))
-        }))
-      }));
+  const loadFromAutosave = useCallback(async (): Promise<void> => {
+    try {
+      const saved = await courseDB.getAutosave(AUTOSAVE_KEY);
+      if (saved) {
+        // Process sections with parsed content
+        const sectionsWithParsedContent = processSectionsContent(saved.sections);
 
-      setCourseTitle(saved.courseTitle);
-      setCourseDescription(saved.courseDescription);
-      setCourseImageUrl(saved.courseImageUrl);
-      setLearningPoints(saved.learningPoints);
-      setSections(sectionsWithContent);
-      setLastSaved(new Date(saved.lastSaved));
-      
-      console.log('Loaded from autosave:', new Date(saved.lastSaved).toLocaleTimeString());
-      console.log('Materials with content:', sectionsWithContent);
+        setCourseTitle(saved.courseTitle);
+        setCourseDescription(saved.courseDescription);
+        setCourseImageUrl(saved.courseImageUrl);
+        setLearningPoints(saved.learningPoints);
+        setSections(sectionsWithParsedContent);
+        setLastSaved(new Date(saved.lastSaved));
+        
+        console.log('Loaded from autosave:', new Date(saved.lastSaved).toLocaleTimeString());
+      }
+    } catch (error) {
+      console.error('Failed to load from autosave:', error);
     }
-  } catch (error) {
-    console.error('Failed to load from autosave:', error);
-  }
-}, []);
+  }, []);
 
   // Import from JSON
-const importFromJSON = useCallback(async (): Promise<void> => {
-  try {
-    const importedData = sessionStorage.getItem('importedCourseData');
-    if (importedData) {
-      sessionStorage.removeItem('importedCourseData');
-      
-      const parsed = importCourseFromJSON(importedData);
-      if (parsed) {
-        // Ensure all materials have content
-        const sectionsWithContent = parsed.sections.map(section => ({
-          ...section,
-          topics: section.topics.map(topic => ({
-            ...topic,
-            materials: topic.materials.map(material => ({
-              ...material,
-              content: material.content || '<p>Mulai menulis konten materi...</p>'
-            }))
-          }))
-        }));
+  const importFromJSON = useCallback(async (): Promise<void> => {
+    try {
+      const importedData = sessionStorage.getItem('importedCourseData');
+      if (importedData) {
+        sessionStorage.removeItem('importedCourseData');
+        
+        const parsed = importCourseFromJSON(importedData);
+        if (parsed) {
+          // Process sections with parsed content using SuperEditorImportHandler
+          const sectionsWithParsedContent = processSectionsContent(parsed.sections);
 
-        setCourseTitle(parsed.courseTitle);
-        setCourseDescription(parsed.courseDescription);
-        setCourseImageUrl(parsed.courseImageUrl);
-        setLearningPoints(parsed.learningPoints);
-        setSections(sectionsWithContent);
-        setHasUnsavedChanges(true);
-        
-        // Save imported data to autosave
-        await courseDB.saveAutosave(AUTOSAVE_KEY, {
-          courseTitle: parsed.courseTitle,
-          courseDescription: parsed.courseDescription,
-          courseImageUrl: parsed.courseImageUrl,
-          learningPoints: parsed.learningPoints,
-          sections: sectionsWithContent,
-          mode: 'create'
-        });
-        
-        // Force re-render after a short delay
-        setTimeout(() => {
+          setCourseTitle(parsed.courseTitle);
+          setCourseDescription(parsed.courseDescription);
+          setCourseImageUrl(parsed.courseImageUrl);
+          setLearningPoints(parsed.learningPoints);
+          setSections(sectionsWithParsedContent);
           setHasUnsavedChanges(true);
-        }, 100);
-        
-        alert('Data berhasil diimport dari JSON!');
-      } else {
-        alert('Format JSON tidak valid atau data corrupt.');
+          
+          // Save imported data to autosave
+          await courseDB.saveAutosave(AUTOSAVE_KEY, {
+            courseTitle: parsed.courseTitle,
+            courseDescription: parsed.courseDescription,
+            courseImageUrl: parsed.courseImageUrl,
+            learningPoints: parsed.learningPoints,
+            sections: sectionsWithParsedContent,
+            mode: 'create'
+          });
+          
+          // Force re-render after a short delay
+          setTimeout(() => {
+            setHasUnsavedChanges(true);
+          }, 100);
+          
+          alert('Data berhasil diimport dari JSON dan content telah diparse!');
+        } else {
+          alert('Format JSON tidak valid atau data corrupt.');
+        }
       }
+    } catch (error) {
+      console.error('Import failed:', error);
+      alert('Gagal mengimport data JSON.');
     }
-  } catch (error) {
-    console.error('Import failed:', error);
-    alert('Gagal mengimport data JSON.');
-  }
-}, []);
+  }, []);
 
   // Initialize component
   useEffect(() => {
@@ -287,70 +301,185 @@ const importFromJSON = useCallback(async (): Promise<void> => {
   };
 
   // Import JSON from file
-const handleImportJSON = (): void => {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.json';
-  input.onchange = (e) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        try {
-          const jsonString = event.target?.result as string;
-          const parsed = importCourseFromJSON(jsonString);
-          
-          if (parsed) {
-            if (confirm('Import akan mengganti semua data yang ada. Lanjutkan?')) {
-              // Ensure all materials have content
-              const sectionsWithContent = parsed.sections.map(section => ({
-                ...section,
-                topics: section.topics.map(topic => ({
-                  ...topic,
-                  materials: topic.materials.map(material => ({
-                    ...material,
-                    content: material.content || '<p>Mulai menulis konten materi...</p>'
-                  }))
-                }))
-              }));
+  const handleImportJSON = (): void => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          try {
+            const jsonString = event.target?.result as string;
+            const parsed = importCourseFromJSON(jsonString);
+            
+            if (parsed) {
+              if (confirm('Import akan mengganti semua data yang ada. Lanjutkan?')) {
+                // Process sections with parsed content using SuperEditorImportHandler
+                const sectionsWithParsedContent = processSectionsContent(parsed.sections);
 
-              setCourseTitle(parsed.courseTitle);
-              setCourseDescription(parsed.courseDescription);
-              setCourseImageUrl(parsed.courseImageUrl);
-              setLearningPoints(parsed.learningPoints);
-              setSections(sectionsWithContent);
+                setCourseTitle(parsed.courseTitle);
+                setCourseDescription(parsed.courseDescription);
+                setCourseImageUrl(parsed.courseImageUrl);
+                setLearningPoints(parsed.learningPoints);
+                setSections(sectionsWithParsedContent);
+                setHasUnsavedChanges(true);
+                
+                // Save imported data to autosave
+                await courseDB.saveAutosave(AUTOSAVE_KEY, {
+                  courseTitle: parsed.courseTitle,
+                  courseDescription: parsed.courseDescription,
+                  courseImageUrl: parsed.courseImageUrl,
+                  learningPoints: parsed.learningPoints,
+                  sections: sectionsWithParsedContent,
+                  mode: 'create'
+                });
+                
+                // Force re-render
+                setTimeout(() => {
+                  setHasUnsavedChanges(true);
+                }, 100);
+                
+                alert('Data berhasil diimport dari JSON dan content telah diparse!');
+              }
+            } else {
+              alert('Format JSON tidak valid atau data corrupt.');
+            }
+          } catch (error) {
+            console.error('Import failed:', error);
+            alert('Gagal mengimport data JSON.');
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  };
+
+  // Export Material to JSON
+  const handleExportMaterialJSON = (sectionId: number, topicId: number, materialId: number): void => {
+    try {
+      const section = sections.find(s => s.id === sectionId);
+      if (!section) {
+        alert('Section tidak ditemukan.');
+        return;
+      }
+      
+      const topic = section.topics.find(t => t.id === topicId);
+      if (!topic) {
+        alert('Topic tidak ditemukan.');
+        return;
+      }
+      
+      const material = topic.materials.find(m => m.id === materialId);
+      if (!material) {
+        alert('Material tidak ditemukan.');
+        return;
+      }
+      
+      // Create material export data
+      const materialData = {
+        title: material.title,
+        isMandatory: material.isMandatory,
+        hasVideo: material.hasVideo,
+        videoType: material.videoType,
+        videoUrl: material.videoUrl,
+        content: material.content,
+        exportDate: new Date().toISOString(),
+        exportVersion: '1.0'
+      };
+      
+      const jsonString = JSON.stringify(materialData, null, 2);
+      const timestamp = new Date().getTime();
+      const filename = `material_${material.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${timestamp}.json`;
+      
+      downloadJSONFile(filename, jsonString);
+      alert('Material berhasil diexport ke JSON!');
+    } catch (error) {
+      console.error('Export material failed:', error);
+      alert('Gagal mengexport material ke JSON.');
+    }
+  };
+
+  // Import Material from JSON
+  const handleImportMaterialJSON = (sectionId: number, topicId: number, materialId: number): void => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          try {
+            const jsonString = event.target?.result as string;
+            const parsed = JSON.parse(jsonString);
+            
+            // Validate JSON structure
+            if (!parsed || typeof parsed !== 'object') {
+              alert('Format JSON tidak valid.');
+              return;
+            }
+            
+            // Validate required fields
+            if (!parsed.hasOwnProperty('title') || !parsed.hasOwnProperty('content')) {
+              alert('JSON tidak memiliki field yang diperlukan (title, content).');
+              return;
+            }
+            
+            if (confirm('Import akan mengganti data material ini. Lanjutkan?')) {
+              // Parse content using SuperEditorImportHandler
+              const parsedContent = parseMaterialContent(parsed.content || '<p>Mulai menulis konten materi...</p>');
+              
+              // Update material dengan data dari JSON
+              setSections(prevSections => prevSections.map(section => 
+                section.id === sectionId 
+                  ? {
+                      ...section,
+                      topics: section.topics.map(topic => 
+                        topic.id === topicId 
+                          ? {
+                              ...topic,
+                              materials: topic.materials.map(material =>
+                                material.id === materialId 
+                                  ? {
+                                      ...material,
+                                      title: parsed.title || material.title,
+                                      isMandatory: parsed.hasOwnProperty('isMandatory') ? parsed.isMandatory : material.isMandatory,
+                                      hasVideo: parsed.hasOwnProperty('hasVideo') ? parsed.hasVideo : material.hasVideo,
+                                      videoType: parsed.videoType || material.videoType,
+                                      videoUrl: parsed.videoUrl || material.videoUrl,
+                                      content: parsedContent
+                                    }
+                                  : material
+                              )
+                            }
+                          : topic
+                      )
+                    }
+                  : section
+              ));
+              
               setHasUnsavedChanges(true);
               
-              // Save imported data to autosave
-              await courseDB.saveAutosave(AUTOSAVE_KEY, {
-                courseTitle: parsed.courseTitle,
-                courseDescription: parsed.courseDescription,
-                courseImageUrl: parsed.courseImageUrl,
-                learningPoints: parsed.learningPoints,
-                sections: sectionsWithContent,
-                mode: 'create'
-              });
-              
-              // Force re-render
+              // Force re-render after a short delay
               setTimeout(() => {
                 setHasUnsavedChanges(true);
               }, 100);
               
-              alert('Data berhasil diimport dari JSON!');
+              alert('Material berhasil diimport dari JSON dan content telah diparse!');
             }
-          } else {
-            alert('Format JSON tidak valid atau data corrupt.');
+          } catch (error) {
+            console.error('Import material failed:', error);
+            alert('Gagal mengimport material dari JSON. Pastikan format JSON benar.');
           }
-        } catch (error) {
-          console.error('Import failed:', error);
-          alert('Gagal mengimport data JSON.');
-        }
-      };
-      reader.readAsText(file);
-    }
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
   };
-  input.click();
-};
 
   // Clear autosave
   const handleClearAutosave = async (): Promise<void> => {
@@ -472,32 +601,32 @@ const handleImportJSON = (): void => {
     setExpandedMaterials(newExpanded);
   };
 
-const addMaterial = (sectionId: number, topicId: number): void => {
-  setSections(sections.map(section => 
-    section.id === sectionId 
-      ? {
-          ...section,
-          topics: section.topics.map(topic => 
-            topic.id === topicId 
-              ? { 
-                  ...topic, 
-                  materials: [...topic.materials, {
-                    id: Date.now(),
-                    title: '',
-                    isMandatory: false,
-                    hasVideo: false,
-                    videoType: 'upload',
-                    videoFile: null,
-                    videoUrl: '',
-                    content: '<p>Mulai menulis konten materi...</p>'
-                  }]
-                }
-              : topic
-          )
-        }
-      : section
-  ));
-};
+  const addMaterial = (sectionId: number, topicId: number): void => {
+    setSections(sections.map(section => 
+      section.id === sectionId 
+        ? {
+            ...section,
+            topics: section.topics.map(topic => 
+              topic.id === topicId 
+                ? { 
+                    ...topic, 
+                    materials: [...topic.materials, {
+                      id: Date.now(),
+                      title: '',
+                      isMandatory: false,
+                      hasVideo: false,
+                      videoType: 'upload',
+                      videoFile: null,
+                      videoUrl: '',
+                      content: '<p>Mulai menulis konten materi...</p>'
+                    }]
+                  }
+                : topic
+            )
+          }
+        : section
+    ));
+  };
 
   const deleteMaterial = (sectionId: number, topicId: number, materialId: number): void => {
     setSections(sections.map(section => 
@@ -618,27 +747,27 @@ const addMaterial = (sectionId: number, topicId: number): void => {
     updateMaterial(sectionId, topicId, materialId, 'videoFile', file);
   };
 
-const handleEditorChange = (sectionId: number, topicId: number, materialId: number) => (content: string): void => {
-  setSections(prevSections => prevSections.map(section => 
-    section.id === sectionId 
-      ? {
-          ...section,
-          topics: section.topics.map(topic => 
-            topic.id === topicId 
-              ? {
-                  ...topic,
-                  materials: topic.materials.map(material =>
-                    material.id === materialId 
-                      ? { ...material, content } 
-                      : material
-                  )
-                }
-              : topic
-          )
-        }
-      : section
-  ));
-};
+  const handleEditorChange = (sectionId: number, topicId: number, materialId: number) => (content: string): void => {
+    setSections(prevSections => prevSections.map(section => 
+      section.id === sectionId 
+        ? {
+            ...section,
+            topics: section.topics.map(topic => 
+              topic.id === topicId 
+                ? {
+                    ...topic,
+                    materials: topic.materials.map(material =>
+                      material.id === materialId 
+                        ? { ...material, content } 
+                        : material
+                    )
+                  }
+                : topic
+            )
+          }
+        : section
+    ));
+  };
 
   const scrollToElement = (elementId: string): void => {
     if (typeof window === 'undefined') return;
@@ -901,7 +1030,7 @@ const handleEditorChange = (sectionId: number, topicId: number, materialId: numb
               </div>
             </div>
             <p className="tw-text-gray-600">
-              Buat dan atur konten course dengan topik, materi, quiz, dan drill
+              Buat dan atur konten course dengan topik, materi, quiz, dan drill. Content dari JSON akan otomatis diparse!
             </p>
           </div>
 
@@ -920,16 +1049,17 @@ const handleEditorChange = (sectionId: number, topicId: number, materialId: numb
             />
           )}
 
-            <div style={{ display: previewMode ? 'block' : 'none' }}>
-              <PreviewComponent
-                courseTitle={courseTitle}
-                courseDescription={courseDescription}
-                courseImageUrl={courseImageUrl}
-                learningPoints={learningPoints}
-                sections={sections}
-              />
-            </div>
-            <div style={{ display: previewMode ? 'none' : 'block' }}>
+          <div style={{ display: previewMode ? 'block' : 'none' }}>
+            <PreviewComponent
+              courseTitle={courseTitle}
+              courseDescription={courseDescription}
+              courseImageUrl={courseImageUrl}
+              learningPoints={learningPoints}
+              sections={sections}
+            />
+          </div>
+          
+          <div style={{ display: previewMode ? 'none' : 'block' }}>
             <div className="tw-space-y-6">
               {/* Course Information Section */}
               <div className="tw-border tw-border-purple-300 tw-rounded-lg tw-shadow-lg">
@@ -1010,7 +1140,7 @@ const handleEditorChange = (sectionId: number, topicId: number, materialId: numb
                 </div>
               </div>
 
-              {/* Sections - COMPLETE IMPLEMENTATION */}
+              {/* Sections */}
               <div className="tw-border tw-border-purple-300 tw-rounded-lg tw-shadow-lg">
                 <div className="tw-bg-purple-600 tw-text-white tw-p-4 tw-rounded-t-lg tw-flex tw-justify-between tw-items-center">
                   <h3 className="tw-text-xl tw-font-semibold tw-mb-0">Section Course</h3>
@@ -1053,440 +1183,467 @@ const handleEditorChange = (sectionId: number, topicId: number, materialId: numb
                             {expandedSections.has(section.id) ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                           </div>
                           
-
-                            <div className="tw-p-4 tw-border-t tw-border-purple-200"
-                              style={{ display: expandedSections.has(section.id) ? 'block' : 'none' }}>
-                              <div className="tw-space-y-4">
-                                <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-12 tw-gap-4 tw-items-end">
-                                  <div className="md:tw-col-span-8">
-                                    <label className="tw-block tw-text-purple-700 tw-font-medium tw-mb-2">
-                                      Judul Section
-                                    </label>
-                                    <input
-                                      type="text"
-                                      placeholder="Masukkan judul section"
-                                      value={section.title}
-                                      onChange={(e) => updateSection(section.id, 'title', e.target.value)}
-                                      className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-purple-300 tw-rounded-lg focus:tw-outline-none focus:tw-border-purple-500 focus:tw-ring-2 focus:tw-ring-purple-200"
-                                    />
-                                  </div>
-                                  <div className="md:tw-col-span-3">
-                                    <label className="tw-block tw-text-purple-700 tw-font-medium tw-mb-2">
-                                      Durasi (menit)
-                                    </label>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      placeholder="0"
-                                      value={section.duration}
-                                      onChange={(e) => updateSection(section.id, 'duration', parseInt(e.target.value) || 0)}
-                                      className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-purple-300 tw-rounded-lg focus:tw-outline-none focus:tw-border-purple-500 focus:tw-ring-2 focus:tw-ring-purple-200"
-                                    />
-                                  </div>
-                                  <div className="md:tw-col-span-1">
-                                    <ButtonGradient
-                                      action="delete"
-                                      size="sm"
-                                      onClick={() => deleteSection(section.id)}
-                                      showText={false}
-                                      className="tw-w-full"
-                                    />
-                                  </div>
-                                </div>
-                                <div className="tw-mt-4">
+                          <div className="tw-p-4 tw-border-t tw-border-purple-200"
+                            style={{ display: expandedSections.has(section.id) ? 'block' : 'none' }}>
+                            <div className="tw-space-y-4">
+                              <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-12 tw-gap-4 tw-items-end">
+                                <div className="md:tw-col-span-8">
                                   <label className="tw-block tw-text-purple-700 tw-font-medium tw-mb-2">
-                                    Deskripsi Section
+                                    Judul Section
                                   </label>
-                                  <textarea
-                                    rows={2}
-                                    placeholder="Masukkan deskripsi section"
-                                    value={section.description}
-                                    onChange={(e) => updateSection(section.id, 'description', e.target.value)}
+                                  <input
+                                    type="text"
+                                    placeholder="Masukkan judul section"
+                                    value={section.title}
+                                    onChange={(e) => updateSection(section.id, 'title', e.target.value)}
                                     className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-purple-300 tw-rounded-lg focus:tw-outline-none focus:tw-border-purple-500 focus:tw-ring-2 focus:tw-ring-purple-200"
                                   />
                                 </div>
+                                <div className="md:tw-col-span-3">
+                                  <label className="tw-block tw-text-purple-700 tw-font-medium tw-mb-2">
+                                    Durasi (menit)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="0"
+                                    value={section.duration}
+                                    onChange={(e) => updateSection(section.id, 'duration', parseInt(e.target.value) || 0)}
+                                    className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-purple-300 tw-rounded-lg focus:tw-outline-none focus:tw-border-purple-500 focus:tw-ring-2 focus:tw-ring-purple-200"
+                                  />
+                                </div>
+                                <div className="md:tw-col-span-1">
+                                  <ButtonGradient
+                                    action="delete"
+                                    size="sm"
+                                    onClick={() => deleteSection(section.id)}
+                                    showText={false}
+                                    className="tw-w-full"
+                                  />
+                                </div>
+                              </div>
+                              <div className="tw-mt-4">
+                                <label className="tw-block tw-text-purple-700 tw-font-medium tw-mb-2">
+                                  Deskripsi Section
+                                </label>
+                                <textarea
+                                  rows={2}
+                                  placeholder="Masukkan deskripsi section"
+                                  value={section.description}
+                                  onChange={(e) => updateSection(section.id, 'description', e.target.value)}
+                                  className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-purple-300 tw-rounded-lg focus:tw-outline-none focus:tw-border-purple-500 focus:tw-ring-2 focus:tw-ring-purple-200"
+                                />
+                              </div>
 
-                                <div className="tw-border-t tw-border-purple-200 tw-pt-4">
-                                  <div className="tw-flex tw-justify-between tw-items-center tw-mb-3">
-                                    <h5 className="tw-text-purple-700 tw-font-medium tw-mb-0">Topik</h5>
-                                    <ButtonGradient
-                                      action="add"
-                                      size="sm"
-                                      onClick={() => addTopic(section.id)}
-                                      customText="Tambah Topik"
-                                      showText={true}
-                                    />
-                                  </div>
-                                  {(section.topics || []).map((topic, topicIndex) => (
-                                    <div key={topic.id} id={`topic-${topic.id}`} className="tw-border tw-border-purple-200 tw-rounded-lg tw-bg-white tw-mb-3">
-                                      <div 
-                                        className="tw-p-4 tw-cursor-pointer tw-flex tw-justify-between tw-items-center hover:tw-bg-purple-50 tw-transition-colors"
-                                        onClick={() => toggleTopic(topic.id)}
-                                      >
-                                        <div className="tw-flex tw-items-center tw-gap-3">
-                                          <span className="tw-font-medium tw-text-purple-800">
-                                            Topik {topicIndex + 1}: {topic.title || 'Topik Baru'}
-                                          </span>
-                                          <span className="tw-bg-gray-500 tw-text-white tw-px-2 tw-py-1 tw-rounded tw-text-xs">
-                                            {(topic.materials || []).length} Materi
-                                          </span>
-                                        </div>
-                                        {expandedTopics.has(topic.id) ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                              <div className="tw-border-t tw-border-purple-200 tw-pt-4">
+                                <div className="tw-flex tw-justify-between tw-items-center tw-mb-3">
+                                  <h5 className="tw-text-purple-700 tw-font-medium tw-mb-0">Topik</h5>
+                                  <ButtonGradient
+                                    action="add"
+                                    size="sm"
+                                    onClick={() => addTopic(section.id)}
+                                    customText="Tambah Topik"
+                                    showText={true}
+                                  />
+                                </div>
+                                {(section.topics || []).map((topic, topicIndex) => (
+                                  <div key={topic.id} id={`topic-${topic.id}`} className="tw-border tw-border-purple-200 tw-rounded-lg tw-bg-white tw-mb-3">
+                                    <div 
+                                      className="tw-p-4 tw-cursor-pointer tw-flex tw-justify-between tw-items-center hover:tw-bg-purple-50 tw-transition-colors"
+                                      onClick={() => toggleTopic(topic.id)}
+                                    >
+                                      <div className="tw-flex tw-items-center tw-gap-3">
+                                        <span className="tw-font-medium tw-text-purple-800">
+                                          Topik {topicIndex + 1}: {topic.title || 'Topik Baru'}
+                                        </span>
+                                        <span className="tw-bg-gray-500 tw-text-white tw-px-2 tw-py-1 tw-rounded tw-text-xs">
+                                          {(topic.materials || []).length} Materi
+                                        </span>
                                       </div>
-                                      
+                                      {expandedTopics.has(topic.id) ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    </div>
+                                    
+                                    <div className="tw-p-4 tw-border-t tw-border-purple-200"
+                                      style={{ display: expandedTopics.has(topic.id) ? 'block' : 'none' }}>
+                                      <div className="tw-space-y-4">
+                                        <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-12 tw-gap-4 tw-items-end">
+                                          <div className="md:tw-col-span-10">
+                                            <label className="tw-block tw-text-purple-700 tw-font-medium tw-mb-2">
+                                              Judul Topik
+                                            </label>
+                                            <input
+                                              type="text"
+                                              placeholder="Masukkan judul topik"
+                                              value={topic.title}
+                                              onChange={(e) => updateTopic(section.id, topic.id, 'title', e.target.value)}
+                                              className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-purple-300 tw-rounded-lg focus:tw-outline-none focus:tw-border-purple-500 focus:tw-ring-2 focus:tw-ring-purple-200"
+                                            />
+                                          </div>
+                                          <div className="md:tw-col-span-2">
+                                            <ButtonGradient
+                                              action="delete"
+                                              size="sm"
+                                              onClick={() => deleteTopic(section.id, topic.id)}
+                                              showText={false}
+                                              className="tw-w-full"
+                                            />
+                                          </div>
+                                        </div>
 
-                                        <div className="tw-p-4 tw-border-t tw-border-purple-200"
-                                          style={{ display: expandedTopics.has(topic.id) ? 'block' : 'none' }}>
-                                          <div className="tw-space-y-4">
-                                            <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-12 tw-gap-4 tw-items-end">
-                                              <div className="md:tw-col-span-10">
-                                                <label className="tw-block tw-text-purple-700 tw-font-medium tw-mb-2">
-                                                  Judul Topik
+                                        <div className="tw-border-t tw-border-purple-200 tw-pt-4">
+                                          <div className="tw-flex tw-justify-between tw-items-center tw-mb-3">
+                                            <h5 className="tw-text-purple-700 tw-font-medium tw-mb-0">Materi</h5>
+                                            <ButtonGradient
+                                              action="add"
+                                              size="sm"
+                                              onClick={() => addMaterial(section.id, topic.id)}
+                                              customText="Tambah Materi"
+                                              showText={true}
+                                            />
+                                          </div>
+
+                                          {(topic.materials || []).map((material, materialIndex) => (
+                                            <div key={material.id} id={`material-${material.id}`} className="tw-mb-3 tw-border tw-border-purple-200 tw-rounded-lg">
+                                              <div 
+                                                className="tw-bg-white tw-p-3 tw-flex tw-justify-between tw-items-center tw-rounded-t-lg tw-cursor-pointer hover:tw-bg-purple-50 tw-transition-colors"
+                                                onClick={() => toggleMaterial(material.id)}
+                                              >
+                                                <div className="tw-flex tw-items-center tw-gap-2">
+                                                  <span className="tw-font-medium tw-text-purple-700">
+                                                    Materi {materialIndex + 1}: {material.title || 'Materi Baru'}
+                                                  </span>
+                                                  <div className="tw-flex tw-gap-1">
+                                                    {material.isMandatory && (
+                                                      <span className="tw-bg-red-500 tw-text-white tw-px-2 tw-py-1 tw-rounded tw-text-xs">Wajib</span>
+                                                    )}
+                                                    {material.hasVideo && (
+                                                      <span className="tw-bg-blue-500 tw-text-white tw-px-2 tw-py-1 tw-rounded tw-text-xs">Video</span>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                                <div className="tw-flex tw-items-center tw-gap-2">
+                                                  <ButtonGradient
+                                                    action="delete"
+                                                    size="sm"
+                                                    onClick={(e) => {
+                                                      e?.stopPropagation();
+                                                      deleteMaterial(section.id, topic.id, material.id);
+                                                    }}
+                                                    showText={false}
+                                                  />
+                                                  {expandedMaterials.has(material.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                </div>
+                                              </div>
+                                              
+                                              <div className="tw-p-4 tw-border-t tw-border-purple-200"
+                                                style={{ display: expandedMaterials.has(material.id) ? 'block' : 'none' }}>
+                                                <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-8 tw-gap-4 tw-mb-3">
+                                                  <div className="md:tw-col-span-5">
+                                                    <label className="tw-block tw-text-sm tw-text-purple-700 tw-mb-1">
+                                                      Judul Materi
+                                                    </label>
+                                                    <input
+                                                      type="text"
+                                                      placeholder="Masukkan judul materi"
+                                                      value={material.title}
+                                                      onChange={(e) => updateMaterial(section.id, topic.id, material.id, 'title', e.target.value)}
+                                                      className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-purple-300 tw-rounded focus:tw-outline-none focus:tw-border-purple-500 focus:tw-ring-1 focus:tw-ring-purple-200"
+                                                    />
+                                                  </div>
+                                                  <div className="md:tw-col-span-3">
+                                                    <div className="tw-space-y-2">
+                                                      <label className="tw-flex tw-items-center tw-gap-2">
+                                                        <input
+                                                          type="checkbox"
+                                                          checked={material.isMandatory}
+                                                          onChange={(e) => updateMaterial(section.id, topic.id, material.id, 'isMandatory', e.target.checked)}
+                                                          className="tw-text-purple-600"
+                                                        />
+                                                        <span className="tw-text-sm">Materi Wajib</span>
+                                                      </label>
+                                                      <label className="tw-flex tw-items-center tw-gap-2">
+                                                        <input
+                                                          type="checkbox"
+                                                          checked={material.hasVideo}
+                                                          onChange={(e) => updateMaterial(section.id, topic.id, material.id, 'hasVideo', e.target.checked)}
+                                                          className="tw-text-purple-600"
+                                                        />
+                                                        <span className="tw-text-sm">Sertakan Video</span>
+                                                      </label>
+                                                    </div>
+                                                  </div>
+                                                </div>
+
+                                                {material.hasVideo && (
+                                                  <div className="tw-mb-3 tw-p-3 tw-bg-blue-50 tw-rounded tw-border tw-border-blue-200">
+                                                    <div className="tw-mb-2">
+                                                      <label className="tw-block tw-text-sm tw-text-blue-700 tw-mb-1">
+                                                        Jenis Video
+                                                      </label>
+                                                      <select
+                                                        value={material.videoType}
+                                                        onChange={(e) => updateMaterial(section.id, topic.id, material.id, 'videoType', e.target.value as 'upload' | 'url')}
+                                                        className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-blue-300 tw-rounded focus:tw-outline-none focus:tw-border-blue-500"
+                                                      >
+                                                        <option value="upload">Upload File</option>
+                                                        <option value="url">Link URL</option>
+                                                      </select>
+                                                    </div>
+
+                                                    {material.videoType === 'upload' ? (
+                                                      <div>
+                                                        <label className="tw-block tw-text-sm tw-text-blue-700 tw-mb-1">
+                                                          Upload Video
+                                                        </label>
+                                                        <input
+                                                          type="file"
+                                                          accept="video/*"
+                                                          onChange={(e) => handleVideoFileChange(section.id, topic.id, material.id, e.target.files?.[0] || null)}
+                                                          className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-blue-300 tw-rounded focus:tw-outline-none focus:tw-border-blue-500"
+                                                        />
+                                                      </div>
+                                                    ) : (
+                                                      <div>
+                                                        <label className="tw-block tw-text-sm tw-text-blue-700 tw-mb-1">
+                                                          URL Video
+                                                        </label>
+                                                        <input
+                                                          type="url"
+                                                          placeholder="https://..."
+                                                          value={material.videoUrl}
+                                                          onChange={(e) => updateMaterial(section.id, topic.id, material.id, 'videoUrl', e.target.value)}
+                                                          className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-blue-300 tw-rounded focus:tw-outline-none focus:tw-border-blue-500"
+                                                        />
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                )}
+
+                                                {/* Material JSON Import/Export */}
+                                                <div className="tw-mb-3 tw-flex tw-gap-2 tw-justify-end">
+                                                  <ButtonGradient
+                                                    action="upload"
+                                                    size="sm"
+                                                    onClick={() => handleImportMaterialJSON(section.id, topic.id, material.id)}
+                                                    customText="Import JSON"
+                                                    showText={true}
+                                                    customColors={{
+                                                      primary: '#06B6D4',
+                                                      secondary: '#0891B2',
+                                                      gradient1: '#06B6D4',
+                                                      gradient2: '#0891B2',
+                                                      text: '#FFFFFF'
+                                                    }}
+                                                  />
+                                                  <ButtonGradient
+                                                    action="download"
+                                                    size="sm"
+                                                    onClick={() => handleExportMaterialJSON(section.id, topic.id, material.id)}
+                                                    customText="Export JSON"
+                                                    showText={true}
+                                                    customColors={{
+                                                      primary: '#10B981',
+                                                      secondary: '#059669',
+                                                      gradient1: '#10B981',
+                                                      gradient2: '#059669',
+                                                      text: '#FFFFFF'
+                                                    }}
+                                                  />
+                                                </div>
+
+                                                <div className="tw-mb-3">
+                                                  <label className="tw-block tw-text-sm tw-text-purple-700 tw-mb-2">
+                                                    Konten Materi
+                                                  </label>
+                                                  <SuperEditor
+                                                    key={`editor-${section.id}-${topic.id}-${material.id}-${material.content.substring(0, 20)}`}
+                                                    onChange={handleEditorChange(section.id, topic.id, material.id)}
+                                                    initialValue={material.content || '<p>Mulai mengetik pembahasan disini...</p>'}
+                                                    editorId={`material-${material.id}`}
+                                                  />
+                                                </div>
+
+                                                <div className="tw-mt-3">
+                                                  <h6 className="tw-text-sm tw-text-purple-700 tw-mb-2">Preview Konten</h6>
+                                                  <div 
+                                                    className="tw-border tw-border-purple-300 tw-bg-white tw-p-3 tw-rounded tw-min-h-[100px] tw-max-h-[200px] tw-overflow-auto"
+                                                    dangerouslySetInnerHTML={{ __html: material.content }}
+                                                  />
+                                                </div>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+
+                                        {/* Quiz and Drill Section */}
+                                        <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4 tw-border-t tw-border-purple-200 tw-pt-4">
+                                          <div className="tw-border tw-border-orange-300 tw-rounded-lg">
+                                            <div className="tw-bg-orange-500 tw-text-white tw-p-3 tw-rounded-t-lg">
+                                              <h6 className="tw-mb-0 tw-font-medium">Quiz ({((topic.quiz && topic.quiz.questions) || []).length} soal)</h6>
+                                            </div>
+                                            <div className="tw-bg-orange-50 tw-p-3 tw-space-y-3">
+                                              <div>
+                                                <label className="tw-block tw-text-sm tw-text-orange-700 tw-mb-1">
+                                                  Cari Soal Quiz
                                                 </label>
                                                 <input
                                                   type="text"
-                                                  placeholder="Masukkan judul topik"
-                                                  value={topic.title}
-                                                  onChange={(e) => updateTopic(section.id, topic.id, 'title', e.target.value)}
-                                                  className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-purple-300 tw-rounded-lg focus:tw-outline-none focus:tw-border-purple-500 focus:tw-ring-2 focus:tw-ring-purple-200"
-                                                />
-                                              </div>
-                                              <div className="md:tw-col-span-2">
-                                                <ButtonGradient
-                                                  action="delete"
-                                                  size="sm"
-                                                  onClick={() => deleteTopic(section.id, topic.id)}
-                                                  showText={false}
-                                                  className="tw-w-full"
-                                                />
-                                              </div>
-                                            </div>
-
-                                            <div className="tw-border-t tw-border-purple-200 tw-pt-4">
-                                              <div className="tw-flex tw-justify-between tw-items-center tw-mb-3">
-                                                <h5 className="tw-text-purple-700 tw-font-medium tw-mb-0">Materi</h5>
-                                                <ButtonGradient
-                                                  action="add"
-                                                  size="sm"
-                                                  onClick={() => addMaterial(section.id, topic.id)}
-                                                  customText="Tambah Materi"
-                                                  showText={true}
+                                                  placeholder="Ketik untuk mencari soal..."
+                                                  onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    clearTimeout((window as any).quizSearchTimeout);
+                                                    (window as any).quizSearchTimeout = setTimeout(() => {
+                                                      searchQuestions(value, topic.id, 'quiz');
+                                                    }, 300);
+                                                  }}
+                                                  className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-orange-300 tw-rounded focus:tw-outline-none focus:tw-border-orange-500 tw-text-sm"
                                                 />
                                               </div>
 
-                                              {(topic.materials || []).map((material, materialIndex) => (
-                                                <div key={material.id} id={`material-${material.id}`} className="tw-mb-3 tw-border tw-border-purple-200 tw-rounded-lg">
-                                                  <div 
-                                                    className="tw-bg-white tw-p-3 tw-flex tw-justify-between tw-items-center tw-rounded-t-lg tw-cursor-pointer hover:tw-bg-purple-50 tw-transition-colors"
-                                                    onClick={() => toggleMaterial(material.id)}
-                                                  >
-                                                    <div className="tw-flex tw-items-center tw-gap-2">
-                                                      <span className="tw-font-medium tw-text-purple-700">
-                                                        Materi {materialIndex + 1}: {material.title || 'Materi Baru'}
-                                                      </span>
-                                                      <div className="tw-flex tw-gap-1">
-                                                        {material.isMandatory && (
-                                                          <span className="tw-bg-red-500 tw-text-white tw-px-2 tw-py-1 tw-rounded tw-text-xs">Wajib</span>
-                                                        )}
-                                                        {material.hasVideo && (
-                                                          <span className="tw-bg-blue-500 tw-text-white tw-px-2 tw-py-1 tw-rounded tw-text-xs">Video</span>
-                                                        )}
-                                                      </div>
-                                                    </div>
-                                                    <div className="tw-flex tw-items-center tw-gap-2">
-                                                      <ButtonGradient
-                                                        action="delete"
-                                                        size="sm"
-                                                        onClick={(e) => {
-                                                          e?.stopPropagation();
-                                                          deleteMaterial(section.id, topic.id, material.id);
-                                                        }}
-                                                        showText={false}
-                                                      />
-                                                      {expandedMaterials.has(material.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                    </div>
-                                                  </div>
-                                                  
-
-                                                    <div className="tw-p-4 tw-border-t tw-border-purple-200"
-                                                      style={{ display: expandedMaterials.has(material.id) ? 'block' : 'none' }}>
-                                                      <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-8 tw-gap-4 tw-mb-3">
-                                                        <div className="md:tw-col-span-5">
-                                                          <label className="tw-block tw-text-sm tw-text-purple-700 tw-mb-1">
-                                                            Judul Materi
-                                                          </label>
-                                                          <input
-                                                            type="text"
-                                                            placeholder="Masukkan judul materi"
-                                                            value={material.title}
-                                                            onChange={(e) => updateMaterial(section.id, topic.id, material.id, 'title', e.target.value)}
-                                                            className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-purple-300 tw-rounded focus:tw-outline-none focus:tw-border-purple-500 focus:tw-ring-1 focus:tw-ring-purple-200"
-                                                          />
-                                                        </div>
-                                                        <div className="md:tw-col-span-3">
-                                                          <div className="tw-space-y-2">
-                                                            <label className="tw-flex tw-items-center tw-gap-2">
-                                                              <input
-                                                                type="checkbox"
-                                                                checked={material.isMandatory}
-                                                                onChange={(e) => updateMaterial(section.id, topic.id, material.id, 'isMandatory', e.target.checked)}
-                                                                className="tw-text-purple-600"
-                                                              />
-                                                              <span className="tw-text-sm">Materi Wajib</span>
-                                                            </label>
-                                                            <label className="tw-flex tw-items-center tw-gap-2">
-                                                              <input
-                                                                type="checkbox"
-                                                                checked={material.hasVideo}
-                                                                onChange={(e) => updateMaterial(section.id, topic.id, material.id, 'hasVideo', e.target.checked)}
-                                                                className="tw-text-purple-600"
-                                                              />
-                                                              <span className="tw-text-sm">Sertakan Video</span>
-                                                            </label>
-                                                          </div>
-                                                        </div>
-                                                      </div>
-
-                                                      {material.hasVideo && (
-                                                        <div className="tw-mb-3 tw-p-3 tw-bg-blue-50 tw-rounded tw-border tw-border-blue-200">
-                                                          <div className="tw-mb-2">
-                                                            <label className="tw-block tw-text-sm tw-text-blue-700 tw-mb-1">
-                                                              Jenis Video
-                                                            </label>
-                                                            <select
-                                                              value={material.videoType}
-                                                              onChange={(e) => updateMaterial(section.id, topic.id, material.id, 'videoType', e.target.value as 'upload' | 'url')}
-                                                              className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-blue-300 tw-rounded focus:tw-outline-none focus:tw-border-blue-500"
-                                                            >
-                                                              <option value="upload">Upload File</option>
-                                                              <option value="url">Link URL</option>
-                                                            </select>
-                                                          </div>
-
-                                                          {material.videoType === 'upload' ? (
-                                                            <div>
-                                                              <label className="tw-block tw-text-sm tw-text-blue-700 tw-mb-1">
-                                                                Upload Video
-                                                              </label>
-                                                              <input
-                                                                type="file"
-                                                                accept="video/*"
-                                                                onChange={(e) => handleVideoFileChange(section.id, topic.id, material.id, e.target.files?.[0] || null)}
-                                                                className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-blue-300 tw-rounded focus:tw-outline-none focus:tw-border-blue-500"
-                                                              />
-                                                            </div>
-                                                          ) : (
-                                                            <div>
-                                                              <label className="tw-block tw-text-sm tw-text-blue-700 tw-mb-1">
-                                                                URL Video
-                                                              </label>
-                                                              <input
-                                                                type="url"
-                                                                placeholder="https://..."
-                                                                value={material.videoUrl}
-                                                                onChange={(e) => updateMaterial(section.id, topic.id, material.id, 'videoUrl', e.target.value)}
-                                                                className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-blue-300 tw-rounded focus:tw-outline-none focus:tw-border-blue-500"
-                                                              />
-                                                            </div>
-                                                          )}
-                                                        </div>
+                                              {questionSearchResults[`${topic.id}-quiz`] && questionSearchResults[`${topic.id}-quiz`].length > 0 && (
+                                                <div className="tw-max-h-32 tw-overflow-y-auto tw-border tw-border-orange-200 tw-rounded">
+                                                  {questionSearchResults[`${topic.id}-quiz`].map(question => (
+                                                    <div 
+                                                      key={question.id} 
+                                                      className="tw-p-2 tw-border-b tw-border-orange-100 tw-flex tw-justify-between tw-items-center tw-bg-white hover:tw-bg-orange-50 tw-cursor-pointer"
+                                                      onClick={() => {
+                                                        if (!((topic.quiz && topic.quiz.questions) || []).find(q => q.id === question.id)) {
+                                                          addQuestionToTopic(section.id, topic.id, 'quiz', question.id, question.code);
+                                                        }
+                                                      }}
+                                                    >
+                                                      <span className="tw-text-sm tw-text-orange-800">{question.id} - {question.code}</span>
+                                                      {((topic.quiz && topic.quiz.questions) || []).find(q => q.id === question.id) && (
+                                                        <span className="tw-text-xs tw-bg-orange-200 tw-text-orange-800 tw-px-2 tw-py-1 tw-rounded">Sudah dipilih</span>
                                                       )}
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              )}
 
-<div className="tw-mb-3">
-  <label className="tw-block tw-text-sm tw-text-purple-700 tw-mb-2">
-    Konten Materi
-  </label>
-  <SuperEditor
-    key={`editor-${section.id}-${topic.id}-${material.id}-${material.content.substring(0, 20)}`}
-    onChange={handleEditorChange(section.id, topic.id, material.id)}
-    initialValue={material.content || '<p>Mulai mengetik pembahasan disini...</p>'}
-    editorId={`material-${material.id}`}
-  />
-</div>
+                                              {questionSearchLoading[`${topic.id}-quiz`] && (
+                                                <div className="tw-text-center tw-text-sm tw-text-orange-600">Mencari soal...</div>
+                                              )}
 
-                                                      <div className="tw-mt-3">
-                                                        <h6 className="tw-text-sm tw-text-purple-700 tw-mb-2">Preview Konten</h6>
-                                                        <div 
-                                                          className="tw-border tw-border-purple-300 tw-bg-white tw-p-3 tw-rounded tw-min-h-[100px] tw-max-h-[200px] tw-overflow-auto"
-                                                          dangerouslySetInnerHTML={{ __html: material.content }}
+                                              <div>
+                                                <label className="tw-block tw-text-sm tw-text-orange-700 tw-mb-2">
+                                                  Soal yang Dipilih
+                                                </label>
+                                                {((topic.quiz && topic.quiz.questions) || []).length === 0 ? (
+                                                  <div className="tw-text-sm tw-text-gray-500 tw-italic">Belum ada soal dipilih</div>
+                                                ) : (
+                                                  <div className="tw-space-y-1">
+                                                    {((topic.quiz && topic.quiz.questions) || []).map(question => (
+                                                      <div key={question.id} className="tw-flex tw-justify-between tw-items-center tw-bg-white tw-p-2 tw-rounded tw-border tw-border-orange-200">
+                                                        <span className="tw-text-sm tw-text-orange-800">{question.id} - {question.code}</span>
+                                                        <ButtonGradient
+                                                          action="delete"
+                                                          size="sm"
+                                                          onClick={() => removeQuestionFromTopic(section.id, topic.id, 'quiz', question.id)}
+                                                          showText={false}
+                                                          customColors={{
+                                                            primary: '#EF4444',
+                                                            secondary: '#DC2626',
+                                                            gradient1: '#EF4444',
+                                                            gradient2: '#DC2626',
+                                                            text: '#FFFFFF'
+                                                          }}
                                                         />
                                                       </div>
-                                                    </div>
-                                                </div>
-                                              ))}
+                                                    ))}
+                                                  </div>
+                                                )}
+                                              </div>
                                             </div>
+                                          </div>
 
-                                            {/* Quiz and Drill Section */}
-                                            <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4 tw-border-t tw-border-purple-200 tw-pt-4">
-                                              <div className="tw-border tw-border-orange-300 tw-rounded-lg">
-                                                <div className="tw-bg-orange-500 tw-text-white tw-p-3 tw-rounded-t-lg">
-                                                  <h6 className="tw-mb-0 tw-font-medium">Quiz ({((topic.quiz && topic.quiz.questions) || []).length} soal)</h6>
-                                                </div>
-                                                <div className="tw-bg-orange-50 tw-p-3 tw-space-y-3">
-                                                  <div>
-                                                    <label className="tw-block tw-text-sm tw-text-orange-700 tw-mb-1">
-                                                      Cari Soal Quiz
-                                                    </label>
-                                                    <input
-                                                      type="text"
-                                                      placeholder="Ketik untuk mencari soal..."
-                                                      onChange={(e) => {
-                                                        const value = e.target.value;
-                                                        clearTimeout((window as any).quizSearchTimeout);
-                                                        (window as any).quizSearchTimeout = setTimeout(() => {
-                                                          searchQuestions(value, topic.id, 'quiz');
-                                                        }, 300);
-                                                      }}
-                                                      className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-orange-300 tw-rounded focus:tw-outline-none focus:tw-border-orange-500 tw-text-sm"
-                                                    />
-                                                  </div>
-
-                                                  {questionSearchResults[`${topic.id}-quiz`] && questionSearchResults[`${topic.id}-quiz`].length > 0 && (
-                                                    <div className="tw-max-h-32 tw-overflow-y-auto tw-border tw-border-orange-200 tw-rounded">
-                                                      {questionSearchResults[`${topic.id}-quiz`].map(question => (
-                                                        <div 
-                                                          key={question.id} 
-                                                          className="tw-p-2 tw-border-b tw-border-orange-100 tw-flex tw-justify-between tw-items-center tw-bg-white hover:tw-bg-orange-50 tw-cursor-pointer"
-                                                          onClick={() => {
-                                                            if (!((topic.quiz && topic.quiz.questions) || []).find(q => q.id === question.id)) {
-                                                              addQuestionToTopic(section.id, topic.id, 'quiz', question.id, question.code);
-                                                            }
-                                                          }}
-                                                        >
-                                                          <span className="tw-text-sm tw-text-orange-800">{question.id} - {question.code}</span>
-                                                          {((topic.quiz && topic.quiz.questions) || []).find(q => q.id === question.id) && (
-                                                            <span className="tw-text-xs tw-bg-orange-200 tw-text-orange-800 tw-px-2 tw-py-1 tw-rounded">Sudah dipilih</span>
-                                                          )}
-                                                        </div>
-                                                      ))}
-                                                    </div>
-                                                  )}
-
-                                                  {questionSearchLoading[`${topic.id}-quiz`] && (
-                                                    <div className="tw-text-center tw-text-sm tw-text-orange-600">Mencari soal...</div>
-                                                  )}
-
-                                                  <div>
-                                                    <label className="tw-block tw-text-sm tw-text-orange-700 tw-mb-2">
-                                                      Soal yang Dipilih
-                                                    </label>
-                                                    {((topic.quiz && topic.quiz.questions) || []).length === 0 ? (
-                                                      <div className="tw-text-sm tw-text-gray-500 tw-italic">Belum ada soal dipilih</div>
-                                                    ) : (
-                                                      <div className="tw-space-y-1">
-                                                        {((topic.quiz && topic.quiz.questions) || []).map(question => (
-                                                          <div key={question.id} className="tw-flex tw-justify-between tw-items-center tw-bg-white tw-p-2 tw-rounded tw-border tw-border-orange-200">
-                                                            <span className="tw-text-sm tw-text-orange-800">{question.id} - {question.code}</span>
-                                                            <ButtonGradient
-                                                              action="delete"
-                                                              size="sm"
-                                                              onClick={() => removeQuestionFromTopic(section.id, topic.id, 'quiz', question.id)}
-                                                              showText={false}
-                                                              customColors={{
-                                                                primary: '#EF4444',
-                                                                secondary: '#DC2626',
-                                                                gradient1: '#EF4444',
-                                                                gradient2: '#DC2626',
-                                                                text: '#FFFFFF'
-                                                              }}
-                                                            />
-                                                          </div>
-                                                        ))}
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                </div>
+                                          <div className="tw-border tw-border-green-300 tw-rounded-lg">
+                                            <div className="tw-bg-green-500 tw-text-white tw-p-3 tw-rounded-t-lg">
+                                              <h6 className="tw-mb-0 tw-font-medium">Drill ({((topic.drill && topic.drill.questions) || []).length} soal)</h6>
+                                            </div>
+                                            <div className="tw-bg-green-50 tw-p-3 tw-space-y-3">
+                                              <div>
+                                                <label className="tw-block tw-text-sm tw-text-green-700 tw-mb-1">
+                                                  Cari Soal Drill
+                                                </label>
+                                                <input
+                                                  type="text"
+                                                  placeholder="Ketik untuk mencari soal..."
+                                                  onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    clearTimeout((window as any).drillSearchTimeout);
+                                                    (window as any).drillSearchTimeout = setTimeout(() => {
+                                                      searchQuestions(value, topic.id, 'drill');
+                                                    }, 300);
+                                                  }}
+                                                  className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-green-300 tw-rounded focus:tw-outline-none focus:tw-border-green-500 tw-text-sm"
+                                                />
                                               </div>
 
-                                              <div className="tw-border tw-border-green-300 tw-rounded-lg">
-                                                <div className="tw-bg-green-500 tw-text-white tw-p-3 tw-rounded-t-lg">
-                                                  <h6 className="tw-mb-0 tw-font-medium">Drill ({((topic.drill && topic.drill.questions) || []).length} soal)</h6>
-                                                </div>
-                                                <div className="tw-bg-green-50 tw-p-3 tw-space-y-3">
-                                                  <div>
-                                                    <label className="tw-block tw-text-sm tw-text-green-700 tw-mb-1">
-                                                      Cari Soal Drill
-                                                    </label>
-                                                    <input
-                                                      type="text"
-                                                      placeholder="Ketik untuk mencari soal..."
-                                                      onChange={(e) => {
-                                                        const value = e.target.value;
-                                                        clearTimeout((window as any).drillSearchTimeout);
-                                                        (window as any).drillSearchTimeout = setTimeout(() => {
-                                                          searchQuestions(value, topic.id, 'drill');
-                                                        }, 300);
+                                              {questionSearchResults[`${topic.id}-drill`] && questionSearchResults[`${topic.id}-drill`].length > 0 && (
+                                                <div className="tw-max-h-32 tw-overflow-y-auto tw-border tw-border-green-200 tw-rounded">
+                                                  {questionSearchResults[`${topic.id}-drill`].map(question => (
+                                                    <div 
+                                                      key={question.id} 
+                                                      className="tw-p-2 tw-border-b tw-border-green-100 tw-flex tw-justify-between tw-items-center tw-bg-white hover:tw-bg-green-50 tw-cursor-pointer"
+                                                      onClick={() => {
+                                                        if (!((topic.drill && topic.drill.questions) || []).find(q => q.id === question.id)) {
+                                                          addQuestionToTopic(section.id, topic.id, 'drill', question.id, question.code);
+                                                        }
                                                       }}
-                                                      className="tw-w-full tw-px-3 tw-py-2 tw-border tw-border-green-300 tw-rounded focus:tw-outline-none focus:tw-border-green-500 tw-text-sm"
-                                                    />
-                                                  </div>
-
-                                                  {questionSearchResults[`${topic.id}-drill`] && questionSearchResults[`${topic.id}-drill`].length > 0 && (
-                                                    <div className="tw-max-h-32 tw-overflow-y-auto tw-border tw-border-green-200 tw-rounded">
-                                                      {questionSearchResults[`${topic.id}-drill`].map(question => (
-                                                        <div 
-                                                          key={question.id} 
-                                                          className="tw-p-2 tw-border-b tw-border-green-100 tw-flex tw-justify-between tw-items-center tw-bg-white hover:tw-bg-green-50 tw-cursor-pointer"
-                                                          onClick={() => {
-                                                            if (!((topic.drill && topic.drill.questions) || []).find(q => q.id === question.id)) {
-                                                              addQuestionToTopic(section.id, topic.id, 'drill', question.id, question.code);
-                                                            }
-                                                          }}
-                                                        >
-                                                          <span className="tw-text-sm tw-text-green-800">{question.id} - {question.code}</span>
-                                                          {((topic.drill && topic.drill.questions) || []).find(q => q.id === question.id) && (
-                                                            <span className="tw-text-xs tw-bg-green-200 tw-text-green-800 tw-px-2 tw-py-1 tw-rounded">Sudah dipilih</span>
-                                                          )}
-                                                        </div>
-                                                      ))}
+                                                    >
+                                                      <span className="tw-text-sm tw-text-green-800">{question.id} - {question.code}</span>
+                                                      {((topic.drill && topic.drill.questions) || []).find(q => q.id === question.id) && (
+                                                        <span className="tw-text-xs tw-bg-green-200 tw-text-green-800 tw-px-2 tw-py-1 tw-rounded">Sudah dipilih</span>
+                                                      )}
                                                     </div>
-                                                  )}
-
-                                                  {questionSearchLoading[`${topic.id}-drill`] && (
-                                                    <div className="tw-text-center tw-text-sm tw-text-green-600">Mencari soal...</div>
-                                                  )}
-
-                                                  <div>
-                                                    <label className="tw-block tw-text-sm tw-text-green-700 tw-mb-2">
-                                                      Soal yang Dipilih
-                                                    </label>
-                                                    {((topic.drill && topic.drill.questions) || []).length === 0 ? (
-                                                      <div className="tw-text-sm tw-text-gray-500 tw-italic">Belum ada soal dipilih</div>
-                                                    ) : (
-                                                      <div className="tw-space-y-1">
-                                                        {((topic.drill && topic.drill.questions) || []).map(question => (
-                                                          <div key={question.id} className="tw-flex tw-justify-between tw-items-center tw-bg-white tw-p-2 tw-rounded tw-border tw-border-green-200">
-                                                            <span className="tw-text-sm tw-text-green-800">{question.id} - {question.code}</span>
-                                                            <ButtonGradient
-                                                              action="delete"
-                                                              size="sm"
-                                                              onClick={() => removeQuestionFromTopic(section.id, topic.id, 'drill', question.id)}
-                                                              showText={false}
-                                                              customColors={{
-                                                                primary: '#EF4444',
-                                                                secondary: '#DC2626',
-                                                                gradient1: '#EF4444',
-                                                                gradient2: '#DC2626',
-                                                                text: '#FFFFFF'
-                                                              }}
-                                                            />
-                                                          </div>
-                                                        ))}
-                                                      </div>
-                                                    )}
-                                                  </div>
+                                                  ))}
                                                 </div>
+                                              )}
+
+                                              {questionSearchLoading[`${topic.id}-drill`] && (
+                                                <div className="tw-text-center tw-text-sm tw-text-green-600">Mencari soal...</div>
+                                              )}
+
+                                              <div>
+                                                <label className="tw-block tw-text-sm tw-text-green-700 tw-mb-2">
+                                                  Soal yang Dipilih
+                                                </label>
+                                                {((topic.drill && topic.drill.questions) || []).length === 0 ? (
+                                                  <div className="tw-text-sm tw-text-gray-500 tw-italic">Belum ada soal dipilih</div>
+                                                ) : (
+                                                  <div className="tw-space-y-1">
+                                                    {((topic.drill && topic.drill.questions) || []).map(question => (
+                                                      <div key={question.id} className="tw-flex tw-justify-between tw-items-center tw-bg-white tw-p-2 tw-rounded tw-border tw-border-green-200">
+                                                        <span className="tw-text-sm tw-text-green-800">{question.id} - {question.code}</span>
+                                                        <ButtonGradient
+                                                          action="delete"
+                                                          size="sm"
+                                                          onClick={() => removeQuestionFromTopic(section.id, topic.id, 'drill', question.id)}
+                                                          showText={false}
+                                                          customColors={{
+                                                            primary: '#EF4444',
+                                                            secondary: '#DC2626',
+                                                            gradient1: '#EF4444',
+                                                            gradient2: '#DC2626',
+                                                            text: '#FFFFFF'
+                                                          }}
+                                                        />
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                )}
                                               </div>
                                             </div>
                                           </div>
                                         </div>
-
+                                      </div>
                                     </div>
-                                  ))}
-                                </div>
+                                  </div>
+                                ))}
                               </div>
                             </div>
-
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1513,7 +1670,7 @@ const handleEditorChange = (sectionId: number, topicId: number, materialId: numb
                 />
               </div>
             </div>
-            </div>
+          </div>
         </div>
       </div>
     </MainLayout>

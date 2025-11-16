@@ -396,6 +396,7 @@ const getKeyConceptStyles = (): string => `
     position: relative;
     margin: 1rem 0;
     transition: all 0.2s ease;
+    z-index: 1
   }
   
   .cte-key-concept-block:hover {
