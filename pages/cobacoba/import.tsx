@@ -1,13 +1,15 @@
+// pages/content-importer/page.tsx
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import SuperEditor from '../../components/supereditor/SuperEditor';
 import { ButtonGradient } from '../../components/button/ButtonTemplate';
-import { Upload, FileJson, AlertCircle, CheckCircle, Download } from 'lucide-react';
+import { Upload, FileJson, AlertCircle, CheckCircle, Download, BookOpen } from 'lucide-react';
 import { 
   parseCustomContent, 
   applySyntaxHighlighting,
-  validateImportedData 
+  validateImportedData,
+  generateTutorialContent
 } from '../../utils/SuperEditorImportHandler';
 import 'katex/dist/katex.min.css';
 
@@ -105,6 +107,19 @@ const loadHighlightJS = async () => {
   }
 };
 
+// Load KaTeX
+const loadKaTeX = async () => {
+  if (typeof window === 'undefined') return;
+  if ((window as any).katex) return;
+  
+  try {
+    const katex = await import('katex');
+    (window as any).katex = katex.default;
+  } catch (error) {
+    console.error('Error loading KaTeX:', error);
+  }
+};
+
 interface ImportedData {
   title?: string;
   author?: string;
@@ -131,9 +146,22 @@ const ContentImporterPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load highlight.js on component mount
+  // Load highlight.js and KaTeX on component mount
   useEffect(() => {
     loadHighlightJS();
+    loadKaTeX();
+  }, []);
+
+  // Load tutorial content on mount
+  useEffect(() => {
+    const tutorialContent = generateTutorialContent();
+    setEditorContent(tutorialContent);
+    setFormData(prev => ({ ...prev, content: tutorialContent }));
+    
+    // Apply syntax highlighting and render equations after a short delay
+    setTimeout(() => {
+      applySyntaxHighlighting();
+    }, 500);
   }, []);
 
   // Handle file upload
@@ -179,7 +207,7 @@ const ContentImporterPage: React.FC = () => {
           fileInputRef.current.value = '';
         }
         
-        // Apply syntax highlighting after content is set
+        // Apply syntax highlighting and render equations after content is set
         setTimeout(() => {
           applySyntaxHighlighting();
         }, 100);
@@ -218,7 +246,8 @@ const ContentImporterPage: React.FC = () => {
   };
 
   const clearContent = () => {
-    setEditorContent('');
+    const tutorialContent = generateTutorialContent();
+    setEditorContent(tutorialContent);
     setFormData({
       title: '',
       author: '',
@@ -226,10 +255,15 @@ const ContentImporterPage: React.FC = () => {
       category: '',
       tags: [],
       publishDate: '',
-      content: ''
+      content: tutorialContent
     });
     setImportStatus('idle');
     setErrorMessage('');
+    
+    // Apply syntax highlighting and render equations
+    setTimeout(() => {
+      applySyntaxHighlighting();
+    }, 100);
   };
 
   const exportToJson = () => {
@@ -249,6 +283,18 @@ const ContentImporterPage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const loadTutorial = () => {
+    const tutorialContent = generateTutorialContent();
+    setEditorContent(tutorialContent);
+    setFormData(prev => ({ ...prev, content: tutorialContent }));
+    setImportStatus('idle');
+    setErrorMessage('');
+    
+    setTimeout(() => {
+      applySyntaxHighlighting();
+    }, 100);
+  };
+
   return (
     <div className="tw-min-h-screen tw-bg-gradient-to-br tw-from-purple-50 tw-via-blue-50 tw-to-pink-50 tw-p-4 md:tw-p-8">
       <div className="tw-max-w-7xl tw-mx-auto">
@@ -260,9 +306,27 @@ const ContentImporterPage: React.FC = () => {
                 <FileJson className="tw-w-8 tw-h-8" />
                 Content Importer
               </h1>
+              <p className="tw-text-sm tw-text-gray-600 tw-mt-1">
+                Import structured content with custom tags into SuperEditor
+              </p>
             </div>
             
             <div className="tw-flex tw-gap-3 tw-flex-wrap">
+              <ButtonGradient
+                action="custom"
+                customText="View Tutorial"
+                customIcon={<BookOpen className="tw-w-4 tw-h-4" />}
+                onClick={loadTutorial}
+                size="md"
+                customColors={{
+                  primary: '#3B82F6',
+                  secondary: '#2563EB',
+                  gradient1: '#3B82F6',
+                  gradient2: '#60A5FA',
+                  text: '#FFFFFF'
+                }}
+              />
+
               <input
                 ref={fileInputRef}
                 type="file"
@@ -273,7 +337,7 @@ const ContentImporterPage: React.FC = () => {
               
               <ButtonGradient
                 action="custom"
-                customText="Import"
+                customText="Import JSON"
                 customIcon={<Upload className="tw-w-4 tw-h-4" />}
                 onClick={triggerFileInput}
                 size="md"
@@ -290,7 +354,7 @@ const ContentImporterPage: React.FC = () => {
                 <>
                   <ButtonGradient
                     action="custom"
-                    customText="Export"
+                    customText="Export JSON"
                     customIcon={<Download className="tw-w-4 tw-h-4" />}
                     onClick={exportToJson}
                     size="md"
@@ -447,268 +511,8 @@ const ContentImporterPage: React.FC = () => {
             initialValue={editorContent}
             height="600px"
           />
-
-          {!editorContent && (
-            <div className="tw-mt-4 tw-text-center tw-text-gray-400 tw-italic">
-              Import a JSON file to start editing
-            </div>
-          )}
         </div>
       </div>
-
-      {/* Additional CSS for proper styling */}
-      <style jsx global>{`
-        /* Heading Styles */
-        h1 {
-          font-size: 2.5rem;
-          font-weight: 800;
-          color: #7c3aed;
-          margin: 1.5rem 0 1rem 0;
-          line-height: 1.2;
-        }
-
-        h2 {
-          font-size: 2rem;
-          font-weight: 700;
-          color: #8b5cf6;
-          margin: 1.25rem 0 0.875rem 0;
-          line-height: 1.3;
-          border-bottom: 2px solid #e9d5ff;
-          padding-bottom: 0.5rem;
-        }
-
-        h3 {
-          font-size: 1.5rem;
-          font-weight: 600;
-          color: #9333ea;
-          margin: 1rem 0 0.75rem 0;
-          line-height: 1.4;
-        }
-
-        h4 {
-          font-size: 1.25rem;
-          font-weight: 600;
-          color: #a855f7;
-          margin: 0.875rem 0 0.625rem 0;
-          line-height: 1.4;
-        }
-
-        /* Code and Pre styling */
-        code {
-          background-color: #f3e8ff;
-          color: #7c3aed;
-          padding: 2px 6px;
-          border-radius: 4px;
-          font-size: 0.9em;
-          font-family: 'Courier New', monospace;
-        }
-
-        pre {
-          background-color: #1e1e1e;
-          color: #d4d4d4;
-          padding: 16px;
-          border-radius: 8px;
-          overflow-x: auto;
-          margin: 16px 0;
-        }
-
-        pre code {
-          background-color: transparent;
-          color: inherit;
-          padding: 0;
-        }
-
-        /* Ensure KaTeX equations display properly */
-        .katex {
-          font-size: 1.1em;
-        }
-
-        .katex-display {
-          margin: 1em 0;
-          text-align: center;
-        }
-
-        /* Paragraph spacing */
-        p {
-          margin: 0.75rem 0;
-          line-height: 1.6;
-        }
-
-        /* List styling - CRITICAL for showing bullets/numbers */
-        ul, ol {
-          margin: 0.75rem 0;
-          padding-left: 2rem;
-        }
-
-        /* Default list styles if not specified */
-        ul:not([style*="list-style-type"]) {
-          list-style-type: disc;
-          padding-left: 30px;
-        }
-
-        ol:not([style*="list-style-type"]) {
-          list-style-type: decimal;
-          padding-left: 30px;
-        }
-
-        li {
-          margin: 0.5rem 0;
-        }
-
-        /* Nested lists */
-        ul ul, ol ol, ul ol, ol ul {
-          margin-top: 4px;
-          padding-left: 25px;
-        }
-
-        /* Link styling */
-        a {
-          color: #8b5cf6;
-          text-decoration: underline;
-          transition: color 0.2s ease;
-        }
-
-        a:hover {
-          color: #7c3aed;
-        }
-
-        /* Blockquote styling */
-        blockquote {
-          border-left: 4px solid #a855f7;
-          padding-left: 1rem;
-          margin: 1rem 0;
-          color: #6b7280;
-          font-style: italic;
-        }
-
-        /* Table styling */
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 1rem 0;
-        }
-
-        th, td {
-          padding: 0.75rem;
-          border: 1px solid #e5e7eb;
-          text-align: left;
-        }
-
-        th {
-          background-color: #f3e8ff;
-          font-weight: 600;
-          color: #7c3aed;
-        }
-
-        tr:nth-child(even) {
-          background-color: #faf5ff;
-        }
-
-        /* Horizontal rule */
-        hr {
-          border: none;
-          border-top: 2px solid #e9d5ff;
-          margin: 2rem 0;
-        }
-
-        /* Strong and emphasis */
-        strong {
-          font-weight: 700;
-          color: #374151;
-        }
-
-        em {
-          font-style: italic;
-          color: #4b5563;
-        }
-
-        /* Image styling */
-        img {
-          max-width: 100%;
-          height: auto;
-          border-radius: 8px;
-          margin: 1rem 0;
-        }
-
-        /* Card grid hover effects */
-        .cte-card-grid-item:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15) !important;
-        }
-
-        /* Styled list item hover */
-        .cte-styled-list-item:hover {
-          transform: translateX(4px);
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Key concept hover */
-        .cte-key-concept-block:hover {
-          box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15);
-          transform: translateY(-1px);
-        }
-
-        /* Smooth transitions */
-        .cte-card-grid-item,
-        .cte-styled-list-item,
-        .cte-key-concept-block {
-          transition: all 0.2s ease;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-          h1 {
-            font-size: 2rem;
-          }
-
-          h2 {
-            font-size: 1.75rem;
-          }
-
-          h3 {
-            font-size: 1.5rem;
-          }
-
-          h4 {
-            font-size: 1.25rem;
-          }
-
-          .katex {
-            font-size: 1em;
-          }
-
-          .cte-card-grid-block {
-            grid-template-columns: 1fr !important;
-          }
-        }
-
-        @media (max-width: 480px) {
-          h1 {
-            font-size: 1.75rem;
-          }
-
-          h2 {
-            font-size: 1.5rem;
-          }
-
-          h3 {
-            font-size: 1.25rem;
-          }
-
-          h4 {
-            font-size: 1.125rem;
-          }
-
-          code {
-            font-size: 0.85em;
-          }
-
-          pre {
-            padding: 12px;
-            font-size: 0.875rem;
-          }
-        }
-      `}</style>
     </div>
   );
 };

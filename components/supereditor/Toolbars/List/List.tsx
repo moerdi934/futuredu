@@ -117,40 +117,49 @@ export const getListStyles = (): string => `
     list-style: none;
     padding-left: 30px;
   }
+  .diamond-list li {
+    position: relative;
+  }
   .diamond-list li::before {
     content: '◆';
     color: #7c3aed;
-    margin-right: 6px;
-    margin-left: -20px;
-    display: inline-block;
-    width: 20px;
+    margin-right: 8px;
+    position: absolute;
+    left: -20px;
+    font-size: 14px;
   }
   
   .arrow-list {
     list-style: none;
     padding-left: 30px;
   }
+  .arrow-list li {
+    position: relative;
+  }
   .arrow-list li::before {
     content: '➤';
     color: #7c3aed;
-    margin-right: 6px;
-    margin-left: -20px;
-    display: inline-block;
-    width: 20px;
+    margin-right: 8px;
+    position: absolute;
+    left: -20px;
+    font-size: 14px;
   }
   
   .check-list {
     list-style: none;
     padding-left: 30px;
   }
+  .check-list li {
+    position: relative;
+  }
   .check-list li::before {
     content: '✓';
     color: #10b981;
-    margin-right: 6px;
-    margin-left: -20px;
-    display: inline-block;
-    width: 20px;
+    margin-right: 8px;
+    position: absolute;
+    left: -20px;
     font-weight: bold;
+    font-size: 16px;
   }
   
   .paren-decimal {
@@ -160,14 +169,15 @@ export const getListStyles = (): string => `
   }
   .paren-decimal li {
     counter-increment: paren-counter;
+    position: relative;
   }
   .paren-decimal li::before {
     content: counter(paren-counter) ')';
-    margin-right: 6px;
-    margin-left: -25px;
-    display: inline-block;
-    width: 25px;
+    margin-right: 8px;
+    position: absolute;
+    left: -25px;
     color: #7c3aed;
+    font-weight: 500;
   }
   
   .paren-upper-alpha {
@@ -177,14 +187,15 @@ export const getListStyles = (): string => `
   }
   .paren-upper-alpha li {
     counter-increment: paren-alpha-counter;
+    position: relative;
   }
   .paren-upper-alpha li::before {
     content: counter(paren-alpha-counter, upper-alpha) ')';
-    margin-right: 6px;
-    margin-left: -25px;
-    display: inline-block;
-    width: 25px;
+    margin-right: 8px;
+    position: absolute;
+    left: -25px;
     color: #7c3aed;
+    font-weight: 500;
   }
   
   .multilevel-list {
@@ -196,46 +207,43 @@ export const getListStyles = (): string => `
   .multilevel-list > li {
     counter-increment: level1;
     margin-bottom: 8px;
+    position: relative;
   }
   
   .multilevel-list.standard > li::before {
     content: counter(level1) '. ';
     color: #7c3aed;
     font-weight: bold;
-    margin-right: 6px;
-    margin-left: -30px;
-    display: inline-block;
-    width: 30px;
+    margin-right: 8px;
+    position: absolute;
+    left: -30px;
   }
   
   .multilevel-list.legal > li::before {
     content: counter(level1, upper-roman) '. ';
     color: #7c3aed;
     font-weight: bold;
-    margin-right: 6px;
-    margin-left: -30px;
-    display: inline-block;
-    width: 30px;
+    margin-right: 8px;
+    position: absolute;
+    left: -30px;
   }
   
   .multilevel-list.outline > li::before {
     content: counter(level1, upper-alpha) '. ';
     color: #7c3aed;
     font-weight: bold;
-    margin-right: 6px;
-    margin-left: -30px;
-    display: inline-block;
-    width: 30px;
+    margin-right: 8px;
+    position: absolute;
+    left: -30px;
   }
   
   .multilevel-list.business > li::before {
     content: counter(level1) '. ';
     color: #7c3aed;
     font-weight: bold;
-    margin-right: 6px;
-    margin-left: -30px;
-    display: inline-block;
-    width: 30px;
+    margin-right: 8px;
+    position: absolute;
+    left: -30px;
   }
   
   .multilevel-list ul {
@@ -249,42 +257,39 @@ export const getListStyles = (): string => `
   .multilevel-list ul li {
     counter-increment: level2;
     margin-bottom: 4px;
+    position: relative;
   }
   
   .multilevel-list.standard ul li::before {
     content: counter(level2, lower-alpha) '. ';
     color: #6366f1;
-    margin-right: 6px;
-    margin-left: -20px;
-    display: inline-block;
-    width: 20px;
+    margin-right: 8px;
+    position: absolute;
+    left: -20px;
   }
   
   .multilevel-list.legal ul li::before {
     content: counter(level2, upper-alpha) '. ';
     color: #6366f1;
-    margin-right: 6px;
-    margin-left: -20px;
-    display: inline-block;
-    width: 20px;
+    margin-right: 8px;
+    position: absolute;
+    left: -20px;
   }
   
   .multilevel-list.outline ul li::before {
     content: counter(level2) '. ';
     color: #6366f1;
-    margin-right: 6px;
-    margin-left: -20px;
-    display: inline-block;
-    width: 20px;
+    margin-right: 8px;
+    position: absolute;
+    left: -20px;
   }
   
   .multilevel-list.business ul li::before {
     content: counter(level1) '.' counter(level2) '. ';
     color: #6366f1;
-    margin-right: 6px;
-    margin-left: -20px;
-    display: inline-block;
-    width: 20px;
+    margin-right: 8px;
+    position: absolute;
+    left: -20px;
   }
   
   .multilevel-list ul ul {
@@ -297,87 +302,81 @@ export const getListStyles = (): string => `
   .multilevel-list ul ul li {
     counter-increment: level3;
     margin-bottom: 4px;
+    position: relative;
   }
   
   .multilevel-list.standard ul ul li::before {
     content: counter(level3, lower-roman) '. ';
     color: #8b5cf6;
-    margin-right: 6px;
-    margin-left: -15px;
-    display: inline-block;
-    width: 15px;
+    margin-right: 8px;
+    position: absolute;
+    left: -15px;
   }
   
   .multilevel-list.legal ul ul li::before {
     content: counter(level3) '. ';
     color: #8b5cf6;
-    margin-right: 6px;
-    margin-left: -15px;
-    display: inline-block;
-    width: 15px;
+    margin-right: 8px;
+    position: absolute;
+    left: -15px;
   }
   
   .multilevel-list.outline ul ul li::before {
     content: counter(level3, lower-alpha) '. ';
     color: #8b5cf6;
-    margin-right: 6px;
-    margin-left: -15px;
-    display: inline-block;
-    width: 15px;
+    margin-right: 8px;
+    position: absolute;
+    left: -15px;
   }
   
   .multilevel-list.business ul ul li::before {
     content: counter(level1) '.' counter(level2) '.' counter(level3) '. ';
     color: #8b5cf6;
-    margin-right: 6px;
-    margin-left: -15px;
-    display: inline-block;
-    width: 15px;
+    margin-right: 8px;
+    position: absolute;
+    left: -15px;
   }
   
   /* Standard HTML lists styling to match the indentation */
-  ul, ol {
+  ul:not([class]), ol:not([class]) {
     padding-left: 30px;
   }
   
-  ul ul, ol ol, ul ol, ol ul {
+  ul ul:not([class]), ol ol:not([class]), ul ol:not([class]), ol ul:not([class]) {
     padding-left: 25px;
     margin-top: 4px;
   }
   
   li {
     margin-bottom: 4px;
+    display: list-item;
+  }
+  
+  /* Ensure bullets/numbers are visible */
+  ul:not([class]) {
+    list-style-type: disc;
+  }
+  
+  ol:not([class]) {
+    list-style-type: decimal;
   }
 `;
 
-// Apply bullet list
+// Apply bullet list - FIXED VERSION
 const applyBulletList = (style: BulletStyle, editorRef: RefObject<HTMLElement>, handleChange: () => void) => {
   if (!editorRef.current) return;
   
   editorRef.current.focus();
   
-  // const selection = window.getSelection();
-  // if (!selection || selection.rangeCount === 0) {
-  //   // No selection, create a new list at cursor position
-  //   const range = document.createRange();
-  //   const sel = window.getSelection();
-  //   if (sel) {
-  //     range.setStart(editorRef.current, editorRef.current.childNodes.length);
-  //     range.collapse(true);
-  //     sel.removeAllRanges();
-  //     sel.addRange(range);
-  //   }
-  // }
-  
-  // Insert unordered list
+  // Insert unordered list first
   document.execCommand('insertUnorderedList', false, null);
   
   setTimeout(() => {
     if (!editorRef.current) return;
     
-    // Find the most recently created list
+    // Find the most recently created/affected list
     const lists = editorRef.current.querySelectorAll('ul');
-    let targetList: HTMLElement | null = null;
+    let targetList: HTMLUListElement | null = null;
     
     // Try to find the list that contains the current selection
     const selection = window.getSelection();
@@ -385,7 +384,7 @@ const applyBulletList = (style: BulletStyle, editorRef: RefObject<HTMLElement>, 
       let node = selection.getRangeAt(0).commonAncestorContainer;
       while (node && node !== editorRef.current) {
         if (node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === 'UL') {
-          targetList = node as HTMLElement;
+          targetList = node as HTMLUListElement;
           break;
         }
         node = node.parentNode;
@@ -394,51 +393,59 @@ const applyBulletList = (style: BulletStyle, editorRef: RefObject<HTMLElement>, 
     
     // If no list found in selection, use the last list
     if (!targetList && lists.length > 0) {
-      targetList = lists[lists.length - 1] as HTMLElement;
+      targetList = lists[lists.length - 1] as HTMLUListElement;
     }
     
     if (targetList) {
+      // CRITICAL FIX: Reset all styles first
+      targetList.removeAttribute('style');
+      targetList.className = '';
+      
+      // Apply the selected style
       if (style.customClass) {
         targetList.className = style.customClass;
+        // Custom classes use ::before pseudo-elements, so we need list-style: none
         targetList.style.listStyleType = 'none';
       } else {
+        // Standard bullet styles
         targetList.style.listStyleType = style.value;
-        targetList.className = '';
+        // IMPORTANT: Ensure padding-left for visibility
+        if (!targetList.style.paddingLeft) {
+          targetList.style.paddingLeft = '30px';
+        }
       }
+      
+      // CRITICAL: Ensure all list items have proper structure
+      const listItems = targetList.querySelectorAll('li');
+      listItems.forEach((li) => {
+        // Remove any inline styles that might hide bullets
+        (li as HTMLLIElement).style.listStyleType = '';
+        // Ensure proper display
+        if (!(li as HTMLLIElement).style.display || (li as HTMLLIElement).style.display === 'none') {
+          (li as HTMLLIElement).style.display = 'list-item';
+        }
+      });
     }
     
     if (handleChange) handleChange();
   }, 10);
 };
 
-// Apply numbered list
+// Apply numbered list - FIXED VERSION
 const applyNumberedList = (style: NumberedStyle, editorRef: RefObject<HTMLElement>, handleChange: () => void) => {
   if (!editorRef.current) return;
   
   editorRef.current.focus();
   
-  // const selection = window.getSelection();
-  // if (!selection || selection.rangeCount === 0) {
-  //   // No selection, create a new list at cursor position
-  //   const range = document.createRange();
-  //   const sel = window.getSelection();
-  //   if (sel) {
-  //     range.setStart(editorRef.current, editorRef.current.childNodes.length);
-  //     range.collapse(true);
-  //     sel.removeAllRanges();
-  //     sel.addRange(range);
-  //   }
-  // }
-  
-  // Insert ordered list
+  // Insert ordered list first
   document.execCommand('insertOrderedList', false, null);
   
   setTimeout(() => {
     if (!editorRef.current) return;
     
-    // Find the most recently created list
+    // Find the most recently created/affected list
     const lists = editorRef.current.querySelectorAll('ol');
-    let targetList: HTMLElement | null = null;
+    let targetList: HTMLOListElement | null = null;
     
     // Try to find the list that contains the current selection
     const selection = window.getSelection();
@@ -446,7 +453,7 @@ const applyNumberedList = (style: NumberedStyle, editorRef: RefObject<HTMLElemen
       let node = selection.getRangeAt(0).commonAncestorContainer;
       while (node && node !== editorRef.current) {
         if (node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === 'OL') {
-          targetList = node as HTMLElement;
+          targetList = node as HTMLOListElement;
           break;
         }
         node = node.parentNode;
@@ -455,17 +462,38 @@ const applyNumberedList = (style: NumberedStyle, editorRef: RefObject<HTMLElemen
     
     // If no list found in selection, use the last list
     if (!targetList && lists.length > 0) {
-      targetList = lists[lists.length - 1] as HTMLElement;
+      targetList = lists[lists.length - 1] as HTMLOListElement;
     }
     
     if (targetList) {
+      // CRITICAL FIX: Reset all styles first
+      targetList.removeAttribute('style');
+      targetList.className = '';
+      
+      // Apply the selected style
       if (style.customClass) {
         targetList.className = style.customClass;
+        // Custom classes use ::before pseudo-elements with counters
         targetList.style.listStyleType = 'none';
       } else {
+        // Standard numbering styles
         targetList.style.listStyleType = style.value;
-        targetList.className = '';
+        // IMPORTANT: Ensure padding-left for visibility
+        if (!targetList.style.paddingLeft) {
+          targetList.style.paddingLeft = '35px';
+        }
       }
+      
+      // CRITICAL: Ensure all list items have proper structure
+      const listItems = targetList.querySelectorAll('li');
+      listItems.forEach((li) => {
+        // Remove any inline styles that might hide numbers
+        (li as HTMLLIElement).style.listStyleType = '';
+        // Ensure proper display
+        if (!(li as HTMLLIElement).style.display || (li as HTMLLIElement).style.display === 'none') {
+          (li as HTMLLIElement).style.display = 'list-item';
+        }
+      });
     }
     
     if (handleChange) handleChange();
@@ -533,7 +561,7 @@ export const BulletListButton = React.forwardRef<any, ListButtonProps>(({ editor
     }
     
     if (dropdownStates.bulletList) {
-      // UBAH: simpan Range yang sebenarnya
+      // Save Range
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
         savedRangeRef.current = selection.getRangeAt(0).cloneRange();
@@ -547,7 +575,7 @@ export const BulletListButton = React.forwardRef<any, ListButtonProps>(({ editor
   }, [dropdownStates.bulletList, setDropdownStates]);
   
   const handleBulletSelect = (style: BulletStyle) => {
-    // UBAH: restore Range sebelum apply list
+    // Restore Range before apply list
     if (savedRangeRef.current && editorRef.current) {
       editorRef.current.focus();
       const selection = window.getSelection();
@@ -582,13 +610,12 @@ export const BulletListButton = React.forwardRef<any, ListButtonProps>(({ editor
         size="md"
         showText={false}
         tooltip={`Bullet List: ${currentBulletStyle} (Ctrl+Shift+Q)`}
-        tooltipPosition="top" // Added
-        tooltipPortal={false} // Added
-        className="tw-w-8 tw-h-8 tw-relative" // Added tw-relative
+        tooltipPosition="top"
+        tooltipPortal={false}
+        className="tw-w-8 tw-h-8 tw-relative"
       >
         <div className="tw-flex tw-items-center tw-gap-1">
           <List className="tw-w-4 tw-h-4" />
-          {/* <ChevronDown className="tw-w-3 tw-h-3" /> */}
         </div>
       </ButtonGradient>
       
@@ -640,7 +667,7 @@ export const NumberedListButton = React.forwardRef<any, ListButtonProps>(({ edit
     }
     
     if (dropdownStates.numberedList) {
-      // UBAH: simpan Range
+      // Save Range
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
         savedRangeRef.current = selection.getRangeAt(0).cloneRange();
@@ -654,7 +681,7 @@ export const NumberedListButton = React.forwardRef<any, ListButtonProps>(({ edit
   }, [dropdownStates.numberedList, setDropdownStates]);
   
   const handleNumberedSelect = (style: NumberedStyle) => {
-    // UBAH: restore Range
+    // Restore Range
     if (savedRangeRef.current && editorRef.current) {
       editorRef.current.focus();
       const selection = window.getSelection();
@@ -693,13 +720,12 @@ export const NumberedListButton = React.forwardRef<any, ListButtonProps>(({ edit
         size="md"
         showText={false}
         tooltip={`Numbered List: ${getCurrentSample()} (Ctrl+Shift+E)`}
-        tooltipPosition="top" // Added
-        tooltipPortal={false} // Added
-        className="tw-w-8 tw-h-8 tw-relative" // Added tw-relative
+        tooltipPosition="top"
+        tooltipPortal={false}
+        className="tw-w-8 tw-h-8 tw-relative"
       >
         <div className="tw-flex tw-items-center tw-gap-1">
           <ListOrdered className="tw-w-4 tw-h-4" />
-          {/* <ChevronDown className="tw-w-3 tw-h-3" /> */}
         </div>
       </ButtonGradient>
       
@@ -751,7 +777,7 @@ export const MultilevelListButton = React.forwardRef<any, ListButtonProps>(({ ed
     }
     
     if (dropdownStates.multilevelList) {
-      // UBAH: simpan Range
+      // Save Range
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
         savedRangeRef.current = selection.getRangeAt(0).cloneRange();
@@ -765,7 +791,7 @@ export const MultilevelListButton = React.forwardRef<any, ListButtonProps>(({ ed
   }, [dropdownStates.multilevelList, setDropdownStates]);
   
   const handleMultilevelSelect = (style: MultilevelStyle) => {
-    // UBAH: restore Range
+    // Restore Range
     if (savedRangeRef.current && editorRef.current) {
       editorRef.current.focus();
       const selection = window.getSelection();
@@ -799,13 +825,12 @@ export const MultilevelListButton = React.forwardRef<any, ListButtonProps>(({ ed
         size="md"
         showText={false}
         tooltip={`Multilevel List: ${currentMultilevelStyle} (Ctrl+Shift+M)`}
-        tooltipPosition="top" // Added
-        tooltipPortal={false} // Added
-        className="tw-w-8 tw-h-8 tw-relative" // Added tw-relative
+        tooltipPosition="top"
+        tooltipPortal={false}
+        className="tw-w-8 tw-h-8 tw-relative"
       >
         <div className="tw-flex tw-items-center tw-gap-1">
           <Network className="tw-w-4 tw-h-4" />
-          {/* <ChevronDown className="tw-w-3 tw-h-3" /> */}
         </div>
       </ButtonGradient>
       
