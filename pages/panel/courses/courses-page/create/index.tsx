@@ -1,4 +1,4 @@
-// pages/panel/courses/courses-page/create/index.tsx - COMPLETE IMPLEMENTATION
+// pages/panel/courses/courses-page/create/index.tsx - COMPLETE IMPLEMENTATION WITH IMPORT HANDLER
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -9,7 +9,7 @@ import { useSearchParams } from 'next/navigation';
 import MainLayout from '../../../../../components/layout/DashboardLayout';
 import { ButtonGradient } from '../../../../../components/button/ButtonTemplate';
 import { courseDB, exportCourseToJSON, importCourseFromJSON, downloadJSONFile, type CourseAutoSaveData } from '../../../../../utils/courseIndexedDB';
-import { parseCustomContent, applySyntaxHighlighting } from '../../../../../utils/SuperEditorImportHandler';
+import { parseCustomContent, applySyntaxHighlighting, validateImportedData } from '../../../../../utils/SuperEditorImportHandler';
 
 // Dynamic imports with loading states and no SSR
 const SuperEditor = dynamic(() => import('../../../../../components/supereditor/SuperEditor'), { 
@@ -78,6 +78,17 @@ interface QuestionSearchLoading {
   [key: string]: boolean;
 }
 
+// Material JSON Import Data Interface
+interface MaterialImportData {
+  title?: string;
+  isMandatory?: boolean;
+  hasVideo?: boolean;
+  videoType?: 'upload' | 'url';
+  videoUrl?: string;
+  content: string;
+  [key: string]: any;
+}
+
 // Component
 const CreateCourse: React.FC = () => {
   const searchParams = useSearchParams();
@@ -111,6 +122,64 @@ const CreateCourse: React.FC = () => {
     if (typeof window === 'undefined') return '';
     return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
   };
+
+  // Load highlight.js and KaTeX on component mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    // Load highlight.js
+    const loadHighlightJS = async () => {
+      if ((window as any).hljs) return;
+      
+      try {
+        const hljs = await import('highlight.js/lib/core');
+        
+        // Import commonly used languages
+        const [
+          javascript, typescript, python, java, cpp, html, css, json
+        ] = await Promise.all([
+          import('highlight.js/lib/languages/javascript'),
+          import('highlight.js/lib/languages/typescript'),
+          import('highlight.js/lib/languages/python'),
+          import('highlight.js/lib/languages/java'),
+          import('highlight.js/lib/languages/cpp'),
+          import('highlight.js/lib/languages/xml'),
+          import('highlight.js/lib/languages/css'),
+          import('highlight.js/lib/languages/json')
+        ]);
+
+        hljs.default.registerLanguage('javascript', javascript.default);
+        hljs.default.registerLanguage('typescript', typescript.default);
+        hljs.default.registerLanguage('python', python.default);
+        hljs.default.registerLanguage('java', java.default);
+        hljs.default.registerLanguage('cpp', cpp.default);
+        hljs.default.registerLanguage('html', html.default);
+        hljs.default.registerLanguage('css', css.default);
+        hljs.default.registerLanguage('json', json.default);
+
+        await import('highlight.js/styles/github-dark.min.css');
+
+        (window as any).hljs = hljs.default;
+      } catch (error) {
+        console.error('Error loading highlight.js:', error);
+      }
+    };
+
+    // Load KaTeX
+    const loadKaTeX = async () => {
+      if ((window as any).katex) return;
+      
+      try {
+        const katex = await import('katex');
+        (window as any).katex = katex.default;
+      } catch (error) {
+        console.error('Error loading KaTeX:', error);
+      }
+    };
+
+    loadHighlightJS();
+    loadKaTeX();
+  }, []);
 
   // Parse material content using SuperEditorImportHandler
   const parseMaterialContent = (content: string): string => {
@@ -339,6 +408,7 @@ const CreateCourse: React.FC = () => {
                 // Force re-render
                 setTimeout(() => {
                   setHasUnsavedChanges(true);
+                  applySyntaxHighlighting();
                 }, 100);
                 
                 alert('Data berhasil diimport dari JSON dan content telah diparse!');
@@ -402,7 +472,7 @@ const CreateCourse: React.FC = () => {
     }
   };
 
-  // Import Material from JSON
+  // ENHANCED: Import Material from JSON with ImportHandler
   const handleImportMaterialJSON = (sectionId: number, topicId: number, materialId: number): void => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -414,17 +484,12 @@ const CreateCourse: React.FC = () => {
         reader.onload = async (event) => {
           try {
             const jsonString = event.target?.result as string;
-            const parsed = JSON.parse(jsonString);
+            const parsed: MaterialImportData = JSON.parse(jsonString);
             
-            // Validate JSON structure
-            if (!parsed || typeof parsed !== 'object') {
-              alert('Format JSON tidak valid.');
-              return;
-            }
-            
-            // Validate required fields
-            if (!parsed.hasOwnProperty('title') || !parsed.hasOwnProperty('content')) {
-              alert('JSON tidak memiliki field yang diperlukan (title, content).');
+            // Validate JSON structure using ImportHandler
+            const validation = validateImportedData(parsed);
+            if (!validation.valid) {
+              alert(validation.error || 'Format JSON tidak valid.');
               return;
             }
             
@@ -446,8 +511,8 @@ const CreateCourse: React.FC = () => {
                                   ? {
                                       ...material,
                                       title: parsed.title || material.title,
-                                      isMandatory: parsed.hasOwnProperty('isMandatory') ? parsed.isMandatory : material.isMandatory,
-                                      hasVideo: parsed.hasOwnProperty('hasVideo') ? parsed.hasVideo : material.hasVideo,
+                                      isMandatory: parsed.hasOwnProperty('isMandatory') ? parsed.isMandatory! : material.isMandatory,
+                                      hasVideo: parsed.hasOwnProperty('hasVideo') ? parsed.hasVideo! : material.hasVideo,
                                       videoType: parsed.videoType || material.videoType,
                                       videoUrl: parsed.videoUrl || material.videoUrl,
                                       content: parsedContent
@@ -463,9 +528,10 @@ const CreateCourse: React.FC = () => {
               
               setHasUnsavedChanges(true);
               
-              // Force re-render after a short delay
+              // Force re-render and apply syntax highlighting
               setTimeout(() => {
                 setHasUnsavedChanges(true);
+                applySyntaxHighlighting();
               }, 100);
               
               alert('Material berhasil diimport dari JSON dan content telah diparse!');
@@ -1030,7 +1096,7 @@ const CreateCourse: React.FC = () => {
               </div>
             </div>
             <p className="tw-text-gray-600">
-              Buat dan atur konten course dengan topik, materi, quiz, dan drill. Content dari JSON akan otomatis diparse!
+              Buat dan atur konten course dengan topik, materi, quiz, dan drill. Import material JSON dengan custom tags support!
             </p>
           </div>
 
@@ -1419,7 +1485,7 @@ const CreateCourse: React.FC = () => {
                                                   </div>
                                                 )}
 
-                                                {/* Material JSON Import/Export */}
+                                                {/* ENHANCED: Material JSON Import/Export with ImportHandler */}
                                                 <div className="tw-mb-3 tw-flex tw-gap-2 tw-justify-end">
                                                   <ButtonGradient
                                                     action="upload"
