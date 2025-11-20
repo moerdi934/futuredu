@@ -1,8 +1,8 @@
-// pages/panel/courses/courses-page/create/index.tsx - COMPLETE IMPLEMENTATION WITH IMPORT HANDLER
+// pages/panel/courses/courses-page/create/index.tsx - COMPLETE IMPLEMENTATION WITH COPY JSON
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Plus, Trash2, Eye, EyeOff, Upload, Link, Play, Menu, X, ChevronRight, Download, Save, Clock } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Trash2, Eye, EyeOff, Upload, Link, Play, Menu, X, ChevronRight, Download, Save, Clock, ArrowUp, ArrowDown, Copy, Clipboard } from 'lucide-react';
 import axios from 'axios';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
@@ -114,6 +114,10 @@ const CreateCourse: React.FC = () => {
   const [isAutosaving, setIsAutosaving] = useState<boolean>(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
 
+  // Copy notification state
+  const [showCopyNotification, setShowCopyNotification] = useState<boolean>(false);
+  const [copyNotificationText, setCopyNotificationText] = useState<string>('');
+
   const AUTOSAVE_KEY = 'create';
   const AUTOSAVE_INTERVAL = 30000; // 30 seconds
 
@@ -121,6 +125,15 @@ const CreateCourse: React.FC = () => {
   const getApiBaseUrl = (): string => {
     if (typeof window === 'undefined') return '';
     return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+  };
+
+  // Show copy notification
+  const showCopyFeedback = (message: string): void => {
+    setCopyNotificationText(message);
+    setShowCopyNotification(true);
+    setTimeout(() => {
+      setShowCopyNotification(false);
+    }, 2000);
   };
 
   // Load highlight.js and KaTeX on component mount
@@ -472,7 +485,68 @@ const CreateCourse: React.FC = () => {
     }
   };
 
-  // ENHANCED: Import Material from JSON with ImportHandler
+  // NEW: Copy Material JSON to Clipboard
+  const handleCopyMaterialJSON = async (sectionId: number, topicId: number, materialId: number): Promise<void> => {
+    try {
+      const section = sections.find(s => s.id === sectionId);
+      if (!section) {
+        alert('Section tidak ditemukan.');
+        return;
+      }
+      
+      const topic = section.topics.find(t => t.id === topicId);
+      if (!topic) {
+        alert('Topic tidak ditemukan.');
+        return;
+      }
+      
+      const material = topic.materials.find(m => m.id === materialId);
+      if (!material) {
+        alert('Material tidak ditemukan.');
+        return;
+      }
+      
+      // Create material export data
+      const materialData = {
+        title: material.title,
+        isMandatory: material.isMandatory,
+        hasVideo: material.hasVideo,
+        videoType: material.videoType,
+        videoUrl: material.videoUrl,
+        content: material.content,
+        exportDate: new Date().toISOString(),
+        exportVersion: '1.0'
+      };
+      
+      const jsonString = JSON.stringify(materialData, null, 2);
+      
+      // Copy to clipboard
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(jsonString);
+        showCopyFeedback('JSON berhasil dicopy ke clipboard!');
+      } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = jsonString;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          showCopyFeedback('JSON berhasil dicopy ke clipboard!');
+        } catch (error) {
+          alert('Gagal copy JSON. Browser Anda mungkin tidak support fitur ini.');
+        }
+        document.body.removeChild(textArea);
+      }
+    } catch (error) {
+      console.error('Copy material JSON failed:', error);
+      alert('Gagal copy material JSON ke clipboard.');
+    }
+  };
+
+  // Import Material from JSON with ImportHandler
   const handleImportMaterialJSON = (sectionId: number, topicId: number, materialId: number): void => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -545,6 +619,82 @@ const CreateCourse: React.FC = () => {
       }
     };
     input.click();
+  };
+
+  // NEW: Paste Material JSON from Clipboard
+  const handlePasteMaterialJSON = async (sectionId: number, topicId: number, materialId: number): Promise<void> => {
+    try {
+      let jsonString = '';
+      
+      // Try to read from clipboard
+      if (navigator.clipboard && window.isSecureContext) {
+        jsonString = await navigator.clipboard.readText();
+      } else {
+        // Fallback: show prompt for manual paste
+        jsonString = prompt('Paste JSON data material di sini:') || '';
+      }
+      
+      if (!jsonString.trim()) {
+        alert('Tidak ada data JSON untuk diimport.');
+        return;
+      }
+      
+      const parsed: MaterialImportData = JSON.parse(jsonString);
+      
+      // Validate JSON structure using ImportHandler
+      const validation = validateImportedData(parsed);
+      if (!validation.valid) {
+        alert(validation.error || 'Format JSON tidak valid.');
+        return;
+      }
+      
+      if (confirm('Paste akan mengganti data material ini. Lanjutkan?')) {
+        // Parse content using SuperEditorImportHandler
+        const parsedContent = parseMaterialContent(parsed.content || '<p>Mulai menulis konten materi...</p>');
+        
+        // Update material dengan data dari JSON
+        setSections(prevSections => prevSections.map(section => 
+          section.id === sectionId 
+            ? {
+                ...section,
+                topics: section.topics.map(topic => 
+                  topic.id === topicId 
+                    ? {
+                        ...topic,
+                        materials: topic.materials.map(material =>
+                          material.id === materialId 
+                            ? {
+                                ...material,
+                                title: parsed.title || material.title,
+                                isMandatory: parsed.hasOwnProperty('isMandatory') ? parsed.isMandatory! : material.isMandatory,
+                                hasVideo: parsed.hasOwnProperty('hasVideo') ? parsed.hasVideo! : material.hasVideo,
+                                videoType: parsed.videoType || material.videoType,
+                                videoUrl: parsed.videoUrl || material.videoUrl,
+                                content: parsedContent
+                              }
+                            : material
+                        )
+                      }
+                    : topic
+                )
+              }
+            : section
+        ));
+        
+        setHasUnsavedChanges(true);
+        
+        // Force re-render and apply syntax highlighting
+        setTimeout(() => {
+          setHasUnsavedChanges(true);
+          applySyntaxHighlighting();
+        }, 100);
+        
+        showCopyFeedback('Material berhasil diimport dari clipboard!');
+      }
+    } catch (error) {
+      console.error('Paste material JSON failed:', error);
+      alert('Gagal paste material JSON. Pastikan format JSON benar.');
+    }
   };
 
   // Clear autosave
@@ -727,6 +877,60 @@ const CreateCourse: React.FC = () => {
           }
         : section
     ));
+  };
+
+  // Move material up in order
+  const moveMaterialUp = (sectionId: number, topicId: number, materialIndex: number): void => {
+    if (materialIndex === 0) return; // Already at top
+
+    setSections(sections.map(section => 
+      section.id === sectionId 
+        ? {
+            ...section,
+            topics: section.topics.map(topic => 
+              topic.id === topicId 
+                ? {
+                    ...topic,
+                    materials: topic.materials.map((material, idx) => {
+                      if (idx === materialIndex - 1) return topic.materials[materialIndex];
+                      if (idx === materialIndex) return topic.materials[materialIndex - 1];
+                      return material;
+                    })
+                  }
+                : topic
+            )
+          }
+        : section
+    ));
+    
+    setHasUnsavedChanges(true);
+  };
+
+  // Move material down in order
+  const moveMaterialDown = (sectionId: number, topicId: number, materialIndex: number, totalMaterials: number): void => {
+    if (materialIndex === totalMaterials - 1) return; // Already at bottom
+
+    setSections(sections.map(section => 
+      section.id === sectionId 
+        ? {
+            ...section,
+            topics: section.topics.map(topic => 
+              topic.id === topicId 
+                ? {
+                    ...topic,
+                    materials: topic.materials.map((material, idx) => {
+                      if (idx === materialIndex) return topic.materials[materialIndex + 1];
+                      if (idx === materialIndex + 1) return topic.materials[materialIndex];
+                      return material;
+                    })
+                  }
+                : topic
+            )
+          }
+        : section
+    ));
+    
+    setHasUnsavedChanges(true);
   };
 
   const searchQuestions = async (searchTerm: string, topicId: number, type: 'quiz' | 'drill'): Promise<void> => {
@@ -992,6 +1196,14 @@ const CreateCourse: React.FC = () => {
   return (
     <MainLayout>
       <div className="tw-flex tw-min-h-screen tw-bg-gray-50">
+        {/* Copy Notification */}
+        {showCopyNotification && (
+          <div className="tw-fixed tw-top-4 tw-right-4 tw-z-50 tw-bg-green-500 tw-text-white tw-px-6 tw-py-3 tw-rounded-lg tw-shadow-lg tw-flex tw-items-center tw-gap-2 tw-animate-bounce">
+            <Copy size={20} />
+            <span>{copyNotificationText}</span>
+          </div>
+        )}
+
         <div className="tw-flex-1 tw-mx-4 tw-py-8 tw-px-4 md:tw-px-8 tw-max-w-none">
           <div className="tw-mb-6">
             <div className="tw-flex tw-flex-col md:tw-flex-row tw-justify-between tw-items-start md:tw-items-center tw-mb-4 tw-gap-4">
@@ -1096,7 +1308,7 @@ const CreateCourse: React.FC = () => {
               </div>
             </div>
             <p className="tw-text-gray-600">
-              Buat dan atur konten course dengan topik, materi, quiz, dan drill. Import material JSON dengan custom tags support!
+              Buat dan atur konten course dengan topik, materi, quiz, dan drill. Copy/Paste JSON untuk transfer antar materi!
             </p>
           </div>
 
@@ -1388,6 +1600,37 @@ const CreateCourse: React.FC = () => {
                                                   </div>
                                                 </div>
                                                 <div className="tw-flex tw-items-center tw-gap-2">
+                                                  {/* Move Up/Down Buttons */}
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      moveMaterialUp(section.id, topic.id, materialIndex);
+                                                    }}
+                                                    disabled={materialIndex === 0}
+                                                    className={`tw-p-1 tw-rounded tw-transition-colors ${
+                                                      materialIndex === 0
+                                                        ? 'tw-bg-gray-200 tw-text-gray-400 tw-cursor-not-allowed'
+                                                        : 'tw-bg-blue-100 tw-text-blue-600 hover:tw-bg-blue-200'
+                                                    }`}
+                                                    title="Naikkan urutan"
+                                                  >
+                                                    <ArrowUp size={16} />
+                                                  </button>
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      moveMaterialDown(section.id, topic.id, materialIndex, topic.materials.length);
+                                                    }}
+                                                    disabled={materialIndex === topic.materials.length - 1}
+                                                    className={`tw-p-1 tw-rounded tw-transition-colors ${
+                                                      materialIndex === topic.materials.length - 1
+                                                        ? 'tw-bg-gray-200 tw-text-gray-400 tw-cursor-not-allowed'
+                                                        : 'tw-bg-blue-100 tw-text-blue-600 hover:tw-bg-blue-200'
+                                                    }`}
+                                                    title="Turunkan urutan"
+                                                  >
+                                                    <ArrowDown size={16} />
+                                                  </button>
                                                   <ButtonGradient
                                                     action="delete"
                                                     size="sm"
@@ -1485,13 +1728,29 @@ const CreateCourse: React.FC = () => {
                                                   </div>
                                                 )}
 
-                                                {/* ENHANCED: Material JSON Import/Export with ImportHandler */}
-                                                <div className="tw-mb-3 tw-flex tw-gap-2 tw-justify-end">
+                                                {/* ENHANCED: Material JSON Actions with Copy/Paste */}
+                                                <div className="tw-mb-3 tw-flex tw-gap-2 tw-justify-end tw-flex-wrap">
+                                                  <button
+                                                    onClick={() => handleCopyMaterialJSON(section.id, topic.id, material.id)}
+                                                    className="tw-flex tw-items-center tw-gap-2 tw-px-3 tw-py-2 tw-bg-gradient-to-r tw-from-purple-500 tw-to-purple-600 tw-text-white tw-rounded-lg hover:tw-from-purple-600 hover:tw-to-purple-700 tw-transition-all tw-shadow-md hover:tw-shadow-lg tw-text-sm"
+                                                    title="Copy JSON ke clipboard"
+                                                  >
+                                                    <Copy size={16} />
+                                                    <span>Copy JSON</span>
+                                                  </button>
+                                                  <button
+                                                    onClick={() => handlePasteMaterialJSON(section.id, topic.id, material.id)}
+                                                    className="tw-flex tw-items-center tw-gap-2 tw-px-3 tw-py-2 tw-bg-gradient-to-r tw-from-indigo-500 tw-to-indigo-600 tw-text-white tw-rounded-lg hover:tw-from-indigo-600 hover:tw-to-indigo-700 tw-transition-all tw-shadow-md hover:tw-shadow-lg tw-text-sm"
+                                                    title="Paste JSON dari clipboard"
+                                                  >
+                                                    <Clipboard size={16} />
+                                                    <span>Paste JSON</span>
+                                                  </button>
                                                   <ButtonGradient
                                                     action="upload"
                                                     size="sm"
                                                     onClick={() => handleImportMaterialJSON(section.id, topic.id, material.id)}
-                                                    customText="Import JSON"
+                                                    customText="Import File"
                                                     showText={true}
                                                     customColors={{
                                                       primary: '#06B6D4',
@@ -1505,7 +1764,7 @@ const CreateCourse: React.FC = () => {
                                                     action="download"
                                                     size="sm"
                                                     onClick={() => handleExportMaterialJSON(section.id, topic.id, material.id)}
-                                                    customText="Export JSON"
+                                                    customText="Export File"
                                                     showText={true}
                                                     customColors={{
                                                       primary: '#10B981',
@@ -1541,8 +1800,9 @@ const CreateCourse: React.FC = () => {
                                           ))}
                                         </div>
 
-                                        {/* Quiz and Drill Section */}
+                                        {/* Quiz and Drill Section - Keeping existing implementation */}
                                         <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4 tw-border-t tw-border-purple-200 tw-pt-4">
+                                          {/* Quiz Section */}
                                           <div className="tw-border tw-border-orange-300 tw-rounded-lg">
                                             <div className="tw-bg-orange-500 tw-text-white tw-p-3 tw-rounded-t-lg">
                                               <h6 className="tw-mb-0 tw-font-medium">Quiz ({((topic.quiz && topic.quiz.questions) || []).length} soal)</h6>
@@ -1623,6 +1883,7 @@ const CreateCourse: React.FC = () => {
                                             </div>
                                           </div>
 
+                                          {/* Drill Section */}
                                           <div className="tw-border tw-border-green-300 tw-rounded-lg">
                                             <div className="tw-bg-green-500 tw-text-white tw-p-3 tw-rounded-t-lg">
                                               <h6 className="tw-mb-0 tw-font-medium">Drill ({((topic.drill && topic.drill.questions) || []).length} soal)</h6>

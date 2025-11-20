@@ -511,12 +511,6 @@ Kalau kamu lihat:
 
 Ini **deduktif murni** meskipun kesimpulannya di akhir. Yang bikin deduktif adalah premis pertama yang **universal** ("Semua mamalia...") dan kesimpulan yang **pasti mengikuti** dari premis.
 
-**Key Distinction:**
-- Induktif: Kesimpulan di akhir karena *disintesis dari banyak observasi*
-- Deduktif dengan kesimpulan di akhir: Kesimpulan di akhir karena *struktur argumen* (premis mayor → minor → kesimpulan), tapi kesimpulan
-
-### **Materi 1.1.3: The Inductive-Deductive Spectrum - Understanding the Continuum** *(lanjutan)*
-
 **Key Distinction:** *(lanjutan)*
 - Induktif: Kesimpulan di akhir karena *disintesis dari banyak observasi*
 - Deduktif dengan kesimpulan di akhir: Kesimpulan di akhir karena *struktur argumen* (premis mayor → minor → kesimpulan), tapi kesimpulannya **pasti mengikuti** dari premis yang universal
