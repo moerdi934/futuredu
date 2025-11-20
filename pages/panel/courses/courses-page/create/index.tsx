@@ -1,4 +1,4 @@
-// pages/panel/courses/courses-page/create/index.tsx - COMPLETE IMPLEMENTATION WITH COPY JSON
+// pages/panel/courses/courses-page/create/index.tsx - COMPLETE IMPLEMENTATION WITH PASTE MODAL
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -89,6 +89,171 @@ interface MaterialImportData {
   [key: string]: any;
 }
 
+// Paste Modal Context Interface
+interface PasteModalContext {
+  sectionId: number;
+  topicId: number;
+  materialId: number;
+}
+
+// Paste JSON Modal Component
+const PasteJSONModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onPaste: (jsonData: string) => void;
+}> = ({ isOpen, onClose, onPaste }) => {
+  const [jsonInput, setJsonInput] = useState<string>('');
+  const [error, setError] = useState<string>('');
+
+  useEffect(() => {
+    if (isOpen) {
+      // Auto-paste from clipboard when modal opens
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.readText()
+          .then(text => {
+            if (text.trim()) {
+              setJsonInput(text);
+            }
+          })
+          .catch(() => {
+            // Silently fail if clipboard access denied
+          });
+      }
+    } else {
+      // Reset when closing
+      setJsonInput('');
+      setError('');
+    }
+  }, [isOpen]);
+
+  const handleInsert = () => {
+    if (!jsonInput.trim()) {
+      setError('Mohon masukkan data JSON terlebih dahulu');
+      return;
+    }
+
+    // Validate JSON format
+    try {
+      JSON.parse(jsonInput);
+      onPaste(jsonInput);
+      setError('');
+    } catch (e) {
+      setError('Format JSON tidak valid. Pastikan JSON Anda benar.');
+    }
+  };
+
+  const handlePasteFromClipboard = async () => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        const text = await navigator.clipboard.readText();
+        setJsonInput(text);
+        setError('');
+      } else {
+        setError('Browser tidak mendukung clipboard API. Silakan paste manual.');
+      }
+    } catch (err) {
+      setError('Gagal membaca clipboard. Silakan paste manual dengan Ctrl+V.');
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-z-50 tw-flex tw-items-center tw-justify-center tw-p-4">
+      <div className="tw-bg-white tw-rounded-lg tw-shadow-2xl tw-max-w-2xl tw-w-full tw-max-h-[90vh] tw-flex tw-flex-col">
+        {/* Modal Header */}
+        <div className="tw-bg-gradient-to-r tw-from-indigo-500 tw-to-indigo-600 tw-text-white tw-p-6 tw-rounded-t-lg tw-flex tw-justify-between tw-items-center">
+          <div className="tw-flex tw-items-center tw-gap-3">
+            <Clipboard size={24} />
+            <h2 className="tw-text-xl tw-font-bold tw-m-0">Paste JSON Material</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="tw-text-white hover:tw-bg-white hover:tw-bg-opacity-20 tw-rounded-full tw-p-2 tw-transition-all"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="tw-flex-1 tw-overflow-y-auto tw-p-6">
+          <div className="tw-mb-4">
+            <div className="tw-flex tw-justify-between tw-items-center tw-mb-2">
+              <label className="tw-block tw-text-gray-700 tw-font-medium">
+                Data JSON Material
+              </label>
+              <button
+                onClick={handlePasteFromClipboard}
+                className="tw-flex tw-items-center tw-gap-2 tw-px-3 tw-py-1 tw-text-sm tw-bg-gray-100 hover:tw-bg-gray-200 tw-text-gray-700 tw-rounded tw-transition-all"
+              >
+                <Clipboard size={16} />
+                <span>Paste dari Clipboard</span>
+              </button>
+            </div>
+            <textarea
+              value={jsonInput}
+              onChange={(e) => {
+                setJsonInput(e.target.value);
+                setError('');
+              }}
+              placeholder='Paste JSON data material di sini, contoh:
+{
+  "title": "Judul Material",
+  "isMandatory": false,
+  "hasVideo": true,
+  "videoType": "url",
+  "videoUrl": "https://...",
+  "content": "<p>Konten material...</p>"
+}'
+              className="tw-w-full tw-h-64 tw-px-4 tw-py-3 tw-border tw-border-gray-300 tw-rounded-lg focus:tw-outline-none focus:tw-border-indigo-500 focus:tw-ring-2 focus:tw-ring-indigo-200 tw-font-mono tw-text-sm tw-resize-none"
+            />
+            {error && (
+              <div className="tw-mt-2 tw-p-3 tw-bg-red-50 tw-border tw-border-red-200 tw-rounded tw-flex tw-items-start tw-gap-2">
+                <div className="tw-text-red-600 tw-font-bold">⚠</div>
+                <p className="tw-text-red-600 tw-text-sm tw-m-0">{error}</p>
+              </div>
+            )}
+          </div>
+
+          {/* JSON Format Info */}
+          <div className="tw-bg-blue-50 tw-border tw-border-blue-200 tw-rounded-lg tw-p-4">
+            <h3 className="tw-text-blue-800 tw-font-semibold tw-mb-2 tw-flex tw-items-center tw-gap-2">
+              <svg className="tw-w-5 tw-h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              Format JSON yang Diharapkan
+            </h3>
+            <ul className="tw-text-blue-700 tw-text-sm tw-space-y-1 tw-mb-0 tw-ml-7">
+              <li><code className="tw-bg-blue-100 tw-px-1 tw-rounded">title</code>: Judul material (string)</li>
+              <li><code className="tw-bg-blue-100 tw-px-1 tw-rounded">isMandatory</code>: Materi wajib atau tidak (boolean)</li>
+              <li><code className="tw-bg-blue-100 tw-px-1 tw-rounded">hasVideo</code>: Apakah ada video (boolean)</li>
+              <li><code className="tw-bg-blue-100 tw-px-1 tw-rounded">videoType</code>: Tipe video "upload" atau "url" (string)</li>
+              <li><code className="tw-bg-blue-100 tw-px-1 tw-rounded">videoUrl</code>: URL video jika type url (string)</li>
+              <li><code className="tw-bg-blue-100 tw-px-1 tw-rounded">content</code>: Konten HTML material (string, wajib)</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="tw-border-t tw-border-gray-200 tw-p-6 tw-flex tw-justify-end tw-gap-3">
+          <button
+            onClick={onClose}
+            className="tw-px-6 tw-py-2 tw-bg-gray-100 hover:tw-bg-gray-200 tw-text-gray-700 tw-rounded-lg tw-transition-all tw-font-medium"
+          >
+            Batal
+          </button>
+          <button
+            onClick={handleInsert}
+            className="tw-px-6 tw-py-2 tw-bg-gradient-to-r tw-from-indigo-500 tw-to-indigo-600 hover:tw-from-indigo-600 hover:tw-to-indigo-700 tw-text-white tw-rounded-lg tw-transition-all tw-font-medium tw-shadow-lg hover:tw-shadow-xl"
+          >
+            Insert Material
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Component
 const CreateCourse: React.FC = () => {
   const searchParams = useSearchParams();
@@ -117,6 +282,10 @@ const CreateCourse: React.FC = () => {
   // Copy notification state
   const [showCopyNotification, setShowCopyNotification] = useState<boolean>(false);
   const [copyNotificationText, setCopyNotificationText] = useState<string>('');
+
+  // Paste Modal State
+  const [isPasteModalOpen, setIsPasteModalOpen] = useState<boolean>(false);
+  const [pasteModalContext, setPasteModalContext] = useState<PasteModalContext | null>(null);
 
   const AUTOSAVE_KEY = 'create';
   const AUTOSAVE_INTERVAL = 30000; // 30 seconds
@@ -485,7 +654,7 @@ const CreateCourse: React.FC = () => {
     }
   };
 
-  // NEW: Copy Material JSON to Clipboard
+  // Copy Material JSON to Clipboard
   const handleCopyMaterialJSON = async (sectionId: number, topicId: number, materialId: number): Promise<void> => {
     try {
       const section = sections.find(s => s.id === sectionId);
@@ -621,24 +790,19 @@ const CreateCourse: React.FC = () => {
     input.click();
   };
 
-  // NEW: Paste Material JSON from Clipboard
-  const handlePasteMaterialJSON = async (sectionId: number, topicId: number, materialId: number): Promise<void> => {
+  // Open Paste Modal
+  const handleOpenPasteModal = (sectionId: number, topicId: number, materialId: number): void => {
+    setPasteModalContext({ sectionId, topicId, materialId });
+    setIsPasteModalOpen(true);
+  };
+
+  // Handle Paste from Modal
+  const handlePasteFromModal = async (jsonString: string): Promise<void> => {
+    if (!pasteModalContext) return;
+
+    const { sectionId, topicId, materialId } = pasteModalContext;
+
     try {
-      let jsonString = '';
-      
-      // Try to read from clipboard
-      if (navigator.clipboard && window.isSecureContext) {
-        jsonString = await navigator.clipboard.readText();
-      } else {
-        // Fallback: show prompt for manual paste
-        jsonString = prompt('Paste JSON data material di sini:') || '';
-      }
-      
-      if (!jsonString.trim()) {
-        alert('Tidak ada data JSON untuk diimport.');
-        return;
-      }
-      
       const parsed: MaterialImportData = JSON.parse(jsonString);
       
       // Validate JSON structure using ImportHandler
@@ -648,49 +812,51 @@ const CreateCourse: React.FC = () => {
         return;
       }
       
-      if (confirm('Paste akan mengganti data material ini. Lanjutkan?')) {
-        // Parse content using SuperEditorImportHandler
-        const parsedContent = parseMaterialContent(parsed.content || '<p>Mulai menulis konten materi...</p>');
-        
-        // Update material dengan data dari JSON
-        setSections(prevSections => prevSections.map(section => 
-          section.id === sectionId 
-            ? {
-                ...section,
-                topics: section.topics.map(topic => 
-                  topic.id === topicId 
-                    ? {
-                        ...topic,
-                        materials: topic.materials.map(material =>
-                          material.id === materialId 
-                            ? {
-                                ...material,
-                                title: parsed.title || material.title,
-                                isMandatory: parsed.hasOwnProperty('isMandatory') ? parsed.isMandatory! : material.isMandatory,
-                                hasVideo: parsed.hasOwnProperty('hasVideo') ? parsed.hasVideo! : material.hasVideo,
-                                videoType: parsed.videoType || material.videoType,
-                                videoUrl: parsed.videoUrl || material.videoUrl,
-                                content: parsedContent
-                              }
-                            : material
-                        )
-                      }
-                    : topic
-                )
-              }
-            : section
-        ));
-        
+      // Parse content using SuperEditorImportHandler
+      const parsedContent = parseMaterialContent(parsed.content || '<p>Mulai menulis konten materi...</p>');
+      
+      // Update material dengan data dari JSON
+      setSections(prevSections => prevSections.map(section => 
+        section.id === sectionId 
+          ? {
+              ...section,
+              topics: section.topics.map(topic => 
+                topic.id === topicId 
+                  ? {
+                      ...topic,
+                      materials: topic.materials.map(material =>
+                        material.id === materialId 
+                          ? {
+                              ...material,
+                              title: parsed.title || material.title,
+                              isMandatory: parsed.hasOwnProperty('isMandatory') ? parsed.isMandatory! : material.isMandatory,
+                              hasVideo: parsed.hasOwnProperty('hasVideo') ? parsed.hasVideo! : material.hasVideo,
+                              videoType: parsed.videoType || material.videoType,
+                              videoUrl: parsed.videoUrl || material.videoUrl,
+                              content: parsedContent
+                            }
+                          : material
+                      )
+                    }
+                  : topic
+              )
+            }
+          : section
+      ));
+      
+      setHasUnsavedChanges(true);
+      
+      // Close modal
+      setIsPasteModalOpen(false);
+      setPasteModalContext(null);
+      
+      // Force re-render and apply syntax highlighting
+      setTimeout(() => {
         setHasUnsavedChanges(true);
-        
-        // Force re-render and apply syntax highlighting
-        setTimeout(() => {
-          setHasUnsavedChanges(true);
-          applySyntaxHighlighting();
-        }, 100);
-        
-        showCopyFeedback('Material berhasil diimport dari clipboard!');
-      }
+        applySyntaxHighlighting();
+      }, 100);
+      
+      showCopyFeedback('Material berhasil diimport dari clipboard!');
     } catch (error) {
       console.error('Paste material JSON failed:', error);
       alert('Gagal paste material JSON. Pastikan format JSON benar.');
@@ -1196,6 +1362,16 @@ const CreateCourse: React.FC = () => {
   return (
     <MainLayout>
       <div className="tw-flex tw-min-h-screen tw-bg-gray-50">
+        {/* Paste JSON Modal */}
+        <PasteJSONModal
+          isOpen={isPasteModalOpen}
+          onClose={() => {
+            setIsPasteModalOpen(false);
+            setPasteModalContext(null);
+          }}
+          onPaste={handlePasteFromModal}
+        />
+
         {/* Copy Notification */}
         {showCopyNotification && (
           <div className="tw-fixed tw-top-4 tw-right-4 tw-z-50 tw-bg-green-500 tw-text-white tw-px-6 tw-py-3 tw-rounded-lg tw-shadow-lg tw-flex tw-items-center tw-gap-2 tw-animate-bounce">
@@ -1728,7 +1904,7 @@ const CreateCourse: React.FC = () => {
                                                   </div>
                                                 )}
 
-                                                {/* ENHANCED: Material JSON Actions with Copy/Paste */}
+                                                {/* Material JSON Actions with Modal */}
                                                 <div className="tw-mb-3 tw-flex tw-gap-2 tw-justify-end tw-flex-wrap">
                                                   <button
                                                     onClick={() => handleCopyMaterialJSON(section.id, topic.id, material.id)}
@@ -1739,7 +1915,7 @@ const CreateCourse: React.FC = () => {
                                                     <span>Copy JSON</span>
                                                   </button>
                                                   <button
-                                                    onClick={() => handlePasteMaterialJSON(section.id, topic.id, material.id)}
+                                                    onClick={() => handleOpenPasteModal(section.id, topic.id, material.id)}
                                                     className="tw-flex tw-items-center tw-gap-2 tw-px-3 tw-py-2 tw-bg-gradient-to-r tw-from-indigo-500 tw-to-indigo-600 tw-text-white tw-rounded-lg hover:tw-from-indigo-600 hover:tw-to-indigo-700 tw-transition-all tw-shadow-md hover:tw-shadow-lg tw-text-sm"
                                                     title="Paste JSON dari clipboard"
                                                   >
