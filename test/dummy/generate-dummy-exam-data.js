@@ -322,7 +322,7 @@ const getQuestionsForExams = async (examIds) => {
 
 // Generate dummy exam data
 const generateDummyExamData = async () => {
-  const examScheduleId = 54;
+  const examScheduleId = 276;
   const startUserId = 42;
   const endUserId = 141;
   

@@ -1,8 +1,8 @@
-// pages/panel/courses/courses-page/create/index.tsx - COMPLETE IMPLEMENTATION WITH PASTE MODAL
+// pages/panel/courses/courses-page/create/index.tsx - COMPLETE IMPLEMENTATION WITH MOVE MATERIAL TO TOPIC
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Plus, Trash2, Eye, EyeOff, Upload, Link, Play, Menu, X, ChevronRight, Download, Save, Clock, ArrowUp, ArrowDown, Copy, Clipboard } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Trash2, Eye, EyeOff, Upload, Link, Play, Menu, X, ChevronRight, Download, Save, Clock, ArrowUp, ArrowDown, Copy, Clipboard, MoveUp, MoveDown } from 'lucide-react';
 import axios from 'axios';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
@@ -95,6 +95,145 @@ interface PasteModalContext {
   topicId: number;
   materialId: number;
 }
+
+// Move Material Modal Component
+const MoveMaterialModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onMove: (targetSectionId: number, targetTopicId: number) => void;
+  sections: Section[];
+  currentSectionId: number;
+  currentTopicId: number;
+  materialTitle: string;
+}> = ({ isOpen, onClose, onMove, sections, currentSectionId, currentTopicId, materialTitle }) => {
+  const [selectedSectionId, setSelectedSectionId] = useState<number>(currentSectionId);
+  const [selectedTopicId, setSelectedTopicId] = useState<number>(currentTopicId);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedSectionId(currentSectionId);
+      setSelectedTopicId(currentTopicId);
+    }
+  }, [isOpen, currentSectionId, currentTopicId]);
+
+  const currentSection = sections.find(s => s.id === currentSectionId);
+  const currentTopic = currentSection?.topics.find(t => t.id === currentTopicId);
+  const selectedSection = sections.find(s => s.id === selectedSectionId);
+
+  const handleSectionChange = (sectionId: number) => {
+    setSelectedSectionId(sectionId);
+    const section = sections.find(s => s.id === sectionId);
+    if (section && section.topics.length > 0) {
+      setSelectedTopicId(section.topics[0].id);
+    }
+  };
+
+  const handleMove = () => {
+    if (selectedSectionId === currentSectionId && selectedTopicId === currentTopicId) {
+      alert('Topik tujuan sama dengan topik asal. Pilih topik yang berbeda.');
+      return;
+    }
+    onMove(selectedSectionId, selectedTopicId);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="tw-fixed tw-inset-0 tw-bg-black tw-bg-opacity-50 tw-z-50 tw-flex tw-items-center tw-justify-center tw-p-4">
+      <div className="tw-bg-white tw-rounded-lg tw-shadow-2xl tw-max-w-lg tw-w-full">
+        {/* Modal Header */}
+        <div className="tw-bg-gradient-to-r tw-from-blue-500 tw-to-blue-600 tw-text-white tw-p-6 tw-rounded-t-lg tw-flex tw-justify-between tw-items-center">
+          <div className="tw-flex tw-items-center tw-gap-3">
+            <MoveUp size={24} />
+            <h2 className="tw-text-xl tw-font-bold tw-m-0">Pindahkan Material</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="tw-text-white hover:tw-bg-white hover:tw-bg-opacity-20 tw-rounded-full tw-p-2 tw-transition-all"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="tw-p-6 tw-space-y-4">
+          <div className="tw-bg-blue-50 tw-border tw-border-blue-200 tw-rounded-lg tw-p-4">
+            <p className="tw-text-blue-800 tw-text-sm tw-mb-2">
+              <strong>Material:</strong> {materialTitle || 'Material Baru'}
+            </p>
+            <p className="tw-text-blue-700 tw-text-sm tw-mb-1">
+              <strong>Dari:</strong> {currentSection?.title || 'Section'} → {currentTopic?.title || 'Topic'}
+            </p>
+          </div>
+
+          <div>
+            <label className="tw-block tw-text-gray-700 tw-font-medium tw-mb-2">
+              Pilih Section Tujuan
+            </label>
+            <select
+              value={selectedSectionId}
+              onChange={(e) => handleSectionChange(Number(e.target.value))}
+              className="tw-w-full tw-px-4 tw-py-3 tw-border tw-border-gray-300 tw-rounded-lg focus:tw-outline-none focus:tw-border-blue-500 focus:tw-ring-2 focus:tw-ring-blue-200"
+            >
+              {sections.map((section, index) => (
+                <option key={section.id} value={section.id}>
+                  Section {index + 1}: {section.title || 'Section Baru'}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="tw-block tw-text-gray-700 tw-font-medium tw-mb-2">
+              Pilih Topic Tujuan
+            </label>
+            <select
+              value={selectedTopicId}
+              onChange={(e) => setSelectedTopicId(Number(e.target.value))}
+              className="tw-w-full tw-px-4 tw-py-3 tw-border tw-border-gray-300 tw-rounded-lg focus:tw-outline-none focus:tw-border-blue-500 focus:tw-ring-2 focus:tw-ring-blue-200"
+              disabled={!selectedSection || selectedSection.topics.length === 0}
+            >
+              {selectedSection && selectedSection.topics.length > 0 ? (
+                selectedSection.topics.map((topic, index) => (
+                  <option key={topic.id} value={topic.id}>
+                    Topic {index + 1}: {topic.title || 'Topic Baru'}
+                  </option>
+                ))
+              ) : (
+                <option value="">Tidak ada topic tersedia</option>
+              )}
+            </select>
+          </div>
+
+          {selectedSectionId === currentSectionId && selectedTopicId === currentTopicId && (
+            <div className="tw-bg-yellow-50 tw-border tw-border-yellow-200 tw-rounded-lg tw-p-3">
+              <p className="tw-text-yellow-800 tw-text-sm tw-m-0">
+                ⚠️ Topik tujuan sama dengan topik asal. Pilih topik yang berbeda.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="tw-border-t tw-border-gray-200 tw-p-6 tw-flex tw-justify-end tw-gap-3">
+          <button
+            onClick={onClose}
+            className="tw-px-6 tw-py-2 tw-bg-gray-100 hover:tw-bg-gray-200 tw-text-gray-700 tw-rounded-lg tw-transition-all tw-font-medium"
+          >
+            Batal
+          </button>
+          <button
+            onClick={handleMove}
+            disabled={selectedSectionId === currentSectionId && selectedTopicId === currentTopicId}
+            className="tw-px-6 tw-py-2 tw-bg-gradient-to-r tw-from-blue-500 tw-to-blue-600 hover:tw-from-blue-600 hover:tw-to-blue-700 tw-text-white tw-rounded-lg tw-transition-all tw-font-medium tw-shadow-lg hover:tw-shadow-xl disabled:tw-opacity-50 disabled:tw-cursor-not-allowed"
+          >
+            Pindahkan Material
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Paste JSON Modal Component
 const PasteJSONModal: React.FC<{
@@ -286,6 +425,14 @@ const CreateCourse: React.FC = () => {
   // Paste Modal State
   const [isPasteModalOpen, setIsPasteModalOpen] = useState<boolean>(false);
   const [pasteModalContext, setPasteModalContext] = useState<PasteModalContext | null>(null);
+
+  // Move Material Modal State
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState<boolean>(false);
+  const [moveMaterialContext, setMoveMaterialContext] = useState<{
+    sectionId: number;
+    topicId: number;
+    materialId: number;
+  } | null>(null);
 
   const AUTOSAVE_KEY = 'create';
   const AUTOSAVE_INTERVAL = 30000; // 30 seconds
@@ -863,6 +1010,82 @@ const CreateCourse: React.FC = () => {
     }
   };
 
+  // Open Move Material Modal
+  const handleOpenMoveModal = (sectionId: number, topicId: number, materialId: number): void => {
+    setMoveMaterialContext({ sectionId, topicId, materialId });
+    setIsMoveModalOpen(true);
+  };
+
+  // Handle Move Material to Another Topic
+// Handle Move Material to Another Topic
+const handleMoveMaterial = (targetSectionId: number, targetTopicId: number): void => {
+  if (!moveMaterialContext) return;
+
+  const { sectionId: sourceSectionId, topicId: sourceTopicId, materialId } = moveMaterialContext;
+
+  // Find the material to move
+  const sourceSection = sections.find(s => s.id === sourceSectionId);
+  if (!sourceSection) return;
+
+  const sourceTopic = sourceSection.topics.find(t => t.id === sourceTopicId);
+  if (!sourceTopic) return;
+
+  const materialToMove = sourceTopic.materials.find(m => m.id === materialId);
+  if (!materialToMove) return;
+
+  // Update sections in one pass
+  setSections(prevSections => {
+    return prevSections.map(section => {
+      // If this is the source section
+      if (section.id === sourceSectionId) {
+        return {
+          ...section,
+          topics: section.topics.map(topic => {
+            // Remove from source topic
+            if (topic.id === sourceTopicId) {
+              return {
+                ...topic,
+                materials: topic.materials.filter(m => m.id !== materialId)
+              };
+            }
+            // Add to target topic if in same section
+            if (section.id === targetSectionId && topic.id === targetTopicId) {
+              return {
+                ...topic,
+                materials: [...topic.materials, materialToMove]
+              };
+            }
+            return topic;
+          })
+        };
+      }
+      
+      // If this is the target section (and different from source)
+      if (section.id === targetSectionId && section.id !== sourceSectionId) {
+        return {
+          ...section,
+          topics: section.topics.map(topic => {
+            // Add to target topic
+            if (topic.id === targetTopicId) {
+              return {
+                ...topic,
+                materials: [...topic.materials, materialToMove]
+              };
+            }
+            return topic;
+          })
+        };
+      }
+      
+      return section;
+    });
+  });
+
+  setHasUnsavedChanges(true);
+  setIsMoveModalOpen(false);
+  setMoveMaterialContext(null);
+  showCopyFeedback('Material berhasil dipindahkan!');
+};
   // Clear autosave
   const handleClearAutosave = async (): Promise<void> => {
     if (confirm('Hapus data autosave? Data yang belum disimpan akan hilang.')) {
@@ -1098,7 +1321,6 @@ const CreateCourse: React.FC = () => {
     
     setHasUnsavedChanges(true);
   };
-
   const searchQuestions = async (searchTerm: string, topicId: number, type: 'quiz' | 'drill'): Promise<void> => {
     if (!mounted || !searchTerm.trim()) {
       setQuestionSearchResults(prev => ({
@@ -1362,6 +1584,28 @@ const CreateCourse: React.FC = () => {
   return (
     <MainLayout>
       <div className="tw-flex tw-min-h-screen tw-bg-gray-50">
+        {/* Move Material Modal */}
+        <MoveMaterialModal
+          isOpen={isMoveModalOpen}
+          onClose={() => {
+            setIsMoveModalOpen(false);
+            setMoveMaterialContext(null);
+          }}
+          onMove={handleMoveMaterial}
+          sections={sections}
+          currentSectionId={moveMaterialContext?.sectionId || 0}
+          currentTopicId={moveMaterialContext?.topicId || 0}
+          materialTitle={
+            moveMaterialContext
+              ? sections
+                  .find(s => s.id === moveMaterialContext.sectionId)
+                  ?.topics.find(t => t.id === moveMaterialContext.topicId)
+                  ?.materials.find(m => m.id === moveMaterialContext.materialId)
+                  ?.title || 'Material Baru'
+              : 'Material Baru'
+          }
+        />
+
         {/* Paste JSON Modal */}
         <PasteJSONModal
           isOpen={isPasteModalOpen}
@@ -1807,6 +2051,17 @@ const CreateCourse: React.FC = () => {
                                                   >
                                                     <ArrowDown size={16} />
                                                   </button>
+                                                  {/* Move to Another Topic Button */}
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleOpenMoveModal(section.id, topic.id, material.id);
+                                                    }}
+                                                    className="tw-p-1 tw-rounded tw-bg-indigo-100 tw-text-indigo-600 hover:tw-bg-indigo-200 tw-transition-colors"
+                                                    title="Pindahkan ke topik lain"
+                                                  >
+                                                    <MoveUp size={16} />
+                                                  </button>
                                                   <ButtonGradient
                                                     action="delete"
                                                     size="sm"
@@ -1976,7 +2231,7 @@ const CreateCourse: React.FC = () => {
                                           ))}
                                         </div>
 
-                                        {/* Quiz and Drill Section - Keeping existing implementation */}
+                                        {/* Quiz and Drill Section */}
                                         <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-4 tw-border-t tw-border-purple-200 tw-pt-4">
                                           {/* Quiz Section */}
                                           <div className="tw-border tw-border-orange-300 tw-rounded-lg">
