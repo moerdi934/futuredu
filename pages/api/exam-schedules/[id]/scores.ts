@@ -50,7 +50,7 @@ export default async function handler(req: AuthenticatedRequest, res: NextApiRes
       SELECT 
         exam_name,
         CASE 
-          WHEN $4 = true THEN score--COALESCE(weighted_score, 0)
+          WHEN $4 = true THEN COALESCE(weighted_score, 0)
           ELSE score
         END as score,
         total_correct,
@@ -79,10 +79,10 @@ export default async function handler(req: AuthenticatedRequest, res: NextApiRes
       });
     }
 
-    // Calculate totals
+    // Calculate totals - UPDATED untuk numeric type
     const examScores = scoresResult.rows.map(row => ({
       exam_name: row.exam_name,
-      score: parseInt(row.score) || 0,
+      score: parseFloat(row.score) || 0, // Ubah dari parseInt ke parseFloat
       total_correct: parseInt(row.total_correct) || 0,
       total_questions: parseInt(row.total_questions) || 0,
       completion_time: row.completion_time
@@ -94,7 +94,7 @@ export default async function handler(req: AuthenticatedRequest, res: NextApiRes
     const averageScore = examScores.length > 0 ? totalScore / examScores.length : 0;
 
     return res.status(200).json({
-      total_score: totalScore,
+      total_score: parseFloat(totalScore.toFixed(2)), // Format dengan 2 desimal
       average_score: parseFloat(averageScore.toFixed(2)),
       total_correct: totalCorrect,
       total_questions: totalQuestions,

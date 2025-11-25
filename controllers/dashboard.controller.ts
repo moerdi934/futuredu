@@ -3,6 +3,16 @@ import { NextApiResponse } from 'next';
 import { AuthenticatedRequest } from '../lib/middleware/auth';
 import { PoolClient } from 'pg';
 import pool from '../lib/db';
+import {
+  getLatestSubjectPerformance,
+  getLatestWeeklyProgress,
+  getRecentExamResults,
+  getProgressDetail,
+  getTopicData,
+  getUserGlobalData,
+  getCompetitiveAnalysis,
+  checkExamDataAvailability
+} from '../models/dashboard.model';
 
 // ========== TYPES ==========
 export interface WeekData {
@@ -110,18 +120,18 @@ export interface StudentDashboardResponse {
 function parseWeeklyProgress(row: any | null): WeekData[] {
   if (!row) return [];
   return [
-    { name: "Minggu 1", nilai: row.week1, target: row.target1 || null },
-    { name: "Minggu 2", nilai: row.week2, target: row.target2 || null },
-    { name: "Minggu 3", nilai: row.week3, target: row.target3 || null },
-    { name: "Minggu 4", nilai: row.week4, target: row.target4 || null },
-    { name: "Minggu 5", nilai: row.week5, target: row.target5 || null }
+    { name: "Minggu 1", nilai: row.week1 || 0, target: row.target1 || null },
+    { name: "Minggu 2", nilai: row.week2 || 0, target: row.target2 || null },
+    { name: "Minggu 3", nilai: row.week3 || 0, target: row.target3 || null },
+    { name: "Minggu 4", nilai: row.week4 || 0, target: row.target4 || null },
+    { name: "Minggu 5", nilai: row.week5 || 0, target: row.target5 || null }
   ];
 }
 
-// Helper to fetch courses with shared client
-async function fetchUserCoursesWithClient(user_id: number, client: PoolClient): Promise<UserCourseData[]> {
+// Helper to fetch courses
+async function fetchUserCourses(user_id: number): Promise<UserCourseData[]> {
   try {
-    const { rows } = await client.query(
+    const { rows } = await pool.query(
       `SELECT DISTINCT ON (c.id)
               c.id,
               c.title,
@@ -177,9 +187,9 @@ async function fetchUserCoursesWithClient(user_id: number, client: PoolClient): 
   }
 }
 
-async function fetchUserClassesWithClient(user_id: number, client: PoolClient): Promise<UserClassData[]> {
+async function fetchUserClasses(user_id: number): Promise<UserClassData[]> {
   try {
-    const { rows } = await client.query(
+    const { rows } = await pool.query(
       `SELECT lc.id, lc.name, lc.description, lc.teacher_name,
               lc.start_date, lc.end_date,
               COALESCE(c.title, 'No Course') as course_name
@@ -206,9 +216,9 @@ async function fetchUserClassesWithClient(user_id: number, client: PoolClient): 
   }
 }
 
-async function fetchUserTryOutsWithClient(user_id: number, client: PoolClient): Promise<UserTryOutData[]> {
+async function fetchUserTryOuts(user_id: number): Promise<UserTryOutData[]> {
   try {
-    const { rows } = await client.query(
+    const { rows } = await pool.query(
       `SELECT ue.id,
               ue.exam_schedule_id,
               es.name as exam_schedule_name,
@@ -265,43 +275,11 @@ export async function getStudentDashboard(
     return res.status(400).json({ error: 'user_id is required' });
   }
 
-  let client: PoolClient | undefined;
-
   try {
     console.log('Dashboard request for user:', user_id);
-    console.log('Pool status before - Total:', pool.totalCount, 'Idle:', pool.idleCount, 'Waiting:', pool.waitingCount);
 
-    // ⭐ Ambil SATU connection dengan timeout handling
-    try {
-      client = await pool.connect();
-      console.log('✅ Client connected successfully');
-    } catch (connectError) {
-      console.error('❌ Failed to connect to database:', connectError);
-      return res.status(503).json({ 
-        error: 'Database connection failed. Please try again later.' 
-      });
-    }
-
-    // Check which exam types have data
-    const { rows: examTypes } = await client.query(
-      `SELECT DISTINCT tipe
-       FROM mars.reportexam_subjectperformance
-       WHERE user_id = $1`,
-      [user_id]
-    );
-    
-    const availableExams: { [key: string]: boolean } = {
-      SNBT: false,
-      SIMAK: false,
-      Quiz: false,
-      CPNS: false
-    };
-    
-    examTypes.forEach((row: { tipe: string }) => {
-      if (row.tipe in availableExams) {
-        availableExams[row.tipe as keyof typeof availableExams] = true;
-      }
-    });
+    // Check which exam types have data using materialized view
+    const availableExams = await checkExamDataAvailability(user_id);
     
     // Build exam dashboards for available types
     const examDashboards: ExamDashboardData[] = [];
@@ -310,84 +288,37 @@ export async function getStudentDashboard(
       if (hasData) {
         console.log('Processing exam type:', examType);
         
-        // ⭐ Semua query parallel menggunakan CLIENT yang SAMA
+        // Fetch all exam data in parallel using model functions with materialized views
         const [
-          subjectPerformance,
-          weeklyProgress,
-          recentResults,
-          progressDetail,
+          subjectPerformanceRaw,
+          weeklyProgressRaw,
+          recentResultsRaw,
+          progressDetailRaw,
           topicDataRaw,
           globalData,
-          competitiveAnalysis
+          competitiveAnalysisRaw
         ] = await Promise.all([
-          client.query(
-            `SELECT DISTINCT ON (mapel) mapel, nilai, postdate
-             FROM mars.reportexam_subjectperformance
-             WHERE user_id = $1 AND tipe = $2
-             ORDER BY mapel, postdate DESC`,
-            [user_id, examType]
-          ),
-          client.query(
-            `SELECT week1, week2, week3, week4, week5, postdate
-             FROM mars.reportexam_weeklyprogressdata
-             WHERE user_id = $1 AND tipe = $2
-             ORDER BY postdate DESC LIMIT 1`,
-            [user_id, examType]
-          ),
-          client.query(
-            `SELECT exam_schedule_name, score, completion_time
-             FROM mars.reportexam_recentexamresult
-             WHERE user_id = $1 AND tipe = $2
-             ORDER BY completion_time DESC
-             LIMIT 5`,
-            [user_id, examType]
-          ),
-          client.query(
-            `SELECT mapel as nama, avg_all_time as nilai, difference as peningkatan
-             FROM mars.reportexam_progressdetail
-             WHERE user_id = $1 AND tipe = $2
-             ORDER BY postdate DESC`,
-            [user_id, examType]
-          ),
-          client.query(
-            `SELECT mapel, topic, accuracy_percentage as score, avg_accuracy as avg, 
-                    jumlah_soal as total, completed
-             FROM mars.reportexam_topicdata
-             WHERE user_id = $1 AND exam_type = $2
-             ORDER BY postdate DESC`,
-            [user_id, examType]
-          ),
-          client.query(
-            `SELECT rank_now, rank_previous, avg_score_now, avg_score_previous,
-                    total_score, total_participants, percentile
-             FROM mars.reportexam_userglobaldata
-             WHERE user_id = $1 AND exam_type = $2
-             ORDER BY postdate DESC
-             LIMIT 1`,
-            [user_id, examType]
-          ),
-          client.query(
-            `SELECT type_rank, avg_score, top_5_percent, top_10_percent, top_25_percent, average_score, postdate
-             FROM mars.reportexam_competitiveanalysis
-             WHERE user_id = $1 AND exam_type = $2
-             ORDER BY postdate DESC
-             LIMIT 1`,
-            [user_id, examType]
-          )
+          getLatestSubjectPerformance(user_id, examType),
+          getLatestWeeklyProgress(user_id, examType),
+          getRecentExamResults(user_id, examType),
+          getProgressDetail(user_id, examType),
+          getTopicData(user_id, examType),
+          getUserGlobalData(user_id, examType),
+          getCompetitiveAnalysis(user_id, examType)
         ]);
 
         // Map subject performance
-        const subjectPerformanceData: SubjectPerformanceData[] = subjectPerformance.rows.map(s => ({
+        const subjectPerformanceData: SubjectPerformanceData[] = subjectPerformanceRaw.map(s => ({
           name: s.mapel,
           nilai: Number(s.nilai),
           target: 85
         }));
 
         // Map weekly progress
-        const weeklyProgressData = parseWeeklyProgress(weeklyProgress.rows[0] || null);
+        const weeklyProgressData = parseWeeklyProgress(weeklyProgressRaw);
 
         // Map recent results
-        const recentResultsData: RecentResultData[] = recentResults.rows.map((r, i) => ({
+        const recentResultsData: RecentResultData[] = recentResultsRaw.map((r, i) => ({
           id: i + 1,
           title: r.exam_schedule_name,
           score: Number(r.score),
@@ -400,7 +331,7 @@ export async function getStudentDashboard(
 
         // Group topic data by mapel
         const topicData: { [key: string]: TopicDataItem[] } = {};
-        for (const t of topicDataRaw.rows) {
+        for (const t of topicDataRaw) {
           if (!topicData[t.mapel]) topicData[t.mapel] = [];
           topicData[t.mapel].push({
             topic: t.topic,
@@ -412,34 +343,34 @@ export async function getStudentDashboard(
         }
 
         // Radar data
-        const radarData: RadarData[] = subjectPerformance.rows.map(s => ({
+        const radarData: RadarData[] = subjectPerformanceRaw.map(s => ({
           subject: s.mapel,
           score: Number(s.nilai),
         }));
 
         // Progress detail
-        const progressDetailData: ProgressDetailData[] = progressDetail.rows.map(d => ({
+        const progressDetailData: ProgressDetailData[] = progressDetailRaw.map(d => ({
           nama: d.nama,
           nilai: Number(d.nilai),
           peningkatan: Number(d.peningkatan),
         }));
 
         // Competitive analysis
-        const competitiveAnalysisData: CompetitiveAnalysisData[] = competitiveAnalysis.rows[0] ? [
-          { name: "Top 5%", score: Number(competitiveAnalysis.rows[0].top_5_percent) },
-          { name: "Top 10%", score: Number(competitiveAnalysis.rows[0].top_10_percent) },
-          { name: "Top 25%", score: Number(competitiveAnalysis.rows[0].top_25_percent) },
-          { name: "Kamu", score: Number(competitiveAnalysis.rows[0].avg_score) },
-          { name: "Rata-rata", score: Number(competitiveAnalysis.rows[0].average_score) },
+        const competitiveAnalysisData: CompetitiveAnalysisData[] = competitiveAnalysisRaw ? [
+          { name: "Top 5%", score: Number(competitiveAnalysisRaw.top_5_percent) },
+          { name: "Top 10%", score: Number(competitiveAnalysisRaw.top_10_percent) },
+          { name: "Top 25%", score: Number(competitiveAnalysisRaw.top_25_percent) },
+          { name: "Kamu", score: Number(competitiveAnalysisRaw.avg_score) },
+          { name: "Rata-rata", score: Number(competitiveAnalysisRaw.average_score) },
         ] : [];
 
         examDashboards.push({
           examType,
           hasData: true,
-          rank: globalData.rows[0]?.rank_now || undefined,
-          averageScore: globalData.rows[0]?.avg_score_now || undefined,
-          percentileRank: globalData.rows[0]?.percentile || undefined,
-          totalParticipants: globalData.rows[0]?.total_participants || undefined,
+          rank: globalData?.rank_now || undefined,
+          averageScore: globalData?.avg_score_now || undefined,
+          percentileRank: globalData?.percentile || undefined,
+          totalParticipants: globalData?.total_participants || undefined,
           subjectPerformance: subjectPerformanceData,
           weeklyProgress: weeklyProgressData,
           recentResults: recentResultsData,
@@ -451,18 +382,18 @@ export async function getStudentDashboard(
       }
     }
 
-    // Get user courses, classes, and try-outs (gunakan client yang sama)
+    // Get user courses, classes, and try-outs in parallel (these don't use materialized views)
     const [courses, classes, tryOuts] = await Promise.all([
-      fetchUserCoursesWithClient(user_id, client),
-      fetchUserClassesWithClient(user_id, client),
-      fetchUserTryOutsWithClient(user_id, client)
+      fetchUserCourses(user_id),
+      fetchUserClasses(user_id),
+      fetchUserTryOuts(user_id)
     ]);
 
     const response: StudentDashboardResponse = {
       examDashboards,
-      courses: courses,
-      classes: classes,
-      tryOuts: tryOuts
+      courses,
+      classes,
+      tryOuts
     };
 
     console.log('Dashboard response prepared successfully');
@@ -483,12 +414,5 @@ export async function getStudentDashboard(
     }
     
     res.status(500).json({ error: 'Internal server error' });
-  } finally {
-    // ⭐ PENTING: Release connection setelah selesai
-    if (client) {
-      client.release();
-      console.log('✅ Client released');
-      console.log('Pool status after - Total:', pool.totalCount, 'Idle:', pool.idleCount, 'Waiting:', pool.waitingCount);
-    }
   }
 }

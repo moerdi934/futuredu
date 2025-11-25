@@ -1,0 +1,1 @@
+ini adalah rangkuman materi ... SNBT, aku ingin jadikan ini adalah section 1. dimana dalam 1 section ini ada beberapa topik (topik 1.1, 1.2, dst) da setiap topik ada beberapa materi (materi 1.1.1, 1.1.2, dst). buatkan list topik dan materinya dengan detail dan buatkan materi detailnya. tolong tuliskan materi denga detail, lengkap, namun santai dan seru.

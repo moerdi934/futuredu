@@ -13,7 +13,7 @@ export interface ExamSession {
   exam_id: number;
   user_id: number;
   answers: string | object;
-  question_elapsed_times?: string | object; // Added this field
+  question_elapsed_times?: string | object;
 }
 
 export interface Question {
@@ -39,10 +39,11 @@ export interface UserExamScore {
   id?: number;
   user_id: number;
   exam_id: number;
-  score: number;
+  score: number; // Compatible dengan PostgreSQL numeric
   total_questions: number;
   total_correct: number;
   exam_schedule_id?: number;
+  weighted_score?: number; // Jika weighted_score juga diubah ke numeric
 }
 
 export interface ExamStatLevel {
@@ -252,17 +253,18 @@ export const countTotalQuestionLevel = async (examId: number): Promise<number> =
 };
 
 /**
- * Save user's exam score
+ * Save user's exam score - Updated untuk handle numeric precision
  */
 export const saveUserExamScore = async (scoreData: {
   user_id: number;
   exam_id: number;
-  score: number;
+  score: number; // Sekarang bisa handle nilai desimal seperti 85.5, 92.75, dll
   total_questions: number;
   total_correct: number;
   exam_schedule_id?: number;
+  weighted_score?: number; // Tambahan jika weighted_score juga numeric
 }): Promise<UserExamScore> => {
-  const { user_id, exam_id, score, total_questions, total_correct, exam_schedule_id } = scoreData;
+  const { user_id, exam_id, score, total_questions, total_correct, exam_schedule_id, weighted_score } = scoreData;
   
   try {
     // Check if score already exists for this user and exam
@@ -273,11 +275,16 @@ export const saveUserExamScore = async (scoreData: {
     const existingResult = await pool.query(existingQuery, [user_id, exam_id, exam_schedule_id || null]);
     
     if (existingResult.rows.length > 0) {
-      // Update existing score
+      // Update existing score - numeric akan otomatis handle precision
       const updateQuery = `
         UPDATE user_exam_scores
-        SET score = $1, total_questions = $2, total_correct = $3
-        WHERE user_id = $4 AND exam_id = $5 AND (exam_schedule_id = $6 OR (exam_schedule_id IS NULL AND $6 IS NULL))
+        SET score = $1::numeric, 
+            total_questions = $2, 
+            total_correct = $3,
+            weighted_score = $4::numeric,
+            postdate = NOW()
+        WHERE user_id = $5 AND exam_id = $6 
+          AND (exam_schedule_id = $7 OR (exam_schedule_id IS NULL AND $7 IS NULL))
         RETURNING *
       `;
       
@@ -285,6 +292,7 @@ export const saveUserExamScore = async (scoreData: {
         score,
         total_questions,
         total_correct,
+        weighted_score || null,
         user_id,
         exam_id,
         exam_schedule_id || null
@@ -295,8 +303,8 @@ export const saveUserExamScore = async (scoreData: {
       // Insert new score
       const insertQuery = ` 
         INSERT INTO user_exam_scores
-          (user_id, exam_id, score, total_questions, total_correct, exam_schedule_id)
-        VALUES ($1, $2, $3, $4, $5, $6)
+          (user_id, exam_id, score, total_questions, total_correct, exam_schedule_id, weighted_score)
+        VALUES ($1, $2, $3::numeric, $4, $5, $6, $7::numeric)
         RETURNING *
       `;
       
@@ -306,7 +314,8 @@ export const saveUserExamScore = async (scoreData: {
         score,
         total_questions,
         total_correct,
-        exam_schedule_id || null
+        exam_schedule_id || null,
+        weighted_score || null
       ]);
       
       return insertResult.rows[0];
@@ -519,4 +528,85 @@ export const getElapsedTimeAnalytics = async (
   
   const result = await pool.query(query, params);
   return result.rows;
+};
+
+/**
+ * Get user exam scores with proper numeric handling
+ */
+export const getUserExamScores = async (
+  userId: number,
+  examScheduleId?: number
+): Promise<UserExamScore[]> => {
+  const query = `
+    SELECT 
+      id,
+      user_id,
+      exam_id,
+      score::numeric as score,
+      weighted_score::numeric as weighted_score,
+      total_questions,
+      total_correct,
+      exam_schedule_id,
+      completion_time,
+      postdate,
+      is_final
+    FROM user_exam_scores
+    WHERE user_id = $1
+      ${examScheduleId ? 'AND exam_schedule_id = $2' : ''}
+    ORDER BY postdate DESC
+  `;
+  
+  const params = examScheduleId ? [userId, examScheduleId] : [userId];
+  const result = await pool.query(query, params);
+  return result.rows;
+};
+
+/**
+ * Get exam score statistics - with numeric precision
+ */
+export const getExamScoreStatistics = async (
+  examId: number,
+  examScheduleId?: number
+): Promise<{
+  total_participants: number;
+  avg_score: number;
+  max_score: number;
+  min_score: number;
+  median_score: number;
+}> => {
+  const query = `
+    SELECT 
+      COUNT(DISTINCT user_id) as total_participants,
+      ROUND(AVG(score::numeric), 2) as avg_score,
+      MAX(score::numeric) as max_score,
+      MIN(score::numeric) as min_score,
+      PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY score::numeric) as median_score
+    FROM user_exam_scores
+    WHERE exam_id = $1
+      AND is_final = true
+      ${examScheduleId ? 'AND exam_schedule_id = $2' : ''}
+  `;
+  
+  const params = examScheduleId ? [examId, examScheduleId] : [examId];
+  const result = await pool.query(query, params);
+  return result.rows[0];
+};
+
+/**
+ * Bulk update scores with weighted calculation
+ */
+export const bulkUpdateWeightedScores = async (
+  examScheduleId: number,
+  weightMultiplier: number
+): Promise<number> => {
+  const query = `
+    UPDATE user_exam_scores
+    SET weighted_score = (score::numeric * $2::numeric)
+    WHERE exam_schedule_id = $1
+      AND is_final = true
+    RETURNING id
+  `;
+  
+  const result = await pool.query(query, [examScheduleId, weightMultiplier]);
+  return result.rowCount || 0;
 };
