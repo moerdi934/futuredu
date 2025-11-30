@@ -1,4 +1,4 @@
-// pages/exam/TryOutClient.tsx - Updated with Coin System Integration
+// pages/exam/TryOutClient.tsx - Updated with Coin System Integration and Live Filtering
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -15,7 +15,7 @@ import ExamModal from './ExamModal';
 import ExamScoreModal from './ExamScoreModal';
 import TryOutPurchaseModal from './TryOutPurchaseModal';
 import GoToCartFloater from '../../components/floater/GoToCartFloater';
-import CoinPurchaseModal from '../../components/modals/CoinPurchaseModal'; // NEW
+import CoinPurchaseModal from '../../components/modals/CoinPurchaseModal';
 import { ButtonGradient } from '../../components/button/ButtonTemplate';
 
 export const dynamic = 'force-dynamic';
@@ -40,8 +40,8 @@ interface ExamSchedule {
   is_promo?: boolean;
   promo_description?: string;
   is_live?: boolean;
-  coin_price?: number; // NEW: Price in coins
-  coin_type?: 'tryout'; // NEW: Coin type for purchase
+  coin_price?: number;
+  coin_type?: 'tryout';
 }
 
 interface UserEntitlement {
@@ -69,7 +69,6 @@ interface GroupedSchedules {
   };
 }
 
-// NEW: Coin balance interface
 interface CoinBalance {
   coin_type: 'class' | 'course' | 'tryout';
   total_balance: number;
@@ -103,7 +102,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
   const [showFloater, setShowFloater] = useState(false);
   const [addedItemName, setAddedItemName] = useState('');
   
-  // NEW: Coin system states
+  // Coin system states
   const [coinBalances, setCoinBalances] = useState<CoinBalance[]>([]);
   const [coinModalOpen, setCoinModalOpen] = useState(false);
   const [selectedCoinSchedule, setSelectedCoinSchedule] = useState<ExamSchedule | null>(null);
@@ -111,7 +110,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
   
   const MAX_INITIAL_OWNED = 6;
 
-  // NEW: Fetch user coin balances
+  // Fetch user coin balances
   const fetchCoinBalances = async () => {
     if (!isAuthenticated || !userId) return;
     
@@ -142,7 +141,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     }
   };
 
-  // NEW: Get coin balance for specific type
+  // Get coin balance for specific type
   const getCoinBalance = (coinType: 'tryout'): number => {
     const balance = coinBalances.find(b => b.coin_type === coinType);
     return balance ? balance.total_balance : 0;
@@ -258,7 +257,6 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
 
   const fetchCompletedSchedules = async (examScheduleIds: number[], token: string) => {
     try {
-      // Fetch all schedules
       const schedulePromises = examScheduleIds.map(id => 
         axios.get(`${apiUrl}/exam-schedules/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -281,10 +279,29 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     }
   };
 
+  // Filter function to check if schedule should be displayed
+  const shouldDisplaySchedule = (schedule: ExamSchedule, isOwned: boolean): boolean => {
+    // Always show if user owns it (has entitlement)
+    if (isOwned) return true;
+    
+    // Always show free schedules
+    if (schedule.isfree) return true;
+    
+    // For paid schedules, only show if is_live is true
+    // If is_live is undefined/null, treat as not live (don't show)
+    return schedule.is_live === true;
+  };
+
   const groupSchedulesByType = (schedulesData: ExamSchedule[]) => {
     const grouped: GroupedSchedules = {};
     
-    schedulesData.forEach(schedule => {
+    // Filter schedules based on shouldDisplaySchedule logic
+    const filteredSchedules = schedulesData.filter(schedule => {
+      const isOwned = isUserEntitled(schedule.id);
+      return shouldDisplaySchedule(schedule, isOwned);
+    });
+    
+    filteredSchedules.forEach(schedule => {
       const examType = schedule.exam_type || 'Unknown';
       
       if (!grouped[examType]) {
@@ -298,6 +315,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
       }
     });
 
+    // Sort schedules within each group
     Object.values(grouped).forEach(group => {
       group.free.sort((a, b) => new Date(b.create_date).getTime() - new Date(a.create_date).getTime());
       group.paid.sort((a, b) => new Date(b.create_date).getTime() - new Date(a.create_date).getTime());
@@ -309,7 +327,6 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
   useEffect(() => {
     if (initialSchedules && Array.isArray(initialSchedules) && initialSchedules.length > 0) {
       setSchedules(initialSchedules);
-      groupSchedulesByType(initialSchedules);
       setLoading(false);
     } else {
       fetchSchedules();
@@ -320,13 +337,13 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     if (schedules.length > 0) {
       groupSchedulesByType(schedules);
     }
-  }, [schedules]);
+  }, [schedules, userEntitlements]); // Re-group when entitlements change
 
   useEffect(() => {
     if (isAuthenticated) {
       fetchUserEntitlements();
       fetchUserScores();
-      fetchCoinBalances(); // NEW: Fetch coin balances
+      fetchCoinBalances();
     }
   }, [isAuthenticated, userId]);
 
@@ -429,7 +446,6 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     setPurchaseModalOpen(true);
   };
 
-  // NEW: Handle coin purchase
   const handleBuyWithCoins = (schedule: ExamSchedule) => {
     if (!isAuthenticated) {
       alert('Silakan login terlebih dahulu untuk membeli try-out');
@@ -441,7 +457,6 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     setCoinModalOpen(true);
   };
 
-  // NEW: Handle coin purchase success
   const handleCoinPurchaseSuccess = (entitlements: string[]) => {
     setAddedItemName(`Try-out dibeli dengan koin: ${entitlements.join(', ')}`);
     setShowFloater(true);
@@ -469,7 +484,6 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
       );
 
       if (response.data.success) {
-        // Success - will be handled by onSuccess callback
         return;
       } else {
         alert('Gagal menambahkan ke keranjang: ' + response.data.message);
@@ -486,7 +500,6 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     setAddedItemName(itemName);
     setShowFloater(true);
     
-    // Refresh entitlements in case user got access
     if (isAuthenticated) {
       fetchUserEntitlements();
     }
@@ -501,12 +514,12 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     const hasCompleted = hasCompletedExam(schedule.id);
     const examScore = getExamScore(schedule.id);
     const canStart = (isFree || isEntitled) && !hasCompleted;
-    const hasValidPrice = schedule.is_live && schedule.price !== undefined && schedule.price > 0;
+    const hasValidPrice = schedule.price !== undefined && schedule.price > 0;
     const discountPercentage = schedule.original_price && schedule.price 
       ? calculateDiscountPercentage(schedule.original_price, schedule.price) 
       : 0;
 
-    // NEW: Coin purchase availability
+    // Coin purchase availability
     const canBuyWithCoins = schedule.coin_price !== undefined && schedule.coin_type === 'tryout';
     const tryoutCoinBalance = getCoinBalance('tryout');
     const hasEnoughCoins = canBuyWithCoins && tryoutCoinBalance >= (schedule.coin_price || 0);
@@ -533,7 +546,6 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
                 -{discountPercentage}%
               </Badge>
             )}
-            {/* NEW: Coin purchase badge */}
             {canBuyWithCoins && !isOwned && !hasCompleted && (
               <Badge className="tw-bg-yellow-500 tw-text-white tw-flex tw-items-center tw-gap-1 tw-px-2 tw-py-1">
                 <Coins className="tw-w-3 tw-h-3" />
@@ -596,14 +608,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
           {/* Pricing Information - Only show if not completed and not owned */}
           {!hasCompleted && !isFree && !isOwned && (
             <div className="tw-mb-4 tw-bg-gradient-to-r tw-from-purple-50 tw-to-pink-50 tw-p-4 tw-rounded-lg tw-border tw-border-purple-100">
-              {!schedule.is_live ? (
-                <div className="tw-text-center">
-                  <p className="tw-text-sm tw-text-gray-600 tw-mb-1">Status:</p>
-                  <Badge className="tw-bg-orange-100 tw-text-orange-800 tw-px-3 tw-py-1">
-                    Belum Tersedia untuk Pembelian
-                  </Badge>
-                </div>
-              ) : hasValidPrice ? (
+              {hasValidPrice ? (
                 <div>
                   <div className="tw-flex tw-items-center tw-justify-between tw-mb-2">
                     <span className="tw-text-sm tw-font-medium tw-text-gray-600">Harga:</span>
@@ -618,7 +623,6 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
                       )}
                     </div>
                   </div>
-                  {/* NEW: Coin price display */}
                   {canBuyWithCoins && (
                     <div className="tw-flex tw-items-center tw-justify-between tw-mb-2 tw-pt-2 tw-border-t tw-border-gray-200">
                       <span className="tw-text-sm tw-font-medium tw-text-gray-600">Atau dengan Koin:</span>
@@ -643,7 +647,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
             </div>
           )}
 
-          {/* NEW: Coin balance display for authenticated users */}
+          {/* Coin balance display for authenticated users */}
           {!hasCompleted && !isFree && !isOwned && isAuthenticated && canBuyWithCoins && (
             <div className="tw-mb-4 tw-bg-yellow-50 tw-p-3 tw-rounded-lg tw-border tw-border-yellow-200">
               <div className="tw-flex tw-items-center tw-justify-between tw-text-sm">
@@ -716,14 +720,6 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
                 text: '#FFFFFF'
               } : undefined}
             />
-          ) : !schedule.is_live ? (
-            <ButtonGradient
-              action="lock"
-              customText="Belum Tersedia"
-              disabled
-              size="md"
-              className="tw-w-full"
-            />
           ) : (
             <div className="tw-space-y-2">
               {/* Regular purchase button */}
@@ -741,7 +737,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
                   }}
                 />
               )}
-              {/* NEW: Coin purchase button */}
+              {/* Coin purchase button */}
               {canBuyWithCoins && (
                 <ButtonGradient
                   action="custom"
@@ -771,10 +767,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
 
   // Separate owned try-outs into completed and not completed
   const { ownedCompleted, ownedNotCompleted, displayedNotCompleted, displayedCompleted } = useMemo(() => {
-    // Not completed: from entitlements that are not in userScores or has_completed: false
     const notCompleted = userEntitlements.filter(ent => !hasCompletedExam(ent.exam_schedule_id));
-    
-    // Completed: from completedSchedules (fetched separately)
     const completed = completedSchedules;
     
     console.log('=== TRY OUT SAYA BREAKDOWN ===');
@@ -800,7 +793,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
         if (isAuthenticated) {
           fetchUserEntitlements();
           fetchUserScores();
-          fetchCoinBalances(); // NEW: Also refresh coin balances
+          fetchCoinBalances();
         }
       }
     }, 5 * 60 * 1000);
@@ -812,7 +805,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     <>
       <Row className="justify-content-center">
         <Col lg={11} xl={10}>
-          {/* NEW: Coin Balance Display */}
+          {/* Coin Balance Display */}
           {isAuthenticated && (
             <div className="tw-mb-6">
               <Card className="tw-border-0 tw-shadow-lg tw-bg-gradient-to-r tw-from-yellow-50 tw-to-orange-100 tw-border tw-border-yellow-200">
@@ -1032,7 +1025,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
                         </div>
                       )}
                       
-                      {/* Paid schedules - with clear border separator */}
+                      {/* Paid schedules */}
                       {typeSchedules.paid.length > 0 && (
                         <>
                           {typeSchedules.free.length > 0 && (
@@ -1103,7 +1096,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
           />
         )}
 
-        {/* NEW: Coin Purchase Modal */}
+        {/* Coin Purchase Modal */}
         {selectedCoinSchedule && (
           <CoinPurchaseModal
             show={coinModalOpen}

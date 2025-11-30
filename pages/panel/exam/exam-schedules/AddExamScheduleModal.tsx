@@ -3,7 +3,7 @@
 /**
  * ./AddExamScheduleModal.tsx
  * --------------------------------------------------------------------------
- * Modal "Tambah Jadwal Ujian" – Updated untuk integrasi dengan AddExamModal
+ * Modal "Tambah Jadwal Ujian" – Complete Fixed Version
  * Menggunakan ModalTemplate dan enhanced FormComponentLayout components
  * --------------------------------------------------------------------------
  */
@@ -45,7 +45,8 @@ import {
   RotateCcw,
   XCircle,
   CheckCircle,
-  Gift
+  Gift,
+  AlertCircle
 } from 'lucide-react';
 
 import { LearningModal, ModalButton } from '../../../../components/modal/ModalTemplate';
@@ -66,6 +67,7 @@ interface FormErrors {
   examGroup?: string;
   exams?: string;
   dateRange?: string;
+  api?: string;
   [k: string]: string | undefined;
 }
 
@@ -134,6 +136,57 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
   }, [name, description, examGroup, examType, selectedExams, customExams, 
       startTime, endTime, isValid, isFree, autoSwitchExam, randomExamOrder, weightedScore]);
 
+  /* ---------------------- Clear specific error when field changes ----- */
+  useEffect(() => {
+    if (examType && errors.examType) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.examType;
+        return newErrors;
+      });
+    }
+  }, [examType]);
+
+  useEffect(() => {
+    if (examGroup && errors.examGroup) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.examGroup;
+        return newErrors;
+      });
+    }
+  }, [examGroup]);
+
+  useEffect(() => {
+    if (name.trim() && errors.name) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.name;
+        return newErrors;
+      });
+    }
+  }, [name]);
+
+  useEffect(() => {
+    if ((selectedExams.length > 0 || customExams.length > 0) && errors.exams) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.exams;
+        return newErrors;
+      });
+    }
+  }, [selectedExams, customExams]);
+
+  useEffect(() => {
+    if ((anytime || (startTime && endTime)) && errors.dateRange) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.dateRange;
+        return newErrors;
+      });
+    }
+  }, [anytime, startTime, endTime]);
+
   /* ---------------------- Fetch helpers ------------------------------ */
   const fetchGroups = async (q='') => {
     setLG(true);
@@ -143,14 +196,19 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
         { params: { search: q, limit: 10 } }
       );
       const raw = data.data || data.examTypes || [];
-      setExamGroups(
-        raw.map((g:any):SelectOption=>({
-          value: g.id,
-          label: g.name || g.exam_type || `Grup #${g.id}`,
-          _raw : g
-        }))
-      );
-    } finally { setLG(false); }
+      const groups = raw.map((g:any):SelectOption=>({
+        value: g.id,
+        label: g.name || g.exam_type || `Grup #${g.id}`,
+        _raw : g
+      }));
+      setExamGroups(groups);
+      console.log('✅ Fetched exam groups:', groups);
+    } catch (error) {
+      console.error('❌ Failed to fetch exam groups:', error);
+      setExamGroups([]);
+    } finally { 
+      setLG(false); 
+    }
   };
 
   const fetchTypes = async (q='') => {
@@ -160,13 +218,19 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
       const { data } = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/productType/filters/exam_type${qs}`
       );
-      setExamTypes(
-        (data.examTypes || []).map((t:any):SelectOption=>({
-          value: t.id,
-          label: t.name ?? t.exam_type
-        }))
-      );
-    } finally { setLT(false); }
+      const types = (data.examTypes || []).map((t:any):SelectOption=>({
+        value: t.id,
+        label: t.name ?? t.exam_type,
+        _raw: t
+      }));
+      setExamTypes(types);
+      console.log('✅ Fetched exam types:', types);
+    } catch (error) {
+      console.error('❌ Failed to fetch exam types:', error);
+      setExamTypes([]);
+    } finally { 
+      setLT(false); 
+    }
   };
 
   const fetchExams = async (q='') => {
@@ -184,21 +248,21 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
         params.set('selected_ids', selectedIds.join(','));
       }
       
-      params.set('limit', '20'); // Increased limit for better UX
+      params.set('limit', '20');
       
       const { data } = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/exam/search?${params.toString()}`
       );
       
-      setExamOptions(
-        (data.data || []).map((e:any):SelectOption=>({
-          value: e.id,
-          label: `${e.id} - ${e.name}`,
-          _raw : e
-        }))
-      );
+      const exams = (data.data || []).map((e:any):SelectOption=>({
+        value: e.id,
+        label: `${e.id} - ${e.name}`,
+        _raw : e
+      }));
+      setExamOptions(exams);
+      console.log('✅ Fetched exams:', exams.length);
     } catch (error) {
-      console.error('Failed to fetch exams:', error);
+      console.error('❌ Failed to fetch exams:', error);
       setExamOptions([]);
     } finally { 
       setLE(false); 
@@ -207,47 +271,103 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
 
   const dFetchGroups = debounce(fetchGroups, 300);
   const dFetchTypes  = debounce(fetchTypes,  300);
-  const dFetchExams  = debounce(fetchExams,  500); // Slightly longer debounce for exams
+  const dFetchExams  = debounce(fetchExams,  500);
 
   /* initial load setiap kali modal dibuka */
   useEffect(() => {
     if (isOpen) {
+      console.log('📂 Modal opened, fetching initial data...');
       fetchGroups('');
       fetchTypes('');
       fetchExams('');
+    } else {
+      // Reset saat modal ditutup
+      console.log('🚪 Modal closed');
     }
   }, [isOpen]);
 
   // Refetch exams when selectedExams changes
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && selectedExams.length > 0) {
+      console.log('🔄 Selected exams changed, refetching...');
       fetchExams('');
     }
-  }, [selectedExams, isOpen]);
+  }, [selectedExams.length, isOpen]);
 
   /* ------------------------- Reset helper ---------------------------- */
   const resetForm = () => {
-    setName(''); setDescription('');
-    setExamGroup(null); setExamType(null);
-    setIsFree(false); setIsValid(true);
-    setSelected([]); setCustom([]);
-    setStart(null); setEnd(null); setAnytime(false);
-    setAuto(false); setRandom(false); setWeighted(false);
-    setErrors({}); setSaving(false);
+    console.log('🔄 Resetting form...');
+    setName(''); 
+    setDescription('');
+    setExamGroup(null); 
+    setExamType(null);
+    setIsFree(false); 
+    setIsValid(true);
+    setSelected([]); 
+    setCustom([]);
+    setStart(null); 
+    setEnd(null); 
+    setAnytime(false);
+    setAuto(false); 
+    setRandom(false); 
+    setWeighted(false);
+    setErrors({}); 
+    setSaving(false);
     setHasChanges(false);
+  };
+
+  /* --------------------------- Validation ---------------------------- */
+  const validateForm = (): FormErrors => {
+    const v: FormErrors = {};
+    
+    if (!name.trim()) {
+      v.name = 'Nama Jadwal wajib diisi';
+    }
+    
+    if (!examGroup) {
+      v.examGroup = 'Grup Ujian wajib dipilih';
+    }
+    
+    if (!examType) {
+      v.examType = 'Tipe ujian wajib dipilih';
+    }
+    
+    if (selectedExams.length === 0 && customExams.length === 0) {
+      v.exams = 'Minimal satu ujian dipilih / dibuat';
+    }
+    
+    if (!anytime && (!startTime || !endTime)) {
+      v.dateRange = 'Rentang waktu wajib diisi';
+    }
+    
+    if (!anytime && startTime && endTime && startTime >= endTime) {
+      v.dateRange = 'Waktu mulai harus lebih awal dari waktu selesai';
+    }
+    
+    return v;
   };
 
   /* --------------------------- Submit ------------------------------- */
   const handleSubmit = async () => {
-    const v: FormErrors = {};
-    if (!name.trim()) v.name = 'Nama Jadwal wajib diisi';
-    if (!examGroup)   v.examGroup = 'Grup Ujian wajib dipilih';
-    if (!examType)    v.examType  = 'Tipe ujian wajib dipilih';
-    if (selectedExams.length === 0 && customExams.length === 0)
-      v.exams = 'Minimal satu ujian dipilih / dibuat';
-    if (!anytime && (!startTime || !endTime))
-      v.dateRange = 'Rentang waktu wajib diisi';
-    if (Object.keys(v).length) { setErrors(v); return; }
+    console.log('📤 Starting form submission...');
+    
+    // Clear previous API errors
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors.api;
+      return newErrors;
+    });
+    
+    // Validate form
+    const validationErrors = validateForm();
+    
+    if (Object.keys(validationErrors).length > 0) {
+      console.log('❌ Validation failed:', validationErrors);
+      setErrors(validationErrors);
+      return;
+    }
+
+    console.log('✅ Validation passed');
 
     /* -------- id ujian unik (tanpa duplikat) -------- */
     const examIds = Array.from(new Set([
@@ -255,13 +375,26 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
       ...customExams.map(e => e.id)
     ]));
 
+    console.log('📋 Exam IDs:', examIds);
+
     setSaving(true);
+    
     try {
+      // Pastikan exam_type dalam format yang benar
+      const examTypeValue = typeof examType!.value === 'number' 
+        ? examType!.value 
+        : parseInt(String(examType!.value), 10);
+
+      // Pastikan exam_group_id dalam format yang benar
+      const examGroupValue = typeof examGroup!.value === 'number' 
+        ? examGroup!.value 
+        : parseInt(String(examGroup!.value), 10);
+
       const payload = {
         name           : name.trim(),
         description    : description.trim(),
-        exam_type      : examType!.value,
-        exam_group_id  : examGroup!.value,
+        exam_type      : examTypeValue,
+        exam_group_id  : examGroupValue,
         isfree         : isFree,
         is_valid       : isValid,
         type           : anytime ? 1999 : 3,
@@ -273,17 +406,52 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
         is_need_weighted_score: weightedScore
       };
 
-      const { data } = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/exam-schedules`, payload);
+      // Debug log untuk melihat payload yang dikirim
+      console.log('📦 Submitting payload:', payload);
+      console.log('📝 Exam Type details:', {
+        original: examType,
+        value: examTypeValue,
+        type: typeof examTypeValue
+      });
+      console.log('👥 Exam Group details:', {
+        original: examGroup,
+        value: examGroupValue,
+        type: typeof examGroupValue
+      });
+
+      const { data } = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/exam-schedules`, 
+        payload
+      );
+      
+      console.log('✅ Success! Response:', data);
+      
       onSave(data);
       resetForm(); 
       onClose();
     } catch (error: any) { 
-      console.error('Submit error:', error);
+      console.error('❌ Submit error:', error);
+      console.error('❌ Error response:', error.response?.data);
+      
+      // Extract error message
+      let errorMessage = 'Gagal menyimpan jadwal ujian. Silakan coba lagi.';
+      
+      if (error.response?.data) {
+        const responseData = error.response.data;
+        errorMessage = responseData.message || 
+                      responseData.error || 
+                      responseData.msg ||
+                      JSON.stringify(responseData);
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       setErrors({ 
-        api: error.response?.data?.message || 'Gagal menyimpan jadwal ujian. Silakan coba lagi.' 
+        api: errorMessage
       });
+    } finally { 
+      setSaving(false); 
     }
-    finally { setSaving(false); }
   };
 
   /* gabungkan opsi server + ujian kustom */
@@ -305,7 +473,15 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
       action: 'reset',
       text: 'Reset Form',
       icon: <RotateCcw className="tw-w-4 tw-h-4" />,
-      onClick: resetForm,
+      onClick: () => {
+        if (hasChanges) {
+          if (window.confirm('Yakin ingin mereset form? Semua perubahan akan hilang.')) {
+            resetForm();
+          }
+        } else {
+          resetForm();
+        }
+      },
       disabled: !hasChanges || saving,
       size: 'sm',
       customColors: {
@@ -373,7 +549,12 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
     <>
       <LearningModal
         show={isOpen}
-        onHide={hasChanges ? () => {} : onClose}
+        onHide={hasChanges ? () => {
+          if (window.confirm('Ada perubahan yang belum disimpan. Yakin ingin menutup?')) {
+            resetForm();
+            onClose();
+          }
+        } : onClose}
         title="Buat Jadwal Ujian Baru"
         subtitle={`${totalSelectedExams} ujian dipilih • ${hasChanges ? 'Ada perubahan' : 'Belum ada perubahan'}`}
         icon={<Calendar className="tw-w-5 tw-h-5" />}
@@ -388,15 +569,23 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
         <div className="tw-space-y-6">
           {/* Error Display */}
           {Object.keys(errors).length > 0 && (
-            <div className="tw-bg-red-50 tw-border tw-border-red-200 tw-rounded-lg tw-p-4">
-              <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
-                <XCircle className="tw-w-4 tw-h-4 tw-text-red-500" />
-                <span className="tw-font-semibold tw-text-red-700">Error</span>
+            <Alert variant="danger" className="tw-mb-4">
+              <div className="tw-flex tw-items-start tw-gap-3">
+                <XCircle className="tw-w-5 tw-h-5 tw-text-red-500 tw-flex-shrink-0 tw-mt-0.5" />
+                <div className="tw-flex-1">
+                  <div className="tw-font-semibold tw-text-red-700 tw-mb-2">
+                    Terdapat kesalahan pada form:
+                  </div>
+                  <ul className="tw-list-disc tw-list-inside tw-space-y-1">
+                    {Object.entries(errors).map(([key, value], i) => (
+                      <li key={i} className="tw-text-red-700 tw-text-sm">
+                        {value}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-              {Object.values(errors).map((e,i)=>(
-                <div key={i} className="tw-text-red-700 tw-text-sm">{e}</div>
-              ))}
-            </div>
+            </Alert>
           )}
 
           <Form>
@@ -406,9 +595,13 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
                 <ShortFormField
                   label="Nama Jadwal"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    console.log('📝 Name changed:', e.target.value);
+                    setName(e.target.value);
+                  }}
                   error={errors.name}
                   required
+                  placeholder="Masukkan nama jadwal..."
                 />
               </Col>
 
@@ -417,12 +610,16 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
                   label="Grup Ujian"
                   value={examGroup}
                   options={examGroups}
-                  onChange={setExamGroup}
+                  onChange={(newValue) => {
+                    console.log('👥 Exam group changed:', newValue);
+                    setExamGroup(newValue);
+                  }}
                   onInputChange={dFetchGroups}
                   isLoading={lg}
                   icon={<Award size={16}/>}
                   required
                   error={errors.examGroup}
+                  placeholder="Pilih grup ujian..."
                 />
               </Col>
 
@@ -431,21 +628,41 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
                   label="Tipe Ujian"
                   value={examType}
                   options={examTypes}
-                  onChange={setExamType}
+                  onChange={(newValue) => {
+                    console.log('📚 Exam type changed:', newValue);
+                    setExamType(newValue);
+                  }}
                   onInputChange={dFetchTypes}
                   isLoading={lt}
                   icon={<BookOpen size={16}/>}
                   required
                   error={errors.examType}
+                  placeholder="Pilih tipe ujian..."
                 />
               </Col>
             </Row>
+
+            {/* Debug Info - Hapus setelah testing */}
+            {(examGroup || examType) && (
+              <div className="tw-bg-blue-50 tw-border tw-border-blue-200 tw-rounded-lg tw-p-3 tw-mb-4">
+                <div className="tw-text-xs tw-text-blue-700 tw-font-mono">
+                  <div className="tw-font-semibold tw-mb-1">Debug Info:</div>
+                  {examGroup && (
+                    <div>Grup: {examGroup.label} (ID: {examGroup.value}, Type: {typeof examGroup.value})</div>
+                  )}
+                  {examType && (
+                    <div>Tipe: {examType.label} (ID: {examType.value}, Type: {typeof examType.value})</div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* -------- Deskripsi -------- */}
             <WideFormField
               label="Deskripsi"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              placeholder="Masukkan deskripsi jadwal (opsional)..."
             />
 
             {/* -------- Waktu -------- */}
@@ -453,10 +670,19 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
               label="Waktu Pelaksanaan"
               startDate={startTime}
               endDate={endTime}
-              onStartDateChange={setStart}
-              onEndDateChange={setEnd}
+              onStartDateChange={(date) => {
+                console.log('📅 Start time changed:', date);
+                setStart(date);
+              }}
+              onEndDateChange={(date) => {
+                console.log('📅 End time changed:', date);
+                setEnd(date);
+              }}
               anytime={anytime}
-              onAnytimeChange={setAnytime}
+              onAnytimeChange={(checked) => {
+                console.log('⏰ Anytime changed:', checked);
+                setAnytime(checked);
+              }}
               error={errors.dateRange}
               required
               icon={<Calendar size={16}/>}
@@ -472,7 +698,10 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
                   <YesNoField
                     label="Gratis"
                     checked={isFree}
-                    onChange={setIsFree}
+                    onChange={(checked) => {
+                      console.log('💰 Free status changed:', checked);
+                      setIsFree(checked);
+                    }}
                     icon={<Gift size={16} />}
                     color="tw-text-purple-700"
                     selectedColor="tw-bg-gradient-to-r tw-from-green-500 tw-to-emerald-500 tw-text-white"
@@ -486,7 +715,10 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
                   <YesNoField
                     label="Status Aktif"
                     checked={isValid}
-                    onChange={setIsValid}
+                    onChange={(checked) => {
+                      console.log('✅ Valid status changed:', checked);
+                      setIsValid(checked);
+                    }}
                     icon={<CheckCircle size={16} />}
                     color="tw-text-purple-700"
                     selectedColor="tw-bg-gradient-to-r tw-from-green-500 tw-to-emerald-500 tw-text-white"
@@ -500,7 +732,10 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
                   <YesNoField
                     label="Berpindah Ujian Otomatis"
                     checked={autoSwitchExam}
-                    onChange={setAuto}
+                    onChange={(checked) => {
+                      console.log('⚡ Auto switch changed:', checked);
+                      setAuto(checked);
+                    }}
                     icon={<Zap size={16} />}
                     color="tw-text-purple-700"
                     selectedColor="tw-bg-gradient-to-r tw-from-blue-500 tw-to-indigo-500 tw-text-white"
@@ -514,7 +749,10 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
                   <YesNoField
                     label="Acak Urutan Ujian"
                     checked={randomExamOrder}
-                    onChange={setRandom}
+                    onChange={(checked) => {
+                      console.log('🔀 Random order changed:', checked);
+                      setRandom(checked);
+                    }}
                     icon={<Shuffle size={16} />}
                     color="tw-text-purple-700"
                     selectedColor="tw-bg-gradient-to-r tw-from-orange-500 tw-to-red-500 tw-text-white"
@@ -528,7 +766,10 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
                   <YesNoField
                     label="Pembobotan Nilai"
                     checked={weightedScore}
-                    onChange={setWeighted}
+                    onChange={(checked) => {
+                      console.log('⚖️ Weighted score changed:', checked);
+                      setWeighted(checked);
+                    }}
                     icon={<Award size={16} />}
                     color="tw-text-purple-700"
                     selectedColor="tw-bg-gradient-to-r tw-from-purple-500 tw-to-pink-500 tw-text-white"
@@ -546,13 +787,16 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
               label="Ujian Terkait"
               value={selectedExams}
               options={allExamOptions}
-              onChange={setSelected}
+              onChange={(selected) => {
+                console.log('📝 Selected exams changed:', selected);
+                setSelected(selected);
+              }}
               onInputChange={dFetchExams}
               isLoading={le}
               error={errors.exams}
               required
               icon={<List size={16}/>}
-              placeholder="Cari ujian..."
+              placeholder="Cari dan pilih ujian..."
             />
 
             {/* --------- Custom Ujian --------- */}
@@ -563,8 +807,12 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
                 </Form.Label>
                 <button
                   type="button"
-                  onClick={()=>setShowCreate(true)}
+                  onClick={() => {
+                    console.log('➕ Opening create exam modal...');
+                    setShowCreate(true);
+                  }}
                   className="tw-px-4 tw-py-2 tw-bg-gradient-to-r tw-from-green-600 tw-to-emerald-600 tw-text-white tw-rounded-lg tw-font-semibold tw-shadow-lg hover:tw-scale-105 tw-transition-transform tw-flex tw-items-center tw-gap-2"
+                  disabled={saving}
                 >
                   <PlusCircle size={16}/> Buat Ujian
                 </button>
@@ -591,8 +839,12 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
                           </div>
                           <button
                             type="button"
-                            onClick={()=>setCustom(prev=>prev.filter((_,i)=>i!==idx))}
+                            onClick={() => {
+                              console.log('🗑️ Removing custom exam:', ex.name);
+                              setCustom(prev=>prev.filter((_,i)=>i!==idx));
+                            }}
                             className="tw-p-2 tw-text-red-500 hover:tw-bg-red-50 tw-rounded-lg tw-transition-colors"
+                            disabled={saving}
                           >
                             <Trash2 size={16}/>
                           </button>
@@ -607,13 +859,13 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
             {/* Summary Section */}
             {totalSelectedExams > 0 && (
               <div className="tw-bg-purple-50 tw-border tw-border-purple-200 tw-rounded-lg tw-p-4 tw-mb-6">
-                <div className="tw-flex tw-items-center tw-gap-2 tw-mb-2">
+                <div className="tw-flex tw-items-center tw-gap-2 tw-mb-3">
                   <CheckCircle className="tw-w-5 tw-h-5 tw-text-purple-600" />
                   <span className="tw-font-semibold tw-text-purple-700">
                     Ringkasan Jadwal
                   </span>
                 </div>
-                <div className="tw-grid tw-grid-cols-2 md:tw-grid-cols-4 tw-gap-4 tw-text-sm">
+                <div className="tw-grid tw-grid-cols-2 md:tw-grid-cols-4 tw-gap-4 tw-text-sm tw-mb-3">
                   <div>
                     <span className="tw-text-purple-600">Total Ujian:</span>
                     <div className="tw-font-semibold tw-text-purple-800">{totalSelectedExams}</div>
@@ -633,6 +885,26 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
                     </div>
                   </div>
                 </div>
+                
+                {/* Display selected details */}
+                {(examGroup || examType) && (
+                  <div className="tw-pt-3 tw-border-t tw-border-purple-200">
+                    <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-3 tw-text-sm">
+                      {examGroup && (
+                        <div>
+                          <span className="tw-text-purple-600">Grup Ujian:</span>
+                          <div className="tw-font-semibold tw-text-purple-800">{examGroup.label}</div>
+                        </div>
+                      )}
+                      {examType && (
+                        <div>
+                          <span className="tw-text-purple-600">Tipe Ujian:</span>
+                          <div className="tw-font-semibold tw-text-purple-800">{examType.label}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -640,7 +912,7 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
             {hasChanges && (
               <div className="tw-bg-orange-50 tw-border tw-border-orange-200 tw-rounded-lg tw-p-3">
                 <div className="tw-flex tw-items-center tw-gap-2 tw-text-orange-700">
-                  <span className="tw-w-2 tw-h-2 tw-bg-orange-400 tw-rounded-full tw-animate-pulse"></span>
+                  <AlertCircle className="tw-w-4 tw-h-4" />
                   <span className="tw-font-medium tw-text-sm">
                     Ada perubahan yang belum disimpan
                   </span>
@@ -654,17 +926,28 @@ const AddExamScheduleModal: React.FC<AddExamScheduleModalProps> = ({
       {/* ------------ Modal Buat Ujian ------------ */}
       <CreateExamModal
         show={showCreate}
-        onClose={()=>setShowCreate(false)}
-        onAddExam={(exam:any)=>{
+        onClose={() => {
+          console.log('🚪 Closing create exam modal...');
+          setShowCreate(false);
+        }}
+        onAddExam={(exam:any) => {
+          console.log('✅ New exam created:', exam);
           /* tambahkan ke dropdown & daftar jika belum ada */
           setSelected(prev=>{
-            if (prev.some(o => o.value === exam.id)) return prev;
+            if (prev.some(o => o.value === exam.id)) {
+              console.log('⚠️ Exam already in selected list');
+              return prev;
+            }
+            console.log('➕ Adding exam to selected list');
             return [
               ...prev,
               { value: exam.id, label: `[BARU] ${exam.id} - ${exam.name}`, _raw: exam }
             ];
           });
-          setCustom(prev=>[...prev, exam]);
+          setCustom(prev => {
+            console.log('➕ Adding exam to custom list');
+            return [...prev, exam];
+          });
         }}
       />
     </>

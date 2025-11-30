@@ -1,7 +1,5 @@
-// controllers/dashboard.controller.ts
 import { NextApiResponse } from 'next';
 import { AuthenticatedRequest } from '../lib/middleware/auth';
-import { PoolClient } from 'pg';
 import pool from '../lib/db';
 import {
   getLatestSubjectPerformance,
@@ -11,7 +9,8 @@ import {
   getTopicData,
   getUserGlobalData,
   getCompetitiveAnalysis,
-  checkExamDataAvailability
+  checkExamDataAvailability,
+  formatToTwoDecimals
 } from '../models/dashboard.model';
 
 // ========== TYPES ==========
@@ -25,13 +24,23 @@ export interface SubjectPerformanceData {
   name: string;
   nilai: number;
   target: number;
+  maxScore: number;
+  metrics: string;
 }
 
 export interface RecentResultData {
   id: number;
   title: string;
   score: number;
+  maxScore: number;
+  metrics: string;
   date: string;
+  numberOfExams: number;
+  averageScore: number;
+  minScore: number;
+  minExamName: string;
+  maxExamScore: number;
+  maxExamName: string;
 }
 
 export interface TopicDataItem {
@@ -40,22 +49,62 @@ export interface TopicDataItem {
   avg: number;
   total: number;
   completed: number;
+  maxScore: number;
+  metrics: string;
 }
 
 export interface RadarData {
   subject: string;
   score: number;
+  maxScore: number;
 }
 
 export interface ProgressDetailData {
   nama: string;
   nilai: number;
   peningkatan: number;
+  maxScore: number;
+  metrics: string;
 }
 
 export interface CompetitiveAnalysisData {
   name: string;
   score: number;
+}
+
+export interface LearningInsight {
+  insight: string;
+  type: 'positive' | 'negative';
+}
+
+export interface Achievement {
+  title: string;
+  description: string;
+  completed: boolean;
+  progress: number;
+}
+
+export interface RecommendedResource {
+  type: 'video' | 'quiz' | 'reading';
+  subject: string;
+  topic: string;
+  title: string;
+  duration?: string;
+  questions?: number;
+  pages?: number;
+}
+
+export interface RecommendedProgram {
+  program: string;
+  match: number;
+  minScore: number;
+  requirement: string;
+}
+
+export interface NextGoal {
+  name: string;
+  score: number;
+  currentScore: number;
 }
 
 export interface UserCourseData {
@@ -96,10 +145,17 @@ export interface UserTryOutData {
 export interface ExamDashboardData {
   examType: string;
   hasData: boolean;
+  maxScore?: number;
+  metrics?: string;
   rank?: number;
+  previousRank?: number | null;
   averageScore?: number;
+  previousAverageScore?: number | null;
+  totalCompleted?: number;
+  studyTime?: string;
   percentileRank?: number;
   totalParticipants?: number;
+  probabilitasKelulusan?: number | null;
   subjectPerformance?: SubjectPerformanceData[];
   weeklyProgress?: WeekData[];
   recentResults?: RecentResultData[];
@@ -107,6 +163,11 @@ export interface ExamDashboardData {
   progressDetail?: ProgressDetailData[];
   topicData?: { [key: string]: TopicDataItem[] };
   competitiveAnalysis?: CompetitiveAnalysisData[];
+  nextGoal?: NextGoal;
+  learningInsights?: LearningInsight[];
+  achievements?: Achievement[];
+  recommendedResources?: RecommendedResource[];
+  recommendedPrograms?: RecommendedProgram[];
 }
 
 export interface StudentDashboardResponse {
@@ -116,15 +177,388 @@ export interface StudentDashboardResponse {
   tryOuts: UserTryOutData[];
 }
 
+// ========== SAMPLE DATA GENERATORS ==========
+
+/**
+ * Generate sample learning insights based on actual data
+ */
+function generateSampleInsights(
+  examType: string,
+  subjectPerformance: SubjectPerformanceData[],
+  topicData: { [key: string]: TopicDataItem[] },
+  rank?: number,
+  totalParticipants?: number
+): LearningInsight[] {
+  const insights: LearningInsight[] = [];
+
+  // Insight 1: Best performing subject
+  if (subjectPerformance.length > 0) {
+    const bestSubject = subjectPerformance.reduce((prev, current) => 
+      (prev.nilai > current.nilai) ? prev : current
+    );
+    
+    if (bestSubject.nilai > bestSubject.target) {
+      const diff = Math.round(((bestSubject.nilai - bestSubject.target) / bestSubject.target) * 100);
+      insights.push({
+        insight: `Kamu ${diff}% lebih baik dalam ${bestSubject.name} dibanding target`,
+        type: 'positive'
+      });
+    }
+  }
+
+  // Insight 2: Topic that needs improvement
+  const allTopics: TopicDataItem[] = [];
+  Object.values(topicData).forEach(topics => allTopics.push(...topics));
+  
+  if (allTopics.length > 0) {
+    const weakTopic = allTopics.reduce((prev, current) => 
+      (prev.score < current.score) ? prev : current
+    );
+    
+    if (weakTopic.score < weakTopic.avg) {
+      const diff = Math.round(((weakTopic.avg - weakTopic.score) / weakTopic.avg) * 100);
+      insights.push({
+        insight: `Akurasi menjawab soal ${weakTopic.topic} ${diff}% lebih rendah dari rata-rata`,
+        type: 'negative'
+      });
+    }
+  }
+
+  // Insight 3: Overall ranking performance
+  if (rank && totalParticipants) {
+    const percentile = Math.round((1 - (rank / totalParticipants)) * 100);
+    insights.push({
+      insight: `Performamu di atas ${percentile}% peserta lain dalam try out`,
+      type: 'positive'
+    });
+  }
+
+  return insights;
+}
+
+/**
+ * Generate sample achievements based on actual performance
+ */
+function generateSampleAchievements(
+  examType: string,
+  subjectPerformance: SubjectPerformanceData[],
+  totalCompleted: number,
+  averageScore: number
+): Achievement[] {
+  const achievements: Achievement[] = [];
+
+  // Achievement 1: High score in a subject
+  const highScoreSubject = subjectPerformance.find(s => s.nilai >= 90);
+  if (highScoreSubject) {
+    achievements.push({
+      title: `${highScoreSubject.name} Master`,
+      description: `Mencapai nilai 90+ di 5 tes ${highScoreSubject.name}`,
+      completed: true,
+      progress: 100
+    });
+  } else if (subjectPerformance.length > 0) {
+    const bestSubject = subjectPerformance.reduce((prev, curr) => 
+      prev.nilai > curr.nilai ? prev : curr
+    );
+    achievements.push({
+      title: `${bestSubject.name} Expert`,
+      description: `Mencapai nilai 90+ di 5 tes ${bestSubject.name}`,
+      completed: false,
+      progress: Math.min(Math.round((bestSubject.nilai / 90) * 100), 95)
+    });
+  }
+
+  // Achievement 2: Consistency
+  if (totalCompleted >= 10) {
+    achievements.push({
+      title: 'Konsisten Belajar',
+      description: 'Belajar selama 10 hari berturut-turut',
+      completed: true,
+      progress: 100
+    });
+  } else {
+    achievements.push({
+      title: 'Konsisten Belajar',
+      description: 'Belajar selama 10 hari berturut-turut',
+      completed: false,
+      progress: totalCompleted * 10
+    });
+  }
+
+  // Achievement 3: Exam completion
+  if (totalCompleted >= 20) {
+    achievements.push({
+      title: 'Problem Solver',
+      description: 'Menyelesaikan 100 soal penalaran',
+      completed: false,
+      progress: Math.min(totalCompleted * 5, 95)
+    });
+  }
+
+  // Achievement 4: Average score
+  if (averageScore >= 85) {
+    achievements.push({
+      title: `${examType} Ready`,
+      description: 'Nilai rata-rata keseluruhan > 80',
+      completed: true,
+      progress: 100
+    });
+  } else if (averageScore > 0) {
+    achievements.push({
+      title: `${examType} Ready`,
+      description: 'Nilai rata-rata keseluruhan > 80',
+      completed: false,
+      progress: Math.min(Math.round((averageScore / 85) * 100), 95)
+    });
+  }
+
+  return achievements;
+}
+
+/**
+ * Generate recommended resources based on weak topics
+ */
+function generateRecommendedResources(
+  topicData: { [key: string]: TopicDataItem[] }
+): RecommendedResource[] {
+  const resources: RecommendedResource[] = [];
+  const allTopics: Array<TopicDataItem & { subject: string }> = [];
+  
+  // Collect all topics with their subjects
+  Object.entries(topicData).forEach(([subject, topics]) => {
+    topics.forEach(topic => {
+      allTopics.push({ ...topic, subject });
+    });
+  });
+
+  // Sort by lowest score compared to average
+  const weakTopics = allTopics
+    .filter(t => t.score < t.avg)
+    .sort((a, b) => (a.score - a.avg) - (b.score - b.avg))
+    .slice(0, 3);
+
+  weakTopics.forEach((topic, index) => {
+    if (index === 0) {
+      resources.push({
+        type: 'video',
+        subject: topic.subject,
+        topic: topic.topic,
+        title: `Konsep Dasar ${topic.topic}`,
+        duration: '15 menit'
+      });
+    } else if (index === 1) {
+      resources.push({
+        type: 'quiz',
+        subject: topic.subject,
+        topic: topic.topic,
+        title: `Latihan Soal ${topic.topic} Tingkat Lanjut`,
+        questions: 20
+      });
+    } else {
+      resources.push({
+        type: 'reading',
+        subject: topic.subject,
+        topic: topic.topic,
+        title: `Teknik Menguasai ${topic.topic}`,
+        pages: 5
+      });
+    }
+  });
+
+  return resources;
+}
+
+/**
+ * Generate recommended programs based on exam type and score
+ */
+function generateRecommendedPrograms(
+  examType: string,
+  averageScore: number,
+  maxScore: number
+): RecommendedProgram[] {
+  const programsMap: { [key: string]: RecommendedProgram[] } = {
+    'SNBT Exam': [
+      { program: 'Kedokteran UI', match: 82, minScore: 700, requirement: 'SNBT + SIMAK FK' },
+      { program: 'Teknik Informatika ITB', match: 78, minScore: 680, requirement: 'SNBT' },
+      { program: 'Psikologi UGM', match: 87, minScore: 650, requirement: 'SNBT' },
+      { program: 'Hukum UNAIR', match: 90, minScore: 630, requirement: 'SNBT' }
+    ],
+    'SIMAK UI': [
+      { program: 'Ilmu Ekonomi UI', match: 87, minScore: 750, requirement: 'SIMAK Utama' },
+      { program: 'Kedokteran UGM', match: 75, minScore: 800, requirement: 'SIMAK + Tes Fakultas' },
+      { program: 'Hubungan Internasional UNPAD', match: 92, minScore: 720, requirement: 'SIMAK Soshum' },
+      { program: 'Teknik Kimia ITB', match: 78, minScore: 760, requirement: 'SIMAK Saintek' }
+    ],
+    'CPNS Exam': [
+      { program: 'Kementerian Keuangan - Analis Kebijakan', match: 85, minScore: 350, requirement: 'Tes SKD + SKB' },
+      { program: 'Kementerian Pendidikan - Pengelola Keuangan', match: 82, minScore: 340, requirement: 'Tes SKD' },
+      { program: 'BKN - Analis SDM Aparatur', match: 78, minScore: 345, requirement: 'Tes SKD + Wawancara' },
+      { program: 'Pemerintah Kota - Pengelola Pengadaan', match: 87, minScore: 335, requirement: 'Tes SKD + Praktik' }
+    ]
+  };
+
+  const programs = programsMap[examType] || [];
+  
+  // Adjust match percentage based on user's average score relative to max score
+  return programs.map(program => {
+    // Calculate score percentage relative to max_score
+    const scorePercentage = maxScore > 0 ? (averageScore / maxScore) * 100 : 0;
+    const targetPercentage = maxScore > 0 ? (program.minScore / maxScore) * 100 : 0;
+    
+    // Calculate match based on how close user is to target
+    let match = Math.round((scorePercentage / targetPercentage) * 100);
+    match = Math.min(match, 100); // Cap at 100
+    
+    return {
+      ...program,
+      match
+    };
+  });
+}
+
+/**
+ * Generate next goal based on exam type and current performance
+ */
+function generateNextGoal(
+  examType: string,
+  averageScore: number,
+  maxScore: number
+): NextGoal | undefined {
+  // Goal is typically 85% of max score
+  const targetScore = Math.round(maxScore * 0.85);
+
+  return {
+    name: `Target ${examType}`,
+    score: targetScore,
+    currentScore: formatToTwoDecimals(averageScore)
+  };
+}
+
+/**
+ * Calculate probability of passing based on performance
+ */
+function calculateProbabilityOfPassing(
+  examType: string,
+  averageScore: number,
+  maxScore: number,
+  percentileRank?: number
+): number | null {
+  // For Quiz, we don't calculate probability
+  if (examType === 'Quiz') return null;
+
+  let probability = 0;
+
+  // Calculate score percentage
+  const scorePercentage = maxScore > 0 ? (averageScore / maxScore) * 100 : 0;
+
+  // Base probability on score percentage
+  if (scorePercentage >= 85) {
+    probability = 85;
+  } else if (scorePercentage >= 75) {
+    probability = 70;
+  } else if (scorePercentage >= 65) {
+    probability = 55;
+  } else {
+    probability = 40;
+  }
+
+  // Adjust based on percentile rank
+  if (percentileRank) {
+    if (percentileRank <= 10) {
+      probability += 15;
+    } else if (percentileRank <= 25) {
+      probability += 10;
+    } else if (percentileRank <= 50) {
+      probability += 5;
+    }
+  }
+
+  return Math.min(probability, 95); // Cap at 95%
+}
+
+/**
+ * Calculate total completed exams for specific exam type
+ */
+async function getTotalCompletedExams(user_id: number, examType: string): Promise<number> {
+  try {
+    const { rows } = await pool.query(
+      `SELECT COUNT(DISTINCT ues.exam_schedule_id) as total_completed
+       FROM user_exam_scores ues
+       JOIN exam_schedule es ON es.id = ues.exam_schedule_id
+       JOIN product_type pt ON pt.id = es.type
+       WHERE ues.user_id = $1 
+         AND pt.description = $2
+         AND ues.is_final = true`,
+      [user_id, examType]
+    );
+    return Number(rows[0]?.total_completed || 0);
+  } catch (error) {
+    console.error('Error getting total completed exams:', error);
+    return 0;
+  }
+}
+
+/**
+ * Calculate study time for specific exam type
+ */
+async function getStudyTime(user_id: number, examType: string): Promise<string> {
+  try {
+    const { rows } = await pool.query(
+      `SELECT COALESCE(
+         SUM(EXTRACT(EPOCH FROM (ues.completion_time - ues.start_time)) / 3600),
+         0
+       ) as study_hours
+       FROM user_exam_scores ues
+       JOIN exam_schedule es ON es.id = ues.exam_schedule_id
+       JOIN product_type pt ON pt.id = es.type
+       WHERE ues.user_id = $1 
+         AND pt.description = $2
+         AND ues.start_time IS NOT NULL
+         AND ues.completion_time IS NOT NULL`,
+      [user_id, examType]
+    );
+    
+    const hours = Number(rows[0]?.study_hours || 0);
+    return formatToTwoDecimals(hours).toString();
+  } catch (error) {
+    console.error('Error calculating study time:', error);
+    return '0';
+  }
+}
+
 // ========== HELPERS ==========
-function parseWeeklyProgress(row: any | null): WeekData[] {
+function parseWeeklyProgress(row: any | null, maxScore: number): WeekData[] {
   if (!row) return [];
+  
+  // Calculate targets as percentages of max_score (you can adjust these percentages)
+  const targetPercentages = [0.60, 0.65, 0.70, 0.75, 0.80]; // 60%, 65%, 70%, 75%, 80% of max
+  
   return [
-    { name: "Minggu 1", nilai: row.week1 || 0, target: row.target1 || null },
-    { name: "Minggu 2", nilai: row.week2 || 0, target: row.target2 || null },
-    { name: "Minggu 3", nilai: row.week3 || 0, target: row.target3 || null },
-    { name: "Minggu 4", nilai: row.week4 || 0, target: row.target4 || null },
-    { name: "Minggu 5", nilai: row.week5 || 0, target: row.target5 || null }
+    { 
+      name: "Minggu 1", 
+      nilai: formatToTwoDecimals(row.week1 || 0), 
+      target: formatToTwoDecimals(maxScore * targetPercentages[0])
+    },
+    { 
+      name: "Minggu 2", 
+      nilai: formatToTwoDecimals(row.week2 || 0), 
+      target: formatToTwoDecimals(maxScore * targetPercentages[1])
+    },
+    { 
+      name: "Minggu 3", 
+      nilai: formatToTwoDecimals(row.week3 || 0), 
+      target: formatToTwoDecimals(maxScore * targetPercentages[2])
+    },
+    { 
+      name: "Minggu 4", 
+      nilai: formatToTwoDecimals(row.week4 || 0), 
+      target: formatToTwoDecimals(maxScore * targetPercentages[3])
+    },
+    { 
+      name: "Minggu 5", 
+      nilai: formatToTwoDecimals(row.week5 || 0), 
+      target: formatToTwoDecimals(maxScore * targetPercentages[4])
+    }
   ];
 }
 
@@ -175,7 +609,7 @@ async function fetchUserCourses(user_id: number): Promise<UserCourseData[]> {
       description: row.description,
       imageUrl: row.imageurl,
       courseString: row.course_string,
-      progressPercentage: Number(row.overall_progress_percentage || 0),
+      progressPercentage: formatToTwoDecimals(row.overall_progress_percentage),
       materialsCompleted: Number(row.finished_materials || 0),
       totalMaterials: Number(row.material || 0),
       quizzesCompleted: Number(row.finished_quiz_topics || 0),
@@ -255,7 +689,7 @@ async function fetchUserTryOuts(user_id: number): Promise<UserTryOutData[]> {
       isFree: row.isfree,
       grantedAt: new Date(row.granted_at).toLocaleDateString('id-ID'),
       hasCompleted: row.has_completed,
-      totalScore: row.total_score ? Number(row.total_score) : undefined,
+      totalScore: row.total_score ? formatToTwoDecimals(row.total_score) : undefined,
       completionTime: row.completion_time ? new Date(row.completion_time).toLocaleDateString('id-ID') : undefined
     }));
   } catch (error) {
@@ -264,126 +698,232 @@ async function fetchUserTryOuts(user_id: number): Promise<UserTryOutData[]> {
   }
 }
 
-// ========== CONTROLLER ==========
+// ========== PROCESS SINGLE EXAM TYPE ==========
+async function processExamType(user_id: number, examType: string): Promise<ExamDashboardData | null> {
+  try {
+    console.log(`Processing exam type: ${examType}`);
+    
+    // Fetch all exam data in parallel using model functions with materialized views
+    const [
+      subjectPerformanceRaw,
+      weeklyProgressRaw,
+      recentResultsRaw,
+      progressDetailRaw,
+      topicDataRaw,
+      globalData,
+      competitiveAnalysisRaw,
+      totalCompleted,
+      studyTime
+    ] = await Promise.all([
+      getLatestSubjectPerformance(user_id, examType),
+      getLatestWeeklyProgress(user_id, examType),
+      getRecentExamResults(user_id, examType),
+      getProgressDetail(user_id, examType),
+      getTopicData(user_id, examType),
+      getUserGlobalData(user_id, examType),
+      getCompetitiveAnalysis(user_id, examType),
+      getTotalCompletedExams(user_id, examType),
+      getStudyTime(user_id, examType)
+    ]);
+
+    // Get max_score and metrics from globalData (or from any of the raw data that has it)
+    const maxScore = globalData?.max_score || subjectPerformanceRaw[0]?.max_score || 100;
+    const metrics = globalData?.metrics || subjectPerformanceRaw[0]?.metrics || 'average';
+
+    console.log(`Exam type: ${examType}, Max Score: ${maxScore}, Metrics: ${metrics}`);
+
+    // Map subject performance
+    const subjectPerformanceData: SubjectPerformanceData[] = subjectPerformanceRaw.map(s => ({
+      name: s.mapel,
+      nilai: formatToTwoDecimals(s.nilai),
+      target: Math.round(maxScore * 0.85), // Target is 85% of max_score
+      maxScore: s.max_score,
+      metrics: s.metrics
+    }));
+
+    // Map weekly progress
+    const weeklyProgressData = parseWeeklyProgress(weeklyProgressRaw, maxScore);
+
+    // Map recent results with new fields
+const recentResultsData: RecentResultData[] = recentResultsRaw
+  .filter(r => r.score !== null && r.average_score !== null)
+  .map((r, i) => {
+    console.log(`[${examType}] Mapping recent result ${i}:`, r);
+    return {
+      id: i + 1,
+      title: r.exam_schedule_name || 'Unknown',
+      score: formatToTwoDecimals(r.score),
+      maxScore: r.max_score_limit || maxScore,
+      metrics: r.metrics || metrics,
+      date: new Date(r.completion_time).toLocaleDateString('id-ID', { 
+        day: '2-digit', 
+        month: 'short', 
+        year: 'numeric' 
+      }),
+      numberOfExams: r.number_of_exams || 0,
+      averageScore: formatToTwoDecimals(r.average_score),
+      minScore: formatToTwoDecimals(r.min_score || 0),
+      minExamName: r.min_exam_name || 'Unknown',
+      maxExamScore: formatToTwoDecimals(r.max_score || 0),
+      maxExamName: r.max_exam_name || 'Unknown'
+    };
+  });
+
+          console.log(`[${examType}] Recent results data count:`, recentResultsData.length);
+    console.log(`[${examType}] Recent results data:`, JSON.stringify(recentResultsData, null, 2));
+
+
+    // Group topic data by mapel
+    const topicData: { [key: string]: TopicDataItem[] } = {};
+    for (const t of topicDataRaw) {
+      if (!topicData[t.mapel]) topicData[t.mapel] = [];
+      topicData[t.mapel].push({
+        topic: t.topic,
+        score: formatToTwoDecimals(t.score),
+        avg: formatToTwoDecimals(t.avg),
+        total: Number(t.total),
+        completed: Number(t.completed),
+        maxScore: t.max_score,
+        metrics: t.metrics
+      });
+    }
+
+    // Radar data
+    const radarData: RadarData[] = subjectPerformanceRaw.map(s => ({
+      subject: s.mapel,
+      score: formatToTwoDecimals(s.nilai),
+      maxScore: s.max_score
+    }));
+
+    // Progress detail
+    const progressDetailData: ProgressDetailData[] = progressDetailRaw.map(d => ({
+      nama: d.nama,
+      nilai: formatToTwoDecimals(d.nilai),
+      peningkatan: formatToTwoDecimals(d.peningkatan),
+      maxScore: d.max_score,
+      metrics: d.metrics
+    }));
+
+    // Competitive analysis
+    const competitiveAnalysisData: CompetitiveAnalysisData[] = competitiveAnalysisRaw ? [
+      { name: "Top 5%", score: formatToTwoDecimals(competitiveAnalysisRaw.top_5_percent) },
+      { name: "Top 10%", score: formatToTwoDecimals(competitiveAnalysisRaw.top_10_percent) },
+      { name: "Top 25%", score: formatToTwoDecimals(competitiveAnalysisRaw.top_25_percent) },
+      { name: "Kamu", score: formatToTwoDecimals(competitiveAnalysisRaw.avg_score) },
+      { name: "Rata-rata", score: formatToTwoDecimals(competitiveAnalysisRaw.average_score) },
+    ] : [];
+
+    // Calculate average score
+    const averageScore = globalData?.avg_score_now || 0;
+
+    // Generate sample data for missing fields
+    const learningInsights = generateSampleInsights(
+      examType,
+      subjectPerformanceData,
+      topicData,
+      globalData?.rank_now,
+      globalData?.total_participants
+    );
+
+    const achievements = generateSampleAchievements(
+      examType,
+      subjectPerformanceData,
+      totalCompleted,
+      averageScore
+    );
+
+    const recommendedResources = generateRecommendedResources(topicData);
+    
+    const recommendedPrograms = generateRecommendedPrograms(examType, averageScore, maxScore);
+    
+    const nextGoal = generateNextGoal(examType, averageScore, maxScore);
+    
+    const probabilitasKelulusan = calculateProbabilityOfPassing(
+      examType,
+      averageScore,
+      maxScore,
+      globalData?.percentile
+    );
+
+    return {
+      examType,
+      hasData: true,
+      maxScore,
+      metrics,
+      rank: globalData?.rank_now || undefined,
+      previousRank: globalData?.rank_previous !== null && globalData?.rank_previous !== undefined 
+        ? globalData.rank_previous 
+        : null,
+      averageScore: averageScore ? formatToTwoDecimals(averageScore) : undefined,
+      previousAverageScore: globalData?.avg_score_previous !== null && globalData?.avg_score_previous !== undefined
+        ? formatToTwoDecimals(globalData.avg_score_previous)
+        : null,
+      totalCompleted,
+      studyTime,
+      percentileRank: globalData?.percentile ? formatToTwoDecimals(globalData.percentile) : undefined,
+      totalParticipants: globalData?.total_participants || undefined,
+      probabilitasKelulusan,
+      subjectPerformance: subjectPerformanceData,
+      weeklyProgress: weeklyProgressData,
+      recentResults: recentResultsData,
+      radarData,
+      progressDetail: progressDetailData,
+      topicData,
+      competitiveAnalysis: competitiveAnalysisData,
+      nextGoal,
+      learningInsights,
+      achievements,
+      recommendedResources,
+      recommendedPrograms
+    };
+  } catch (error) {
+    console.error(`Error processing exam type ${examType}:`, error);
+    return null;
+  }
+}
+
+// ========== MAIN CONTROLLER ==========
 export async function getStudentDashboard(
   req: AuthenticatedRequest, 
   res: NextApiResponse<StudentDashboardResponse | { error: string }>
 ) {
   const user_id = parseInt(req.user!.id);
 
-  if (!user_id) {
-    return res.status(400).json({ error: 'user_id is required' });
+  if (!user_id || isNaN(user_id)) {
+    return res.status(400).json({ error: 'Valid user_id is required' });
   }
 
   try {
+    console.log('===========================================');
     console.log('Dashboard request for user:', user_id);
+    console.log('Timestamp:', new Date().toISOString());
 
     // Check which exam types have data using materialized view
     const availableExams = await checkExamDataAvailability(user_id);
+    console.log('Available exams:', availableExams);
     
     // Build exam dashboards for available types
     const examDashboards: ExamDashboardData[] = [];
     
-    for (const [examType, hasData] of Object.entries(availableExams)) {
-      if (hasData) {
-        console.log('Processing exam type:', examType);
-        
-        // Fetch all exam data in parallel using model functions with materialized views
-        const [
-          subjectPerformanceRaw,
-          weeklyProgressRaw,
-          recentResultsRaw,
-          progressDetailRaw,
-          topicDataRaw,
-          globalData,
-          competitiveAnalysisRaw
-        ] = await Promise.all([
-          getLatestSubjectPerformance(user_id, examType),
-          getLatestWeeklyProgress(user_id, examType),
-          getRecentExamResults(user_id, examType),
-          getProgressDetail(user_id, examType),
-          getTopicData(user_id, examType),
-          getUserGlobalData(user_id, examType),
-          getCompetitiveAnalysis(user_id, examType)
-        ]);
-
-        // Map subject performance
-        const subjectPerformanceData: SubjectPerformanceData[] = subjectPerformanceRaw.map(s => ({
-          name: s.mapel,
-          nilai: Number(s.nilai),
-          target: 85
-        }));
-
-        // Map weekly progress
-        const weeklyProgressData = parseWeeklyProgress(weeklyProgressRaw);
-
-        // Map recent results
-        const recentResultsData: RecentResultData[] = recentResultsRaw.map((r, i) => ({
-          id: i + 1,
-          title: r.exam_schedule_name,
-          score: Number(r.score),
-          date: new Date(r.completion_time).toLocaleDateString('id-ID', { 
-            day: '2-digit', 
-            month: 'short', 
-            year: 'numeric' 
-          }),
-        }));
-
-        // Group topic data by mapel
-        const topicData: { [key: string]: TopicDataItem[] } = {};
-        for (const t of topicDataRaw) {
-          if (!topicData[t.mapel]) topicData[t.mapel] = [];
-          topicData[t.mapel].push({
-            topic: t.topic,
-            score: Number(t.score),
-            avg: Number(t.avg),
-            total: Number(t.total),
-            completed: Number(t.completed),
-          });
-        }
-
-        // Radar data
-        const radarData: RadarData[] = subjectPerformanceRaw.map(s => ({
-          subject: s.mapel,
-          score: Number(s.nilai),
-        }));
-
-        // Progress detail
-        const progressDetailData: ProgressDetailData[] = progressDetailRaw.map(d => ({
-          nama: d.nama,
-          nilai: Number(d.nilai),
-          peningkatan: Number(d.peningkatan),
-        }));
-
-        // Competitive analysis
-        const competitiveAnalysisData: CompetitiveAnalysisData[] = competitiveAnalysisRaw ? [
-          { name: "Top 5%", score: Number(competitiveAnalysisRaw.top_5_percent) },
-          { name: "Top 10%", score: Number(competitiveAnalysisRaw.top_10_percent) },
-          { name: "Top 25%", score: Number(competitiveAnalysisRaw.top_25_percent) },
-          { name: "Kamu", score: Number(competitiveAnalysisRaw.avg_score) },
-          { name: "Rata-rata", score: Number(competitiveAnalysisRaw.average_score) },
-        ] : [];
-
-        examDashboards.push({
-          examType,
-          hasData: true,
-          rank: globalData?.rank_now || undefined,
-          averageScore: globalData?.avg_score_now || undefined,
-          percentileRank: globalData?.percentile || undefined,
-          totalParticipants: globalData?.total_participants || undefined,
-          subjectPerformance: subjectPerformanceData,
-          weeklyProgress: weeklyProgressData,
-          recentResults: recentResultsData,
-          radarData,
-          progressDetail: progressDetailData,
-          topicData,
-          competitiveAnalysis: competitiveAnalysisData
-        });
+    // Process each exam type that has data
+    const examTypePromises = Object.entries(availableExams)
+      .filter(([_, hasData]) => hasData)
+      .map(([examType, _]) => processExamType(user_id, examType));
+    
+    const examResults = await Promise.allSettled(examTypePromises);
+    
+    examResults.forEach((result, index) => {
+      if (result.status === 'fulfilled' && result.value !== null) {
+        examDashboards.push(result.value);
+      } else if (result.status === 'rejected') {
+        console.error(`Failed to process exam type at index ${index}:`, result.reason);
       }
-    }
+    });
 
-    // Get user courses, classes, and try-outs in parallel (these don't use materialized views)
-    const [courses, classes, tryOuts] = await Promise.all([
+    console.log(`Successfully processed ${examDashboards.length} exam dashboards`);
+
+    // Get user courses, classes, and try-outs in parallel
+    const [courses, classes, tryOuts] = await Promise.allSettled([
       fetchUserCourses(user_id),
       fetchUserClasses(user_id),
       fetchUserTryOuts(user_id)
@@ -391,16 +931,23 @@ export async function getStudentDashboard(
 
     const response: StudentDashboardResponse = {
       examDashboards,
-      courses,
-      classes,
-      tryOuts
+      courses: courses.status === 'fulfilled' ? courses.value : [],
+      classes: classes.status === 'fulfilled' ? classes.value : [],
+      tryOuts: tryOuts.status === 'fulfilled' ? tryOuts.value : []
     };
 
-    console.log('Dashboard response prepared successfully');
+    console.log('Dashboard response summary:');
+    console.log('- Exam dashboards:', response.examDashboards.length);
+    console.log('- Courses:', response.courses.length);
+    console.log('- Classes:', response.classes.length);
+    console.log('- Try-outs:', response.tryOuts.length);
+    console.log('===========================================');
+
     res.json(response);
     
   } catch (error: any) {
     console.error('Error in getStudentDashboard:', error);
+    console.error('Error stack:', error.stack);
     
     // Handle specific error types
     if (error.code === 'ECONNREFUSED') {
@@ -411,6 +958,9 @@ export async function getStudentDashboard(
     }
     if (error.message?.includes('timeout')) {
       return res.status(504).json({ error: 'Database query timeout' });
+    }
+    if (error.code === '42P01') {
+      return res.status(500).json({ error: 'Database table or view not found' });
     }
     
     res.status(500).json({ error: 'Internal server error' });

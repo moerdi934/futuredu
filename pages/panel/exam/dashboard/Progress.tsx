@@ -10,16 +10,19 @@ import { Medal, Target, Award, Book, Activity, BookOpen, Briefcase, Library } fr
 
 // Type definitions
 interface TopicData {
-  topic: string;
+  topic: string | null;
   score: number;
   avg: number;
   completed: number;
   total: number;
+  maxScore: number;
+  metrics: string;
 }
 
 interface RadarData {
-  subject: string;
+  subject: string | null;
   score: number;
+  maxScore: number;
 }
 
 interface CompetitiveAnalysis {
@@ -28,9 +31,11 @@ interface CompetitiveAnalysis {
 }
 
 interface ProgressDetail {
-  nama: string;
+  nama: string | null;
   nilai: number;
   peningkatan: number;
+  maxScore: number;
+  metrics: string;
 }
 
 interface RecommendedProgram {
@@ -62,18 +67,21 @@ interface ExamData {
   recommendedResources: RecommendedResource[];
 }
 
-type ExamType = 'SNBT' | 'SIMAK' | 'Quiz' | 'CPNS';
+type ExamType = 'SNBT' | 'SNBT Exam' | 'SIMAK' | 'Quiz' | 'CPNS';
 
 interface ProgressProps {
   examType: ExamType;
-  currentExamData?: ExamData; // Make this optional
+  currentExamData?: ExamData;
   selectedSubject: string | null;
   setSelectedSubject: (subject: string | null) => void;
   showTopicDetail: boolean;
   setShowTopicDetail: (show: boolean) => void;
+  maxScore: number;
+  metrics: string;
   getTopicData: (subject: string) => TopicData[];
-  getColorForScore: (score: number) => string;
-  getProgressColor: (score: number) => string;
+  getColorForScore: (score: number, maxScore?: number) => string;
+  getProgressColor: (score: number, maxScore?: number) => string;
+  calculatePercentage: (score: number, maxScore?: number) => number;
 }
 
 interface IconProps {
@@ -116,13 +124,17 @@ const Progress: React.FC<ProgressProps> = ({
   setSelectedSubject,
   showTopicDetail,
   setShowTopicDetail,
+  maxScore,
+  metrics,
   getTopicData,
   getColorForScore,
-  getProgressColor
+  getProgressColor,
+  calculatePercentage
 }) => {
   
-  // Early return if data is not available
-  if (!currentExamData || !currentExamData.radarData || !currentExamData.competitiveAnalysis || !currentExamData.progressDetail || !currentExamData.recommendedPrograms || !currentExamData.recommendedResources) {
+  if (!currentExamData || !currentExamData.radarData || !currentExamData.competitiveAnalysis || 
+      !currentExamData.progressDetail || !currentExamData.recommendedPrograms || 
+      !currentExamData.recommendedResources) {
     return (
       <Row className="tw-mb-4">
         <Col>
@@ -145,12 +157,15 @@ const Progress: React.FC<ProgressProps> = ({
     const topicData = getTopicData(selectedSubject);
     if (!topicData || topicData.length === 0) return null;
     
+    // Determine domain based on maxScore
+    const radarDomain = maxScore === 1000 ? [0, 1000] : [0, 100];
+    
     return (
       <ResponsiveContainer width="100%" height={300}>
         <RadarChart outerRadius={90} data={topicData}>
           <PolarGrid />
           <PolarAngleAxis dataKey="topic" />
-          <PolarRadiusAxis angle={30} domain={[0, 100]} />
+          <PolarRadiusAxis angle={30} domain={radarDomain} />
           <Radar name="Nilai Kamu" dataKey="score" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
           <Radar name="Rata-rata" dataKey="avg" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.4} />
           <Legend />
@@ -162,7 +177,6 @@ const Progress: React.FC<ProgressProps> = ({
 
   // Render probabilitas kelulusan gauge
   const renderProbabilitasGauge = () => {
-    // Quiz tidak memiliki probabilitas kelulusan
     if (examType === 'Quiz' || !currentExamData.probabilitasKelulusan) {
       return null;
     }
@@ -224,22 +238,34 @@ const Progress: React.FC<ProgressProps> = ({
   // Membuat insight cards berdasarkan data
   const generateInsights = (): Insight[] => {
     const insights: Insight[] = [];
-    const subjects = currentExamData.radarData;
+    const subjects = currentExamData.radarData.filter(s => s.subject !== null);
+    
+    if (subjects.length === 0) return insights;
     
     // Best subject
-    const bestSubject = [...subjects].sort((a, b) => b.score - a.score)[0];
+    const bestSubject = [...subjects].sort((a, b) => {
+      const aPercentage = (a.score / a.maxScore) * 100;
+      const bPercentage = (b.score / b.maxScore) * 100;
+      return bPercentage - aPercentage;
+    })[0];
+    
     insights.push({
       title: `Kamu unggul di ${bestSubject.subject}`,
-      description: `Nilai ${bestSubject.score}`,
+      description: `Nilai ${bestSubject.score}${maxScore !== 100 ? `/${bestSubject.maxScore}` : ''}`,
       icon: <Medal className="tw-text-yellow-500" />,
       color: 'tw-bg-yellow-100'
     });
     
     // Weakest subject
-    const weakestSubject = [...subjects].sort((a, b) => a.score - b.score)[0];
+    const weakestSubject = [...subjects].sort((a, b) => {
+      const aPercentage = (a.score / a.maxScore) * 100;
+      const bPercentage = (b.score / b.maxScore) * 100;
+      return aPercentage - bPercentage;
+    })[0];
+    
     insights.push({
       title: `Perlu fokus di ${weakestSubject.subject}`,
-      description: `Nilai ${weakestSubject.score}`,
+      description: `Nilai ${weakestSubject.score}${maxScore !== 100 ? `/${weakestSubject.maxScore}` : ''}`,
       icon: <Target className="tw-text-red-500" />,
       color: 'tw-bg-red-100'
     });
@@ -257,9 +283,11 @@ const Progress: React.FC<ProgressProps> = ({
   
   // Render competitive analysis chart
   const renderCompetitiveAnalysisChart = () => {
-    // Urutkan data berdasarkan score, namun simpan data asli untuk referensi
     const sortedData = [...currentExamData.competitiveAnalysis]
-      .sort((a, b) => b.score - a.score); // Urutkan dari tertinggi ke terendah
+      .sort((a, b) => b.score - a.score);
+    
+    // Determine domain based on maxScore
+    const xDomain = maxScore === 1000 ? [0, 5000] : [0, 100];
     
     return (
       <ResponsiveContainer width="100%" height={250}>
@@ -269,7 +297,7 @@ const Progress: React.FC<ProgressProps> = ({
           margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-          <XAxis type="number" domain={[0, 100]} />
+          <XAxis type="number" domain={xDomain} />
           <YAxis dataKey="name" type="category" width={80} />
           <Tooltip />
           <Bar dataKey="score" fill="#8884d8" radius={[0, 4, 4, 0]}>
@@ -301,10 +329,10 @@ const Progress: React.FC<ProgressProps> = ({
                 <p className="tw-text-sm tw-text-gray-600">Klik pada mata pelajaran untuk melihat topik-topiknya</p>
               </div>
               <ResponsiveContainer width="100%" height={300}>
-                <RadarChart outerRadius={90} data={currentExamData.radarData}>
+                <RadarChart outerRadius={90} data={currentExamData.radarData.filter(r => r.subject !== null)}>
                   <PolarGrid />
                   <PolarAngleAxis dataKey="subject" />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                  <PolarRadiusAxis angle={30} domain={maxScore === 1000 ? [0, 1000] : [0, 100]} />
                   <Radar 
                     name="Kemampuan" 
                     dataKey="score" 
@@ -312,8 +340,10 @@ const Progress: React.FC<ProgressProps> = ({
                     fill="#8884d8" 
                     fillOpacity={0.6} 
                     onClick={(data: any) => {
-                      setSelectedSubject(data.subject);
-                      setShowTopicDetail(true);
+                      if (data.subject) {
+                        setSelectedSubject(data.subject);
+                        setShowTopicDetail(true);
+                      }
                     }}
                   />
                   <Legend />
@@ -356,7 +386,7 @@ const Progress: React.FC<ProgressProps> = ({
                 >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="month" />
-                  <YAxis domain={[50, 100]} />
+                  <YAxis domain={maxScore === 1000 ? [0, 1000] : [0, 100]} />
                   <Tooltip />
                   <Legend />
                   <Line 
@@ -375,7 +405,6 @@ const Progress: React.FC<ProgressProps> = ({
         </Col>
         
         <Col md={6}>
-          {/* Probabilitas Kelulusan Card */}
           {renderProbabilitasGauge()}
           
           <Card className="tw-border-0 tw-shadow-sm tw-mb-4">
@@ -412,7 +441,7 @@ const Progress: React.FC<ProgressProps> = ({
             <Card.Body>
               <div className="tw-flex tw-justify-between tw-items-center tw-mb-4">
                 <h5 className="tw-font-bold tw-mb-0">
-                  {examType === 'SNBT' || examType === 'SIMAK' ? 'Rekomendasi Program Studi' : 
+                  {examType === 'SNBT' || examType === 'SNBT Exam' || examType === 'SIMAK' ? 'Rekomendasi Program Studi' : 
                    examType === 'CPNS' ? 'Rekomendasi Formasi' : 'Rekomendasi Topik Belajar'}
                 </h5>
                 <div className="tw-bg-purple-100 tw-text-purple-700 tw-px-3 tw-py-1 tw-rounded-full tw-text-sm">
@@ -465,7 +494,7 @@ const Progress: React.FC<ProgressProps> = ({
               )}
               
               <Button variant="purple" className="tw-bg-purple-600 tw-border-0 tw-w-full tw-mt-4">
-                {examType === 'SNBT' || examType === 'SIMAK' ? 'Eksplorasi Program Studi' : 
+                {examType === 'SNBT' || examType === 'SNBT Exam' || examType === 'SIMAK' ? 'Eksplorasi Program Studi' : 
                 examType === 'CPNS' ? 'Cari Formasi Lainnya' : 'Lihat Semua Rekomendasi'}
               </Button>
             </Card.Body>
@@ -484,23 +513,28 @@ const Progress: React.FC<ProgressProps> = ({
                 </div>
               </div>
               <div className="tw-space-y-4">
-                {currentExamData.progressDetail.map((item, idx) => (
-                  <div key={idx} className="tw-bg-white tw-p-3 tw-rounded-lg tw-border tw-border-gray-100 hover:tw-shadow-sm tw-transition-all">
-                    <div className="tw-flex tw-justify-between">
-                      <span className="tw-font-medium">{item.nama}</span>
-                      <span className={getColorForScore(item.nilai)}>{item.nilai}/100</span>
+                {currentExamData.progressDetail.filter(item => item.nama !== null).map((item, idx) => {
+                  const percentage = calculatePercentage(item.nilai, item.maxScore);
+                  return (
+                    <div key={idx} className="tw-bg-white tw-p-3 tw-rounded-lg tw-border tw-border-gray-100 hover:tw-shadow-sm tw-transition-all">
+                      <div className="tw-flex tw-justify-between">
+                        <span className="tw-font-medium">{item.nama}</span>
+                        <span className={getColorForScore(item.nilai, item.maxScore)}>
+                          {item.nilai}/{item.maxScore}
+                        </span>
+                      </div>
+                      <ProgressBar 
+                        now={percentage} 
+                        variant={getProgressColor(item.nilai, item.maxScore)} 
+                        className="tw-h-2 tw-my-2" 
+                      />
+                      <div className="tw-flex tw-justify-between tw-text-sm">
+                        <span className="tw-text-gray-600">Progres terakhir</span>
+                        <span className="tw-text-green-600">+{item.peningkatan} poin</span>
+                      </div>
                     </div>
-                    <ProgressBar 
-                      now={item.nilai} 
-                      variant={getProgressColor(item.nilai)} 
-                      className="tw-h-2 tw-my-2" 
-                    />
-                    <div className="tw-flex tw-justify-between tw-text-sm">
-                      <span className="tw-text-gray-600">Progres terakhir</span>
-                      <span className="tw-text-green-600">+{item.peningkatan} poin</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </Card.Body>
           </Card>

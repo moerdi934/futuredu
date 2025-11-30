@@ -264,17 +264,20 @@ export const createExamSchedule = async (req: AuthenticatedRequest, res: NextApi
     isfree, 
     is_valid, 
     created_by, 
-    exam_type, 
+    exam_type, // This comes from modal (product_type.id)
+    exam_group_id, // This is also product_type.id
     is_auto_move, 
     is_need_order_exam, 
     is_need_weighted_score 
   } = req.body;
-  console.log(req.user)
+  
+  console.log('Create Exam Schedule Request Body:', req.body);
+  console.log('User:', req.user);
+  
   const userRole = req.user?.role;
   const userId = req.user?.id;
   
   try {
-    // Only teachers and admins can create exam schedules
     if (userRole !== 'teacher' && userRole !== 'admin') {
       return res.status(403).json({
         success: false,
@@ -282,8 +285,21 @@ export const createExamSchedule = async (req: AuthenticatedRequest, res: NextApi
       });
     }
 
-    // Check if this is an AUTOCREATE schedule
     const isAutoCreate = isAutoCreateSchedule(description);
+
+    // Use exam_type as product_type_id (it's already the ID from product_type table)
+    const productTypeId = typeof exam_type === 'number' 
+      ? exam_type 
+      : parseInt(String(exam_type), 10);
+
+    console.log('Product Type ID:', productTypeId, 'Type:', typeof productTypeId);
+
+    if (isNaN(productTypeId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tipe ujian tidak valid'
+      });
+    }
 
     const newSchedule = await examScheduleModel.createExamSchedule(
       name, 
@@ -294,14 +310,13 @@ export const createExamSchedule = async (req: AuthenticatedRequest, res: NextApi
       isfree, 
       is_valid, 
       userId?.toString() || created_by, 
-      exam_type,
+      productTypeId, // Pass the product_type.id
       is_auto_move, 
       is_need_order_exam, 
       is_need_weighted_score,
       userRole
     );
 
-    // Determine response message based on approval status and AUTOCREATE
     let responseMessage: string;
     if (isAutoCreate) {
       responseMessage = 'Jadwal ujian AUTOCREATE berhasil dibuat dan disetujui otomatis (tersembunyi dari tampilan umum)';
@@ -318,7 +333,10 @@ export const createExamSchedule = async (req: AuthenticatedRequest, res: NextApi
     });
   } catch (error: any) {
     console.error('Create exam schedule error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 // Update an existing exam schedule
@@ -332,14 +350,13 @@ export const updateExamSchedule = async (req: AuthenticatedRequest, res: NextApi
     end_time, 
     is_valid, 
     updated_by, 
-    exam_type 
+    exam_type // This is product_type.id
   } = req.body;
 
   const userRole = req.user?.role;
   const userId = req.user?.id;
   
   try {
-    // Check if exam schedule exists and user can access it
     const existingSchedule = await examScheduleModel.getExamScheduleByIdWithAccess(
       id as string, 
       false, 
@@ -358,17 +375,29 @@ export const updateExamSchedule = async (req: AuthenticatedRequest, res: NextApi
       });
     }
 
-    // Check if user can modify this exam schedule
     if (!canUserModifyExamSchedule(existingSchedule, userRole, userId)) {
       return res.status(403).json({ 
         message: 'Anda tidak memiliki hak untuk mengubah jadwal ujian ini' 
       });
     }
 
-    // Teachers can only edit schedules that are not approved yet
     if (userRole === 'teacher' && existingSchedule.approval_status !== 'need_approve') {
       return res.status(403).json({ 
         message: 'Jadwal ujian yang sudah disetujui tidak dapat diubah' 
+      });
+    }
+
+    // Parse product_type_id
+    const productTypeId = typeof exam_type === 'number' 
+      ? exam_type 
+      : parseInt(String(exam_type), 10);
+
+    console.log('Update Product Type ID:', productTypeId, 'Type:', typeof productTypeId);
+
+    if (isNaN(productTypeId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tipe ujian tidak valid'
       });
     }
 
@@ -381,7 +410,7 @@ export const updateExamSchedule = async (req: AuthenticatedRequest, res: NextApi
       end_time, 
       is_valid, 
       userId?.toString() || updated_by, 
-      exam_type,
+      productTypeId, // Pass the product_type.id
       userRole
     );
 
@@ -399,9 +428,13 @@ export const updateExamSchedule = async (req: AuthenticatedRequest, res: NextApi
     });
   } catch (error: any) {
     console.error('Update exam schedule error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
+
 // Delete an exam schedule
 export const deleteExamSchedule = async (req: NextApiRequest, res: NextApiResponse) => {
   const { id } = req.query;

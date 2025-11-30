@@ -1,510 +1,944 @@
-# Section 1: Semantik - Struktur Topik dan Materi (Revisi Final)
+# STRUCTURE COURSE: BAHASA INDONESIA (PPU) - 4 SECTION
 
-Berikut struktur yang lebih ringkas dengan fokus pada kategori soal:
+---
 
-## **Topik 1.1: Jenis-Jenis Makna**
+## **SECTION 1. SEMANTIK**
 
-**Materi 1.1.1: Makna Leksikal**
-- Pengertian makna leksikal
-- Karakteristik: tetap, lugas, sesuai KBBI
-- Contoh penerapan
+### **Topik 1.1 Jenis-Jenis Makna**
 
-**Materi 1.1.2: Makna Gramatikal - Imbuhan (Afiksasi)**
-- Pengertian makna gramatikal dari imbuhan
-- Jenis-jenis imbuhan: prefiks, infiks, sufiks, konfiks
-- Perubahan makna akibat imbuhan
-- Contoh penerapan setiap jenis imbuhan
+**Materi 1.1.1 Pengenalan Jenis Makna**
+- Pengertian makna dalam bahasa
+- Mengapa makna kata bisa berbeda-beda
+- Gambaran umum jenis-jenis makna
+- Pentingnya memahami makna dalam komunikasi
 
-**Materi 1.1.3: Makna Gramatikal - Kata Tugas (Preposisi)**
-- Pengertian preposisi
-- Fungsi preposisi dalam kalimat
-- Perubahan makna akibat penggunaan preposisi
-- Contoh: di, ke, dari, pada, untuk, dll
+**Materi 1.1.2 Makna Leksikal**
+- Definisi makna leksikal
+- Makna berdasarkan KBBI
+- Sifat tetap dan lugas
+- Contoh-contoh penerapan
 
-**Materi 1.1.4: Makna Gramatikal - Kata Tugas (Konjungsi)**
-- Pengertian konjungsi
-- Jenis konjungsi: koordinatif, subordinatif, korelatif
-- Perubahan makna akibat penggunaan konjungsi
-- Contoh: dan, atau, tetapi, karena, sehingga, dll
+**Materi 1.1.3 Makna Gramatikal**
+- Definisi makna gramatikal
+- Perubahan makna karena imbuhan
+- Perubahan makna karena kata tugas
+- Perubahan makna karena struktur kalimat
+- Contoh-contoh penerapan
 
-**Materi 1.1.5: Makna Gramatikal - Pengulangan (Reduplikasi)**
-- Pengertian reduplikasi
-- Jenis reduplikasi: penuh, sebagian, berimbuhan
-- Perubahan makna akibat reduplikasi
-- Contoh: buku-buku, bolak-balik, berlari-larian
+**Materi 1.1.4 Makna Denotasi**
+- Definisi makna denotasi
+- Ciri-ciri makna sebenarnya
+- Makna lugas dan apa adanya
+- Contoh-contoh penggunaan
 
-**Materi 1.1.6: Makna Gramatikal - Pemajemukan (baru)**
-- Pengertian kata majemuk
-- Karakteristik: dua kata atau lebih membentuk makna baru
-- Jenis kata majemuk: setara, bertingkat, idiomatis
-- Contoh: meja hijau, orang tua, mata pelajaran
-
-**Materi 1.1.7: Makna Denotasi**
-- Pengertian makna denotasi
-- Ciri-ciri: makna sebenarnya, apa adanya
-- Contoh dalam kalimat
-
-**Materi 1.1.8: Makna Konotasi**
-- Pengertian makna konotasi
-- Ciri-ciri: makna kias, bukan makna sebenarnya
-- Konotasi positif, negatif, dan netral
+**Materi 1.1.5 Makna Konotasi**
+- Definisi makna konotasi
+- Makna kias dan kiasan
 - Perbedaan dengan denotasi
-- Contoh penggunaan
+- Contoh-contoh dalam kehidupan sehari-hari
 
-**Materi 1.1.9: Makna Ambigu**
-- Pengertian makna ambigu
-- Jenis ambiguitas: leksikal, struktural, kontekstual
-- Penyebab kalimat menjadi ambigu
+**Materi 1.1.6 Makna Ambigu**
+- Definisi makna ambigu
+- Penyebab kalimat bermakna ganda
+- Cara mengidentifikasi ambiguitas
 - Cara memperbaiki kalimat ambigu
-
-**Materi 1.1.10: Makna Kontekstual (baru)**
-- Pengertian makna kontekstual
-- Makna yang bergantung pada konteks situasi
-- Perbedaan dengan makna leksikal
-- Contoh penggunaan dalam berbagai konteks
-
-**Materi 1.1.11: Makna Referensial dan Non-Referensial (baru)**
-- Pengertian makna referensial (mengacu pada objek nyata)
-- Pengertian makna non-referensial (tidak mengacu pada objek)
-- Perbedaan keduanya
-- Contoh masing-masing
-
-**Materi 1.1.12: Makna Konseptual dan Makna Asosiatif (baru)**
-- Pengertian makna konseptual (makna logis)
-- Pengertian makna asosiatif (makna tambahan dari pengalaman)
-- Perbedaan keduanya
-- Contoh dalam penggunaan
-
-**Materi 1.1.13: Makna Idiomatis (baru)**
-- Pengertian idiom
-- Karakteristik: makna tidak dapat ditafsirkan per kata
-- Perbedaan dengan makna leksikal
-- Contoh: membanting tulang, panjang tangan, besar kepala
-
-**Materi 1.1.14: Makna Emotif dan Netral (baru)**
-- Pengertian makna emotif (mengandung emosi/perasaan)
-- Pengertian makna netral (objektif, tanpa emosi)
-- Perbedaan keduanya
-- Contoh: gemuk (netral) vs gendut (emotif negatif) vs berisi (emotif positif)
-
-**Materi 1.1.15: Makna Stilistika (baru)**
-- Pengertian makna stilistika
-- Makna yang dipengaruhi gaya bahasa dan ragam bahasa
-- Ragam formal vs informal
-- Contoh: makan (netral), santap (formal), mangan (informal Jawa)
+- Contoh-contoh kasus
 
 ---
 
-## **Topik 1.2: Perubahan Makna Kata**
+### **Topik 1.2 Perubahan Makna Kata**
 
-**Materi 1.2.1: Ameliorasi (Peningkatan Makna)**
-- Pengertian ameliorasi
-- Karakteristik: makna menjadi lebih tinggi/sopan
-- Faktor penyebab ameliorasi
-- Contoh perubahan makna ameliorasi
+**Materi 1.2.1 Pengenalan Perubahan Makna**
+- Mengapa makna kata bisa berubah
+- Faktor-faktor penyebab perubahan makna
+- Gambaran umum jenis perubahan makna
+- Pengaruh zaman terhadap makna kata
 
-**Materi 1.2.2: Peyorasi (Penurunan Makna)**
-- Pengertian peyorasi
-- Karakteristik: makna menjadi kurang baik
-- Faktor penyebab peyorasi
-- Contoh perubahan makna peyorasi
+**Materi 1.2.2 Ameliorasi**
+- Definisi ameliorasi
+- Makna yang meningkat/lebih sopan
+- Alasan penggunaan ameliorasi
+- Contoh-contoh perubahan makna ameliorasi
 
-**Materi 1.2.3: Perluasan Makna (Generalisasi)**
-- Pengertian perluasan makna
-- Proses makna menjadi lebih luas
-- Faktor penyebab perluasan
-- Contoh kata yang mengalami perluasan
+**Materi 1.2.3 Peyorasi**
+- Definisi peyorasi
+- Makna yang menurun/kurang baik
+- Perbedaan dengan ameliorasi
+- Contoh-contoh perubahan makna peyorasi
 
-**Materi 1.2.4: Penyempitan Makna (Spesialisasi)**
-- Pengertian penyempitan makna
-- Proses makna menjadi lebih sempit
-- Faktor penyebab penyempitan
-- Contoh kata yang mengalami penyempitan
+**Materi 1.2.4 Perluasan Makna**
+- Definisi perluasan makna
+- Cakupan makna yang meluas
+- Proses perluasan makna
+- Contoh-contoh kata yang meluas
 
-**Materi 1.2.5: Perubahan Makna Asosiasi**
-- Pengertian perubahan makna asosiasi
-- Karakteristik: muncul karena persamaan sifat
-- Proses terjadinya asosiasi
-- Contoh perubahan makna asosiasi
+**Materi 1.2.5 Penyempitan Makna**
+- Definisi penyempitan makna
+- Cakupan makna yang menyempit
+- Proses penyempitan makna
+- Contoh-contoh kata yang menyempit
 
-**Materi 1.2.6: Sinestesia**
-- Pengertian sinestesia
-- Karakteristik: pertukaran dua indra
-- Jenis-jenis sinestesia (penglihatan-pendengaran, pengecapan-pendengaran, dll)
-- Contoh penggunaan sinestesia
+**Materi 1.2.6 Asosiasi**
+- Definisi makna asosiasi
+- Persamaan sifat sebagai dasar
+- Makna baru dari makna asli
+- Contoh-contoh makna asosiasi
 
-**Materi 1.2.7: Perubahan Makna Total (baru)**
-- Pengertian perubahan makna total
-- Makna berubah sepenuhnya dari makna asli
-- Faktor penyebab perubahan total
-- Contoh kata yang mengalami perubahan total
-- Perbedaan dengan perubahan makna lainnya
-
-**Materi 1.2.8: Pergeseran Makna (baru)**
-- Pengertian pergeseran makna
-- Makna berubah secara perlahan tanpa kehilangan makna asli
-- Perbedaan dengan perubahan makna total
-- Contoh: "transmisi" dulu untuk meneruskan, kini lebih ke sistem pemindah tenaga
-
-**Materi 1.2.9: Perubahan Makna karena Faktor Sosial dan Budaya (baru)**
-- Perubahan karena tabu (pantangan)
-- Perubahan karena perkembangan teknologi
-- Perubahan karena pengaruh budaya asing
-- Contoh: "kakus" → "WC" → "toilet" → "kamar kecil"
+**Materi 1.2.7 Sinestesia**
+- Definisi sinestesia
+- Pertukaran fungsi indra
+- Cara mengenali sinestesia
+- Contoh-contoh sinestesia dalam bahasa
 
 ---
 
-## **Topik 1.3: Relasi Makna**
+### **Topik 1.3 Relasi Makna**
 
-**Materi 1.3.1: Sinonim (Persamaan Makna)**
-- Pengertian sinonim
-- Jenis sinonim: sinonim mutlak dan sinonim parsial
-- Prinsip: tidak selalu dapat saling menggantikan
-- Contoh sinonim dan konteks penggunaannya
+**Materi 1.3.1 Pengenalan Relasi Makna**
+- Pengertian relasi makna
+- Hubungan semantik antar kata
+- Gambaran umum jenis relasi makna
+- Pentingnya memahami relasi makna
 
-**Materi 1.3.2: Antonim Bertingkat (Gradual)**
-- Pengertian antonim bertingkat
-- Karakteristik: ada tingkatan/gradasi
-- Contoh: panas-hangat-dingin, sangat-agak-sedikit
+**Materi 1.3.2 Sinonim**
+- Definisi sinonim
+- Kata-kata bermakna mirip/sama
+- Kapan sinonim bisa saling menggantikan
+- Kapan sinonim tidak bisa saling menggantikan
+- Contoh-contoh sinonim
 
-**Materi 1.3.3: Antonim Komplementer (Mutlak)**
-- Pengertian antonim komplementer
-- Karakteristik: mutlak berlawanan, tidak ada gradasi
-- Contoh: hidup-mati, benar-salah, laki-laki-perempuan
+**Materi 1.3.3 Antonim**
+- Definisi antonim
+- Kata-kata bermakna berlawanan
+- Jenis-jenis antonim
+- Contoh-contoh antonim
 
-**Materi 1.3.4: Antonim Relasional (Konvers)**
-- Pengertian antonim relasional
-- Karakteristik: saling bergantung/timbal balik
-- Contoh: membeli-menjual, suami-istri, guru-murid
+**Materi 1.3.4 Homofon**
+- Definisi homofon
+- Bunyi sama, ejaan dan makna beda
+- Cara membedakan homofon
+- Contoh-contoh homofon
 
-**Materi 1.3.5: Antonim Majemuk (baru)**
-- Pengertian antonim majemuk
-- Antonim yang terdiri dari dua kata atau lebih
-- Contoh: naik daun >< turun pamor, besar hati >< kecil hati
+**Materi 1.3.5 Homograf**
+- Definisi homograf
+- Ejaan sama, lafal dan makna beda
+- Cara membedakan homograf
+- Contoh-contoh homograf
 
-**Materi 1.3.6: Homofon**
-- Pengertian homofon
-- Karakteristik: sama bunyi, beda ejaan dan makna
-- Contoh kata homofon
-
-**Materi 1.3.7: Homograf**
-- Pengertian homograf
-- Karakteristik: sama ejaan, beda lafal dan makna
-- Contoh kata homograf
-
-**Materi 1.3.8: Homonim**
-- Pengertian homonim
-- Karakteristik: sama ejaan dan lafal, beda makna
+**Materi 1.3.6 Homonim**
+- Definisi homonim
+- Ejaan dan lafal sama, makna beda
 - Perbedaan dengan homograf dan homofon
-- Contoh kata homonim
+- Contoh-contoh homonim
 
-**Materi 1.3.9: Polisemi**
-- Pengertian polisemi
-- Karakteristik: banyak makna dalam satu alur pusat
-- Perbedaan polisemi dengan homonim
-- Contoh kata polisemi (mata, kepala, buah, dll)
+**Materi 1.3.7 Polisemi**
+- Definisi polisemi
+- Satu kata, banyak makna bertalian
+- Perbedaan dengan homonim
+- Contoh-contoh polisemi
 
-**Materi 1.3.10: Hiponim dan Hipernim**
-- Pengertian hipernim (kategori umum/superordinat)
-- Pengertian hiponim (anggota kategori/subordinat)
-- Hubungan hiponim-hipernim
-- Contoh dalam berbagai kategori
+**Materi 1.3.8 Hiponim dan Hipernim (baru)**
+- Definisi hiponim dan hipernim
+- Hubungan kategori umum dan khusus
+- Cara menentukan hiponim dan hipernim
+- Contoh-contoh dalam kehidupan sehari-hari
 
-**Materi 1.3.11: Kohiponim (baru)**
-- Pengertian kohiponim
-- Hubungan antar hiponim dalam satu hipernim
-- Contoh: apel, mangga, jeruk (kohiponim dari buah)
-- Perbedaan dengan hiponim biasa
-
-**Materi 1.3.12: Taksonim**
-- Pengertian taksonim
-- Sistem klasifikasi bertingkat
-- Struktur hierarki taksonim
-- Contoh struktur taksonim
-
-**Materi 1.3.13: Meronim dan Holonim**
-- Pengertian meronim (bagian)
-- Pengertian holonim (keseluruhan)
-- Jenis-jenis meronim: tubuh-anggota, kumpulan-anggota, massa-unsur
-- Contoh hubungan meronim-holonim
-
-**Materi 1.3.14: Ekuivalensi (baru)**
-- Pengertian ekuivalensi (kesetaraan makna)
-- Perbedaan dengan sinonim
-- Ekuivalensi dalam penerjemahan
-- Contoh ekuivalensi antar bahasa atau antar ragam
-
-**Materi 1.3.15: Kolokasi (baru)**
-- Pengertian kolokasi
-- Kata-kata yang sering muncul bersama
-- Kolokasi tetap vs kolokasi bebas
-- Contoh: melakukan kesalahan (bukan "membuat kesalahan"), menunaikan janji
-
-**Materi 1.3.16: Oposisi Makna (baru)**
-- Pengertian oposisi makna
-- Berbagai jenis pertentangan makna
-- Hubungan dengan antonim
-- Contoh: vertikal-horizontal, maskulin-feminin
+**Materi 1.3.9 Meronim dan Holonim (baru)**
+- Definisi meronim dan holonim
+- Hubungan bagian dan keseluruhan
+- Jenis-jenis meronim
+- Contoh-contoh meronim dan holonim
 
 ---
 
-## **Topik 1.4: Gaya Bahasa (Majas)**
+### **Topik 1.4 Gaya Bahasa (Majas)**
 
-**Materi 1.4.1: Majas Metafora**
-- Pengertian metafora
-- Karakteristik: perbandingan langsung tanpa kata pembanding
-- Jenis: metafora implisit dan eksplisit
-- Contoh penggunaan metafora
+**Materi 1.4.1 Pengenalan Gaya Bahasa**
+- Pengertian gaya bahasa (majas)
+- Fungsi gaya bahasa dalam komunikasi
+- Gambaran umum jenis-jenis majas
+- Perbedaan bahasa biasa dan bahasa kiasan
 
-**Materi 1.4.2: Majas Simile (Perbandingan)**
-- Pengertian simile
-- Karakteristik: perbandingan dengan kata pembanding
-- Kata-kata pembanding (seperti, bagai, laksana, ibarat, bak, dll)
-- Perbedaan dengan metafora
-- Contoh penggunaan simile
+**Materi 1.4.2 Metafora**
+- Definisi metafora
+- Perbandingan dua hal berbeda
+- Cara mengenali metafora
+- Contoh-contoh metafora
 
-**Materi 1.4.3: Majas Personifikasi (baru)**
-- Pengertian personifikasi
-- Karakteristik: memberikan sifat manusia pada benda mati/hewan
-- Perbedaan dengan metafora
-- Contoh penggunaan personifikasi
-
-**Materi 1.4.4: Majas Alegori (baru)**
-- Pengertian alegori
-- Karakteristik: cerita kiasan dengan makna tersembunyi
-- Fungsi alegori dalam sastra
-- Perbedaan dengan metafora
-- Contoh penggunaan alegori
-
-**Materi 1.4.5: Majas Litotes**
-- Pengertian litotes
-- Karakteristik: merendahkan diri atau mengecilkan fakta
+**Materi 1.4.3 Litotes**
+- Definisi litotes
+- Gaya bahasa merendahkan diri
 - Tujuan penggunaan litotes
-- Contoh penggunaan litotes
+- Contoh-contoh litotes
 
-**Materi 1.4.6: Majas Hiperbola**
-- Pengertian hiperbola
-- Karakteristik: berlebihan dan tidak logis
-- Tujuan penggunaan hiperbola
-- Contoh penggunaan hiperbola
+**Materi 1.4.4 Sinekdoke**
+- Definisi sinekdoke
+- Jenis pars pro toto
+- Jenis totem pro parte
+- Contoh-contoh sinekdoke
 
-**Materi 1.4.7: Majas Ironi**
-- Pengertian ironi
-- Karakteristik: menyatakan kebalikan dari kenyataan dengan halus
-- Tujuan penggunaan ironi
-- Contoh penggunaan ironi
-
-**Materi 1.4.8: Majas Sinisme (baru)**
-- Pengertian sinisme
-- Karakteristik: sindiran kasar
-- Perbedaan dengan ironi
-- Contoh penggunaan sinisme
-
-**Materi 1.4.9: Majas Sarkasme (baru)**
-- Pengertian sarkasme
-- Karakteristik: sindiran sangat kasar dan menyakitkan
-- Perbedaan dengan sinisme dan ironi
-- Contoh penggunaan sarkasme
-
-**Materi 1.4.10: Majas Sinekdoke Pars Pro Toto**
-- Pengertian pars pro toto
-- Karakteristik: bagian mewakili keseluruhan
-- Contoh penggunaan
-
-**Materi 1.4.11: Majas Sinekdoke Totem Pro Parte**
-- Pengertian totem pro parte
-- Karakteristik: keseluruhan mewakili bagian
-- Contoh penggunaan
-
-**Materi 1.4.12: Majas Metonimia**
-- Pengertian metonimia
-- Karakteristik: penggunaan merek/ciri khas sebagai pengganti
+**Materi 1.4.5 Metonimia**
+- Definisi metonimia
+- Penggunaan merek/ciri khas
 - Perbedaan dengan sinekdoke
-- Contoh penggunaan metonimia
+- Contoh-contoh metonimia
 
-**Materi 1.4.13: Majas Eufimisme**
-- Pengertian eufimisme
-- Karakteristik: penghalusan kata
+**Materi 1.4.6 Eufimisme**
+- Definisi eufimisme
+- Penghalusan kata
 - Hubungan dengan ameliorasi
-- Tujuan penggunaan eufimisme
-- Contoh penghalusan kata
+- Contoh-contoh eufimisme
 
-**Materi 1.4.14: Majas Disfemisme (baru)**
-- Pengertian disfemisme
-- Karakteristik: pengasaran kata (kebalikan eufimisme)
-- Hubungan dengan peyorasi
-- Contoh: meninggal → mampus, buang air besar → berak
+**Materi 1.4.7 Hiperbola**
+- Definisi hiperbola
+- Pernyataan berlebihan
+- Cara mengenali hiperbola
+- Contoh-contoh hiperbola
 
-**Materi 1.4.15: Majas Antonomasia**
-- Pengertian antonomasia
-- Karakteristik: menyebut ciri khas bukan nama
-- Contoh penggunaan antonomasia
+**Materi 1.4.8 Antonomasia**
+- Definisi antonomasia
+- Penyebutan dengan ciri khas
+- Cara mengenali antonomasia
+- Contoh-contoh antonomasia
 
-**Materi 1.4.16: Majas Epitet (baru)**
-- Pengertian epitet
-- Karakteristik: julukan yang melekat pada seseorang/sesuatu
-- Perbedaan dengan antonomasia
-- Contoh: Si Kancil, Iskandar Zulkarnain, Alexander the Great
+**Materi 1.4.9 Simile (Perbandingan)**
+- Definisi simile
+- Kata pembanding dalam simile
+- Perbedaan dengan metafora
+- Contoh-contoh simile
 
-**Materi 1.4.17: Majas Paradoks (baru)**
-- Pengertian paradoks
-- Karakteristik: pernyataan bertentangan tapi mengandung kebenaran
-- Perbedaan dengan ironi
-- Contoh: "Kemiskinan di tengah kemakmuran", "Semakin banyak tahu, semakin merasa tidak tahu"
+**Materi 1.4.10 Personifikasi (baru)**
+- Definisi personifikasi
+- Memberikan sifat manusia pada benda mati
+- Cara mengenali personifikasi
+- Contoh-contoh personifikasi
 
-**Materi 1.4.18: Majas Oksimoron (baru)**
-- Pengertian oksimoron
-- Karakteristik: dua kata berlawanan dalam satu frasa
-- Perbedaan dengan paradoks
-- Contoh: "gelap terang", "pait manis", "mati rasa"
-
-**Materi 1.4.19: Majas Pleonasme (baru)**
-- Pengertian pleonasme
-- Karakteristik: penggunaan kata berlebihan tapi masih dapat diterima
-- Contoh: "turun ke bawah", "naik ke atas", "masuk ke dalam"
-
-**Materi 1.4.20: Majas Tautologi (baru)**
-- Pengertian tautologi
-- Karakteristik: pengulangan makna yang sama (pemborosan kata)
-- Perbedaan dengan pleonasme
-- Contoh: "sejak dari dulu", "saling tolong-menolong", "para hadirin sekalian"
-
-**Materi 1.4.21: Majas Klimaks (baru)**
-- Pengertian klimaks
-- Karakteristik: urutan dari rendah ke tinggi
-- Fungsi dalam kalimat
-- Contoh: "Anak-anak, remaja, dewasa, hingga orang tua hadir di acara itu"
-
-**Materi 1.4.22: Majas Antiklimaks (baru)**
-- Pengertian antiklimaks
-- Karakteristik: urutan dari tinggi ke rendah
-- Fungsi dalam kalimat
-- Contoh: "Raja, menteri, rakyat jelata semua terkena dampaknya"
-
-**Materi 1.4.23: Majas Alusio (baru)**
-- Pengertian alusio
-- Karakteristik: rujukan tidak langsung pada tokoh/peristiwa terkenal
-- Tujuan penggunaan alusio
-- Contoh: "Dia seperti Judas bagi kelompoknya" (pengkhianat)
-
-**Materi 1.4.24: Majas Repetisi (baru)**
-- Pengertian repetisi
-- Karakteristik: pengulangan kata/frasa untuk penegasan
-- Jenis: anafora, epifora, simploke
-- Contoh: "Kita harus maju, kita harus berani, kita harus bersatu"
-
-**Materi 1.4.25: Majas Paralelisme (baru)**
-- Pengertian paralelisme
-- Karakteristik: kesejajaran struktur kalimat
-- Fungsi untuk memberikan keseimbangan
-- Contoh: "Ia tidak hanya pintar, tetapi juga rajin"
-
-**Materi 1.4.26: Majas Retoris (baru)**
-- Pengertian majas retoris
-- Karakteristik: pertanyaan yang tidak memerlukan jawaban
-- Tujuan untuk penegasan
-- Contoh: "Siapa yang tidak ingin sukses?"
-
-**Materi 1.4.27: Majas Elipsis (baru)**
-- Pengertian elipsis
-- Karakteristik: penghilangan bagian kalimat yang sudah dipahami
-- Fungsi untuk efisiensi bahasa
-- Contoh: "Dia ke pasar, saya (ke) sekolah"
+**Materi 1.4.11 Ironi dan Sarkasme (baru)**
+- Definisi ironi dan sarkasme
+- Perbedaan keduanya
+- Tujuan penggunaan
+- Contoh-contoh ironi dan sarkasme
 
 ---
 
-## **Topik 1.5: Pembentukan dan Penyerapan Istilah**
+### **Topik 1.5 Pembentukan Istilah dan Nama**
 
-**Materi 1.5.1: Pengertian Istilah dan Tata Istilah**
-- Definisi istilah
-- Definisi tata istilah (terminologi)
-- Perbedaan istilah umum dan istilah khusus
-- Persyaratan istilah yang baik
+**Materi 1.5.1 Pengenalan Istilah**
+- Pengertian istilah dan tata istilah
+- Perbedaan istilah dengan kata biasa
+- Fungsi istilah dalam bidang ilmu
+- Contoh-contoh istilah
 
-**Materi 1.5.2: Sumber Istilah Bahasa Indonesia**
-- Bahasa Indonesia dan Melayu
-- Bahasa Nusantara serumpun
-- Bahasa asing (Inggris, Arab, dll)
-- Contoh dari masing-masing sumber
+**Materi 1.5.2 Istilah Umum dan Istilah Khusus**
+- Definisi istilah umum
+- Definisi istilah khusus
+- Perbedaan keduanya
+- Contoh-contoh istilah umum dan khusus
 
-**Materi 1.5.3: Penerjemahan Istilah Langsung**
-- Pengertian penerjemahan langsung
-- Pedoman penerjemahan (4 aturan utama)
-- Kesesuaian makna dan bentuk
-- Contoh penerjemahan istilah asing
+**Materi 1.5.3 Persyaratan Istilah yang Baik**
+- Kriteria istilah yang baik
+- Ketepatan makna
+- Kesederhanaan bentuk
+- Konotasi positif
+- Kesesuaian dengan kaidah bahasa
 
-**Materi 1.5.4: Penerjemahan dengan Perekaan**
-- Pengertian perekaan (penciptaan istilah baru)
-- Kapan perekaan digunakan
-- Proses perekaan
-- Contoh istilah hasil perekaan
+**Materi 1.5.4 Nama dan Tata Nama**
+- Pengertian nama dan nomenklatur
+- Fungsi tata nama
+- Penamaan dalam bidang ilmu tertentu
+- Contoh-contoh nama ilmiah
 
-**Materi 1.5.5: Penyerapan dengan Penyesuaian Ejaan dan Lafal**
-- Karakteristik: ejaan dan lafal disesuaikan
-- Aturan penyesuaian
-- Contoh: system → sistem, caramel → karamel
+**Materi 1.5.5 Bahan Istilah Bahasa Indonesia**
+- Sumber istilah bahasa Indonesia
+- Istilah dari bahasa Melayu
+- Istilah dari bahasa Nusantara
+- Istilah dari bahasa asing
 
-**Materi 1.5.6: Penyerapan dengan Penyesuaian Ejaan Tanpa Lafal**
-- Karakteristik: hanya ejaan yang disesuaikan
-- Lafal tetap seperti bahasa asli
-- Contoh: design → desain, science → sains
+**Materi 1.5.6 Pemadanan Istilah: Penerjemahan**
+- Penerjemahan langsung
+- Penerjemahan dengan perekaan
+- Pedoman penerjemahan
+- Contoh-contoh penerjemahan istilah
 
-**Materi 1.5.7: Penyerapan Tanpa Penyesuaian Ejaan dengan Penyesuaian Lafal**
-- Karakteristik: ejaan tetap, lafal disesuaikan
-- Contoh: bias, nasal, radar
+**Materi 1.5.7 Pemadanan Istilah: Penyerapan**
+- Jenis-jenis penyerapan
+- Penyerapan dengan penyesuaian
+- Penyerapan tanpa penyesuaian
+- Contoh-contoh penyerapan
 
-**Materi 1.5.8: Penyerapan Tanpa Penyesuaian (Dicetak Miring)**
-- Karakteristik: ejaan dan lafal tidak disesuaikan
-- Penulisan dengan huruf miring
-- Contoh: status quo, in vitro, ad hoc
-
-**Materi 1.5.9: Penyerapan Tanpa Penyesuaian (Dicetak Tegak/Sudah Umum)**
-- Karakteristik: sudah diterima umum
-- Penulisan dengan huruf tegak
-- Contoh: internet, orbit, email, sonar
-
-**Materi 1.5.10: Kata Serapan vs Kata Pungut (baru)**
-- Pengertian kata serapan (sudah disesuaikan sepenuhnya)
-- Pengertian kata pungut (masih menggunakan bentuk asli)
-- Perbedaan tingkat penyesuaian
-- Contoh: risiko (serapan) vs resort (pungut)
-
-**Materi 1.5.11: Akronim (baru)**
-- Pengertian akronim
-- Karakteristik: singkatan yang dibaca sebagai kata
-- Aturan penulisan akronim
-- Contoh: UNESCO, radar, tilang, pemilu
-
-**Materi 1.5.12: Singkatan (baru)**
-- Pengertian singkatan
-- Karakteristik: singkatan yang dibaca per huruf
-- Aturan penulisan singkatan
-- Contoh: KTP, TNI, DPR, SMA
-
-**Materi 1.5.13: Abreviasi (baru)**
-- Pengertian abreviasi (pemendekan kata)
-- Jenis abreviasi: kontraksi dan kependekan
-- Aturan penulisan abreviasi
-- Contoh: Dr., Sdr., hlm., dll., dsb.
-
-**Materi 1.5.14: Kata Majemuk dalam Istilah (baru)**
-- Pembentukan istilah dari kata majemuk
-- Karakteristik istilah majemuk
-- Penulisan istilah majemuk
-- Contoh: hak asasi manusia, tata bahasa, ilmu pengetahuan
-
-**Materi 1.5.15: Neologisme (baru)**
-- Pengertian neologisme (kata baru)
-- Proses munculnya kata baru
-- Faktor penyebab: teknologi, budaya, sosial
-- Contoh: gawai, daring, luring, surel, nirkabel
+**Materi 1.5.8 Pemberian Makna Baru pada Istilah**
+- Penyempitan makna istilah
+- Perluasan makna istilah
+- Proses pemberian makna baru
+- Contoh-contoh perubahan makna istilah
 
 ---
 
-**Struktur revisi final ini memberikan:**
-- **5 topik utama** yang fokus pada kategori soal
-- **68 materi** yang sangat spesifik dan fokus
-- Materi 1.1.2-1.1.6 memisahkan makna gramatikal menjadi 5 materi berbeda (imbuhan, preposisi, konjungsi, reduplikasi, pemajemukan)
-- Penambahan 28 materi baru yang relevan untuk SNBT
-- Setiap materi sangat fokus sehingga mudah dipelajari
-- Cakupan yang sangat komprehensif untuk semantik
+## **SECTION 2. SINTAKSIS**
+
+### **Topik 2.1 Frasa**
+
+**Materi 2.1.1 Pengenalan Frasa**
+- Pengertian frasa
+- Ciri-ciri frasa
+- Perbedaan frasa dengan kata dan kalimat
+- Fungsi frasa dalam kalimat
+
+**Materi 2.1.2 Frasa Ambiguitas**
+- Definisi frasa ambiguitas
+- Penyebab ambiguitas
+- Cara mengidentifikasi
+- Contoh-contoh frasa ambiguitas
+
+**Materi 2.1.3 Frasa Idiomatis**
+- Definisi frasa idiomatis
+- Makna konotasi dalam frasa
+- Perbedaan dengan frasa biasa
+- Contoh-contoh frasa idiomatis
+
+**Materi 2.1.4 Frasa Endosentris: Frasa Setara**
+- Definisi frasa endosentris
+- Ciri-ciri frasa setara
+- Kesetaraan antarunsur
+- Contoh-contoh frasa setara
+
+**Materi 2.1.5 Frasa Endosentris: Frasa Bertingkat**
+- Definisi frasa bertingkat
+- Unsur inti (D) dan penjelas (M)
+- Cara menentukan inti dan penjelas
+- Contoh-contoh frasa bertingkat
+
+**Materi 2.1.6 Frasa Eksosentris**
+- Definisi frasa eksosentris
+- Ketergantungan pada pasangan
+- Frasa dengan kata depan
+- Contoh-contoh frasa eksosentris
+
+**Materi 2.1.7 Frasa Verbal**
+- Definisi frasa verbal
+- Inti berupa kata kerja
+- Pola frasa verbal
+- Contoh-contoh frasa verbal
+
+**Materi 2.1.8 Frasa Nominal**
+- Definisi frasa nominal
+- Inti berupa kata benda
+- Pola frasa nominal
+- Contoh-contoh frasa nominal
+
+**Materi 2.1.9 Frasa Adjektiva**
+- Definisi frasa adjektiva
+- Inti berupa kata sifat
+- Pola frasa adjektiva
+- Contoh-contoh frasa adjektiva
+
+**Materi 2.1.10 Frasa Numeralia**
+- Definisi frasa numeralia
+- Inti berupa kata bilangan
+- Pola frasa numeralia
+- Contoh-contoh frasa numeralia
+
+**Materi 2.1.11 Frasa Adverbial (baru)**
+- Definisi frasa adverbial
+- Inti berupa kata keterangan
+- Pola frasa adverbial
+- Contoh-contoh frasa adverbial
+
+**Materi 2.1.12 Frasa Preposisional (baru)**
+- Definisi frasa preposisional
+- Struktur frasa preposisional
+- Fungsi dalam kalimat
+- Contoh-contoh frasa preposisional
+
+**Materi 2.1.13 Frasa Sepola/Sebentuk**
+- Definisi frasa sepola
+- Cara menentukan frasa sepola
+- Unsur dan kedudukan yang sama
+- Contoh-contoh frasa sepola
+
+**Materi 2.1.14 Frasa Semakna**
+- Definisi frasa semakna
+- Makna yang sama dengan frasa lain
+- Cara mengenali frasa semakna
+- Contoh-contoh frasa semakna
+
+---
+
+### **Topik 2.2 Kalimat Dasar**
+
+**Materi 2.2.1 Pengenalan Kalimat**
+- Pengertian kalimat
+- Ciri-ciri kalimat
+- Unsur minimal kalimat
+- Perbedaan kalimat dengan frasa
+
+**Materi 2.2.2 Kalimat Inti**
+- Definisi kalimat inti
+- Unsur subjek dan predikat
+- Cara mengubah kalimat luas menjadi kalimat inti
+- Contoh-contoh kalimat inti
+
+**Materi 2.2.3 Kalimat Transformasi**
+- Definisi kalimat transformasi
+- Perubahan bentuk dengan makna tetap
+- Jenis-jenis transformasi
+- Contoh-contoh kalimat transformasi
+
+**Materi 2.2.4 Unsur Kalimat: Subjek**
+- Definisi subjek
+- Ciri-ciri subjek
+- Cara menentukan subjek
+- Contoh-contoh subjek
+
+**Materi 2.2.5 Unsur Kalimat: Predikat**
+- Definisi predikat
+- Ciri-ciri predikat
+- Jenis-jenis predikat
+- Contoh-contoh predikat
+
+**Materi 2.2.6 Unsur Kalimat: Objek**
+- Definisi objek
+- Ciri-ciri objek
+- Perbedaan dengan pelengkap
+- Contoh-contoh objek
+
+**Materi 2.2.7 Unsur Kalimat: Pelengkap**
+- Definisi pelengkap
+- Ciri-ciri pelengkap
+- Perbedaan dengan objek
+- Contoh-contoh pelengkap
+
+**Materi 2.2.8 Unsur Kalimat: Keterangan**
+- Definisi keterangan
+- Jenis-jenis keterangan (waktu, tempat, cara, dll)
+- Posisi keterangan dalam kalimat
+- Contoh-contoh keterangan
+
+---
+
+### **Topik 2.3 Jenis Kalimat Berdasarkan Struktur**
+
+**Materi 2.3.1 Pengenalan Jenis Kalimat**
+- Klasifikasi kalimat
+- Dasar pengelompokan kalimat
+- Pentingnya memahami jenis kalimat
+- Gambaran umum jenis-jenis kalimat
+
+**Materi 2.3.2 Kalimat Aktif Transitif**
+- Definisi kalimat aktif transitif
+- Ciri-ciri kalimat aktif transitif
+- Dapat dipasifkan
+- Contoh-contoh kalimat aktif transitif
+
+**Materi 2.3.3 Kalimat Aktif Intransitif**
+- Definisi kalimat aktif intransitif
+- Ciri-ciri kalimat aktif intransitif
+- Tidak dapat dipasifkan
+- Contoh-contoh kalimat aktif intransitif
+
+**Materi 2.3.4 Kalimat Aktif Ekatransitif**
+- Definisi kalimat aktif ekatransitif
+- Memiliki satu objek tidak spesifik
+- Ciri-ciri kalimat ekatransitif
+- Contoh-contoh kalimat ekatransitif
+
+**Materi 2.3.5 Kalimat Aktif Dwitransitif**
+- Definisi kalimat aktif dwitransitif
+- Memiliki objek dan pelengkap
+- Ciri-ciri kalimat dwitransitif
+- Contoh-contoh kalimat dwitransitif
+
+**Materi 2.3.6 Kalimat Pasif Persona**
+- Definisi kalimat pasif persona
+- Subjek orang pertama/kedua
+- Predikat tanpa imbuhan
+- Contoh-contoh kalimat pasif persona
+
+**Materi 2.3.7 Kalimat Pasif Kanonis**
+- Definisi kalimat pasif kanonis
+- Subjek orang ketiga
+- Predikat berimbuhan di-
+- Contoh-contoh kalimat pasif kanonis
+
+**Materi 2.3.8 Cara Mengubah Kalimat Aktif ke Pasif (baru)**
+- Pedoman pembalik subjek dan objek
+- Perubahan imbuhan predikat
+- Aturan khusus pengubahan
+- Latihan mengubah kalimat
+
+**Materi 2.3.9 Kalimat Langsung**
+- Definisi kalimat langsung
+- Ciri-ciri kalimat langsung
+- Penggunaan tanda petik
+- Contoh-contoh kalimat langsung
+
+**Materi 2.3.10 Kalimat Tidak Langsung**
+- Definisi kalimat tidak langsung
+- Cara mengubah dari kalimat langsung
+- Penggunaan kata penghubung 'bahwa'
+- Contoh-contoh kalimat tidak langsung
+
+**Materi 2.3.11 Kalimat Lengkap dan Tidak Lengkap**
+- Definisi kalimat lengkap
+- Definisi kalimat tidak lengkap
+- Perbedaan keduanya
+- Contoh-contoh kalimat lengkap dan tidak lengkap
+
+**Materi 2.3.12 Kalimat Versi dan Inversi**
+- Definisi kalimat versi (normal)
+- Definisi kalimat inversi (tidak normal)
+- Susunan subjek dan predikat
+- Contoh-contoh kalimat versi dan inversi
+
+**Materi 2.3.13 Kalimat Verbal dan Nominal**
+- Definisi kalimat verbal
+- Definisi kalimat nominal
+- Jenis kata predikat
+- Contoh-contoh kalimat verbal dan nominal
+
+**Materi 2.3.14 Kalimat Minor dan Mayor**
+- Definisi kalimat minor
+- Definisi kalimat mayor
+- Perbedaan berdasarkan unsur
+- Contoh-contoh kalimat minor dan mayor
+
+**Materi 2.3.15 Kalimat Tunggal dan Majemuk (baru)**
+- Definisi kalimat tunggal
+- Definisi kalimat majemuk
+- Perbedaan struktur klausa
+- Contoh-contoh kalimat tunggal dan majemuk
+
+---
+
+### **Topik 2.4 Konjungsi dan Preposisi**
+
+**Materi 2.4.1 Pengenalan Kata Penghubung**
+- Pengertian kata penghubung
+- Fungsi kata penghubung dalam kalimat
+- Jenis-jenis kata penghubung
+- Perbedaan konjungsi dan preposisi
+
+**Materi 2.4.2 Konjungsi Koordinatif**
+- Definisi konjungsi koordinatif
+- Menghubungkan klausa setara
+- Jenis-jenis konjungsi koordinatif
+- Contoh-contoh penggunaan
+
+**Materi 2.4.3 Konjungsi Subordinatif: Waktu**
+- Konjungsi penanda waktu
+- Jenis-jenis konjungsi waktu
+- Fungsi dalam kalimat
+- Contoh-contoh penggunaan
+
+**Materi 2.4.4 Konjungsi Subordinatif: Sebab-Akibat**
+- Konjungsi penanda sebab
+- Konjungsi penanda akibat
+- Perbedaan keduanya
+- Contoh-contoh penggunaan
+
+**Materi 2.4.5 Konjungsi Subordinatif: Tujuan dan Syarat**
+- Konjungsi penanda tujuan
+- Konjungsi penanda syarat
+- Fungsi dalam kalimat
+- Contoh-contoh penggunaan
+
+**Materi 2.4.6 Konjungsi Subordinatif: Perlawanan dan Perbandingan**
+- Konjungsi penanda perlawanan
+- Konjungsi penanda perbandingan
+- Fungsi dalam kalimat
+- Contoh-contoh penggunaan
+
+**Materi 2.4.7 Konjungsi Antarkalimat**
+- Definisi konjungsi antarkalimat
+- Posisi di awal kalimat
+- Jenis-jenis konjungsi antarkalimat
+- Contoh-contoh penggunaan
+
+**Materi 2.4.8 Konjungsi Korelatif**
+- Definisi konjungsi korelatif
+- Konjungsi berpasangan
+- Jenis-jenis konjungsi korelatif
+- Contoh-contoh penggunaan
+
+**Materi 2.4.9 Preposisi Penanda Tempat**
+- Definisi preposisi tempat
+- Jenis-jenis preposisi tempat
+- Fungsi dalam kalimat
+- Contoh-contoh penggunaan
+
+**Materi 2.4.10 Preposisi Penanda Jarak**
+- Definisi preposisi jarak
+- Jarak tempat dan waktu
+- Pola preposisi jarak
+- Contoh-contoh penggunaan
+
+**Materi 2.4.11 Kesalahan Umum Penggunaan Konjungsi dan Preposisi (baru)**
+- Penggunaan konjungsi ganda yang salah
+- Kesalahan penempatan preposisi
+- Kata 'bahwa' yang tidak perlu
+- Tips menghindari kesalahan
+
+---
+
+## **SECTION 3. MORFOLOGI**
+
+### **Topik 3.1 Pembentukan Kata**
+
+**Materi 3.1.1 Pengenalan Morfologi**
+- Pengertian morfologi
+- Konsep kata dasar dan kata berimbuhan
+- Pentingnya memahami morfologi
+- Gambaran umum proses pembentukan kata
+
+**Materi 3.1.2 Kata Dasar (baru)**
+- Definisi kata dasar
+- Ciri-ciri kata dasar
+- Kata dasar vs kata berimbuhan
+- Contoh-contoh kata dasar
+
+**Materi 3.1.3 Penulisan Imbuhan dan Bentuk Terikat**
+- Aturan penulisan imbuhan
+- Penulisan bentuk terikat
+- Imbuhan dari unsur asing
+- Aturan khusus penulisan
+
+**Materi 3.1.4 Pengertian Afiks**
+- Definisi afiks
+- Fungsi afiks dalam pembentukan kata
+- Jenis-jenis afiks
+- Perubahan makna karena afiks
+
+---
+
+### **Topik 3.2 Jenis-Jenis Afiks**
+
+**Materi 3.2.1 Pengenalan Jenis Afiks**
+- Klasifikasi afiks
+- Perbedaan prefiks, infiks, sufiks, konfiks
+- Posisi afiks dalam kata
+- Gambaran umum fungsi masing-masing afiks
+
+**Materi 3.2.2 Prefiks Me(N)-: Bentuk dan Aturan Luluh**
+- Variasi bentuk me(N)-
+- Aturan peluluhan huruf
+- Kata dasar satu suku kata
+- Contoh-contoh pembentukan
+
+**Materi 3.2.3 Prefiks Ber-: Bentuk dan Makna**
+- Variasi bentuk ber-
+- Perubahan menjadi be-
+- Perubahan menjadi bel-
+- Makna-makna prefiks ber-
+
+**Materi 3.2.4 Prefiks Me(N)- untuk Kata Kerja (baru)**
+- Pembentukan kata kerja transitif
+- Pembentukan kata kerja intransitif
+- Perbedaan fungsi
+- Contoh-contoh penggunaan
+
+**Materi 3.2.5 Konfiks Me(N)-kan**
+- Pembentukan kata dengan -kan
+- Makna-makna konfiks me(N)-kan
+- Perbedaan me(N)-kan dengan me(N)-i
+- Contoh-contoh penggunaan
+
+**Materi 3.2.6 Konfiks Me(N)-i**
+- Pembentukan kata dengan -i
+- Makna-makna konfiks me(N)-i
+- Kapan menggunakan -i atau -kan
+- Contoh-contoh penggunaan
+
+**Materi 3.2.7 Konfiks Pe(N)-an**
+- Pembentukan kata benda
+- Makna-makna konfiks pe(N)-an
+- Fungsi dalam kalimat
+- Contoh-contoh penggunaan
+
+**Materi 3.2.8 Konfiks Pe(R)-an**
+- Pembentukan kata benda
+- Makna-makna konfiks pe(R)-an
+- Perbedaan dengan pe(N)-an
+- Contoh-contoh penggunaan
+
+**Materi 3.2.9 Konfiks Ke-an**
+- Pembentukan kata benda/sifat
+- Makna-makna konfiks ke-an
+- Fungsi dalam kalimat
+- Contoh-contoh penggunaan
+
+**Materi 3.2.10 Infiks (Sisipan)**
+- Definisi infiks
+- Jenis-jenis infiks (-el-, -em-, -er-)
+- Posisi di tengah kata
+- Contoh-contoh penggunaan
+
+**Materi 3.2.11 Sufiks (Akhiran)**
+- Definisi sufiks
+- Jenis-jenis sufiks
+- Fungsi sufiks dalam pembentukan kata
+- Contoh-contoh penggunaan
+
+**Materi 3.2.12 Prefiks Ter- (baru)**
+- Variasi bentuk ter-
+- Makna-makna prefiks ter-
+- Pembentukan kata sifat dan kata kerja
+- Contoh-contoh penggunaan
+
+**Materi 3.2.13 Prefiks Se- (baru)**
+- Fungsi prefiks se-
+- Makna-makna prefiks se-
+- Pembentukan kata
+- Contoh-contoh penggunaan
+
+**Materi 3.2.14 Prefiks Pe(N)- (baru)**
+- Pembentukan kata benda pelaku
+- Pembentukan kata benda alat
+- Perbedaan dengan konfiks pe(N)-an
+- Contoh-contoh penggunaan
+
+---
+
+### **Topik 3.3 Kata Ulang (Reduplikasi)**
+
+**Materi 3.3.1 Pengenalan Kata Ulang**
+- Pengertian kata ulang
+- Fungsi reduplikasi dalam bahasa
+- Klasifikasi kata ulang
+- Pentingnya memahami kata ulang
+
+**Materi 3.3.2 Dwilingga (Pengulangan Utuh)**
+- Definisi dwilingga
+- Kata diulang tanpa perubahan
+- Fungsi dwilingga
+- Contoh-contoh dwilingga
+
+**Materi 3.3.3 Dwilingga Salin Suara**
+- Definisi dwilingga salin suara
+- Perubahan bunyi vokal/konsonan
+- Pola perubahan bunyi
+- Contoh-contoh dwilingga salin suara
+
+**Materi 3.3.4 Dwipurwa (Pengulangan Suku Awal)**
+- Definisi dwipurwa
+- Pengulangan suku pertama
+- Fungsi dwipurwa
+- Contoh-contoh dwipurwa
+
+**Materi 3.3.5 Kata Ulang Berimbuhan**
+- Pengulangan dengan imbuhan
+- Pola pengulangan berimbuhan
+- Fungsi dalam kalimat
+- Contoh-contoh kata ulang berimbuhan
+
+**Materi 3.3.6 Kata Ulang Semu**
+- Definisi kata ulang semu
+- Kata yang sudah menjadi nama
+- Tidak dapat dipisahkan
+- Contoh-contoh kata ulang semu
+
+**Materi 3.3.7 Makna Kata Ulang: Intensitas**
+- Makna kualitatif
+- Makna kuantitatif
+- Makna variatif
+- Makna frekuentatif
+
+**Materi 3.3.8 Makna Kata Ulang: Lainnya**
+- Makna serba
+- Makna menyerupai
+- Makna menyatakan hal
+- Makna agak dan saling
+
+---
+
+### **Topik 3.4 Kata Majemuk (baru)**
+
+**Materi 3.4.1 Pengenalan Kata Majemuk**
+- Pengertian kata majemuk
+- Perbedaan kata majemuk dengan frasa
+- Ciri-ciri kata majemuk
+- Contoh-contoh kata majemuk
+
+**Materi 3.4.2 Jenis-Jenis Kata Majemuk (baru)**
+- Kata majemuk setara
+- Kata majemuk bertingkat
+- Kata majemuk idiomatis
+- Contoh-contoh masing-masing jenis
+
+**Materi 3.4.3 Penulisan Kata Majemuk (baru)**
+- Aturan penulisan kata majemuk
+- Kapan ditulis serangkai
+- Kapan ditulis terpisah
+- Kapan menggunakan tanda hubung
+
+---
+
+## **SECTION 4. PARAGRAF**
+
+### **Topik 4.1 Struktur Paragraf**
+
+**Materi 4.1.1 Pengenalan Paragraf**
+- Pengertian paragraf
+- Fungsi paragraf dalam teks
+- Unsur-unsur paragraf
+- Perbedaan kalimat dan paragraf
+
+**Materi 4.1.2 Kalimat Utama**
+- Definisi kalimat utama
+- Ciri-ciri kalimat utama
+- Cara menentukan kalimat utama
+- Contoh-contoh kalimat utama
+
+**Materi 4.1.3 Kalimat Penjelas (baru)**
+- Definisi kalimat penjelas
+- Fungsi kalimat penjelas
+- Hubungan dengan kalimat utama
+- Contoh-contoh kalimat penjelas
+
+**Materi 4.1.4 Ide Pokok/Gagasan Utama**
+- Definisi ide pokok
+- Perbedaan ide pokok dengan kalimat utama
+- Cara menemukan ide pokok
+- Contoh-contoh ide pokok
+
+**Materi 4.1.5 Koherensi dalam Paragraf**
+- Definisi koherensi
+- Keterkaitan makna antarkalimat
+- Cara menciptakan koherensi
+- Contoh paragraf berkoherensi
+
+**Materi 4.1.6 Kohesi dalam Paragraf**
+- Definisi kohesi
+- Alat kohesi dalam paragraf
+- Penggunaan kata ganti, repetisi, konjungsi
+- Contoh paragraf berkohesi
+
+---
+
+### **Topik 4.2 Jenis Paragraf Berdasarkan Letak Ide Pokok**
+
+**Materi 4.2.1 Pengenalan Jenis Paragraf**
+- Klasifikasi berdasarkan letak ide pokok
+- Pentingnya memahami jenis paragraf
+- Cara menentukan jenis paragraf
+- Gambaran umum pola paragraf
+
+**Materi 4.2.2 Paragraf Deduktif**
+- Definisi paragraf deduktif
+- Ide pokok di awal paragraf
+- Struktur paragraf deduktif
+- Contoh-contoh paragraf deduktif
+
+**Materi 4.2.3 Paragraf Induktif**
+- Definisi paragraf induktif
+- Ide pokok di akhir paragraf
+- Struktur paragraf induktif
+- Contoh-contoh paragraf induktif
+
+**Materi 4.2.4 Paragraf Campuran (Deduktif-Induktif)**
+- Definisi paragraf campuran
+- Ide pokok di awal dan akhir
+- Struktur paragraf campuran
+- Contoh-contoh paragraf campuran
+
+**Materi 4.2.5 Paragraf Deskriptif dan Naratif**
+- Paragraf tanpa kalimat utama tunggal
+- Ide pokok tersebar
+- Ciri-ciri paragraf jenis ini
+- Contoh-contoh paragraf deskriptif/naratif
+
+---
+
+### **Topik 4.3 Jenis Paragraf Berdasarkan Teknik Pemaparan**
+
+**Materi 4.3.1 Pengenalan Teknik Pemaparan**
+- Klasifikasi berdasarkan tujuan
+- Perbedaan teknik pemaparan
+- Pemilihan teknik yang tepat
+- Gambaran umum jenis-jenis paragraf
+
+**Materi 4.3.2 Paragraf Narasi**
+- Definisi paragraf narasi
+- Ciri-ciri paragraf narasi
+- Unsur-unsur narasi
+- Contoh-contoh paragraf narasi
+
+**Materi 4.3.3 Paragraf Deskripsi**
+- Definisi paragraf deskripsi
+- Ciri-ciri paragraf deskripsi
+- Objek deskripsi
+- Contoh-contoh paragraf deskripsi
+
+**Materi 4.3.4 Paragraf Argumentasi**
+- Definisi paragraf argumentasi
+- Ciri-ciri paragraf argumentasi
+- Struktur argumentasi
+- Contoh-contoh paragraf argumentasi
+
+**Materi 4.3.5 Paragraf Persuasi**
+- Definisi paragraf persuasi
+- Ciri-ciri paragraf persuasi
+- Teknik membujuk pembaca
+- Contoh-contoh paragraf persuasi
+
+**Materi 4.3.6 Paragraf Eksposisi**
+- Definisi paragraf eksposisi
+- Ciri-ciri paragraf eksposisi
+- Tujuan menginformasikan
+- Contoh-contoh paragraf eksposisi
+
+**Materi 4.3.7 Paragraf Prosedur (baru)**
+- Definisi paragraf prosedur
+- Ciri-ciri paragraf prosedur
+- Struktur langkah-langkah
+- Contoh-contoh paragraf prosedur
+
+---
+
+### **Topik 4.4 Simpulan dan Ringkasan**
+
+**Materi 4.4.1 Pengenalan Simpulan**
+- Pengertian kesimpulan
+- Fungsi kesimpulan dalam teks
+- Perbedaan simpulan dengan ide pokok
+- Cara membuat kesimpulan yang baik
+
+**Materi 4.4.2 Cara Menentukan Kesimpulan**
+- Membaca keseluruhan teks
+- Mencari kata dominan
+- Memilih pernyataan mencakup keseluruhan
+- Latihan menentukan kesimpulan
+
+**Materi 4.4.3 Simpulan Paragraf Tunggal (baru)**
+- Menyimpulkan satu paragraf
+- Mengambil inti dari ide pokok
+- Teknik merumuskan simpulan
+- Contoh-contoh simpulan paragraf
+
+**Materi 4.4.4 Simpulan Beberapa Paragraf/Teks (baru)**
+- Menyimpulkan teks panjang
+- Menggabungkan ide pokok beberapa paragraf
+- Menyusun simpulan menyeluruh
+- Contoh-contoh simpulan teks
+
+**Materi 4.4.5 Perbedaan Simpulan dan Ringkasan (baru)**
+- Definisi ringkasan
+- Perbedaan simpulan dan ringkasan
+- Kapan membuat simpulan vs ringkasan
+- Contoh-contoh keduanya
+
+**Materi 4.4.6 Cara Membuat Ringkasan (baru)**
+- Langkah-langkah membuat ringkasan
+- Menentukan poin-poin penting
+- Menyusun kembali dengan bahasa sendiri
+- Latihan membuat ringkasan
+
+---
+
+### **CATATAN PENTING:**
+
+✅ **Total Materi:** ~130+ materi  
+✅ **Materi Baru:** 31 materi tambahan (ditandai **baru**)  
+✅ **Struktur:** Setiap topik dimulai dengan materi pengenalan sebagai preview gratis  
+✅ **Fokus:** Setiap materi membahas satu konsep spesifik  
+✅ **Urutan:** Disusun dari dasar ke lanjutan secara logis  
+✅ **Kelengkapan:** Materi tambahan melengkapi celah yang belum tercover
