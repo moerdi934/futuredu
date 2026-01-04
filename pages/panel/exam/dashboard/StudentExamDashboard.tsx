@@ -11,6 +11,7 @@ import Overview from './Overview';
 import Progress from './Progress';
 import TopicAnalysis from './TopicAnalysis';
 import Achievement from './Achievement';
+import TargetProdiAnalysisComponent from './TargetProdiAnalysis';
 
 // Type definitions (sesuaikan dengan response API)
 interface LearningInsight {
@@ -67,6 +68,27 @@ interface RecentResult {
 interface CompetitiveAnalysis {
   name: string;
   score: number;
+}
+
+interface TargetProdiAnalysis {
+  prodi_id: number;
+  nama_prodi: string;
+  nama_ptn: string;
+  user_score: number;
+  user_rank: number;
+  total_bimbel_participants: number;
+  peminat: number | null;
+  daya_tampung: number | null;
+  safe_zone_rank: number | null;
+  min_score_reference: number | null;
+  max_score_reference: number | null;
+  average_score_reference: number | null;
+  has_historical_data: boolean;
+  status: 'Aman' | 'Perlu Ditingkatkan' | 'Tidak Aman' | 'No Historical Data';
+  score_gap_to_minimum: number | null;
+  score_gap_to_average: number | null;
+  competition_ratio: number | null;
+  status_message: string;
 }
 
 interface ProgressDetail {

@@ -9,8 +9,15 @@ import {
   getTopicData,
   getUserGlobalData,
   getCompetitiveAnalysis,
+  getCompetitiveAnalysisWithHistory,
+  getRecommendedPrograms,
   checkExamDataAvailability,
-  formatToTwoDecimals
+  formatToTwoDecimals,
+  getPassingProbabilityWithDetails
+} from '../models/dashboard.model';
+import type { 
+  RecommendedProgram as RecommendedProgramModel,
+  PassingProbabilityDetail
 } from '../models/dashboard.model';
 
 // ========== TYPES ==========
@@ -72,6 +79,27 @@ export interface CompetitiveAnalysisData {
   score: number;
 }
 
+export interface TargetProdiAnalysis {
+  prodi_id: number;
+  nama_prodi: string;
+  nama_ptn: string;
+  user_score: number;
+  user_rank: number;
+  total_bimbel_participants: number;
+  peminat: number | null;
+  daya_tampung: number | null;
+  safe_zone_rank: number | null;
+  min_score_reference: number | null;
+  max_score_reference: number | null;
+  average_score_reference: number | null;
+  has_historical_data: boolean;
+  status: 'Aman' | 'Perlu Ditingkatkan' | 'Tidak Aman' | 'No Historical Data';
+  score_gap_to_minimum: number | null;
+  score_gap_to_average: number | null;
+  competition_ratio: number | null;
+  status_message: string;
+}
+
 export interface LearningInsight {
   insight: string;
   type: 'positive' | 'negative';
@@ -96,9 +124,20 @@ export interface RecommendedResource {
 
 export interface RecommendedProgram {
   program: string;
+  university: string;
   match: number;
   minScore: number;
+  maxScore: number | null;
+  averageScore: number | null;
   requirement: string;
+  scoreGap: number;
+  competitionRatio: number | null;
+  akreditasi: string;
+  jenjang: string;
+  targetChoice: number | null;
+  targetProdi: string | null;
+  targetUniversity: string | null;
+  recommendationType: 'similarity' | 'same_university';
 }
 
 export interface NextGoal {
@@ -156,6 +195,7 @@ export interface ExamDashboardData {
   percentileRank?: number;
   totalParticipants?: number;
   probabilitasKelulusan?: number | null;
+  probabilitasKelulusanDetails?: PassingProbabilityDetail[];
   subjectPerformance?: SubjectPerformanceData[];
   weeklyProgress?: WeekData[];
   recentResults?: RecentResultData[];
@@ -163,6 +203,7 @@ export interface ExamDashboardData {
   progressDetail?: ProgressDetailData[];
   topicData?: { [key: string]: TopicDataItem[] };
   competitiveAnalysis?: CompetitiveAnalysisData[];
+  targetProdiAnalysis?: TargetProdiAnalysis[];
   nextGoal?: NextGoal;
   learningInsights?: LearningInsight[];
   achievements?: Achievement[];
@@ -369,51 +410,100 @@ function generateRecommendedResources(
 }
 
 /**
- * Generate recommended programs based on exam type and score
+ * Get recommended programs based on user score from materialized view
+ * Returns two blocks: top 5 by score gap and top 5 by competition ratio
  */
-function generateRecommendedPrograms(
+async function fetchRecommendedPrograms(
+  user_id: number,
   examType: string,
   averageScore: number,
   maxScore: number
-): RecommendedProgram[] {
-  const programsMap: { [key: string]: RecommendedProgram[] } = {
-    'SNBT Exam': [
-      { program: 'Kedokteran UI', match: 82, minScore: 700, requirement: 'SNBT + SIMAK FK' },
-      { program: 'Teknik Informatika ITB', match: 78, minScore: 680, requirement: 'SNBT' },
-      { program: 'Psikologi UGM', match: 87, minScore: 650, requirement: 'SNBT' },
-      { program: 'Hukum UNAIR', match: 90, minScore: 630, requirement: 'SNBT' }
-    ],
-    'SIMAK UI': [
-      { program: 'Ilmu Ekonomi UI', match: 87, minScore: 750, requirement: 'SIMAK Utama' },
-      { program: 'Kedokteran UGM', match: 75, minScore: 800, requirement: 'SIMAK + Tes Fakultas' },
-      { program: 'Hubungan Internasional UNPAD', match: 92, minScore: 720, requirement: 'SIMAK Soshum' },
-      { program: 'Teknik Kimia ITB', match: 78, minScore: 760, requirement: 'SIMAK Saintek' }
-    ],
-    'CPNS Exam': [
-      { program: 'Kementerian Keuangan - Analis Kebijakan', match: 85, minScore: 350, requirement: 'Tes SKD + SKB' },
-      { program: 'Kementerian Pendidikan - Pengelola Keuangan', match: 82, minScore: 340, requirement: 'Tes SKD' },
-      { program: 'BKN - Analis SDM Aparatur', match: 78, minScore: 345, requirement: 'Tes SKD + Wawancara' },
-      { program: 'Pemerintah Kota - Pengelola Pengadaan', match: 87, minScore: 335, requirement: 'Tes SKD + Praktik' }
-    ]
-  };
+): Promise<RecommendedProgram[]> {
+  try {
+    console.log(`[DEBUG fetchRecommendedPrograms] Starting for user ${user_id}, examType: "${examType}"`);
+    
+    // Only fetch for SNBT Exam
+    if (!examType.includes('SNBT')) {
+      console.log(`[DEBUG fetchRecommendedPrograms] ExamType doesn't include SNBT, returning empty`);
+      return [];
+    }
 
-  const programs = programsMap[examType] || [];
-  
-  // Adjust match percentage based on user's average score relative to max score
-  return programs.map(program => {
-    // Calculate score percentage relative to max_score
-    const scorePercentage = maxScore > 0 ? (averageScore / maxScore) * 100 : 0;
-    const targetPercentage = maxScore > 0 ? (program.minScore / maxScore) * 100 : 0;
+    console.log(`[DEBUG fetchRecommendedPrograms] Calling getRecommendedPrograms with limit 100...`);
+    const recommendedData = await getRecommendedPrograms(user_id, examType, 100);
     
-    // Calculate match based on how close user is to target
-    let match = Math.round((scorePercentage / targetPercentage) * 100);
-    match = Math.min(match, 100); // Cap at 100
+    console.log(`[DEBUG fetchRecommendedPrograms] Fetched recommendations for user ${user_id}:`, {
+      byScoreGapCount: recommendedData.byScoreGap.length,
+      byCompetitionCount: recommendedData.byCompetition.length,
+      byScoreGapData: recommendedData.byScoreGap,
+      byCompetitionData: recommendedData.byCompetition
+    });
     
-    return {
-      ...program,
-      match
-    };
-  });
+    // Combine both lists and format
+    const allPrograms: RecommendedProgram[] = [];
+    
+    // Add "Top 25 by Score Gap" programs (includes both similarity and same_university types)
+    recommendedData.byScoreGap.forEach((item: RecommendedProgramModel) => {
+      const matchPercentage = Math.round(item.similarity_score);
+      
+      allPrograms.push({
+        program: item.nama_prodi,
+        university: item.nama_pt || item.nama_singkat,
+        match: matchPercentage,
+        minScore: item.min_score_prev,
+        maxScore: item.max_score_prev || null,
+        averageScore: item.average_score_prev || null,
+        requirement: 'SNBT',
+        scoreGap: item.score_gap,
+        competitionRatio: item.competition_ratio,
+        akreditasi: item.akreditasi,
+        jenjang: item.jenjang_prodi,
+        targetChoice: item.target_choice_number,
+        targetProdi: item.target_prodi_name,
+        targetUniversity: item.target_university_name,
+        recommendationType: item.recommendation_type
+      });
+    });
+    
+    // Add "Top 25 by Competition" programs (avoid duplicates by prodi_id + university)
+    recommendedData.byCompetition.forEach((item: RecommendedProgramModel) => {
+      const exists = allPrograms.find(p => 
+        p.program === item.nama_prodi && 
+        p.university === (item.nama_pt || item.nama_singkat)
+      );
+      if (!exists) {
+        const matchPercentage = Math.round(item.similarity_score);
+        
+        allPrograms.push({
+          program: item.nama_prodi,
+          university: item.nama_pt || item.nama_singkat,
+          match: matchPercentage,
+          minScore: item.min_score_prev,
+          maxScore: item.max_score_prev || null,
+          averageScore: item.average_score_prev || null,
+          requirement: 'SNBT',
+          scoreGap: item.score_gap,
+          competitionRatio: item.competition_ratio,
+          akreditasi: item.akreditasi,
+          jenjang: item.jenjang_prodi,
+          targetChoice: item.target_choice_number,
+          targetProdi: item.target_prodi_name,
+          targetUniversity: item.target_university_name,
+          recommendationType: item.recommendation_type
+        });
+      }
+    });
+
+    // Return all recommendations (frontend will handle display limit)
+    const finalResults = allPrograms;
+    
+    console.log(`[DEBUG fetchRecommendedPrograms] Final recommendations count: ${finalResults.length}`, finalResults);
+    
+    return finalResults;
+  } catch (error) {
+    console.error('[ERROR fetchRecommendedPrograms] Error fetching recommended programs:', error);
+    console.error('[ERROR fetchRecommendedPrograms] Stack trace:', error instanceof Error ? error.stack : 'No stack');
+    return [];
+  }
 }
 
 /**
@@ -703,6 +793,13 @@ async function processExamType(user_id: number, examType: string): Promise<ExamD
   try {
     console.log(`Processing exam type: ${examType}`);
     
+    // Get product_type_id for this exam type
+    const productTypeResult = await pool.query(
+      `SELECT id FROM product_type WHERE description = $1 LIMIT 1`,
+      [examType]
+    );
+    const productTypeId = productTypeResult.rows[0]?.id;
+    
     // Fetch all exam data in parallel using model functions with materialized views
     const [
       subjectPerformanceRaw,
@@ -712,6 +809,7 @@ async function processExamType(user_id: number, examType: string): Promise<ExamD
       topicDataRaw,
       globalData,
       competitiveAnalysisRaw,
+      competitiveAnalysisWithHistoryRaw,
       totalCompleted,
       studyTime
     ] = await Promise.all([
@@ -722,6 +820,7 @@ async function processExamType(user_id: number, examType: string): Promise<ExamD
       getTopicData(user_id, examType),
       getUserGlobalData(user_id, examType),
       getCompetitiveAnalysis(user_id, examType),
+      getCompetitiveAnalysisWithHistory(user_id, examType),
       getTotalCompletedExams(user_id, examType),
       getStudyTime(user_id, examType)
     ]);
@@ -813,6 +912,44 @@ const recentResultsData: RecentResultData[] = recentResultsRaw
       { name: "Rata-rata", score: formatToTwoDecimals(competitiveAnalysisRaw.average_score) },
     ] : [];
 
+    // Target Prodi Analysis with Historical Data
+    const targetProdiAnalysisData: TargetProdiAnalysis[] = competitiveAnalysisWithHistoryRaw.map(item => {
+      // Generate status message based on status
+      let statusMessage = '';
+      if (item.status === 'No Historical Data') {
+        statusMessage = 'Data historis belum tersedia. Target ini baru atau belum ada data tahun sebelumnya.';
+      } else if (item.status === 'Aman') {
+        statusMessage = `Selamat! Kamu berada di posisi aman (rank ${item.user_rank} dari ${item.safe_zone_rank} safe zone). Score kamu ${formatToTwoDecimals(item.user_score)} sudah di atas minimum ${formatToTwoDecimals(item.min_score_prev || 0)}.`;
+      } else if (item.status === 'Perlu Ditingkatkan') {
+        const gapToMin = item.score_gap_to_minimum || 0;
+        statusMessage = `Score kamu sudah di atas minimum (${formatToTwoDecimals(item.min_score_prev || 0)}), namun ranking perlu ditingkatkan. Kamu di rank ${item.user_rank}, target safe zone: ${item.safe_zone_rank}.`;
+      } else { // Tidak Aman
+        const gapToMin = item.score_gap_to_minimum || 0;
+        statusMessage = `Perlu peningkatan! Score kamu (${formatToTwoDecimals(item.user_score)}) masih ${formatToTwoDecimals(gapToMin)} poin di bawah minimum tahun lalu (${formatToTwoDecimals(item.min_score_prev || 0)}).`;
+      }
+
+      return {
+        prodi_id: item.prodi_id,
+        nama_prodi: item.nama_prodi_dikbud,
+        nama_ptn: item.nama_ptn_dikbud,
+        user_score: formatToTwoDecimals(item.user_score),
+        user_rank: item.user_rank,
+        total_bimbel_participants: item.total_bimbel_participants,
+        peminat: item.peminat_current,
+        daya_tampung: item.daya_tampung_current,
+        safe_zone_rank: item.safe_zone_rank,
+        min_score_reference: item.min_score_prev ? formatToTwoDecimals(item.min_score_prev) : null,
+        max_score_reference: item.max_score_prev ? formatToTwoDecimals(item.max_score_prev) : null,
+        average_score_reference: item.average_score_prev ? formatToTwoDecimals(item.average_score_prev) : null,
+        has_historical_data: item.has_prev_year_data === 1,
+        status: item.status,
+        score_gap_to_minimum: item.score_gap_to_minimum ? formatToTwoDecimals(item.score_gap_to_minimum) : null,
+        score_gap_to_average: item.score_gap_to_average ? formatToTwoDecimals(item.score_gap_to_average) : null,
+        competition_ratio: item.competition_ratio ? formatToTwoDecimals(item.competition_ratio) : null,
+        status_message: statusMessage
+      };
+    });
+
     // Calculate average score
     const averageScore = globalData?.avg_score_now || 0;
 
@@ -834,16 +971,16 @@ const recentResultsData: RecentResultData[] = recentResultsRaw
 
     const recommendedResources = generateRecommendedResources(topicData);
     
-    const recommendedPrograms = generateRecommendedPrograms(examType, averageScore, maxScore);
+    const recommendedPrograms = await fetchRecommendedPrograms(user_id, examType, averageScore, maxScore);
     
     const nextGoal = generateNextGoal(examType, averageScore, maxScore);
     
-    const probabilitasKelulusan = calculateProbabilityOfPassing(
-      examType,
-      averageScore,
-      maxScore,
-      globalData?.percentile
-    );
+    // Get passing probability with details per target choice
+    const passingProbabilityData = productTypeId 
+      ? await getPassingProbabilityWithDetails(user_id, productTypeId)
+      : { overall_probability: 0, details: [] };
+    
+    const probabilitasKelulusan = passingProbabilityData.overall_probability;
 
     return {
       examType,
@@ -863,6 +1000,7 @@ const recentResultsData: RecentResultData[] = recentResultsRaw
       percentileRank: globalData?.percentile ? formatToTwoDecimals(globalData.percentile) : undefined,
       totalParticipants: globalData?.total_participants || undefined,
       probabilitasKelulusan,
+      probabilitasKelulusanDetails: passingProbabilityData.details,
       subjectPerformance: subjectPerformanceData,
       weeklyProgress: weeklyProgressData,
       recentResults: recentResultsData,
@@ -870,6 +1008,7 @@ const recentResultsData: RecentResultData[] = recentResultsRaw
       progressDetail: progressDetailData,
       topicData,
       competitiveAnalysis: competitiveAnalysisData,
+      targetProdiAnalysis: targetProdiAnalysisData,
       nextGoal,
       learningInsights,
       achievements,
@@ -964,5 +1103,72 @@ export async function getStudentDashboard(
     }
     
     res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// ========== COMPETITIVE ANALYSIS WITH HISTORY ENDPOINT ==========
+export async function getCompetitiveAnalysisWithHistoryController(
+  req: AuthenticatedRequest,
+  res: NextApiResponse
+) {
+  const user_id = parseInt(req.user!.id);
+  const { examType } = req.query;
+
+  if (!user_id || isNaN(user_id)) {
+    return res.status(400).json({ error: 'Valid user_id is required' });
+  }
+
+  if (!examType || typeof examType !== 'string') {
+    return res.status(400).json({ error: 'examType is required' });
+  }
+
+  try {
+    const analysisData = await getCompetitiveAnalysisWithHistory(user_id, examType);
+    
+    const formattedData: TargetProdiAnalysis[] = analysisData.map(item => {
+      let statusMessage = '';
+      if (item.status === 'No Historical Data') {
+        statusMessage = 'Data historis belum tersedia. Target ini baru atau belum ada data tahun sebelumnya.';
+      } else if (item.status === 'Aman') {
+        statusMessage = `Selamat! Kamu berada di posisi aman (rank ${item.user_rank} dari ${item.safe_zone_rank} safe zone). Score kamu ${formatToTwoDecimals(item.user_score)} sudah di atas minimum ${formatToTwoDecimals(item.min_score_prev || 0)}.`;
+      } else if (item.status === 'Perlu Ditingkatkan') {
+        statusMessage = `Score kamu sudah di atas minimum (${formatToTwoDecimals(item.min_score_prev || 0)}), namun ranking perlu ditingkatkan. Kamu di rank ${item.user_rank}, target safe zone: ${item.safe_zone_rank}.`;
+      } else {
+        const gapToMin = item.score_gap_to_minimum || 0;
+        statusMessage = `Perlu peningkatan! Score kamu (${formatToTwoDecimals(item.user_score)}) masih ${formatToTwoDecimals(gapToMin)} poin di bawah minimum tahun lalu (${formatToTwoDecimals(item.min_score_prev || 0)}).`;
+      }
+
+      return {
+        prodi_id: item.prodi_id,
+        nama_prodi: item.nama_prodi_dikbud,
+        nama_ptn: item.nama_ptn_dikbud,
+        user_score: formatToTwoDecimals(item.user_score),
+        user_rank: item.user_rank,
+        total_bimbel_participants: item.total_bimbel_participants,
+        peminat: item.peminat_current,
+        daya_tampung: item.daya_tampung_current,
+        safe_zone_rank: item.safe_zone_rank,
+        min_score_reference: item.min_score_prev ? formatToTwoDecimals(item.min_score_prev) : null,
+        max_score_reference: item.max_score_prev ? formatToTwoDecimals(item.max_score_prev) : null,
+        average_score_reference: item.average_score_prev ? formatToTwoDecimals(item.average_score_prev) : null,
+        has_historical_data: item.has_prev_year_data === 1,
+        status: item.status,
+        score_gap_to_minimum: item.score_gap_to_minimum ? formatToTwoDecimals(item.score_gap_to_minimum) : null,
+        score_gap_to_average: item.score_gap_to_average ? formatToTwoDecimals(item.score_gap_to_average) : null,
+        competition_ratio: item.competition_ratio ? formatToTwoDecimals(item.competition_ratio) : null,
+        status_message: statusMessage
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      data: formattedData
+    });
+  } catch (error) {
+    console.error('Error in getCompetitiveAnalysisWithHistory:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to fetch competitive analysis with history' 
+    });
   }
 }

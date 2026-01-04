@@ -6,7 +6,7 @@ import { Row, Col, Card, Button, ProgressBar } from 'react-bootstrap';
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, LineChart, Line, 
   BarChart, Bar, Cell, PieChart, Pie, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
   ResponsiveContainer } from 'recharts';
-import { Medal, Target, Award, Book, Activity, BookOpen, Briefcase, Library } from 'lucide-react';
+import { Medal, Target, Award, Book, Activity, BookOpen, Briefcase, Library, TrendingUp, Users } from 'lucide-react';
 
 // Type definitions
 interface TopicData {
@@ -40,9 +40,20 @@ interface ProgressDetail {
 
 interface RecommendedProgram {
   program: string;
+  university: string;
   match: number;
   minScore: number;
+  maxScore: number | null;
+  averageScore: number | null;
   requirement: string;
+  scoreGap: number;
+  competitionRatio: number | null;
+  akreditasi: string;
+  jenjang: string;
+  targetChoice: number | null;
+  targetProdi: string | null;
+  targetUniversity: string | null;
+  recommendationType: 'similarity' | 'same_university';
 }
 
 interface RecommendedResource {
@@ -55,10 +66,20 @@ interface RecommendedResource {
   pages?: number;
 }
 
+interface PassingProbabilityDetail {
+  choice_number: number;
+  prodi_name: string;
+  university_name: string;
+  min_score_prev: number;
+  user_score: number;
+  choice_probability: number;
+}
+
 interface ExamData {
   averageScore: number;
   percentileRank: number;
   probabilitasKelulusan?: number;
+  probabilitasKelulusanDetails?: PassingProbabilityDetail[];
   radarData: RadarData[];
   topicData: { [key: string]: TopicData[] };
   competitiveAnalysis: CompetitiveAnalysis[];
@@ -132,6 +153,38 @@ const Progress: React.FC<ProgressProps> = ({
   calculatePercentage
 }) => {
   
+  // Shuffle array helper function
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // Memoize shuffled recommendations to prevent re-shuffling on every render
+  const shuffledSimilarityRecs = React.useMemo(() => {
+    if (!currentExamData?.recommendedPrograms) return [];
+    return shuffleArray(
+      currentExamData.recommendedPrograms.filter(p => p.recommendationType === 'similarity')
+    );
+  }, [currentExamData?.recommendedPrograms]);
+
+  const shuffledSameUniversityRecs = React.useMemo(() => {
+    if (!currentExamData?.recommendedPrograms) return [];
+    return shuffleArray(
+      currentExamData.recommendedPrograms.filter(p => p.recommendationType === 'same_university')
+    );
+  }, [currentExamData?.recommendedPrograms]);
+  
+  // Debug: Log recommended programs data
+  React.useEffect(() => {
+    if (currentExamData?.recommendedPrograms?.length > 0) {
+      console.log('[Progress] Sample Recommended Program:', currentExamData.recommendedPrograms[0]);
+    }
+  }, [currentExamData?.recommendedPrograms]);
+  
   if (!currentExamData || !currentExamData.radarData || !currentExamData.competitiveAnalysis || 
       !currentExamData.progressDetail || !currentExamData.recommendedPrograms || 
       !currentExamData.recommendedResources) {
@@ -182,20 +235,22 @@ const Progress: React.FC<ProgressProps> = ({
     }
 
     const prob = currentExamData.probabilitasKelulusan;
+    const details = currentExamData.probabilitasKelulusanDetails || [];
+    
     let color = '#FF0000';
     if (prob >= 80) color = '#4CAF50';
     else if (prob >= 60) color = '#2196F3';
     else if (prob >= 40) color = '#FFC107';
     
     return (
-      <Card className="tw-border-0 tw-shadow-sm tw-mb-4">
+      <Card className="tw-border-0 tw-shadow-sm tw-mb-4" style={{ minHeight: '450px' }}>
         <Card.Body>
           <h5 className="tw-font-bold tw-mb-3">Probabilitas Kelulusan</h5>
           <div className="tw-flex tw-justify-center">
-            <div className="tw-relative tw-w-48 tw-h-48">
+            <div className="tw-relative tw-w-56 tw-h-56">
               <div className="tw-absolute tw-inset-0 tw-flex tw-items-center tw-justify-center">
                 <div className="tw-text-center">
-                  <div className="tw-text-4xl tw-font-bold" style={{ color }}>
+                  <div className="tw-text-3xl tw-font-bold" style={{ color }}>
                     {prob}%
                   </div>
                   <div className="tw-text-sm tw-text-gray-600">Peluang Lulus</div>
@@ -230,6 +285,43 @@ const Progress: React.FC<ProgressProps> = ({
              prob >= 40 ? 'Perlu perbaikan untuk meningkatkan peluang' : 
              'Butuh usaha keras untuk lulus'}
           </div>
+          
+          {/* Details per target choice */}
+          {details.length > 0 && (
+            <div className="tw-mt-4 tw-border-t tw-pt-3">
+              <h6 className="tw-font-semibold tw-mb-2 tw-text-sm">Detail per Pilihan:</h6>
+              <div className="tw-space-y-2">
+                {details.map((detail, idx) => {
+                  let detailColor = '#FF0000';
+                  const detailProb = detail.choice_probability;
+                  if (detailProb >= 80) detailColor = '#4CAF50';
+                  else if (detailProb >= 60) detailColor = '#2196F3';
+                  else if (detailProb >= 40) detailColor = '#FFC107';
+                  
+                  return (
+                    <div key={idx} className="tw-bg-gray-50 tw-p-3 tw-rounded-lg">
+                      <div className="tw-flex tw-justify-between tw-items-start tw-mb-1">
+                        <div className="tw-flex-1">
+                          <div className="tw-font-semibold tw-text-sm">
+                            Pilihan {detail.choice_number}: {detail.prodi_name}
+                          </div>
+                          <div className="tw-text-xs tw-text-gray-600">
+                            {detail.university_name}
+                          </div>
+                        </div>
+                        <div className="tw-font-bold tw-text-lg" style={{ color: detailColor }}>
+                          {detailProb.toFixed(1)}%
+                        </div>
+                      </div>
+                      <div className="tw-text-xs tw-text-gray-500 tw-mt-1">
+                        Score kamu: {detail.user_score.toFixed(2)} | Min tahun lalu: {detail.min_score_prev.toFixed(2)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </Card.Body>
       </Card>
     );
@@ -286,8 +378,10 @@ const Progress: React.FC<ProgressProps> = ({
     const sortedData = [...currentExamData.competitiveAnalysis]
       .sort((a, b) => b.score - a.score);
     
-    // Determine domain based on maxScore
-    const xDomain = maxScore === 1000 ? [0, 5000] : [0, 100];
+    // Calculate max value from data to set appropriate chart domain
+    const maxDataValue = Math.max(...sortedData.map(d => d.score));
+    // Add 10% padding to max value for better visualization
+    const chartMax = Math.ceil(maxDataValue * 1.1);
     
     return (
       <ResponsiveContainer width="100%" height={250}>
@@ -297,7 +391,7 @@ const Progress: React.FC<ProgressProps> = ({
           margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-          <XAxis type="number" domain={xDomain} />
+          <XAxis type="number" domain={[0, chartMax]} />
           <YAxis dataKey="name" type="category" width={80} />
           <Tooltip />
           <Bar dataKey="score" fill="#8884d8" radius={[0, 4, 4, 0]}>
@@ -316,7 +410,9 @@ const Progress: React.FC<ProgressProps> = ({
   return (
     <>
       <Row className="tw-mb-4">
+        {/* Left Column */}
         <Col md={6}>
+          {/* Radar Chart */}
           <Card className="tw-border-0 tw-shadow-sm tw-mb-4">
             <Card.Body>
               <div className="tw-flex tw-justify-between tw-items-center tw-mb-4">
@@ -328,8 +424,8 @@ const Progress: React.FC<ProgressProps> = ({
               <div className="tw-text-center tw-mb-3">
                 <p className="tw-text-sm tw-text-gray-600">Klik pada mata pelajaran untuk melihat topik-topiknya</p>
               </div>
-              <ResponsiveContainer width="100%" height={300}>
-                <RadarChart outerRadius={90} data={currentExamData.radarData.filter(r => r.subject !== null)}>
+              <ResponsiveContainer width="100%" height={350}>
+                <RadarChart outerRadius={110} data={currentExamData.radarData.filter(r => r.subject !== null)}>
                   <PolarGrid />
                   <PolarAngleAxis dataKey="subject" />
                   <PolarRadiusAxis angle={30} domain={maxScore === 1000 ? [0, 1000] : [0, 100]} />
@@ -364,50 +460,12 @@ const Progress: React.FC<ProgressProps> = ({
               )}
             </Card.Body>
           </Card>
-          
-          <Card className="tw-border-0 tw-shadow-sm">
-            <Card.Body>
-              <div className="tw-flex tw-justify-between tw-items-center tw-mb-4">
-                <h5 className="tw-font-bold tw-mb-0">Trending Skor {examType}</h5>
-                <div className="tw-bg-purple-100 tw-text-purple-700 tw-px-3 tw-py-1 tw-rounded-full tw-text-sm">
-                  6 Bulan Terakhir
-                </div>
-              </div>
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart 
-                  data={[
-                    { month: 'Nov', score: currentExamData.averageScore - 15 },
-                    { month: 'Des', score: currentExamData.averageScore - 12 },
-                    { month: 'Jan', score: currentExamData.averageScore - 8 },
-                    { month: 'Feb', score: currentExamData.averageScore - 5 },
-                    { month: 'Mar', score: currentExamData.averageScore - 2 },
-                    { month: 'Apr', score: currentExamData.averageScore }
-                  ]}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" />
-                  <YAxis domain={maxScore === 1000 ? [0, 1000] : [0, 100]} />
-                  <Tooltip />
-                  <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="score" 
-                    name="Skor Rata-rata" 
-                    stroke="#8884d8" 
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </Card.Body>
-          </Card>
-        </Col>
-        
-        <Col md={6}>
+
+          {/* Probabilitas Kelulusan */}
           {renderProbabilitasGauge()}
-          
-          <Card className="tw-border-0 tw-shadow-sm tw-mb-4">
+
+          {/* Competitive Analysis */}
+          <Card className="tw-border-0 tw-shadow-sm" style={{ minHeight: '400px' }}>
             <Card.Body>
               <div className="tw-flex tw-justify-between tw-items-center tw-mb-4">
                 <h5 className="tw-font-bold tw-mb-0">Perbandingan dengan Kompetitor</h5>
@@ -436,8 +494,51 @@ const Progress: React.FC<ProgressProps> = ({
               </div>
             </Card.Body>
           </Card>
+        </Col>
+        
+        {/* Right Column */}
+        <Col md={6}>
+          {/* Trending Score */}
+          <Card className="tw-border-0 tw-shadow-sm tw-mb-4">
+            <Card.Body>
+              <div className="tw-flex tw-justify-between tw-items-center tw-mb-4">
+                <h5 className="tw-font-bold tw-mb-0">Trending Skor {examType}</h5>
+                <div className="tw-bg-purple-100 tw-text-purple-700 tw-px-3 tw-py-1 tw-rounded-full tw-text-sm">
+                  6 Bulan Terakhir
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={350}>
+                <LineChart 
+                  data={[
+                    { month: 'Nov', score: currentExamData.averageScore - 15 },
+                    { month: 'Des', score: currentExamData.averageScore - 12 },
+                    { month: 'Jan', score: currentExamData.averageScore - 8 },
+                    { month: 'Feb', score: currentExamData.averageScore - 5 },
+                    { month: 'Mar', score: currentExamData.averageScore - 2 },
+                    { month: 'Apr', score: currentExamData.averageScore }
+                  ]}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="month" />
+                  <YAxis domain={maxScore === 1000 ? [0, 1000] : [0, 100]} />
+                  <Tooltip />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="score" 
+                    name="Skor Rata-rata" 
+                    stroke="#8884d8" 
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </Card.Body>
+          </Card>
           
-          <Card className="tw-border-0 tw-shadow-sm">
+          {/* Recommended Programs */}
+          <Card className="tw-border-0 tw-shadow-sm" style={{ minHeight: '500px' }}>
             <Card.Body>
               <div className="tw-flex tw-justify-between tw-items-center tw-mb-4">
                 <h5 className="tw-font-bold tw-mb-0">
@@ -450,25 +551,70 @@ const Progress: React.FC<ProgressProps> = ({
               </div>
 
               {examType !== 'Quiz' ? (
-                <div className="tw-space-y-3">
-                  {currentExamData.recommendedPrograms.map((program, idx) => (
-                    <div key={idx} className="tw-flex tw-gap-3 tw-rounded-lg tw-p-3 tw-border tw-border-gray-200 hover:tw-shadow-sm tw-transition-all">
-                      <div className="tw-flex tw-items-center tw-justify-center tw-rounded-full tw-bg-purple-100 tw-h-10 tw-w-10">
-                        {examType === 'CPNS' ? 
-                          <Briefcase size={18} className="tw-text-purple-600" /> : 
-                          <Library size={18} className="tw-text-purple-600" />
-                        }
-                      </div>
-                      <div className="tw-flex-1">
-                        <div className="tw-font-medium">{program.program}</div>
-                        <div className="tw-flex tw-justify-between tw-text-sm tw-mt-1">
-                          <div className="tw-text-gray-500">Match: {program.match}%</div>
-                          <div className="tw-text-gray-500">Min. Score: {program.minScore}</div>
+                <div>
+                  {/* Similarity-based Recommendations */}
+                  <div className="tw-mb-4">
+                    <h6 className="tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-3 tw-flex tw-items-center tw-gap-2">
+                      <TrendingUp size={16} className="tw-text-green-600" />
+                      Rekomendasi Berdasarkan Kemiripan (5 Random)
+                    </h6>
+                    <div className="tw-space-y-2">
+                      {shuffledSimilarityRecs.slice(0, 5).map((program, idx) => (
+                        <div key={`score-${idx}`} className="tw-flex tw-gap-3 tw-rounded-lg tw-p-3 tw-border tw-border-gray-200 hover:tw-shadow-sm tw-transition-all tw-bg-green-50/30">
+                          <div className="tw-flex tw-items-center tw-justify-center tw-rounded-full tw-bg-green-100 tw-h-10 tw-w-10 tw-flex-shrink-0">
+                            <span className="tw-font-bold tw-text-green-700 tw-text-sm">{idx + 1}</span>
+                          </div>
+                          <div className="tw-flex-1">
+                            <div className="tw-font-medium tw-text-sm">{program.program}</div>
+                            <div className="tw-text-xs tw-text-gray-600 tw-mt-0.5">{program.university}</div>
+                            <div className="tw-flex tw-gap-3 tw-text-xs tw-mt-1.5 tw-flex-wrap">
+                              {program.recommendationType === 'similarity' && program.targetChoice ? (
+                                <div className="tw-text-gray-600">Mirip Pilihan <span className="tw-font-semibold tw-text-green-600">{program.targetChoice}</span></div>
+                              ) : (
+                                <div className="tw-text-gray-600">Dari <span className="tw-font-semibold tw-text-purple-600">{program.targetUniversity}</span></div>
+                              )}
+                              <div className="tw-text-gray-600">Min: <span className="tw-font-semibold">{program.minScore}</span></div>
+                              {program.scoreGap && (
+                                <div className="tw-text-gray-600">Gap: <span className="tw-font-semibold tw-text-green-600">+{program.scoreGap}</span></div>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <div className="tw-text-xs tw-text-gray-600 tw-mt-1">{program.requirement}</div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Same University Recommendations */}
+                  <div>
+                    <h6 className="tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-3 tw-flex tw-items-center tw-gap-2">
+                      <Users size={16} className="tw-text-purple-600" />
+                      Prodi Lain di Kampus Pilihan Kamu (5 Random)
+                    </h6>
+                    <div className="tw-space-y-2">
+                      {shuffledSameUniversityRecs.slice(0, 5).map((program, idx) => (
+                        <div key={`comp-${idx}`} className="tw-flex tw-gap-3 tw-rounded-lg tw-p-3 tw-border tw-border-gray-200 hover:tw-shadow-sm tw-transition-all tw-bg-blue-50/30">
+                          <div className="tw-flex tw-items-center tw-justify-center tw-rounded-full tw-bg-blue-100 tw-h-10 tw-w-10 tw-flex-shrink-0">
+                            <span className="tw-font-bold tw-text-blue-700 tw-text-sm">{idx + 1}</span>
+                          </div>
+                          <div className="tw-flex-1">
+                            <div className="tw-font-medium tw-text-sm">{program.program}</div>
+                            <div className="tw-text-xs tw-text-gray-600 tw-mt-0.5">{program.university}</div>
+                            <div className="tw-flex tw-gap-3 tw-text-xs tw-mt-1.5 tw-flex-wrap">
+                              {program.recommendationType === 'similarity' && program.targetChoice ? (
+                                <div className="tw-text-gray-600">Mirip Pilihan <span className="tw-font-semibold tw-text-blue-600">{program.targetChoice}</span></div>
+                              ) : (
+                                <div className="tw-text-gray-600">Dari <span className="tw-font-semibold tw-text-purple-600">{program.targetUniversity}</span></div>
+                              )}
+                              <div className="tw-text-gray-600">Min: <span className="tw-font-semibold">{program.minScore}</span></div>
+                              {program.competitionRatio && (
+                                <div className="tw-text-gray-600">Ratio: <span className="tw-font-semibold tw-text-blue-600">{program.competitionRatio}:1</span></div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="tw-space-y-3">

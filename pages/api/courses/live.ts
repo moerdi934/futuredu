@@ -106,7 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         LEFT JOIN user_account ua ON ua.user_id = cu.user_id
         WHERE c.approval_status = 'approved'
           AND (c.is_deleted IS NULL OR c.is_deleted = false)
-          AND p.type = 12  -- Course products
+          AND p.type = 1  -- Course products
           AND p.stock > 0
           AND (
             ph.effective_start <= NOW()
@@ -169,7 +169,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Pagination
     params.push(parseInt(limit as string), offset);
     query += ` LIMIT $${params.length - 1} OFFSET $${params.length}`;
-
+console.log('Query:', query);
+console.log('Params:', params);
     const result = await client.query(query, params);
     
     const courses: LiveCourse[] = result.rows.map(row => ({

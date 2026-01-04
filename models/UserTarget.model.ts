@@ -1,13 +1,11 @@
-// Final models/UserTarget.model.ts with INTEGER user_id
-
+// models/UserTarget.model.ts
 import pool from '../lib/db';
 
 // Types
 export interface UserTarget {
   id: number;
   user_id: number;
-  jenis_seleksi: string;
-  sub_jenis_seleksi?: string;
+  product_type_id: number;
   notes?: string;
   prodi_id_list?: number[];
   formasi_id_list?: number[];
@@ -22,10 +20,16 @@ export interface UserTarget {
   updated_date: string;
 }
 
+export interface ProductType {
+  id: number;
+  description: string;
+  series?: string;
+  group_product?: string;
+}
+
 export interface ExamScoreMapping {
   id: number;
-  jenis_seleksi: string;
-  sub_jenis_seleksi?: string;
+  product_type_id: number;
   university_id?: number;
   score_position: number;
   score_label: string;
@@ -38,7 +42,7 @@ export interface ExamScoreMapping {
 
 export interface Formasi {
   id: number;
-  jenis_seleksi: string;
+  product_type_id: number;
   kode_formasi?: string;
   nama_formasi: string;
   instansi?: string;
@@ -78,8 +82,7 @@ export interface ProdiSelectOption {
 
 export interface UserTargetInput {
   user_id: number;
-  jenis_seleksi: string;
-  sub_jenis_seleksi?: string;
+  product_type_id: number;
   notes?: string;
   prodi_id_list?: number[];
   formasi_id_list?: number[];
@@ -98,45 +101,50 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
-// Get exam score mapping by jenis_seleksi
-const getExamScoreMapping = async (jenisSeleksi: string, subJenisSeleksi?: string): Promise<ExamScoreMapping[]> => {
-  let query = `
-    SELECT * FROM exam_score_mapping 
-    WHERE jenis_seleksi = $1 AND is_active = true
+// Get all product types for selection dropdown
+export const getProductTypes = async (): Promise<ProductType[]> => {
+  const query = `
+    SELECT id, description, series, group_product
+    FROM product_type
+    where group_product ilike 'TO%'
+    ORDER BY description ASC
   `;
-  let params: any[] = [jenisSeleksi];
-
-  // For Ujian Mandiri, we need sub_jenis_seleksi
-  if (jenisSeleksi === 'Ujian Mandiri') {
-    if (!subJenisSeleksi) {
-      return []; // Return empty if sub_jenis_seleksi not provided for Ujian Mandiri
-    }
-    query += ` AND sub_jenis_seleksi = $2`;
-    params.push(subJenisSeleksi);
-  } else {
-    // For other types, ensure sub_jenis_seleksi is NULL
-    query += ` AND sub_jenis_seleksi IS NULL`;
-  }
-
-  query += ` ORDER BY score_position ASC`;
 
   try {
-    const result = await pool.query(query, params);
+    const result = await pool.query(query);
+    return result.rows;
+  } catch (error) {
+    console.error('Error fetching product types:', error);
+    throw error;
+  }
+};
+
+// Get exam score mapping by product_type_id
+export const getExamScoreMapping = async (productTypeId: number): Promise<ExamScoreMapping[]> => {
+  const query = `
+    SELECT * FROM exam_score_mapping 
+    WHERE product_type_id = $1 AND is_active = true
+    ORDER BY score_position ASC
+  `;
+
+  try {
+    const result = await pool.query(query, [productTypeId]);
     return result.rows;
   } catch (error) {
     console.error('Error fetching exam score mapping:', error);
     throw error;
   }
 };
-// Get formasi by jenis_seleksi with search
-const getFormasi = async (jenisSeleksi: string, searchName?: string): Promise<FormasiSelectOption[]> => {
+
+// Get formasi by product_type_id with search
+export const getFormasi = async (productTypeId: number, searchName?: string): Promise<FormasiSelectOption[]> => {
   let query = `
     SELECT id, kode_formasi, nama_formasi, instansi, deskripsi
     FROM formasi 
-    WHERE jenis_seleksi = $1 AND is_active = true
+    WHERE product_type_id = $1 AND is_active = true
   `;
   
-  let queryParams: any[] = [jenisSeleksi];
+  let queryParams: any[] = [productTypeId];
   let paramIndex = 2;
 
   if (searchName && searchName.trim()) {
@@ -164,7 +172,7 @@ const getFormasi = async (jenisSeleksi: string, searchName?: string): Promise<Fo
 };
 
 // Get prodi with university details for target selection
-const getProdiWithUniversity = async (searchName?: string, jenisSeleksi?: string): Promise<ProdiSelectOption[]> => {
+export const getProdiWithUniversity = async (searchName?: string, productTypeId?: number): Promise<ProdiSelectOption[]> => {
   let query = `
     SELECT 
       p.id,
@@ -184,11 +192,20 @@ const getProdiWithUniversity = async (searchName?: string, jenisSeleksi?: string
   let queryParams: any[] = [];
   let paramIndex = 1;
 
-  // Filter by jenjang for specific selection types
-  if (jenisSeleksi === 'SNBT' || jenisSeleksi === 'SNBP') {
-    query += ` AND p.jenjang_prodi = $${paramIndex}`;
-    queryParams.push('S1');
-    paramIndex++;
+  // Filter by jenjang for SNBT/SNBP (S1 only) - check via product_type
+  if (productTypeId) {
+    const productTypeQuery = `SELECT series FROM product_type WHERE id = $1`;
+    const productTypeResult = await pool.query(productTypeQuery, [productTypeId]);
+    
+    if (productTypeResult.rows.length > 0) {
+      const series = productTypeResult.rows[0].series;
+      // If series is 'SNBT' or 'SNBP', filter to S1 only
+      if (series === 'SNBT' || series === 'SNBP') {
+        query += ` AND p.jenjang_prodi = $${paramIndex}`;
+        queryParams.push('S1');
+        paramIndex++;
+      }
+    }
   }
 
   if (searchName && searchName.trim()) {
@@ -216,38 +233,63 @@ const getProdiWithUniversity = async (searchName?: string, jenisSeleksi?: string
   }
 };
 
+// Get university for specific product type (for Ujian Mandiri types)
+export const getUniversityForProductType = async (productTypeId: number): Promise<{university_id: number; university_name: string} | null> => {
+  const query = `
+    SELECT DISTINCT esm.university_id, u.nama_pt, u.nama_singkat
+    FROM exam_score_mapping esm
+    JOIN universities u ON esm.university_id = u.id
+    WHERE esm.product_type_id = $1
+      AND esm.university_id IS NOT NULL
+    LIMIT 1
+  `;
+
+  try {
+    const result = await pool.query(query, [productTypeId]);
+    if (result.rows.length > 0) {
+      const row = result.rows[0];
+      return {
+        university_id: row.university_id,
+        university_name: `${row.nama_pt} (${row.nama_singkat})`
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching university for product type:', error);
+    return null;
+  }
+};
+
 // Save or update user target
-const saveUserTarget = async (data: UserTargetInput): Promise<UserTarget> => {
+export const saveUserTarget = async (data: UserTargetInput): Promise<UserTarget> => {
   // Check if user target already exists
   const existingQuery = `
     SELECT id FROM user_target 
-    WHERE user_id = $1 AND jenis_seleksi = $2
+    WHERE user_id = $1 AND product_type_id = $2
   `;
   
-  const existingResult = await pool.query(existingQuery, [data.user_id, data.jenis_seleksi]);
+  const existingResult = await pool.query(existingQuery, [data.user_id, data.product_type_id]);
 
   if (existingResult.rows.length > 0) {
     // Update existing record
     const updateQuery = `
       UPDATE user_target SET
-        sub_jenis_seleksi = $1,
-        notes = $2,
-        prodi_id_list = $3,
-        formasi_id_list = $4,
-        score_1 = $5,
-        score_2 = $6,
-        score_3 = $7,
-        score_4 = $8,
-        score_5 = $9,
-        score_6 = $10,
-        score_7 = $11,
+        notes = $1,
+        prodi_id_list = $2,
+        formasi_id_list = $3,
+        score_1 = $4,
+        score_2 = $5,
+        score_3 = $6,
+        score_4 = $7,
+        score_5 = $8,
+        score_6 = $9,
+        score_7 = $10,
         updated_date = CURRENT_TIMESTAMP
-      WHERE user_id = $12 AND jenis_seleksi = $13
+      WHERE user_id = $11 AND product_type_id = $12
       RETURNING *
     `;
 
     const result = await pool.query(updateQuery, [
-      data.sub_jenis_seleksi || null,
       data.notes || null,
       data.prodi_id_list || null,
       data.formasi_id_list || null,
@@ -259,7 +301,7 @@ const saveUserTarget = async (data: UserTargetInput): Promise<UserTarget> => {
       data.score_6 || null,
       data.score_7 || null,
       data.user_id,
-      data.jenis_seleksi
+      data.product_type_id
     ]);
 
     return result.rows[0];
@@ -267,16 +309,15 @@ const saveUserTarget = async (data: UserTargetInput): Promise<UserTarget> => {
     // Insert new record
     const insertQuery = `
       INSERT INTO user_target (
-        user_id, jenis_seleksi, sub_jenis_seleksi, notes, prodi_id_list, formasi_id_list,
+        user_id, product_type_id, notes, prodi_id_list, formasi_id_list,
         score_1, score_2, score_3, score_4, score_5, score_6, score_7
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `;
 
     const result = await pool.query(insertQuery, [
       data.user_id,
-      data.jenis_seleksi,
-      data.sub_jenis_seleksi || null,
+      data.product_type_id,
       data.notes || null,
       data.prodi_id_list || null,
       data.formasi_id_list || null,
@@ -293,15 +334,15 @@ const saveUserTarget = async (data: UserTargetInput): Promise<UserTarget> => {
   }
 };
 
-// Get user target by user_id and jenis_seleksi
-const getUserTarget = async (userId: number, jenisSeleksi: string): Promise<UserTarget | null> => {
+// Get user target by user_id and product_type_id
+export const getUserTarget = async (userId: number, productTypeId: number): Promise<UserTarget | null> => {
   const query = `
     SELECT * FROM user_target 
-    WHERE user_id = $1 AND jenis_seleksi = $2
+    WHERE user_id = $1 AND product_type_id = $2
   `;
 
   try {
-    const result = await pool.query(query, [userId, jenisSeleksi]);
+    const result = await pool.query(query, [userId, productTypeId]);
     return result.rows.length > 0 ? result.rows[0] : null;
   } catch (error) {
     console.error('Error fetching user target:', error);
@@ -310,16 +351,18 @@ const getUserTarget = async (userId: number, jenisSeleksi: string): Promise<User
 };
 
 // Get user target with detailed prodi and formasi information
-const getUserTargetWithDetails = async (userId: number, jenisSeleksi: string) => {
-  console.log("getUserTargetWithDetailsOptimized called with:", { userId, jenisSeleksi });
-
+// Get user target with detailed prodi and formasi information
+export const getUserTargetWithDetails = async (userId: number, productTypeId: number) => {
   const query = `
     SELECT 
       ut.*,
+      pt.description as product_type_description,
+      pt.series as product_type_series,
+      pt.group_product as product_type_group,
       CASE 
         WHEN ut.prodi_id_list IS NOT NULL AND array_length(ut.prodi_id_list, 1) > 0 THEN
           json_agg(
-            json_build_object(
+            DISTINCT jsonb_build_object(
               'id', p.id,
               'nama_prodi', p.nama_prodi,
               'jenjang_prodi', p.jenjang_prodi,
@@ -327,125 +370,115 @@ const getUserTargetWithDetails = async (userId: number, jenisSeleksi: string) =>
               'university_id', p.university_id,
               'nama_pt', u.nama_pt,
               'nama_singkat', u.nama_singkat
-            ) ORDER BY array_position(ut.prodi_id_list, p.id)
+            ) ORDER BY jsonb_build_object(
+              'id', p.id,
+              'nama_prodi', p.nama_prodi,
+              'jenjang_prodi', p.jenjang_prodi,
+              'akreditasi', p.akreditasi,
+              'university_id', p.university_id,
+              'nama_pt', u.nama_pt,
+              'nama_singkat', u.nama_singkat
+            )
           ) FILTER (WHERE p.id IS NOT NULL)
         ELSE '[]'::json
       END as prodi_details,
       CASE 
         WHEN ut.formasi_id_list IS NOT NULL AND array_length(ut.formasi_id_list, 1) > 0 THEN
           json_agg(
-            json_build_object(
+            DISTINCT jsonb_build_object(
               'id', f.id,
-              'jenis_seleksi', f.jenis_seleksi,
+              'product_type_id', f.product_type_id,
               'kode_formasi', f.kode_formasi,
               'nama_formasi', f.nama_formasi,
               'instansi', f.instansi,
               'deskripsi', f.deskripsi,
               'requirements', f.requirements,
               'is_active', f.is_active
-            ) ORDER BY array_position(ut.formasi_id_list, f.id)
+            ) ORDER BY jsonb_build_object(
+              'id', f.id,
+              'product_type_id', f.product_type_id,
+              'kode_formasi', f.kode_formasi,
+              'nama_formasi', f.nama_formasi,
+              'instansi', f.instansi,
+              'deskripsi', f.deskripsi,
+              'requirements', f.requirements,
+              'is_active', f.is_active
+            )
           ) FILTER (WHERE f.id IS NOT NULL)
         ELSE '[]'::json
       END as formasi_details
     FROM user_target ut
-    LEFT JOIN prodi p ON p.id = ANY(ut.prodi_id_list)
+    JOIN product_type pt ON ut.product_type_id = pt.id
+    LEFT JOIN LATERAL unnest(ut.prodi_id_list) WITH ORDINALITY AS prodi_array(prodi_id, prodi_ord) ON true
+    LEFT JOIN prodi p ON p.id = prodi_array.prodi_id
     LEFT JOIN universities u ON u.id = p.university_id
-    LEFT JOIN formasi f ON f.id = ANY(ut.formasi_id_list)
-    WHERE ut.user_id = $1 AND ut.jenis_seleksi = $2
-    GROUP BY ut.id, ut.user_id, ut.jenis_seleksi, ut.notes, ut.prodi_id_list, ut.formasi_id_list,
+    LEFT JOIN LATERAL unnest(ut.formasi_id_list) WITH ORDINALITY AS formasi_array(formasi_id, formasi_ord) ON true
+    LEFT JOIN formasi f ON f.id = formasi_array.formasi_id
+    WHERE ut.user_id = $1 AND ut.product_type_id = $2
+    GROUP BY ut.id, ut.user_id, ut.product_type_id, ut.notes, ut.prodi_id_list, ut.formasi_id_list,
              ut.score_1, ut.score_2, ut.score_3, ut.score_4, ut.score_5, ut.score_6, ut.score_7,
-             ut.created_date, ut.updated_date
+             ut.created_date, ut.updated_date, pt.description, pt.series, pt.group_product
   `;
 
   try {
-    const result = await pool.query(query, [userId, jenisSeleksi]);
+    const result = await pool.query(query, [userId, productTypeId]);
     
     if (result.rows.length === 0) {
-      console.log("No user target found");
       return null;
     }
 
     const userTarget = result.rows[0];
     
-    // Parse JSON arrays back to JavaScript arrays
+    // Parse JSON arrays back to JavaScript arrays and sort by original order
     const prodiDetails = userTarget.prodi_details || [];
     const formasiDetails = userTarget.formasi_details || [];
+
+    // Sort prodi_details based on original prodi_id_list order
+    if (prodiDetails.length > 0 && userTarget.prodi_id_list) {
+      prodiDetails.sort((a: any, b: any) => {
+        const indexA = userTarget.prodi_id_list.indexOf(a.id);
+        const indexB = userTarget.prodi_id_list.indexOf(b.id);
+        return indexA - indexB;
+      });
+    }
+
+    // Sort formasi_details based on original formasi_id_list order
+    if (formasiDetails.length > 0 && userTarget.formasi_id_list) {
+      formasiDetails.sort((a: any, b: any) => {
+        const indexA = userTarget.formasi_id_list.indexOf(a.id);
+        const indexB = userTarget.formasi_id_list.indexOf(b.id);
+        return indexA - indexB;
+      });
+    }
 
     // Remove the JSON fields from the main object
     delete userTarget.prodi_details;
     delete userTarget.formasi_details;
 
-    const finalResult = {
+    return {
       ...userTarget,
       prodi_details: prodiDetails,
       formasi_details: formasiDetails
     };
 
-    console.log("Returning optimized user target with details:", {
-      id: finalResult.id,
-      jenis_seleksi: finalResult.jenis_seleksi,
-      prodi_count: prodiDetails.length,
-      formasi_count: formasiDetails.length
-    });
-
-    return finalResult;
-
   } catch (error) {
-    console.error('Error in getUserTargetWithDetailsOptimized:', error);
+    console.error('Error in getUserTargetWithDetails:', error);
     throw error;
   }
 };
 
 // Delete user target
-const deleteUserTarget = async (userId: number, jenisSeleksi: string): Promise<boolean> => {
+export const deleteUserTarget = async (userId: number, productTypeId: number): Promise<boolean> => {
   const query = `
     DELETE FROM user_target 
-    WHERE user_id = $1 AND jenis_seleksi = $2
+    WHERE user_id = $1 AND product_type_id = $2
   `;
 
   try {
-    const result = await pool.query(query, [userId, jenisSeleksi]);
+    const result = await pool.query(query, [userId, productTypeId]);
     return result.rowCount > 0;
   } catch (error) {
     console.error('Error deleting user target:', error);
     throw error;
   }
-};
-
-const getUniversityForUjianMandiri = async (subJenisSeleksi: string): Promise<{university_id: number; university_name: string} | null> => {
-  const query = `
-    SELECT DISTINCT esm.university_id, u.nama_pt, u.nama_singkat
-    FROM exam_score_mapping esm
-    JOIN universities u ON esm.university_id = u.id
-    WHERE esm.jenis_seleksi = 'Ujian Mandiri' 
-      AND esm.sub_jenis_seleksi = $1 
-      AND esm.university_id IS NOT NULL
-    LIMIT 1
-  `;
-
-  try {
-    const result = await pool.query(query, [subJenisSeleksi]);
-    if (result.rows.length > 0) {
-      const row = result.rows[0];
-      return {
-        university_id: row.university_id,
-        university_name: `${row.nama_pt} (${row.nama_singkat})`
-      };
-    }
-    return null;
-  } catch (error) {
-    console.error('Error fetching university for ujian mandiri:', error);
-    return null;
-  }
-};
-
-export {
-  getExamScoreMapping,
-  getFormasi,
-  getProdiWithUniversity,
-  saveUserTarget,
-  getUserTarget,
-  getUserTargetWithDetails,
-  deleteUserTarget,
-  getUniversityForUjianMandiri
 };

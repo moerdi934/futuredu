@@ -929,35 +929,40 @@ const EnhancedExamDashboard: React.FC<EnhancedExamDashboardProps> = ({ data, onV
               </Badge>
             </div>
             <div className="tw-space-y-3">
-              {data.recommendedPrograms.map((program, idx) => (
-                <div 
-                  key={idx} 
-                  className="tw-p-4 tw-bg-gradient-to-r tw-from-indigo-50 tw-to-blue-50 tw-rounded-lg tw-border-2 tw-border-indigo-200 hover:tw-shadow-md tw-transition-all"
-                >
-                  <div className="tw-flex tw-justify-between tw-items-start tw-mb-2">
-                    <div className="tw-flex-1">
-                      <h6 className="tw-font-bold tw-text-gray-800 tw-mb-1">{program.program}</h6>
-                      <div className="tw-text-sm tw-text-gray-600 tw-mb-2">
-                        <span className="tw-font-medium">Min. Skor:</span> {program.minScore} • {program.requirement}
+              {data.recommendedPrograms.map((program, idx) => {
+                const userScore = parseFloat(String(data.averageScore || 0));
+                const scorePercentage = (userScore / program.minScore) * 100;
+                const isQualified = userScore >= program.minScore;
+                
+                return (
+                  <div 
+                    key={idx} 
+                    className="tw-p-4 tw-bg-gradient-to-r tw-from-indigo-50 tw-to-blue-50 tw-rounded-lg tw-border-2 tw-border-indigo-200 hover:tw-shadow-md tw-transition-all"
+                  >
+                    <div className="tw-flex tw-justify-between tw-items-start tw-mb-2">
+                      <div className="tw-flex-1">
+                        <h6 className="tw-font-bold tw-text-gray-800 tw-mb-1">{program.program}</h6>
+                        <div className="tw-text-sm tw-text-gray-600 tw-mb-2">
+                          <span className="tw-font-medium">Min. Skor:</span> {program.minScore} • {program.requirement}
+                        </div>
+                      </div>
+                      <div className="tw-text-right">
+                        <div className={`tw-text-xs tw-font-semibold ${isQualified ? 'tw-text-green-600' : 'tw-text-orange-600'}`}>
+                          {isQualified ? '✓ Memenuhi' : `Kurang ${(program.minScore - userScore).toFixed(0)}`}
+                        </div>
+                        <div className="tw-text-xs tw-text-gray-500">
+                          {userScore.toFixed(0)} / {program.minScore}
+                        </div>
                       </div>
                     </div>
-                    <div className="tw-text-center">
-                      <div 
-                        className="tw-text-2xl tw-font-bold"
-                        style={{ color: getScoreColor(program.match, 100) }}
-                      >
-                        {program.match}%
-                      </div>
-                      <div className="tw-text-xs tw-text-gray-500">Match</div>
-                    </div>
+                    <ProgressBar 
+                      now={Math.min(scorePercentage, 100)} 
+                      variant={isQualified ? 'success' : scorePercentage >= 80 ? 'warning' : 'danger'}
+                      style={{ height: '8px' }}
+                    />
                   </div>
-                  <ProgressBar 
-                    now={program.match} 
-                    variant={getProgressColor(program.match, 100)}
-                    style={{ height: '8px' }}
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Card.Body>
         </Card>

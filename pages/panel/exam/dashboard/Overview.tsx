@@ -6,6 +6,7 @@ import { Row, Col, Card, Button, ProgressBar } from 'react-bootstrap';
 import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ComposedChart, 
   ResponsiveContainer } from 'recharts';
 import { Calendar, CheckCircle, AlertTriangle, Clock, TrendingUp, Target } from 'lucide-react';
+import TargetProdiAnalysisComponent from './TargetProdiAnalysis';
 
 // Type definitions
 interface SubjectPerformance {
@@ -44,11 +45,33 @@ interface RecentResult {
   maxExamName?: string;
 }
 
+interface TargetProdiAnalysis {
+  prodi_id: number;
+  nama_prodi: string;
+  nama_ptn: string;
+  user_score: number;
+  user_rank: number;
+  total_bimbel_participants: number;
+  peminat: number | null;
+  daya_tampung: number | null;
+  safe_zone_rank: number | null;
+  min_score_reference: number | null;
+  max_score_reference: number | null;
+  average_score_reference: number | null;
+  has_historical_data: boolean;
+  status: 'Aman' | 'Perlu Ditingkatkan' | 'Tidak Aman' | 'No Historical Data';
+  score_gap_to_minimum: number | null;
+  score_gap_to_average: number | null;
+  competition_ratio: number | null;
+  status_message: string;
+}
+
 interface ExamData {
   nextGoal: NextGoal;
   subjectPerformanceData: SubjectPerformance[];
   weeklyProgressData: WeeklyProgressData[];
   recentResults: RecentResult[];
+  targetProdiAnalysis?: TargetProdiAnalysis[];
   rank?: string;
   previousRank?: string | null;
   averageScore?: number;
@@ -338,6 +361,11 @@ const Overview: React.FC<OverviewProps> = ({
               )}
             </Card.Body>
           </Card>
+
+          {/* Target Prodi Analysis - only for SNBT Exam */}
+          {(examType === 'SNBT' || examType === 'SNBT Exam') && currentExamData.targetProdiAnalysis && currentExamData.targetProdiAnalysis.length > 0 && (
+            <TargetProdiAnalysisComponent data={currentExamData.targetProdiAnalysis} />
+          )}
         </Col>
 
         <Col md={4}>

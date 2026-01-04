@@ -1,4 +1,4 @@
-// pages/api/target/user/[jenisSeleksi].ts
+// pages/api/target/user/[productTypeId].ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import { AuthenticatedRequest, authenticateJWT } from '../../../../lib/middleware/auth';
 import { getUserTargetController, deleteUserTargetController } from '../../../../controllers/UserTarget.controller';

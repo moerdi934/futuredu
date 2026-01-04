@@ -1,8 +1,8 @@
-// Updated controllers/UserTarget.controller.ts with JWT authentication
-
+// controllers/UserTarget.controller.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import { AuthenticatedRequest } from '../lib/middleware/auth';
 import {
+  getProductTypes,
   getExamScoreMapping,
   getFormasi,
   getProdiWithUniversity,
@@ -10,40 +10,49 @@ import {
   getUserTarget,
   getUserTargetWithDetails,
   deleteUserTarget,
+  getUniversityForProductType,
   ApiResponse,
+  ProductType,
   ExamScoreMapping,
   FormasiSelectOption,
   ProdiSelectOption,
   UserTarget,
   UserTargetInput,
-  getUniversityForUjianMandiri
 } from '../models/UserTarget.model';
 
-// Get exam score mapping by jenis_seleksi (public endpoint)
-const getExamScoreMappingController = async (
+// Get all product types for dropdown (public endpoint)
+export const getProductTypesController = async (
+  req: NextApiRequest,
+  res: NextApiResponse<ProductType[] | ApiResponse<ProductType[]>>
+) => {
+  try {
+    const productTypes = await getProductTypes();
+    res.status(200).json(productTypes);
+  } catch (error: any) {
+    console.error('Error in getProductTypesController:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message || 'Failed to fetch product types'
+    });
+  }
+};
+
+// Get exam score mapping by product_type_id (public endpoint)
+export const getExamScoreMappingController = async (
   req: NextApiRequest,
   res: NextApiResponse<ExamScoreMapping[] | ApiResponse<ExamScoreMapping[]>>
 ) => {
   try {
-    const jenisSeleksi = req.query.jenisSeleksi as string;
-    const subJenisSeleksi = req.query.subJenisSeleksi as string;
+    const productTypeId = parseInt(req.query.productTypeId as string);
 
-    if (!jenisSeleksi) {
+    if (!productTypeId || isNaN(productTypeId)) {
       return res.status(400).json({
         status: 'error',
-        message: 'Jenis seleksi is required'
+        message: 'Product type ID is required and must be a valid number'
       });
     }
 
-    // For Ujian Mandiri, sub_jenis_seleksi is required
-    if (jenisSeleksi === 'Ujian Mandiri' && !subJenisSeleksi) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Sub jenis seleksi is required for Ujian Mandiri'
-      });
-    }
-
-    const mappings = await getExamScoreMapping(jenisSeleksi, subJenisSeleksi);
+    const mappings = await getExamScoreMapping(productTypeId);
     res.status(200).json(mappings);
   } catch (error: any) {
     console.error('Error in getExamScoreMappingController:', error);
@@ -54,23 +63,23 @@ const getExamScoreMappingController = async (
   }
 };
 
-// Get formasi by jenis_seleksi (public endpoint)
-const getFormasiController = async (
+// Get formasi by product_type_id (public endpoint)
+export const getFormasiController = async (
   req: NextApiRequest,
   res: NextApiResponse<FormasiSelectOption[] | ApiResponse<FormasiSelectOption[]>>
 ) => {
   try {
-    const jenisSeleksi = req.query.jenisSeleksi as string;
+    const productTypeId = parseInt(req.query.productTypeId as string);
     const searchName = req.query.search as string;
 
-    if (!jenisSeleksi) {
+    if (!productTypeId || isNaN(productTypeId)) {
       return res.status(400).json({
         status: 'error',
-        message: 'Jenis seleksi is required'
+        message: 'Product type ID is required and must be a valid number'
       });
     }
 
-    const formasi = await getFormasi(jenisSeleksi, searchName);
+    const formasi = await getFormasi(productTypeId, searchName);
     res.status(200).json(formasi);
   } catch (error: any) {
     console.error('Error in getFormasiController:', error);
@@ -82,15 +91,15 @@ const getFormasiController = async (
 };
 
 // Get prodi with university details (public endpoint)
-const getProdiWithUniversityController = async (
+export const getProdiWithUniversityController = async (
   req: NextApiRequest,
   res: NextApiResponse<ProdiSelectOption[] | ApiResponse<ProdiSelectOption[]>>
 ) => {
   try {
     const searchName = req.query.search as string;
-    const jenisSeleksi = req.query.jenisSeleksi as string;
+    const productTypeId = req.query.productTypeId ? parseInt(req.query.productTypeId as string) : undefined;
 
-    const prodi = await getProdiWithUniversity(searchName, jenisSeleksi);
+    const prodi = await getProdiWithUniversity(searchName, productTypeId);
     res.status(200).json(prodi);
   } catch (error: any) {
     console.error('Error in getProdiWithUniversityController:', error);
@@ -101,8 +110,42 @@ const getProdiWithUniversityController = async (
   }
 };
 
+// Get university for product type (public endpoint)
+export const getUniversityForProductTypeController = async (
+  req: NextApiRequest,
+  res: NextApiResponse<{university_id: number | null; university_name?: string} | ApiResponse<any>>
+) => {
+  try {
+    const productTypeId = parseInt(req.query.productTypeId as string);
+
+    if (!productTypeId || isNaN(productTypeId)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Product type ID is required and must be a valid number'
+      });
+    }
+
+    const universityData = await getUniversityForProductType(productTypeId);
+    
+    if (universityData) {
+      res.status(200).json({ 
+        university_id: universityData.university_id,
+        university_name: universityData.university_name
+      });
+    } else {
+      res.status(200).json({ university_id: null });
+    }
+  } catch (error: any) {
+    console.error('Error in getUniversityForProductTypeController:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message || 'Failed to fetch university for product type'
+    });
+  }
+};
+
 // Save or update user target (authenticated endpoint)
-const saveUserTargetController = async (
+export const saveUserTargetController = async (
   req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<UserTarget>>
 ) => {
@@ -132,10 +175,10 @@ const saveUserTargetController = async (
     };
 
     // Validate required fields
-    if (!targetData.jenis_seleksi) {
+    if (!targetData.product_type_id) {
       return res.status(400).json({
         status: 'error',
-        message: 'Jenis seleksi is required'
+        message: 'Product type ID is required'
       });
     }
 
@@ -167,8 +210,8 @@ const saveUserTargetController = async (
   }
 };
 
-// Get user target by authenticated user ID and jenis_seleksi
-const getUserTargetController = async (
+// Get user target by authenticated user ID and product_type_id
+export const getUserTargetController = async (
   req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<any>>
 ) => {
@@ -182,12 +225,12 @@ const getUserTargetController = async (
       });
     }
 
-    const jenisSeleksi = req.query.jenisSeleksi as string;
+    const productTypeId = parseInt(req.query.productTypeId as string);
 
-    if (!jenisSeleksi) {
+    if (!productTypeId || isNaN(productTypeId)) {
       return res.status(400).json({
         status: 'error',
-        message: 'Jenis seleksi is required'
+        message: 'Product type ID is required and must be a valid number'
       });
     }
 
@@ -195,16 +238,16 @@ const getUserTargetController = async (
 
     let result;
     if (includeDetails) {
-      result = await getUserTargetWithDetails(userId, jenisSeleksi);
+      result = await getUserTargetWithDetails(userId, productTypeId);
     } else {
-      result = await getUserTarget(userId, jenisSeleksi);
+      result = await getUserTarget(userId, productTypeId);
     }
 
-    // Return empty structure if no target found instead of 404
+    // Return empty structure if no target found
     if (!result) {
       const emptyTarget = {
         user_id: userId,
-        jenis_seleksi: jenisSeleksi,
+        product_type_id: productTypeId,
         notes: '',
         prodi_id_list: [],
         formasi_id_list: [],
@@ -239,7 +282,7 @@ const getUserTargetController = async (
 };
 
 // Delete user target (authenticated endpoint)
-const deleteUserTargetController = async (
+export const deleteUserTargetController = async (
   req: AuthenticatedRequest,
   res: NextApiResponse<ApiResponse<any>>
 ) => {
@@ -260,16 +303,16 @@ const deleteUserTargetController = async (
       });
     }
 
-    const jenisSeleksi = req.query.jenisSeleksi as string;
+    const productTypeId = parseInt(req.query.productTypeId as string);
 
-    if (!jenisSeleksi) {
+    if (!productTypeId || isNaN(productTypeId)) {
       return res.status(400).json({
         status: 'error',
-        message: 'Jenis seleksi is required'
+        message: 'Product type ID is required and must be a valid number'
       });
     }
 
-    const deleted = await deleteUserTarget(userId, jenisSeleksi);
+    const deleted = await deleteUserTarget(userId, productTypeId);
 
     if (!deleted) {
       return res.status(404).json({
@@ -289,46 +332,4 @@ const deleteUserTargetController = async (
       message: error.message || 'Failed to delete user target'
     });
   }
-};
-
-const getUjianMandiriUniversityController = async (
-  req: NextApiRequest,
-  res: NextApiResponse<{university_id: number | null; university_name?: string} | ApiResponse<any>>
-) => {
-  try {
-    const subJenisSeleksi = req.query.subJenisSeleksi as string;
-
-    if (!subJenisSeleksi) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Sub jenis seleksi is required'
-      });
-    }
-
-    const universityData = await getUniversityForUjianMandiri(subJenisSeleksi);
-    
-    if (universityData) {
-      res.status(200).json({ 
-        university_id: universityData.university_id,
-        university_name: universityData.university_name
-      });
-    } else {
-      res.status(200).json({ university_id: null });
-    }
-  } catch (error: any) {
-    console.error('Error in getUjianMandiriUniversityController:', error);
-    res.status(500).json({
-      status: 'error',
-      message: error.message || 'Failed to fetch university for ujian mandiri'
-    });
-  }
-};
-export {
-  getExamScoreMappingController,
-  getFormasiController,
-  getProdiWithUniversityController,
-  saveUserTargetController,
-  getUserTargetController,
-  deleteUserTargetController,
-  getUjianMandiriUniversityController 
 };
