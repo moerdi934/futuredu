@@ -1,0 +1,1320 @@
+ΓòöΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòù
+Γòæ   Split Markdown by Heading - Flexible Version            Γòæ
+ΓòÜΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò¥
+
+ΓÜá∩╕Å  MODE: DRY RUN (preview saja)
+≡ƒôÅ Split Level: AUTO-DETECT
+≡ƒÆ╛ File original: AKAN DIPERTAHANKAN (default)
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+≡ƒôü Folder: LBI
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+≡ƒôä Memproses: 1.1.md
+   ≡ƒöì Auto-detect: Split by H3 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 12 section
+   [DRY RUN] File yang akan dibuat:
+     1. Kesimpulan Materi 1.1.1.md
+     2. Kesimpulan Materi 1.1.2.md
+     3. Kesimpulan Materi 1.1.3.md
+     4. Kesimpulan Materi 1.1.4.md
+     5. Kesimpulan Materi 1.1.5.md
+     6. Kesimpulan Materi 1.1.6.md
+     7. Materi 1.1.1 Pengenalan Paragraf.md
+     8. Materi 1.1.2 Letak Kalimat Utama.md
+     9. Materi 1.1.3 Ide Pokok dan Ide Pendukung.md
+     10. Materi 1.1.4 Ide Pokok dalam Berbagai Posisi.md
+     11. Materi 1.1.5 Kepanduan Paragraf.md
+     12. Materi 1.1.6 Kalimat Padu dan Tidak Padu.md
+
+≡ƒôä Memproses: 1.2.md
+   ≡ƒöì Auto-detect: Split by H2 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.2.1 Pengenalan Paragraf Narasi.md
+     2. Materi 1.2.2 Narasi Ekspositoris.md
+     3. Materi 1.2.3 Narasi Sugestif.md
+     4. Materi 1.2.4 Menganalisis Unsur dan Alur Narasi.md
+     5. Materi 1.2.5 Menentukan Tema dan Nilai dalam Narasi.md
+
+≡ƒôä Memproses: 1.3.md
+   ≡ƒöì Auto-detect: Split by H2 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.3.1 Pengenalan Paragraf Deskripsi.md
+     2. Materi 1.3.2 Pola Pengembangan Deskripsi - Pola Spasial.md
+     3. Materi 1.3.3 Pola Pengembangan Deskripsi - Pola Sudut Pandang.md
+     4. Materi 1.3.4 Mengidentifikasi Objek dan Ciri dalam Deskripsi.md
+     5. Materi 1.3.5 Sikap dan Tujuan Penulis dalam Deskripsi.md
+
+≡ƒôä Memproses: 1.4.md
+   ≡ƒöì Auto-detect: Split by H2 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.4.1 Pengenalan Paragraf Persuasi.md
+     2. Materi 1.4.2 Ciri-Ciri Paragraf Persuasi.md
+     3. Materi 1.4.3 Teknik Persuasi dalam Teks.md
+     4. Materi 1.4.4 Mengidentifikasi Tujuan dan Ajakan Penulis.md
+     5. Materi 1.4.5 Membedakan Fakta dan Opini dalam Persuasi.md
+     6. RANGKUMAN MATERI PERSUASI.md
+
+≡ƒôä Memproses: 1.5.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.5.1 Pengenalan Paragraf Eksposisi.md
+     2. Materi 1.5.2 Jenis-Jenis Paragraf Eksposisi.md
+     3. Materi 1.5.3 Sebab-Akibat dalam Teks Eksplanatif.md
+     4. Materi 1.5.4 Menganalisis Pola Pengembangan Eksposisi.md
+     5. Materi 1.5.5 Mencari Info Eksplisit dalam Teks Eksposisi.md
+
+≡ƒôä Memproses: 1.6.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.6.1 Pengenalan Paragraf Argumentasi.md
+     2. Materi 1.6.2 Jenis-Jenis Paragraf Argumentasi.md
+     3. Materi 1.6.3 Struktur dan Pola Argumentasi.md
+     4. Materi 1.6.4 Menganalisis Kekuatan Argumentasi.md
+     5. Materi 1.6.5 Sintaksis dan Argumen.md
+
+≡ƒôä Memproses: 2.1.md
+   ≡ƒöì Auto-detect: Split by H3 (4 materi, 4 total heading)
+   Γ£ô Ditemukan 4 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.1.1 Pengenalan Teks Biografi.md
+     2. Materi 2.1.2 Unsur-Unsur Teks Biografi.md
+     3. Materi 2.1.3 Menganalisis Informasi dalam Biografi.md
+     4. Materi 2.1.4 Menentukan Nilai dalam Teks Biografi.md
+
+≡ƒôä Memproses: 2.2.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.2.1 Pengenalan Teks Eksplanasi.md
+     2. Materi 2.2.2 Eksplanasi Fenomena Alam.md
+     3. Materi 2.2.3 Eksplanasi Fenomena Sosial.md
+     4. Materi 2.2.4 Sebab-Akibat dalam Teks Eksplanatif.md
+     5. Materi 2.2.5 Mencari Info Relevan dalam Eksplanasi.md
+
+≡ƒôä Memproses: 2.3.md
+   ≡ƒöì Auto-detect: Split by H3 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.3.1 Pengenalan Teks Editorial.md
+     2. Materi 2.3.2 Fakta dan Opini dalam Editorial.md
+     3. Materi 2.3.3 Opini dan Sikap Penulis Editorial.md
+     4. Materi 2.3.4 Keberpihakan Penulis dalam Editorial.md
+     5. Materi 2.3.5 Ditujukan dan Menentukan Judul Editorial.md
+     6. Materi 2.3.6 Sikap dan Tujuan Penulis dalam Editorial.md
+
+≡ƒôä Memproses: 2.4.md
+   ≡ƒöì Auto-detect: Split by H3 (4 materi, 4 total heading)
+   Γ£ô Ditemukan 4 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.4.1 Pengenalan Teks Ulasan.md
+     2. Materi 2.4.2 Langkah-Langkah Membuat Ulasan.md
+     3. Materi 2.4.3 Menganalisis Kelebihan dan Kelemahan Karya.md
+     4. Materi 2.4.4 Menentukan Rekomendasi dalam Ulasan.md
+
+≡ƒôä Memproses: 2.5.md
+   ≡ƒöì Auto-detect: Split by H3 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.5.1 Pengenalan Pemahaman Bacaan.md
+     2. Materi 2.5.2 Mencari Info Eksplisit.md
+     3. Materi 2.5.3 Mencari Info Relevan.md
+     4. Materi 2.5.4 Menyimpulkan InfoIsi Bacaan.md
+     5. Materi 2.5.5 Menentukan Makna Kontekstual Kata.md
+     6. Materi 2.5.6 Menyarankan Solusi dari Bacaan.md
+
+≡ƒôä Memproses: 2.6.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.6.1 Pengenalan Analisis Bacaan.md
+     2. Materi 2.6.2 Menghubungkan Info dan Menilai Info.md
+     3. Materi 2.6.3 Menentukan Pilihan Berdasarkan Bacaan.md
+     4. Materi 2.6.4 Analisis Bacaan Kompleks.md
+     5. Materi 2.6.5 Menentukan Kesimpulan Teks.md
+     6. Materi 2.6.6 Menentukan Judul Teks.md
+
+≡ƒôä Memproses: 3.1.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.1.1 Pengenalan Novel.md
+     2. Materi 3.1.2 Unsur Intrinsik Novel - Sudut Pandang.md
+     3. Materi 3.1.3 Unsur Intrinsik Novel - Alur.md
+     4. Materi 3.1.4 Unsur Intrinsik Novel - Tema, Amanat, Latar.md
+     5. Materi 3.1.6 Unsur Ekstrinsik dan Nilai Novel.md
+
+≡ƒôä Memproses: 3.2.md
+   ≡ƒöì Auto-detect: Split by H2 (4 materi, 4 total heading)
+   Γ£ô Ditemukan 4 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.2.1 Pengenalan Cerpen.md
+     2. Materi 3.2.2 Unsur Intrinsik Cerpen.md
+     3. Materi 3.2.3 Unsur Ekstrinsik dan Nilai Cerpen.md
+     4. Materi 3.2.4 Menentukan Tema Teks Sastra Prosa (Cerpen dan Novel).md
+
+≡ƒôä Memproses: 3.2.md
+   ≡ƒöì Auto-detect: Split by H3 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.3.1 Pengenalan Puisi.md
+     2. Materi 3.3.2 Puisi Baru.md
+     3. Materi 3.3.3 Puisi Lama.md
+     4. Materi 3.3.4 Unsur-Unsur Puisi.md
+     5. Materi 3.3.5 Menentukan Tema Teks Sastra Puisi.md
+     6. Materi 3.3.6 Menentukan Nilai dalam Teks Sastra Puisi.md
+
+≡ƒôä Memproses: 3.4.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.4.1 Pengenalan Majas dan Gaya Bahasa.md
+     2. Materi 3.4.2 Majas Perbandingan.md
+     3. Materi 3.4.3 Majas Pertentangan.md
+     4. Materi 3.4.4 Majas Sindiran dan Penegasan.md
+     5. Materi 3.4.5 Mengidentifikasi Majas dalam Teks.md
+
+≡ƒôä Memproses: 3.6.md
+   ≡ƒöì Auto-detect: Split by H2 (4 materi, 4 total heading)
+   Γ£ô Ditemukan 4 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.6.1 Pengenalan Referensi Silang.md
+     2. Materi 3.6.2 Pronomina sebagai Alat Referensi.md
+     3. Materi 3.6.3 Repetisi dan Sinonim sebagai Referensi.md
+     4. Materi 3.6.4 Mengidentifikasi Rujukan dalam Teks Sastra.md
+
+≡ƒôä Memproses: 4.1.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.1.1 Pengenalan Frasa.md
+     2. Materi 4.1.2 Jenis-Jenis Frasa Berdasarkan Kategori.md
+     3. Materi 4.1.3 Jenis-Jenis Frasa Berdasarkan Hubungan.md
+     4. Materi 4.1.4 Mengidentifikasi dan Menganalisis Frasa.md
+     5. Materi 4.1.5 Frasa yang Benar dan Salah.md
+
+≡ƒôä Memproses: 4.3.md
+   ≡ƒöì Auto-detect: Split by H2 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.3.1 Pengenalan Sintaksis.md
+     2. Materi 4.3.2 Kalimat Efektif.md
+     3. Materi 4.3.3 Kalimat Tidak Efektif dan Perbaikannya.md
+     4. Materi 4.3.4 Konjungsi dan Hubungan Antarklausa.md
+     5. Materi 4.3.5 Sintaksis dan Argumen.md
+
+≡ƒôä Memproses: 4.4.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.4.1 Pengenalan Ejaan (PUEBI).md
+     2. Materi 4.4.2 Penggunaan Huruf Kapital.md
+     3. Materi 4.4.3 Kesalahan Umum Huruf Kapital.md
+     4. Materi 4.4.4 Penggunaan Huruf Miring.md
+     5. Materi 4.4.5 Diftong dan Gabungan Konsonan.md
+
+≡ƒôä Memproses: 4.5.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.5.1 Pengenalan Penulisan Kata.md
+     2. Materi 4.5.2 Kata Dasar dan Kata Berimbuhan.md
+     3. Materi 4.5.3 Bentuk Terikat.md
+     4. Materi 4.5.4 Kata Ulang dan Gabungan Kata.md
+     5. Materi 4.5.5 Partikel dan Singkatan.md
+
+≡ƒôä Memproses: 4.6.md
+   ≡ƒöì Auto-detect: Split by H3 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.6.1 Pengenalan Tanda Baca.md
+     2. Materi 4.6.2 Tanda Titik, Koma, dan Titik Koma.md
+     3. Materi 4.6.3 Tanda Petik, Kurung, dan Seru.md
+     4. Materi 4.6.4 Tanda Hubung, Pisah, dan Garis Miring.md
+     5. Materi 4.6.5 Tanda Titik Dua dan Elipsis.md
+     6. Materi 4.6.6 Menganalisis Kesalahan Tanda Baca.md
+
+≡ƒôä Memproses: list_materi.md
+   ≡ƒöì Auto-detect: Split by H3 (0 materi, 0 total heading)
+   Γ£ô Ditemukan 0 section
+   [DRY RUN] File yang akan dibuat:
+
+≡ƒôä Memproses: list_materiv1.md
+   ≡ƒöì Auto-detect: Split by H3 (0 materi, 0 total heading)
+   Γ£ô Ditemukan 0 section
+   [DRY RUN] File yang akan dibuat:
+
+≡ƒôä Memproses: sampel.md
+   ≡ƒöì Auto-detect: Split by H3 (0 materi, 0 total heading)
+   Γ£ô Ditemukan 0 section
+   [DRY RUN] File yang akan dibuat:
+
+≡ƒôè Ringkasan LBI:
+   ΓÇó File diproses: 25
+   ΓÇó Section ditemukan: 119
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+≡ƒôü Folder: LBE
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+≡ƒôä Memproses: 1.1.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. MATERI 1.1.1 PENGENALAN MAIN IDEA DAN TOPIC.md
+     2. MATERI 1.1.2 ANALISIS MAIN IDEA DI PARAGRAF PERTAMA.md
+     3. MATERI 1.1.3 ANALISIS MAIN IDEA DI PARAGRAF TENGAH DAN AKHIR.md
+     4. MATERI 1.1.4 MENENTUKAN BEST TITLE DARI BACAAN.md
+     5. MATERI 1.1.5 MAIN IDEA UNTUK MULTI-PARAGRAPH TEXT.md
+
+≡ƒôä Memproses: 1.2.md
+   ≡ƒöì Auto-detect: Split by H2 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.1 Pengenalan Purpose dan Jenisnya.md
+     2. Materi 2.2 Analisis Purpose dari Main Idea dan Tone.md
+     3. Materi 2.3 Purpose dalam Berbagai Genre Teks.md
+     4. Materi 2.4 Analisis Vocabulary Purpose dalam Opsi.md
+     5. Materi 2.5 Purpose of Mentioning Specific Information.md
+
+≡ƒôä Memproses: 1.3.md
+   ≡ƒöì Auto-detect: Split by H2 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. MATERI 1.3.1 PENGENALAN DETAIL INFORMATION.md
+     2. MATERI 1.3.2 ANALISIS STATED INFORMATION DENGAN SCANNING.md
+     3. MATERI 1.3.3 ANALISIS PARAPHRASED INFORMATION.md
+     4. MATERI 1.3.4 ANALISIS SOAL EXCEPT DAN NOT TRUE.md
+     5. MATERI 1.3.5 DETAIL INFORMATION TERSEBAR MULTI-PARAGRAF.md
+
+≡ƒôä Memproses: 1.4.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. MATERI 1.4.1 Pengenalan Inference dan Conclusion.md
+     2. MATERI 1.4.2 Analisis Inference dari Main Idea.md
+     3. MATERI 1.4.3 Analisis Local Inference (Satu Paragraf).md
+     4. MATERI 1.4.4 Analisis Global Inference (Keseluruhan Teks).md
+     5. MATERI 1.4.5 Analisis Jebakan dalam Soal Inference.md
+
+≡ƒôä Memproses: 1.5.md
+   ≡ƒöì Auto-detect: Split by H2 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.5.1 Pengenalan Author's Attitude (Materi Dibuka).md
+     2. Materi 1.5.2 Analisis Author's Opinion.md
+     3. Materi 1.5.3 Analisis Fact vs Opinion.md
+     4. Materi 1.5.4 Analisis Author's Tone.md
+     5. Materi 1.5.5 Analisis Emotional Language dan Bias.md
+
+≡ƒôä Memproses: 2.1.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.1.1 Pengenalan Main Idea dan Topic.md
+     2. Materi 1.1.2 Analisis Main Idea di Paragraf Pertama.md
+     3. Materi 1.1.3 Analisis Main Idea di Paragraf Tengah dan Akhir.md
+     4. Materi 1.1.4 Menentukan Best Title dari Bacaan.md
+     5. Materi 1.1.5 Main Idea untuk Multi-Paragraph Text.md
+
+≡ƒôä Memproses: 2.2.md
+   ≡ƒöì Auto-detect: Split by H2 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. MATERI 2.2.1 PENGENALAN PRECEDING DAN FOLLOWING PARAGRAPH.md
+     2. MATERI 2.2.2 ANALISIS PRECEDING PARAGRAPH.md
+     3. MATERI 2.2.3 ANALISIS FOLLOWING PARAGRAPH.md
+     4. MATERI 2.2.4 ANALISIS TRANSITION WORDS UNTUK PRECEDING-FOLLOWING.md
+     5. MATERI 2.2.5 ANALISIS COMMON PATTERNS PRECEDING-FOLLOWING.md
+
+≡ƒôä Memproses: 2.3.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.1.1 Pengenalan Organization of Ideas.md
+     2. Materi 2.1.2 Analisis Pola Organisasi Teks.md
+     3. Materi 2.1.3 Analisis Hubungan Antar Paragraf.md
+     4. Materi 2.1.4 Analisis Main Idea Tiap Paragraf untuk Mapping.md
+     5. Materi 2.1.5 Analisis Jebakan Opsi Jawaban dalam Soal Organization.md
+
+≡ƒôä Memproses: 2.4.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.4.1 Pengenalan Sentence Function (Materi Dibuka).md
+     2. Materi 2.4.2 Analisis Topic Sentences.md
+     3. Materi 2.4.3 Analisis Supporting Sentences.md
+     4. Materi 2.4.4 Analisis Concluding Sentences.md
+     5. Materi 2.4.5 Analisis Paragraph Development Patterns.md
+
+≡ƒôä Memproses: 3.1.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.1.1 Pengenalan Synonym dalam Konteks.md
+     2. Materi 3.1.2 Analisis Synonym dari Context Clues.md
+     3. Materi 3.1.3 Analisis Multiple Meanings.md
+     4. Materi 3.1.4 Analisis Synonym untuk Different Word Classes.md
+     5. Materi 3.1.5 Analisis Academic Vocabulary dan Register.md
+
+≡ƒôä Memproses: 3.2.md
+   ≡ƒöì Auto-detect: Split by H2 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.2.1 Pengenalan Reference.md
+     2. Materi 3.2.2 Analisis Personal Pronouns Reference.md
+     3. Materi 3.2.3 Analisis Demonstrative Pronouns Reference.md
+     4. Materi 3.2.4 Analisis Relative Pronouns dan Other References.md
+     5. Materi 3.2.5 Analisis Ambiguous Reference.md
+
+≡ƒôä Memproses: 3.3.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.3.1 Pengenalan Paraphrase dan Restatement.md
+     2. Materi 3.3.2 Analisis Paraphrase dengan Synonym Substitution.md
+     3. Materi 3.3.3 Analisis Paraphrase dengan Structure Change.md
+     4. Materi 3.3.4 Analisis Complex Paraphrase.md
+     5. Materi 3.3.5 Analisis Jebakan dalam Soal Restatement.md
+
+≡ƒôä Memproses: 3.4.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.4.1 Pengenalan Word Formation.md
+     2. Materi 3.4.2 Analisis Common Prefixes.md
+     3. Materi 3.4.3 Analisis Common Suffixes.md
+     4. Materi 3.4.4 Analisis Root Words dan Word Families.md
+     5. Materi 3.4.5 Aplikasi Word Formation untuk Comprehension.md
+
+≡ƒôä Memproses: 4.1.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.1.1 Pengenalan Two Texts Analysis.md
+     2. Materi 4.1.2 Analisis Tema dan Main Idea Dua Teks.md
+     3. Materi 4.1.3 Analisis Persamaan Dua Teks.md
+     4. Materi 4.1.4 Analisis Perbedaan Dua Teks.md
+     5. Materi 4.1.5 Analisis Relationship antara Dua Teks.md
+
+≡ƒôä Memproses: 4.3.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.3.1 Pengenalan Infographic Reading.md
+     2. Materi 4.3.2 Analisis Bar Charts dan Pie Charts.md
+     3. Materi 4.3.3 Analisis Line Graphs dan Trends.md
+     4. Materi 4.3.4 Analisis Tables dan Statistical Data.md
+     5. Materi 4.3.5 Analisis Predictions dan Inferences dari Data.md
+
+≡ƒôä Memproses: 4.4.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. MATERI 4.4.1 PENGENALAN SENTENCE COMPLETION.md
+     2. MATERI 4.4.2 ANALISIS MISSING FIRST SENTENCE.md
+     3. MATERI 4.4.3 ANALISIS MISSING MIDDLE SENTENCE.md
+     4. MATERI 4.4.4 ANALISIS MISSING LAST SENTENCE.md
+     5. MATERI 4.4.5 ANALISIS JUMBLED SENTENCES.md
+
+≡ƒôä Memproses: 4.5.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.5.1 Pengenalan Text Genres dalam SNBT (Materi Dibuka).md
+     2. Materi 4.5.2 Analisis Teks Umum (InspirationalGeneral Interest).md
+     3. Materi 4.5.3 Analisis Teks Sastra (LiteraryNovel Excerpts).md
+     4. Materi 4.5.4 Analisis Teks Saintek (ScientificTechnical).md
+     5. Materi 4.5.5 Analisis Teks Sosial Humaniora (Social SciencesHumanities).md
+
+≡ƒôä Memproses: 4.6.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. MATERI 4.6.1 PENGENALAN SUMMARY QUESTIONS (Materi Dibuka).md
+     2. MATERI 4.6.2 ANALISIS SUMMARY UNTUK SINGLE PARAGRAPH.md
+     3. MATERI 4.6.3 ANALISIS SUMMARY UNTUK MULTI-PARAGRAPH TEXT.md
+     4. MATERI 4.6.4 ANALISIS SUMMARY OPTIONS.md
+     5. MATERI 4.6.5 DISTINGUISHING MAIN POINTS DARI SUPPORTING DETAILS.md
+
+≡ƒôä Memproses: list_materi.md
+   ≡ƒöì Auto-detect: Split by H3 (0 materi, 0 total heading)
+   Γ£ô Ditemukan 0 section
+   [DRY RUN] File yang akan dibuat:
+
+≡ƒôä Memproses: sampel.md
+   ≡ƒöì Auto-detect: Split by H3 (0 materi, 0 total heading)
+   Γ£ô Ditemukan 0 section
+   [DRY RUN] File yang akan dibuat:
+
+≡ƒôè Ringkasan LBE:
+   ΓÇó File diproses: 20
+   ΓÇó Section ditemukan: 90
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+≡ƒôü Folder: PM
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+≡ƒôä Memproses: 1.1.md
+   ≡ƒöì Auto-detect: Split by H2 (7 materi, 7 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. ≡ƒôÜ Materi 1.1.1 Pengenalan Pola Bilangan (GRATIS).md
+     2. ≡ƒôÜ Materi 1.1.2 Pola Bilangan Aritmatika.md
+     3. ≡ƒôÜ Materi 1.1.3 Pola Bilangan Geometri.md
+     4. ≡ƒôÜ Materi 1.1.4 Pola Bilangan Khusus.md
+     5. ≡ƒôÜ Materi 1.1.5 Pola Bilangan Fibonacci dan Pola Kompleks.md
+     6. ≡ƒôÜ Materi 1.1.6 Deret Bilangan.md
+     7. ≡ƒôÜ Materi 1.1.7 Analisis dan Prediksi Pola.md
+
+≡ƒôä Memproses: 1.2.md
+   ≡ƒöì Auto-detect: Split by H2 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.2.1 Pengenalan Hubungan Variabel (GRATIS).md
+     2. Materi 1.2.2 Hubungan Linear Antar Variabel.md
+     3. Materi 1.2.3 Hubungan Kuadratik Antar Variabel.md
+     4. Materi 1.2.4 Hubungan Proporsional.md
+     5. Materi 1.2.5 Analisis Grafik dan Tabel.md
+     6. Materi 1.2.6 Korelasi dan Interpretasi Data.md
+
+≡ƒôä Memproses: 1.3.md
+   ≡ƒöì Auto-detect: Split by H2 (7 materi, 7 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.3.1 Pengenalan Penalaran Aljabar (GRATIS).md
+     2. Materi 1.3.2 Menyusun Persamaan dari Masalah.md
+     3. Materi 1.3.3 Strategi Penyelesaian Persamaan.md
+     4. Materi 1.3.4 Penalaran Pertidaksamaan.md
+     5. Materi 1.3.5 Sistem Persamaan dalam Konteks.md
+     6. Materi 1.3.6 Penalaran Fungsi.md
+     7. Materi 1.3.7 Penalaran Eksponen dan Logaritma.md
+
+≡ƒôä Memproses: 1.4.md
+   ≡ƒöì Auto-detect: Split by H2 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.4.1 Pengenalan Urutan Bilangan (GRATIS).md
+     2. Materi 1.4.2 Operasi Bilangan Bulat.md
+     3. Materi 1.4.3 Operasi Pecahan dan Desimal.md
+     4. Materi 1.4.4 Bilangan Berpangkat dalam Penalaran.md
+     5. Materi 1.4.5 Akar dan Estimasi.md
+     6. Materi 1.4.6 Keterbagian dan Sifat Bilangan.md
+
+≡ƒôä Memproses: 2.1.md
+   ≡ƒöì Auto-detect: Split by H2 (4 materi, 4 total heading)
+   Γ£ô Ditemukan 4 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.1.1 Pengenalan Penalaran Geometri Datar (GRATIS).md
+     2. Materi 2.1.2 Penalaran Segitiga.md
+     3. Materi 2.1.3 Penalaran Segiempat.md
+     4. Materi 2.1.4 Penalaran Lingkaran.md
+
+≡ƒôä Memproses: 2.2.md
+   ≡ƒöì Auto-detect: Split by H2 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.2.1 Pengenalan Penalaran Geometri Ruang (GRATIS).md
+     2. Materi 2.2.2 Penalaran Volume.md
+     3. Materi 2.2.3 Penalaran Luas Permukaan.md
+     4. Materi 2.2.4 Penalaran Diagonal dan Jarak.md
+     5. Materi 2.2.5 Bangun Ruang Gabungan.md
+     6. Materi 2.2.6 Penalaran Irisan dan Potongan.md
+
+≡ƒôä Memproses: 2.3.md
+   ≡ƒöì Auto-detect: Split by H2 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.3.1 Pengenalan Penalaran Spasial (GRATIS).md
+     2. Materi 2.3.2 Rotasi dan Refleksi.md
+     3. Materi 2.3.3 Visualisasi Bangun Ruang.md
+     4. Materi 2.3.4 Pola Geometri.md
+     5. Materi 2.3.5 Kongruensi dan Transformasi.md
+     6. Materi 2.3.6 Penalaran Koordinat.md
+
+≡ƒôä Memproses: 2.4.md
+   ≡ƒöì Auto-detect: Split by H2 (4 materi, 4 total heading)
+   Γ£ô Ditemukan 4 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.4.1 Pengenalan Pengukuran dalam Penalaran (GRATIS).md
+     2. Materi 2.4.2 Penalaran Perbandingan Panjang.md
+     3. Materi 2.4.3 Penalaran Perbandingan Luas.md
+     4. Materi 2.4.4 Penalaran Perbandingan Volume.md
+
+≡ƒôä Memproses: 3.1.md
+   ≡ƒöì Auto-detect: Split by H2 (7 materi, 7 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. ≡ƒôè Materi 3.1.1 Pengenalan Analisis Data (GRATIS).md
+     2. ≡ƒôï Materi 3.1.2 Interpretasi Tabel.md
+     3. ≡ƒôê Materi 3.1.3 Interpretasi Grafik Batang dan Garis.md
+     4. ≡ƒÑº Materi 3.1.4 Interpretasi Diagram Lingkaran.md
+     5. ≡ƒôè Materi 3.1.5 Histogram dan Poligon Frekuensi.md
+     6. ≡ƒöì Materi 3.1.6 Scatter Plot dan Korelasi.md
+     7. ≡ƒöä Materi 3.1.7 Perbandingan dan Analisis Multi-Data.md
+
+≡ƒôä Memproses: 3.2.md
+   ≡ƒöì Auto-detect: Split by H2 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.2.1 Pengenalan Ukuran Statistik (GRATIS).md
+     2. Materi 3.2.2 Penalaran Mean (Rata-rata).md
+     3. Materi 3.2.3 Penalaran Median dan Modus.md
+     4. Materi 3.2.4 Penalaran Jangkauan dan Kuartil.md
+     5. Materi 3.2.5 Diagram Kotak Garis (Box Plot).md
+     6. Materi 3.2.6 Variansi dan Standar Deviasi dalam Penalaran.md
+
+≡ƒôä Memproses: 3.3.md
+   ≡ƒöì Auto-detect: Split by H2 (7 materi, 7 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.3.1 Pengenalan Penalaran Peluang (GRATIS).md
+     2. Materi 3.3.2 Penalaran Peluang Sederhana.md
+     3. Materi 3.3.3 Peluang Kejadian Majemuk.md
+     4. Materi 3.3.4 Peluang Bersyarat dalam Penalaran.md
+     5. Materi 3.3.5 Nilai Harapan.md
+     6. Materi 3.3.6 Penalaran Kombinatorika.md
+     7. Materi 3.3.7 Paradoks dan Kesalahan Umum Probabilitas.md
+
+≡ƒôä Memproses: 4.1.md
+   ≡ƒöì Auto-detect: Split by H2 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.1.1 Pengenalan Penalaran Aritmatika Sosial (GRATIS).md
+     2. Materi 4.1.2 Penalaran Persentase.md
+     3. Materi 4.1.3 Penalaran Diskon dan Pajak.md
+     4. Materi 4.1.4 Penalaran Bunga dan Investasi.md
+     5. Materi 4.1.5 Penalaran Keuntungan dan Rugi.md
+     6. Materi 4.1.6 Penalaran Angsuran dan Cicilan.md
+
+≡ƒôä Memproses: 4.3.md
+   ≡ƒöì Auto-detect: Split by H2 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.3.1 Pengenalan Penalaran Proporsi (GRATIS).md
+     2. Materi 4.3.2 Perbandingan Senilai dalam Penalaran.md
+     3. Materi 4.3.3 Perbandingan Berbalik Nilai dalam Penalaran.md
+     4. Materi 4.3.4 Penalaran Campuran dan Konsentrasi.md
+     5. Materi 4.3.5 Pembagian Bersusun dan Proporsional.md
+     6. Materi 4.3.6 Penalaran Skala dan Model.md
+
+≡ƒôä Memproses: list_materi.md
+   ≡ƒöì Auto-detect: Split by H3 (0 materi, 0 total heading)
+   Γ£ô Ditemukan 0 section
+   [DRY RUN] File yang akan dibuat:
+
+≡ƒôè Ringkasan PM:
+   ΓÇó File diproses: 14
+   ΓÇó Section ditemukan: 78
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+≡ƒôü Folder: PK
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+≡ƒôä Memproses: 1.1.md
+   ≡ƒöì Auto-detect: Split by H2 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.1.1 Pengenalan Aljabar dan Sifat-sifat Operasi (GRATIS).md
+     2. Materi 1.1.2 Operasi Pecahan Aljabar.md
+     3. Materi 1.1.3 Eksponen dan Bentuk Akar.md
+     4. Materi 1.1.4 Faktorisasi Aljabar.md
+     5. Materi 1.1.5 Operasi Aljabar Lanjutan.md
+
+≡ƒôä Memproses: 1.2.md
+   ≡ƒöì Auto-detect: Split by H2 (7 materi, 7 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.2.1 Pengenalan Persamaan Linear Satu Variabel (GRATIS).md
+     2. Materi 1.2.2 Pertidaksamaan Linear Satu Variabel.md
+     3. Materi 1.2.3 Sistem Persamaan Linear Dua Variabel (SPLDV).md
+     4. Materi 1.2.4 Aplikasi Sistem Persamaan Linear.md
+     5. Materi 1.2.5 Fungsi Linear dan Grafiknya.md
+     6. Materi 1.2.6 Persamaan Garis Lurus.md
+     7. Materi 1.2.7 Pertidaksamaan Linear Dua Variabel.md
+
+≡ƒôä Memproses: 1.3.md
+   ≡ƒöì Auto-detect: Split by H2 (7 materi, 7 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.3.1 Pengenalan Persamaan Kuadrat (GRATIS).md
+     2. Materi 1.3.2 Menyelesaikan Persamaan Kuadrat dengan Melengkapkan Kuadrat.md
+     3. Materi 1.3.3 Rumus ABC (Kuadratik).md
+     4. Materi 1.3.4 Sifat-sifat Akar Persamaan Kuadrat.md
+     5. Materi 1.3.5 Fungsi Kuadrat.md
+     6. Materi 1.3.6 Grafik dan Karakteristik Parabola.md
+     7. Materi 1.3.7 Pertidaksamaan Kuadrat.md
+
+≡ƒôä Memproses: 1.4.md
+   ≡ƒöì Auto-detect: Split by H2 (7 materi, 7 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.4.1 Pengenalan Fungsi Eksponen (GRATIS).md
+     2. Materi 1.4.2 Persamaan Eksponen.md
+     3. Materi 1.4.3 Pertidaksamaan Eksponen.md
+     4. Materi 1.4.4 Pengenalan Logaritma.md
+     5. Materi 1.4.5 Operasi dan Sifat Logaritma.md
+     6. Materi 1.4.6 Persamaan Logaritma.md
+     7. Materi 1.4.7 Pertidaksamaan Logaritma dan Fungsi Logaritma.md
+
+≡ƒôä Memproses: 2.1.md
+   ≡ƒöì Auto-detect: Split by H2 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.1.1 Pengenalan Sistem Bilangan (GRATIS).md
+     2. Materi 2.1.2 Sifat-sifat Bilangan Bulat.md
+     3. Materi 2.1.4 Operasi pada Bilangan Pecahan.md
+     4. Materi 2.1.5 Bilangan Berpangkat.md
+     5. Materi 2.1.6 Akar dan Operasinya.md
+
+≡ƒôä Memproses: 2.2.md
+   ≡ƒöì Auto-detect: Split by H2 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.2.1 Pengenalan Bilangan Prima (GRATIS).md
+     2. Materi 2.2.2 Faktorisasi Prima.md
+     3. Materi 2.2.3 FPB dan KPK.md
+     4. Materi 2.2.4 Aplikasi FPB dan KPK.md
+     5. Materi 2.2.5 Keterbagian Bilangan.md
+     6. Materi 2.2.6 Bilangan Bulat dalam Operasi Modulo.md
+     7. Penutup Mindset untuk Menguasai Materi Ini.md
+
+≡ƒôä Memproses: 2.3.md
+   ≡ƒöì Auto-detect: Split by H3 (7 materi, 7 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.3.1 Pengenalan Barisan dan Deret (GRATIS).md
+     2. Materi 2.3.2 Barisan Aritmatika.md
+     3. Materi 2.3.3 Deret Aritmatika.md
+     4. Materi 2.3.4 Barisan Geometri.md
+     5. Materi 2.3.5 Deret Geometri.md
+     6. Materi 2.3.6 Deret Geometri Tak Hingga.md
+     7. Materi 2.3.7 Pola Bilangan dan Aplikasi Barisan Deret.md
+
+≡ƒôä Memproses: 2.4.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.4.1 Pengenalan Aritmatika Sosial (GRATIS).md
+     2. Materi 2.4.2 Rabat (Diskon), Bruto, Neto, dan Tara.md
+     3. Materi 2.4.3 Pajak dan Bunga Tunggal.md
+     4. Materi 2.4.4 Bunga Majemuk dan Anuitas.md
+     5. Materi 2.4.5 Persentase dan Aplikasinya.md
+
+≡ƒôä Memproses: 3.1.md
+   ≡ƒöì Auto-detect: Split by H3 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.1.1 Pengenalan Bangun Datar (GRATIS).md
+     2. Materi 3.1.2 Segitiga.md
+     3. Materi 3.1.3 Segiempat (Persegi, Persegi Panjang, Jajargenjang).md
+     4. Materi 3.1.4 Segiempat (Trapesium, Belah Ketupat, Layang-layang).md
+     5. Materi 3.1.5 Lingkaran.md
+     6. Materi 3.1.6 Aplikasi Bangun Datar Gabungan.md
+
+≡ƒôä Memproses: 3.2.md
+   ≡ƒöì Auto-detect: Split by H2 (7 materi, 7 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.2.1 Pengenalan Bangun Ruang (GRATIS).md
+     2. Materi 3.2.2 Kubus dan Balok.md
+     3. Materi 3.2.3 Prisma dan Limas.md
+     4. Materi 3.2.4 Tabung (Silinder).md
+     5. Materi 3.2.5 Kerucut.md
+     6. Materi 3.2.6 Bola.md
+     7. Materi 3.2.7 Bangun Ruang Gabungan dan Aplikasi.md
+
+≡ƒôä Memproses: 3.3.md
+   ≡ƒöì Auto-detect: Split by H2 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.3.1 Pengenalan Transformasi Geometri (GRATIS).md
+     2. Materi 3.3.2 Translasi (Pergeseran).md
+     3. Materi 3.3.3 Refleksi (Pencerminan).md
+     4. Materi 3.3.4 Rotasi (Perputaran).md
+     5. Materi 3.3.5 Dilatasi (PerbesaranPengecilan).md
+     6. Materi 3.3.6 Komposisi Transformasi.md
+
+≡ƒôä Memproses: 4.1.md
+   ≡ƒöì Auto-detect: Split by H2 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.1.1 Pengenalan Statistika dan Pengumpulan Data (GRATIS).md
+     2. Materi 4.1.2 Penyajian Data.md
+     3. Materi 4.1.3 Ukuran Pemusatan Data (Mean).md
+     4. Materi 4.1.4 Ukuran Pemusatan Data (Median dan Modus).md
+     5. Materi 4.1.5 Ukuran Penyebaran Data (Jangkauan dan Kuartil).md
+
+≡ƒôä Memproses: 4.3.md
+   ≡ƒöì Auto-detect: Split by H3 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.3.1 Pengenalan Himpunan (GRATIS).md
+     2. Materi 4.3.2 Himpunan Bagian.md
+     3. Materi 4.3.3 Operasi Himpunan.md
+     4. Materi 4.3.4 Diagram Venn.md
+     5. Materi 4.3.5 Aplikasi Himpunan.md
+     6. Materi 4.3.6 Himpunan Bilangan.md
+
+≡ƒôä Memproses: list_materi.md
+   ≡ƒöì Auto-detect: Split by H3 (0 materi, 0 total heading)
+   Γ£ô Ditemukan 0 section
+   [DRY RUN] File yang akan dibuat:
+
+≡ƒôè Ringkasan PK:
+   ΓÇó File diproses: 14
+   ΓÇó Section ditemukan: 80
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+≡ƒôü Folder: PBM
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+≡ƒôä Memproses: 1.1.md
+   ≡ƒöì Auto-detect: Split by H3 (7 materi, 7 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. MATERI 1.1.1 PENGENALAN KALIMAT EFEKTIF.md
+     2. MATERI 1.1.2 SYARAT KALIMAT EFEKTIF - KESATUAN.md
+     3. MATERI 1.1.3 SYARAT KALIMAT EFEKTIF - KEHEMATAN.md
+     4. MATERI 1.1.4 SYARAT KALIMAT EFEKTIF - KEPARALELAN.md
+     5. MATERI 1.1.5 SYARAT KALIMAT EFEKTIF - KELOGISAN, KEPADUAN, DAN KETEPATAN.md
+     6. MATERI 1.1.6 MENGHINDARI KALIMAT AMBIGU.md
+     7. MATERI 1.1.7 KALIMAT EFEKTIF DALAM KONTEKS UTBK.md
+
+≡ƒôä Memproses: 1.2.md
+   ≡ƒöì Auto-detect: Split by H2 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.2.1 Pengenalan Kata Baku dan Tidak Baku.md
+     2. Materi 1.2.2 Ciri-Ciri dan Karakteristik Kata Baku.md
+     3. Materi 1.2.3 Ciri-Ciri dan Penyebab Kata Tidak Baku.md
+     4. Materi 1.2.4 Daftar Kata Baku-Tidak Baku Umum.md
+     5. Materi 1.2.5 Strategi Mengenali Kata Baku dalam Soal.md
+
+≡ƒôä Memproses: 1.3.md
+   ≡ƒöì Auto-detect: Split by H3 (4 materi, 4 total heading)
+   Γ£ô Ditemukan 4 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.3.1 Pengenalan Kalimat dan Strukturnya.md
+     2. Materi 1.3.2 Kalimat Tunggal.md
+     3. Materi 1.3.3 Variasi Struktur Kalimat Tunggal.md
+     4. Materi 1.3.4 Menganalisis Struktur Kalimat.md
+
+≡ƒôä Memproses: 1.4.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.4.1 Pengenalan Kalimat Majemuk.md
+     2. Materi 1.4.2 Kalimat Majemuk Setara.md
+     3. Materi 1.4.3 Kalimat Majemuk Bertingkat.md
+     4. Materi 1.4.4 Kalimat Majemuk Campuran.md
+     5. Materi 1.4.5 Mengidentifikasi Jenis Kalimat Majemuk (Strategi Khusus untuk UTBK).md
+
+≡ƒôä Memproses: 1.5.md
+   ≡ƒöì Auto-detect: Split by H3 (9 materi, 9 total heading)
+   Γ£ô Ditemukan 10 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.5.1 Pengenalan Kalimat Aktif dan Pasif.md
+     2. Materi 1.5.2 Kalimat Aktif.md
+     3. Materi 1.5.3 Kalimat Pasif.md
+     4. Materi 1.5.4 Kalimat Pasif Zero.md
+     5. Materi 1.5.5 Mengubah Kalimat Aktif-Pasif.md
+     6. Materi 1.5.6 Bonus - Ringkasan dan Tips Akhir.md
+     7. Materi 1.6.1 Pengenalan Kalimat Langsung dan Tidak Langsung.md
+     8. Materi 1.6.2 Kalimat Langsung.md
+     9. Materi 1.6.3 Kalimat Tidak Langsung.md
+     10. Materi 1.6.4 Teknik Transformasi Kalimat Langsung-Tidak Langsung.md
+
+≡ƒôä Memproses: 1.6.md
+   ≡ƒöì Auto-detect: Split by H3 (4 materi, 4 total heading)
+   Γ£ô Ditemukan 4 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.6.1 Pengenalan Kalimat Langsung dan Tidak Langsung.md
+     2. Materi 1.6.2 Kalimat Langsung.md
+     3. Materi 1.6.3 Kalimat Tidak Langsung.md
+     4. Materi 1.6.4 Teknik Transformasi Kalimat Langsung-Tidak Langsung.md
+
+≡ƒôä Memproses: 2.1.md
+   ≡ƒöì Auto-detect: Split by H3 (7 materi, 7 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.1.1 Pengenalan Huruf Kapital.md
+     2. Materi 2.1.2 Huruf Kapital pada Awal Kalimat dan Petikan.md
+     3. Materi 2.1.3 Huruf Kapital pada Nama Diri.md
+     4. Materi 2.1.4 Huruf Kapital pada Gelar dan Jabatan.md
+     5. Materi 2.1.5 Huruf Kapital pada Nama Tempat dan Peristiwa.md
+     6. Materi 2.1.6 Huruf Kapital pada Judul dan Singkatan.md
+     7. Materi 2.1.7 Kesalahan Umum Penggunaan Huruf Kapital.md
+
+≡ƒôä Memproses: 2.2.md
+   ≡ƒöì Auto-detect: Split by H3 (7 materi, 7 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.2.1 Pengenalan Huruf Miring dan Tebal.md
+     2. Materi 2.2.2 Penggunaan Huruf Miring - Detail dan Konteks.md
+     3. Materi 2.2.3 Penggunaan Huruf Tebal - Konteks dan Aplikasi.md
+     4. Materi 2.2.4 Huruf Diftong - Bunyi Ganda yang Satu.md
+     5. Materi 2.2.5 Gabungan Huruf Konsonan.md
+     6. Materi 2.2.6 Kesalahan Umum dalam Penulisan - Analisis Mendalam.md
+     7. Strategi Khusus untuk Soal SNBT tentang Materi Ini.md
+
+≡ƒôä Memproses: 2.3.md
+   ≡ƒöì Auto-detect: Split by H3 (4 materi, 4 total heading)
+   Γ£ô Ditemukan 4 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.3.1 Pengenalan Kata Dasar dan Berimbuhan.md
+     2. Materi 2.3.2 Kata Dasar - Pendalaman.md
+     3. Materi 2.3.3 Kata Berimbuhan - Pendalaman.md
+     4. Materi 2.3.4 Hukum K, T, S, P - Aturan Peluluhan Konsonan.md
+
+≡ƒôä Memproses: 2.4.md
+   ≡ƒöì Auto-detect: Split by H3 (7 materi, 7 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.1.1 Pengenalan Huruf Kapital.md
+     2. Materi 2.1.2 Huruf Kapital pada Awal Kalimat dan Petikan.md
+     3. Materi 2.1.3 Huruf Kapital pada Nama Diri.md
+     4. Materi 2.1.4 Huruf Kapital pada Gelar dan Jabatan.md
+     5. Materi 2.1.5 Huruf Kapital pada Nama Tempat dan Peristiwa.md
+     6. Materi 2.1.6 Huruf Kapital pada Judul dan Singkatan.md
+     7. Materi 2.1.7 Kesalahan Umum Penggunaan Huruf Kapital.md
+
+≡ƒôä Memproses: 2.5.md
+   ≡ƒöì Auto-detect: Split by H3 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.5.1 Pengenalan Singkatan dan Akronim.md
+     2. Materi 2.5.2 Penulisan Singkatan.md
+     3. Materi 2.5.3 Lambang, Satuan, dan Akronim.md
+     4. Materi 2.5.4 Pengenalan Penulisan Bilangan.md
+     5. Materi 2.5.5 Penulisan Bilangan dengan Huruf dan Angka.md
+     6. Materi 2.5.6 Kesalahan Umum Singkatan dan Bilangan + Strategi SNBT.md
+
+≡ƒôä Memproses: 2.6.md
+   ≡ƒöì Auto-detect: Split by H3 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.6.1 Pengenalan Kata Ganti dan Kata Sandang.md
+     2. Materi 2.6.2 Penulisan Kata Ganti dan Kata Sandang.md
+     3. Materi 2.6.3 Pengenalan Partikel.md
+     4. Materi 2.6.4 Penulisan Partikel.md
+     5. Materi 2.6.5 Suku Kata dan Pemenggalan.md
+     6. Materi 2.6.6 Kesalahan Umum Penulisan.md
+
+≡ƒôä Memproses: 3.1.md
+   ≡ƒöì Auto-detect: Split by H3 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.1.1 Pengenalan Tanda Baca.md
+     2. Materi 3.1.2 Tanda Titik di Akhir Kalimat dan Penomoran.md
+     3. Materi 3.1.3 Tanda Titik dalam Waktu dan Bilangan.md
+     4. Materi 3.1.4 Tanda Titik dalam Daftar Pustaka.md
+     5. Materi 3.1.5 Konteks yang TIDAK Menggunakan Tanda Titik.md
+     6. Materi 3.1.6 Strategi Khusus Menghadapi Soal Tanda Titik di SNBT.md
+
+≡ƒôä Memproses: 3.2.md
+   ≡ƒöì Auto-detect: Split by H3 (7 materi, 7 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.2.1 Pengenalan Tanda Koma.md
+     2. Materi 3.2.2 Tanda Koma dalam Pemerincian dan Penghubung.md
+     3. Materi 3.2.3 Tanda Koma dalam Kalimat Majemuk.md
+     4. Materi 3.2.4 Tanda Koma dalam Sapaan dan Petikan.md
+     5. Materi 3.2.5 Tanda Koma dalam Alamat, Tanggal, dan Daftar Pustaka.md
+     6. Materi 3.2.6 Tanda Koma untuk Mengapit dan Memisahkan.md
+     7. Materi 3.2.7 Kesalahan Umum Penggunaan Koma.md
+
+≡ƒôä Memproses: 3.3.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.3.1 Pengenalan Tanda Titik Koma dan Titik Dua.md
+     2. Materi 3.3.2 Tanda Titik Koma (;).md
+     3. Materi 3.3.3 Tanda Titik Dua ().md
+     4. Materi 3.3.4 Tanda Titik Dua dalam Konteks Khusus.md
+     5. Materi 3.3.5 Penggunaan yang Tepat (Materi Baru).md
+
+≡ƒôä Memproses: 3.4.md
+   ≡ƒöì Auto-detect: Split by H3 (7 materi, 7 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.4.1 Pengenalan Tanda Hubung dan Tanda Pisah.md
+     2. Materi 3.4.2 Tanda Hubung (-) - Fungsi Dasar.md
+     3. Materi 3.4.3 Tanda Hubung untuk Merangkai - Part 1.md
+     4. Materi 3.4.3 Tanda Hubung untuk Merangkai - Part 2.md
+     5. Materi 3.4.4 Tanda Hubung dalam Konteks Khusus.md
+     6. Materi 3.4.5 Tanda Pisah (ΓÇö) - Fungsi dan Penggunaan.md
+     7. Materi 3.4.6 Perbedaan dan Kesalahan Umum Penggunaan Tanda Hubung dan Tanda Pisah.md
+
+≡ƒôä Memproses: 3.5.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.5.1 Pengenalan Tanda Baca Akhir Kalimat.md
+     2. Materi 3.5.2 Tanda Tanya ().md
+     3. Materi 3.5.3 Tanda Seru (!).md
+     4. Materi 3.5.4 Tanda Elipsis (...).md
+     5. Materi 3.5.5 Penggunaan dalam Dialog dan Kutipan.md
+
+≡ƒôä Memproses: 3.6.md
+   ≡ƒöì Auto-detect: Split by H3 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.6.1 Pengenalan Tanda Baca Pelengkap.md
+     2. Materi 3.6.2 Tanda Petik (...) dan Tanda Petik Tunggal ('...').md
+     3. Materi 3.6.3 Tanda Penyingkat atau Apostrof (').md
+     4. Materi 3.6.4 Tanda Kurung ((...)) dan Kurung Siku ([...]).md
+     5. Materi 3.6.5 Tanda Garis Miring ().md
+     6. Materi 3.6.6 Kesalahan Umum dan Kombinasi Tanda Baca.md
+
+≡ƒôä Memproses: 4.1.md
+   ≡ƒöì Auto-detect: Split by H3 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.1.1 Pengenalan Paragraf.md
+     2. Materi 4.1.2 Struktur Paragraf.md
+     3. Materi 4.1.3 Jenis Paragraf Berdasarkan Isi.md
+     4. Materi 4.1.4 Pengembangan Paragraf.md
+     5. Materi 4.1.5 Menemukan Ide Pokok Paragraf.md
+     6. Materi 4.1.6 Menganalisis Kualitas Paragraf.md
+
+≡ƒôä Memproses: 4.2.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.2.1 Pengenalan Kohesi dan Koherensi.md
+     2. Materi 4.2.2 Alat Kohesi.md
+     3. Materi 4.2.3 Membangun Koherensi.md
+     4. Materi 4.2.4 Penanda Wacana.md
+     5. Materi 4.2.5 Menganalisis Kohesi dan Koherensi dalam Teks.md
+
+≡ƒôä Memproses: 4.3.md
+   ≡ƒöì Auto-detect: Split by H3 (4 materi, 4 total heading)
+   Γ£ô Ditemukan 7 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.3.1 Pengenalan Istilah dan Tata Istilah.md
+     2. Materi 4.3.2 Persyaratan Istilah yang Baik.md
+     3. Kesimpulan Materi 4.3.2.md
+     4. Materi 4.3.3 Konsep Ilmu Pengetahuan dan Peristilahannya.md
+     5. Kesimpulan Materi 4.3.3.md
+     6. Materi 4.3.4 Bahan Baku Istilah Indonesia.md
+     7. Kesimpulan Materi 4.3.5.md
+
+≡ƒôä Memproses: 4.4.md
+   ≡ƒöì Auto-detect: Split by H3 (11 materi, 11 total heading)
+   Γ£ô Ditemukan 11 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.4.1 Pengenalan Pemadanan Istilah.md
+     2. Materi 4.4.2 Penerjemahan Langsung.md
+     3. Materi 4.4.3 Pedoman Penerjemahan.md
+     4. Materi 4.4.4 Penerjemahan dengan Perekaan.md
+     5. Materi 4.4.5 Latihan Penerjemahan Istilah.md
+     6. Materi 4.5.5 Penyerapan dalam Konteks Soal.md
+     7. Materi 4.6.1 Gabungan Penerjemahan dan Penyerapan.md
+     8. Materi 4.6.2 Perekaciptaan Istilah.md
+     9. Materi 4.6.3 Pembakuan dan Kodifikasi Istilah.md
+     10. Materi 4.6.4 Menggunakan Istilah dengan Tepat.md
+     11. Materi 4.6.5 Perkembangan Istilah dalam Bahasa Indonesia.md
+
+≡ƒôä Memproses: 4.5.md
+   ≡ƒöì Auto-detect: Split by H3 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.1.1 Pengenalan Paragraf.md
+     2. Materi 4.1.2 Struktur Paragraf.md
+     3. Materi 4.1.3 Jenis Paragraf Berdasarkan Isi.md
+     4. Materi 4.1.4 Pengembangan Paragraf.md
+     5. Materi 4.1.5 Menemukan Ide Pokok Paragraf.md
+     6. Materi 4.1.6 Menganalisis Kualitas Paragraf.md
+
+≡ƒôä Memproses: 4.6.md
+   ≡ƒöì Auto-detect: Split by H3 (5 materi, 5 total heading)
+   Γ£ô Ditemukan 5 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.6.1 Gabungan Penerjemahan dan Penyerapan.md
+     2. Materi 4.6.2 Perekaciptaan Istilah.md
+     3. Materi 4.6.3 Pembakuan dan Kodifikasi Istilah.md
+     4. Materi 4.6.4 Menggunakan Istilah dengan Tepat (Baru).md
+     5. Materi 4.6.5 Perkembangan Istilah dalam Bahasa Indonesia (Baru).md
+
+≡ƒôä Memproses: list_materi.md
+   ≡ƒöì Auto-detect: Split by H3 (0 materi, 0 total heading)
+   Γ£ô Ditemukan 0 section
+   [DRY RUN] File yang akan dibuat:
+
+≡ƒôä Memproses: sampel.md
+   ≡ƒöì Auto-detect: Split by H2 (1 materi, 1 total heading)
+   Γ£ô Ditemukan 1 section
+   [DRY RUN] File yang akan dibuat:
+     1. MATERI PENDAMPING BAHASA INDONESIA.md
+
+≡ƒôè Ringkasan PBM:
+   ΓÇó File diproses: 26
+   ΓÇó Section ditemukan: 149
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+≡ƒôü Folder: PPU
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+≡ƒôä Memproses: 1.1.md
+   ≡ƒöì Auto-detect: Split by H2 (15 materi, 15 total heading)
+   Γ£ô Ditemukan 15 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.1.1 Pengenalan Makna Kata ≡ƒÄ».md
+     2. Materi 1.1.2 Makna Leksikal ≡ƒôû.md
+     3. Materi 1.1.3 Makna Gramatikal - Imbuhan (Afiksasi) ≡ƒöº.md
+     4. Materi 1.1.4 Makna Gramatikal - Kata Tugas (Preposisi) ≡ƒôì.md
+     5. Materi 1.1.5 Makna Gramatikal - Kata Tugas (Konjungsi) ≡ƒöù.md
+     6. Materi 1.1.6 Makna Gramatikal - Pengulangan (Reduplikasi) ≡ƒöü.md
+     7. Materi 1.1.7 Makna Gramatikal - Pemajemukan ≡ƒÅó.md
+     8. Materi 1.1.8 Makna Denotasi ≡ƒô¥.md
+     9. Materi 1.1.9 Makna Konotasi ≡ƒÄ¡.md
+     10. Materi 1.1.10 Makna Ambigu ≡ƒñ╖.md
+     11. Materi 1.1.11 Makna Kontekstual ≡ƒÄ».md
+     12. Materi 1.1.12 Makna Referensial dan Non-Referensial ≡ƒöù.md
+     13. Materi 1.1.13 Makna Konseptual dan Makna Asosiatif ≡ƒºá.md
+     14. Materi 1.1.14 Makna Idiomatis ≡ƒÄ¿.md
+     15. Materi 1.1.15 Makna Emotif dan Netral ≡ƒÿè≡ƒÿÉ.md
+
+≡ƒôä Memproses: 1.2.md
+   ≡ƒöì Auto-detect: Split by H2 (10 materi, 10 total heading)
+   Γ£ô Ditemukan 10 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.2.1 Pengenalan Perubahan Makna Kata.md
+     2. Materi 1.2.2 Ameliorasi (Peningkatan Makna).md
+     3. Materi 1.2.3 Peyorasi (Penurunan Makna).md
+     4. Materi 1.2.4 Perluasan Makna (Generalisasi).md
+     5. Materi 1.2.5 Penyempitan Makna (Spesialisasi).md
+     6. Materi 1.2.6 Perubahan Makna Asosiasi.md
+     7. Materi 1.2.7 Sinestesia.md
+     8. Materi 1.2.8 Perubahan Makna Total.md
+     9. Materi 1.2.9 Pergeseran Makna.md
+     10. Materi 1.2.10 Perubahan Makna karena Faktor Sosial dan Budaya.md
+
+≡ƒôä Memproses: 1.3.md
+   ≡ƒöì Auto-detect: Split by H2 (9 materi, 9 total heading)
+   Γ£ô Ditemukan 9 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.3.1 Pengenalan Relasi Makna.md
+     2. Materi 1.3.2 Sinonim.md
+     3. Materi 1.3.3 Antonim.md
+     4. Materi 1.3.4 Homofon.md
+     5. Materi 1.3.5 Homograf.md
+     6. Materi 1.3.6 Homonim.md
+     7. Materi 1.3.7 Polisemi.md
+     8. Materi 1.3.8 Hiponim dan Hipernim.md
+     9. Materi 1.3.9 Meronim dan Holonim.md
+
+≡ƒôä Memproses: 1.4.md
+   ≡ƒöì Auto-detect: Split by H2 (11 materi, 11 total heading)
+   Γ£ô Ditemukan 11 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.4.1 Pengenalan Gaya Bahasa.md
+     2. Materi 1.4.2 Metafora.md
+     3. Materi 1.4.3 Litotes.md
+     4. Materi 1.4.4 Sinekdoke.md
+     5. Materi 1.4.5 Metonimia.md
+     6. Materi 1.4.6 Eufimisme.md
+     7. Materi 1.4.7 Hiperbola.md
+     8. Materi 1.4.8 Antonomasia.md
+     9. Materi 1.4.9 Simile (Perbandingan).md
+     10. Materi 1.4.10 Personifikasi.md
+     11. Materi 1.4.11 Ironi dan Sarkasme.md
+
+≡ƒôä Memproses: 1.5.md
+   ≡ƒöì Auto-detect: Split by H2 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 1.5.1 Pengenalan Istilah.md
+     2. Materi 1.5.2 Istilah Umum dan Istilah Khusus.md
+     3. Materi 1.5.3 Persyaratan Istilah yang Baik.md
+     4. Materi 1.5.4 Nama dan Tata Nama.md
+     5. Materi 1.5.5 Bahan Istilah Bahasa Indonesia.md
+     6. Materi 1.5.6 Pemadanan Istilah Penerjemahan.md
+
+≡ƒôä Memproses: 2.1.md
+   ≡ƒöì Auto-detect: Split by H2 (14 materi, 14 total heading)
+   Γ£ô Ditemukan 15 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.1.1 Pengenalan Frasa.md
+     2. Materi 2.1.2 Frasa Ambiguitas.md
+     3. Materi 2.1.3 Frasa Idiomatis.md
+     4. Materi 2.1.4 Frasa Endosentris Frasa Setara.md
+     5. Materi 2.1.5 Frasa Endosentris Frasa Bertingkat.md
+     6. Materi 2.1.6 Frasa Eksosentris.md
+     7. Materi 2.1.7 Frasa Verbal.md
+     8. Materi 2.1.8 Frasa Nominal.md
+     9. Materi 2.1.9 Frasa Adjektiva.md
+     10. Materi 2.1.10 Frasa Numeralia.md
+     11. Materi 2.1.11 Frasa Adverbial.md
+     12. Materi 2.1.12 Frasa Preposisional.md
+     13. Materi 2.1.13 Frasa SepolaSebentuk.md
+     14. Materi 2.1.14 Frasa Semakna.md
+     15. RANGKUMAN MATERI FRASA - SECTION 2 TOPIK 1.md
+
+≡ƒôä Memproses: 2.2.md
+   ≡ƒöì Auto-detect: Split by H2 (8 materi, 8 total heading)
+   Γ£ô Ditemukan 9 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.2.1 Pengenalan Kalimat.md
+     2. Materi 2.2.2 Kalimat Inti.md
+     3. Materi 2.2.3 Kalimat Transformasi.md
+     4. Materi 2.2.4 Unsur Kalimat Subjek.md
+     5. Materi 2.2.5 Unsur Kalimat Predikat.md
+     6. Materi 2.2.6 Unsur Kalimat Objek.md
+     7. Materi 2.2.7 Unsur Kalimat Pelengkap.md
+     8. Materi 2.2.8 Unsur Kalimat Keterangan.md
+     9. Rangkuman Materi 2.2 Kalimat Dasar.md
+
+≡ƒôä Memproses: 2.3.md
+   ≡ƒöì Auto-detect: Split by H2 (15 materi, 15 total heading)
+   Γ£ô Ditemukan 15 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.3.1 Pengenalan Jenis Kalimat.md
+     2. Materi 2.3.2 Kalimat Aktif Transitif.md
+     3. Materi 2.3.3 Kalimat Aktif Intransitif.md
+     4. Materi 2.3.4 Kalimat Aktif Ekatransitif.md
+     5. Materi 2.3.5 Kalimat Aktif Dwitransitif.md
+     6. Materi 2.3.6 Kalimat Pasif Persona.md
+     7. Materi 2.3.7 Kalimat Pasif Kanonis.md
+     8. Materi 2.3.8 Cara Mengubah Kalimat Aktif ke Pasif (PENTING!).md
+     9. Materi 2.3.9 Kalimat Langsung.md
+     10. Materi 2.3.10 Kalimat Tidak Langsung.md
+     11. Materi 2.3.11 Kalimat Lengkap dan Tidak Lengkap.md
+     12. Materi 2.3.12 Kalimat Versi dan Inversi.md
+     13. Materi 2.3.13 Kalimat Verbal dan Nominal.md
+     14. Materi 2.3.14 Kalimat Minor dan Mayor.md
+     15. Materi 2.3.15 Kalimat Tunggal dan Majemuk.md
+
+≡ƒôä Memproses: 2.4.md
+   ≡ƒöì Auto-detect: Split by H2 (11 materi, 11 total heading)
+   Γ£ô Ditemukan 11 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 2.4.1 Pengenalan Kata Penghubung.md
+     2. Materi 2.4.2 Konjungsi Koordinatif.md
+     3. Materi 2.4.3 Konjungsi Subordinatif Waktu.md
+     4. Materi 2.4.4 Konjungsi Subordinatif Sebab-Akibat.md
+     5. Materi 2.4.5 Konjungsi Subordinatif Tujuan dan Syarat.md
+     6. Materi 2.4.6 Konjungsi Subordinatif Perlawanan dan Perbandingan.md
+     7. Materi 2.4.7 Konjungsi Antarkalimat.md
+     8. Materi 2.4.8 Konjungsi Korelatif.md
+     9. Materi 2.4.9 Preposisi Penanda Tempat.md
+     10. Materi 2.4.10 Preposisi Penanda Jarak.md
+     11. Materi 2.4.11 Kesalahan Umum Penggunaan Konjungsi dan Preposisi.md
+
+≡ƒôä Memproses: 3.1.md
+   ≡ƒöì Auto-detect: Split by H2 (4 materi, 4 total heading)
+   Γ£ô Ditemukan 4 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.1.1 Pengenalan Morfologi.md
+     2. Materi 3.1.2 Kata Dasar.md
+     3. Materi 3.1.3 Penulisan Imbuhan dan Bentuk Terikat.md
+     4. Materi 3.1.4 Pengertian Afiks.md
+
+≡ƒôä Memproses: 3.2.md
+   ≡ƒöì Auto-detect: Split by H2 (14 materi, 14 total heading)
+   Γ£ô Ditemukan 14 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.2.1 Pengenalan Jenis Afiks.md
+     2. Materi 3.2.2 Prefiks Me(N)- Bentuk dan Aturan Luluh.md
+     3. Materi 3.2.3 Prefiks Ber- Bentuk dan Makna.md
+     4. Materi 3.2.4 Prefiks Me(N)- untuk Kata Kerja.md
+     5. Materi 3.2.5 Konfiks Me(N)-kan.md
+     6. Materi 3.2.6 Konfiks Me(N)-i.md
+     7. Materi 3.2.7 Konfiks Pe(N)-an.md
+     8. Materi 3.2.8 Konfiks Pe(R)-an.md
+     9. Materi 3.2.9 Konfiks Ke-an.md
+     10. Materi 3.2.10 Infiks (Sisipan).md
+     11. Materi 3.2.11 Sufiks (Akhiran).md
+     12. Materi 3.2.12 Prefiks Ter-.md
+     13. Materi 3.2.13 Prefiks Se-.md
+     14. Materi 3.2.14 Prefiks Pe(N)-.md
+
+≡ƒôä Memproses: 3.3.md
+   ≡ƒöì Auto-detect: Split by H2 (8 materi, 8 total heading)
+   Γ£ô Ditemukan 8 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.3.1 Pengenalan Kata Ulang.md
+     2. Materi 3.3.2 Dwilingga (Pengulangan Utuh).md
+     3. Materi 3.3.3 Dwilingga Salin Suara.md
+     4. Materi 3.3.4 Dwipurwa (Pengulangan Suku Awal).md
+     5. Materi 3.3.5 Kata Ulang Berimbuhan.md
+     6. Materi 3.3.6 Kata Ulang Semu.md
+     7. Materi 3.3.7 Makna Kata Ulang Intensitas.md
+     8. Materi 3.3.8 Makna Kata Ulang Lainnya.md
+
+≡ƒôä Memproses: 3.4.md
+   ≡ƒöì Auto-detect: Split by H2 (3 materi, 3 total heading)
+   Γ£ô Ditemukan 3 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 3.4.1 Pengenalan Kata Majemuk.md
+     2. Materi 3.4.2 Jenis-Jenis Kata Majemuk.md
+     3. Materi 3.4.3 Penulisan Kata Majemuk.md
+
+≡ƒôä Memproses: 4.1.md
+   ≡ƒöì Auto-detect: Split by H2 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.1.1 Pengenalan Paragraf.md
+     2. Materi 4.1.2 Kalimat Utama.md
+     3. Materi 4.1.3 Kalimat Penjelas.md
+     4. Materi 4.1.4 Ide PokokGagasan Utama.md
+     5. Materi 4.1.5 Koherensi dalam Paragraf.md
+     6. Materi 4.1.6 Kohesi dalam Paragraf.md
+
+≡ƒôä Memproses: 4.2.md
+   ≡ƒöì Auto-detect: Split by H2 (6 materi, 6 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.2.1 Pengenalan Klasifikasi Paragraf.md
+     2. Materi 4.2.2 Paragraf Deduktif.md
+     3. Materi 4.2.3 Paragraf Induktif.md
+     4. Materi 4.2.4 Paragraf Campuran (Deduktif-Induktif).md
+     5. Materi 4.2.10 Paragraf Eksposisi.md
+     6. Materi 4.2.11 Paragraf Prosedur.md
+
+≡ƒôä Memproses: 4.3.md
+   ≡ƒöì Auto-detect: Split by H2 (3 materi, 3 total heading)
+   Γ£ô Ditemukan 3 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.3.1 Pola Pengembangan Paragraf.md
+     2. Materi 4.3.2 Teknik Elaborasi Kalimat.md
+     3. Materi 4.3.3 Melengkapi Paragraf Rumpang.md
+
+≡ƒôä Memproses: 4.4.md
+   ≡ƒöì Auto-detect: Split by H2 (3 materi, 3 total heading)
+   Γ£ô Ditemukan 6 section
+   [DRY RUN] File yang akan dibuat:
+     1. Materi 4.4.1 Pengenalan Simpulan.md
+     2. Materi 4.4.2 Cara Menentukan Kesimpulan.md
+     3. Materi 4.4.3 Simpulan Paragraf Tunggal.md
+     4. Materi 4.4.4 Simpulan Beberapa ParagrafTeks.md
+     5. Materi 4.4.5 Perbedaan Simpulan dan Ringkasan.md
+     6. Materi 4.4.6 Cara Membuat Ringkasan.md
+
+≡ƒôä Memproses: lst_materi.md
+   ≡ƒöì Auto-detect: Split by H3 (0 materi, 0 total heading)
+   Γ£ô Ditemukan 0 section
+   [DRY RUN] File yang akan dibuat:
+
+≡ƒôä Memproses: sampel.md
+   ≡ƒöì Auto-detect: Split by H3 (0 materi, 0 total heading)
+   Γ£ô Ditemukan 0 section
+   [DRY RUN] File yang akan dibuat:
+
+≡ƒôè Ringkasan PPU:
+   ΓÇó File diproses: 19
+   ΓÇó Section ditemukan: 151
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+≡ƒôè RINGKASAN TOTAL
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+Total file yang diproses: 118
+Total section yang dibuat: 667
+
+≡ƒÆí Untuk menjalankan proses sebenarnya, jalankan tanpa --dry-run

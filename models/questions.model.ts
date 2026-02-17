@@ -515,9 +515,10 @@ export const getQuestionsByExamString = async (exam_string: string) => {
 
 export const getQuestionsByExamId = async (examId: number) => {
   try {
-    // Modified query to include passage data
+    // Modified query to include passage data and all necessary fields
     const query = `
-      SELECT q.id, q.question_type, q.question_text, q.options, q.statements, q.level, 
+      SELECT q.id, q.question_type, q.question_text, q.options, q.correct_answer, 
+             q.statements, q.level, q.question_topic_type, q.pembahasan,
              p.id as passage_id, 
              p.title as passage_title, 
              p.passage as passage_content
@@ -536,13 +537,16 @@ export const getQuestionsByExamId = async (examId: number) => {
     return {
       questions: questionsResult.rows.map((q: any) => ({
         id: q.id,
-        type: q.question_type,
-        question: q.question_text,
+        question_type: q.question_type,
+        question_text: q.question_text,
         options: q.options,
-        correct: q.correct_answer,
+        correct_answer: q.correct_answer,
         statements: q.statements,
+        level: q.level,
+        question_topic_type: q.question_topic_type,
+        pembahasan: q.pembahasan,
+        passage_id: q.passage_id,
         passage: q.passage_id ? {
-          id: q.passage_id,
           title: q.passage_title,
           content: q.passage_content
         } : null

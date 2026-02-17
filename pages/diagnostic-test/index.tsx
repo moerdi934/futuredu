@@ -4,7 +4,7 @@ import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import {
   Brain, Eye, BookOpen, Lightbulb, Search, Zap, Clock, Target, Puzzle, Trophy,
-  Star, Play, ChevronRight, Quote
+  Star, Play, ChevronRight, Quote, TrendingUp, RefreshCw
 } from 'lucide-react';
 import DiagnosticTestModal from './DiagnosticTestModal';
 import NavigationBar from '../../components/layout/NavigationBar';
@@ -186,6 +186,24 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
       duration: "60 menit",
       questions: 45,
       color: "purple"
+    },
+    {
+      id: 11,
+      title: "Penalaran Induktif",
+      description: "Kemampuan mengidentifikasi pola dari contoh spesifik dan membuat generalisasi logis",
+      icon: <TrendingUp className="tw-w-6 tw-h-6" />,
+      duration: "40 menit",
+      questions: 30,
+      color: "indigo"
+    },
+    {
+      id: 12,
+      title: "Fleksibilitas Kognitif & Adaptasi",
+      description: "Kemampuan beralih antara tugas berbeda dan beradaptasi dengan aturan baru dengan cepat",
+      icon: <RefreshCw className="tw-w-6 tw-h-6" />,
+      duration: "35 menit",
+      questions: 28,
+      color: "pink"
     }
   ];
 
@@ -282,7 +300,7 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
                 <div className="tw-flex tw-flex-wrap tw-justify-center tw-gap-4 tw-text-sm tw-text-white/80 tw-mt-6">
                   <div className="tw-flex tw-items-center tw-gap-2">
                     <Star className="tw-w-4 tw-h-4 tw-text-yellow-300" />
-                    <span>10 Jenis Tes Berbeda</span>
+                    <span>12 Jenis Tes Berbeda</span>
                   </div>
                   <div className="tw-flex tw-items-center tw-gap-2">
                     <Clock className="tw-w-4 tw-h-4 tw-text-blue-300" />
@@ -297,7 +315,7 @@ const DiagnosticTestPage: React.FC<DiagnosticTestPageProps> = ({ initialQuote })
             </div>
 
             <div className="tw-max-w-7xl tw-mx-auto">
-              <div className="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 lg:tw-grid-cols-3 xl:tw-grid-cols-4 tw-gap-6">
+              <div className="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 md:tw-grid-cols-3 lg:tw-grid-cols-4 xl:tw-grid-cols-6 tw-gap-6">
                 {diagnosticTests.map((test) => (
                   <div
                     key={test.id}

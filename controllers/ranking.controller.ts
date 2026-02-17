@@ -64,6 +64,7 @@ export const getUserCenteredRankings = async (
 ) => {
   const { examScheduleId } = req.query;
   const userId = req.user?.id; // Get user ID from authenticated request
+  const userRole = req.user?.role; // Get user role from authenticated request
   
   if (!userId) {
     return res.status(401).json({
@@ -95,6 +96,20 @@ export const getUserCenteredRankings = async (
         message: 'No rankings or user data found for this exam schedule' 
       });
     }
+    
+    // Hide participant names for students (except their own)
+    if (userRole === 'student' && result.data) {
+      result.data = result.data.map((ranking: any) => {
+        // Don't hide the current user's name
+        if (ranking.user_id !== parseInt(userId)) {
+          const name = ranking.name || '';
+          // Show first 4 characters followed by ***
+          ranking.name = name.substring(0, 4) + '***';
+        }
+        return ranking;
+      });
+    }
+    
     res.status(200).json({
       success: true,
       ...result

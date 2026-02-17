@@ -74,6 +74,19 @@ export interface SearchSingleProps {
   onClear?: () => void;
 }
 
+export interface FilterableSelectProps {
+  label: string;
+  value: SelectOption | null;
+  options: SelectOption[];
+  onChange: (newValue: SingleValue<SelectOption>, actionMeta: ActionMeta<SelectOption>) => void;
+  error?: string;
+  required?: boolean;
+  placeholder?: string;
+  icon?: React.ReactNode;
+  onClear?: () => void;
+  isLoading?: boolean;
+}
+
 export interface SearchMultipleProps {
   label: string;
   value: SelectOption[];
@@ -577,6 +590,124 @@ export const SearchSingleField: React.FC<EnhancedSearchSingleProps> = ({
             const searchValue = String(inputValue || '').toLowerCase();
             const label = String(option.label || '').toLowerCase();
             return label.includes(searchValue);
+          }}
+          components={{
+            LoadingMessage: ({ children, ...props }) => (
+              <div {...props.innerProps} style={props.getStyles('loadingMessage', props)}>
+                <div className="tw-inline-block tw-w-4 tw-h-4 tw-border-2 tw-border-purple-200 tw-border-t-purple-600 tw-rounded-full tw-animate-spin"></div>
+                {children}
+              </div>
+            ),
+            NoOptionsMessage: ({ children, ...props }) => (
+              <div {...props.innerProps} style={props.getStyles('noOptionsMessage', props)}>
+                <span className="tw-text-gray-500">{children}</span>
+              </div>
+            ),
+          }}
+        />
+        {isMenuOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 9998,
+              backgroundColor: 'transparent',
+              pointerEvents: 'none'
+            }}
+          />
+        )}
+      </div>
+      {error && (
+        <div className="invalid-feedback" style={{ display: 'block', marginTop: '4px' }}>
+          <span className="tw-text-red-600 tw-text-sm tw-font-medium">{error}</span>
+        </div>
+      )}
+    </Form.Group>
+  );
+};
+
+export const FilterableSelectField: React.FC<FilterableSelectProps> = ({
+  label,
+  value,
+  options,
+  onChange,
+  error,
+  required = false,
+  placeholder = 'Cari atau pilih...',
+  icon,
+  onClear,
+  isLoading = false,
+}) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const selectRef = useRef<any>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const handleMenuOpen = () => setIsMenuOpen(true);
+  const handleMenuClose = () => setIsMenuOpen(false);
+
+  const handleClear = () => {
+    if (onClear) {
+      onClear();
+    } else {
+      onChange(null, { action: 'clear', removedValue: value, option: null });
+    }
+  };
+
+  if (!isMounted) {
+    return null;
+  }
+
+  return (
+    <Form.Group className="mb-3" ref={selectRef}>
+      <Form.Label className="tw-font-semibold tw-text-purple-700 tw-mb-2 tw-flex tw-items-center tw-gap-2">
+        {icon && <span className="tw-flex-shrink-0">{icon}</span>}
+        <span>
+          {label} {required && <span className="text-danger">*</span>}
+        </span>
+      </Form.Label>
+      
+      {onClear && (
+        <div className="tw-flex tw-gap-2 tw-mb-2">
+          <ButtonGradient
+            action="clear"
+            size="sm"
+            onClick={handleClear}
+            disabled={isLoading}
+          />
+        </div>
+      )}
+
+      <div style={{ position: 'relative', zIndex: isMenuOpen ? 9999 : 1, isolation: 'isolate' }}>
+        <Select
+          ref={selectRef}
+          value={value}
+          options={options}
+          onChange={onChange}
+          onMenuOpen={handleMenuOpen}
+          onMenuClose={handleMenuClose}
+          isSearchable={true}
+          isClearable={true}
+          isLoading={isLoading}
+          placeholder={placeholder}
+          className={error ? 'is-invalid' : ''}
+          classNamePrefix="select"
+          styles={getCustomSelectStyles('medium')}
+          menuPortalTarget={null}
+          menuShouldScrollIntoView={false}
+          menuPosition="fixed"
+          menuPlacement="auto"
+          maxMenuHeight={250}
+          filterOption={(option, inputValue) => {
+            if (!inputValue) return true;
+            const searchTerm = inputValue.toLowerCase();
+            return option.label.toLowerCase().includes(searchTerm);
           }}
           components={{
             LoadingMessage: ({ children, ...props }) => (
@@ -2558,6 +2689,7 @@ export default {
   ShortFormField,
   WideFormField,
   SearchSingleField,
+  FilterableSelectField,
   SearchMultipleField,
   YesNoField,
   OptionCard,
