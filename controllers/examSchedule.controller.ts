@@ -835,4 +835,68 @@ export const restoreExamSchedule = async (req: AuthenticatedRequest, res: NextAp
   }
 };
 
-// Updated getValidExamSchedules with role-based access
+// Get multiple exam schedules by IDs (batch fetch)
+export const getExamSchedulesByIds = async (req: AuthenticatedRequest, res: NextApiResponse) => {
+  try {
+    const { ids } = req.query;
+    const userRole = req.user?.role || 'student';
+    const userId = req.user?.id;
+
+    if (!ids) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Parameter ids diperlukan' 
+      });
+    }
+
+    // Parse IDs - support both comma-separated string and array
+    let idArray: number[];
+    if (typeof ids === 'string') {
+      idArray = ids.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+    } else if (Array.isArray(ids)) {
+      idArray = ids.map(id => parseInt(id as string)).filter(id => !isNaN(id));
+    } else {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Format parameter ids tidak valid' 
+      });
+    }
+
+    if (idArray.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Tidak ada ID yang valid' 
+      });
+    }
+
+    // Limit batch size to prevent abuse
+    if (idArray.length > 100) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Maksimal 100 jadwal per request' 
+      });
+    }
+
+    const schedules = await examScheduleModel.getExamSchedulesByIds(
+      idArray,
+      false, // includeDeleted
+      userRole,
+      userId?.toString()
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: schedules,
+      count: schedules.length,
+      requested: idArray.length
+    });
+
+  } catch (error) {
+    console.error('Get Exam Schedules By IDs Error:', error);
+    return res.status(500).json({ 
+      success: false,
+      message: 'Server Error' 
+    });
+  }
+};
+

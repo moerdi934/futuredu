@@ -915,3 +915,53 @@ export const getExamScheduleByIdWithAccess = async (
   const result = await pool.query(query, values);
   return result.rows[0] || null;
 };
+
+// Get multiple exam schedules by IDs (batch fetch)
+export const getExamSchedulesByIds = async (
+  ids: number[],
+  includeDeleted: boolean = false,
+  userRole?: string,
+  userId?: string
+): Promise<any[]> => {
+  if (!ids || ids.length === 0) {
+    return [];
+  }
+
+  try {
+    // Build WHERE IN clause
+    const placeholders = ids.map((_, index) => `$${index + 1}`).join(',');
+    
+    let query = `
+      SELECT 
+        es.*,
+        pt.description as exam_type,
+        us1.name as created_by_name,
+        us2.name as updated_by_name
+      FROM exam_schedule es
+      LEFT JOIN product_type pt ON pt.id = es.type
+      LEFT JOIN v_dashboard_userdata us1 ON us1.userid = es.created_by
+      LEFT JOIN v_dashboard_userdata us2 ON us2.userid = es.updated_by
+      WHERE es.id IN (${placeholders})
+    `;
+
+    // Apply user role filters
+    if (userRole === 'student') {
+      query += ` AND es.approval_status = 'approved'`;
+    } else if (userRole === 'teacher' && userId) {
+      query += ` AND (es.created_by = '${userId}' OR es.approval_status = 'approved')`;
+    }
+
+    if (!includeDeleted) {
+      query += ` AND (es.is_deleted IS NULL OR es.is_deleted = false)`;
+    }
+
+    // Order by the input order (using CASE to maintain order)
+    const orderCases = ids.map((id, index) => `WHEN es.id = ${id} THEN ${index}`).join(' ');
+    query += ` ORDER BY CASE ${orderCases} END`;
+
+    const result = await pool.query(query, ids);
+    return result.rows;
+  } catch (error) {
+    throw error;
+  }
+};

@@ -137,9 +137,9 @@ const ChainExam: React.FC = () => {
     }
   }, [loading, questions, currentQuestion, exam_string]);
 
-  // Add question timer logging effect
+  // Question timer tracking (development only)
   useEffect(() => {
-    if (!loading && questions.length > 0) {
+    if (process.env.NODE_ENV === 'development' && !loading && questions.length > 0) {
       const logQuestionTimer = async () => {
         const currentQuestionId = questions[currentQuestion].id;
         const elapsedTimes = await examDbService.getQuestionElapsedTimes(exam_string);
@@ -152,8 +152,7 @@ const ChainExam: React.FC = () => {
         console.log('---');
       };
 
-      const timer = setInterval(logQuestionTimer, 5000); // Log every 5 seconds
-      
+      const timer = setInterval(logQuestionTimer, 5000);
       return () => clearInterval(timer);
     }
   }, [loading, questions, currentQuestion, exam_string]);

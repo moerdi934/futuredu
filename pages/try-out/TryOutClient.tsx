@@ -6,7 +6,7 @@ import { Container, Row, Col, Card, Accordion, Spinner, Badge } from 'react-boot
 import {
   BookOpen, Clock, Star, Zap, Target, Trophy, Gift, 
   ShoppingCart, Play, Calendar, Check, AlertCircle,
-  Award, ChevronDown, ChevronUp, Unlock, Lock, Coins
+  Award, ChevronDown, ChevronUp, Unlock, Lock, Coins, RefreshCw
 } from 'lucide-react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
@@ -110,7 +110,66 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
   
   const MAX_INITIAL_OWNED = 6;
 
-  // Fetch user coin balances
+  // Fetch all try-out user data in a single API call (optimized to reduce N+1 queries)
+  const fetchTryOutUserData = async () => {
+    if (!isAuthenticated || !userId) return;
+    
+    try {
+      setEntitlementsLoading(true);
+      setCoinLoading(true);
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await axios.get(
+        `${apiUrl}/user/try-out-data`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Cache-Control': 'no-cache',
+          },
+          params: { _t: Date.now() }
+        }
+      );
+
+      if (response.data.success) {
+        const { entitlements, scores, coinBalances } = response.data.data;
+        
+        // Set entitlements
+        setUserEntitlements(entitlements || []);
+        
+        // Set scores
+        const scoresMap: Record<number, UserExamScore> = {};
+        if (Array.isArray(scores)) {
+          scores.forEach((score: UserExamScore) => {
+            scoresMap[score.exam_schedule_id] = score;
+          });
+        }
+        setUserScores(scoresMap);
+        
+        // Fetch schedules for completed exams
+        const completedExamIds = Object.entries(scoresMap)
+          .filter(([_, score]) => score.has_completed)
+          .map(([id, _]) => parseInt(id));
+
+        if (completedExamIds.length > 0) {
+          await fetchCompletedSchedules(completedExamIds, token);
+        }
+        
+        // Set coin balances
+        setCoinBalances(coinBalances || []);
+      }
+    } catch (error) {
+      console.error('Error fetching try-out user data:', error);
+      setUserEntitlements([]);
+      setUserScores({});
+      setCoinBalances([]);
+    } finally {
+      setEntitlementsLoading(false);
+      setCoinLoading(false);
+    }
+  };
+
+  // Fetch user coin balances (kept for backward compatibility)
   const fetchCoinBalances = async () => {
     if (!isAuthenticated || !userId) return;
     
@@ -134,7 +193,6 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
         setCoinBalances(response.data.data.balances || []);
       }
     } catch (error) {
-      console.error('Error fetching coin balances:', error);
       setCoinBalances([]);
     } finally {
       setCoinLoading(false);
@@ -176,7 +234,6 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
         setSchedules([]);
       }
     } catch (error) {
-      console.error('Error fetching schedules:', error);
       setError(error instanceof Error ? error.message : 'Unknown error occurred');
       setSchedules([]);
     } finally {
@@ -184,6 +241,10 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     }
   };
 
+  /**
+   * @deprecated Use fetchTryOutUserData() instead for better performance
+   * This function is kept for backward compatibility only
+   */
   const fetchUserEntitlements = async () => {
     if (!isAuthenticated || !userId) return;
     
@@ -205,13 +266,16 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
 
       setUserEntitlements(response.data || []);
     } catch (error) {
-      console.error('Error fetching user entitlements:', error);
       setUserEntitlements([]);
     } finally {
       setEntitlementsLoading(false);
     }
   };
 
+  /**
+   * @deprecated Use fetchTryOutUserData() instead for better performance
+   * This function is kept for backward compatibility only
+   */
   const fetchUserScores = async () => {
     if (!isAuthenticated || !userId) return;
     
@@ -237,8 +301,6 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
         });
       }
       
-      console.log('Fetched user scores:', scoresMap);
-      console.log('Total completed exams:', Object.values(scoresMap).filter(s => s.has_completed).length);
       setUserScores(scoresMap);
 
       // Fetch schedules for completed exams
@@ -250,31 +312,35 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
         await fetchCompletedSchedules(completedExamIds, token);
       }
     } catch (error) {
-      console.error('Error fetching user scores:', error);
       setUserScores({});
     }
   };
 
   const fetchCompletedSchedules = async (examScheduleIds: number[], token: string) => {
+    if (examScheduleIds.length === 0) {
+      setCompletedSchedules([]);
+      return;
+    }
+
     try {
-      const schedulePromises = examScheduleIds.map(id => 
-        axios.get(`${apiUrl}/exam-schedules/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }).catch(err => {
-          console.error(`Failed to fetch schedule ${id}:`, err);
-          return null;
-        })
+      // Use batch endpoint - 1 API call instead of N calls
+      const response = await axios.get(
+        `${apiUrl}/exam-schedules/batch`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { 
+            ids: examScheduleIds.join(','),
+            _t: Date.now() 
+          }
+        }
       );
 
-      const results = await Promise.all(schedulePromises);
-      const validSchedules = results
-        .filter(res => res !== null && res.data)
-        .map(res => res!.data);
-
-      console.log('Fetched completed schedules:', validSchedules.length);
-      setCompletedSchedules(validSchedules);
+      if (response.data?.success && Array.isArray(response.data.data)) {
+        setCompletedSchedules(response.data.data);
+      } else {
+        setCompletedSchedules([]);
+      }
     } catch (error) {
-      console.error('Error fetching completed schedules:', error);
       setCompletedSchedules([]);
     }
   };
@@ -325,13 +391,17 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
   };
 
   useEffect(() => {
-    if (initialSchedules && Array.isArray(initialSchedules) && initialSchedules.length > 0) {
+    // Always use SSR data, never refetch on mount
+    if (initialSchedules && Array.isArray(initialSchedules)) {
       setSchedules(initialSchedules);
       setLoading(false);
     } else {
-      fetchSchedules();
+      // SSR failed, set empty state
+      setSchedules([]);
+      setLoading(false);
+      setError('Tidak ada jadwal try out tersedia');
     }
-  }, []);
+  }, [initialSchedules]);
 
   useEffect(() => {
     if (schedules.length > 0) {
@@ -341,9 +411,8 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetchUserEntitlements();
-      fetchUserScores();
-      fetchCoinBalances();
+      // Use combined API call to reduce N+1 queries
+      fetchTryOutUserData();
     }
   }, [isAuthenticated, userId]);
 
@@ -360,7 +429,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     return Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
   };
 
-  const formatTimeDisplay = (timeString: string | undefined): JSX.Element => {
+  const formatTimeDisplay = (timeString: string | undefined): React.ReactElement => {
     if (!timeString) return (
       <span className="tw-flex tw-items-center tw-text-violet-600 tw-font-medium">
         <Zap className="tw-w-4 tw-h-4 tw-mr-1" />
@@ -461,10 +530,9 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     setAddedItemName(`Try-out dibeli dengan koin: ${entitlements.join(', ')}`);
     setShowFloater(true);
     
-    // Refresh data
+    // Refresh data with combined API call
     if (isAuthenticated) {
-      fetchUserEntitlements();
-      fetchCoinBalances();
+      fetchTryOutUserData();
     }
   };
 
@@ -490,7 +558,6 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
         throw new Error(response.data.message);
       }
     } catch (error: any) {
-      console.error('Add to cart error:', error);
       alert('Gagal menambahkan ke keranjang: ' + (error.response?.data?.message || 'Terjadi kesalahan'));
       throw error;
     }
@@ -501,12 +568,13 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     setShowFloater(true);
     
     if (isAuthenticated) {
-      fetchUserEntitlements();
+      // Use combined API call to reduce N+1 queries
+      fetchTryOutUserData();
     }
   };
 
   const handleRetry = () => {
-    fetchSchedules();
+    handleRefreshData();
   };
 
   const renderScheduleCard = (schedule: ExamSchedule, index: number, isFree: boolean, isOwned: boolean = false) => {
@@ -741,12 +809,8 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
               {canBuyWithCoins && (
                 <ButtonGradient
                   action="custom"
-                  customText={
-                    <div className="tw-flex tw-items-center tw-justify-center tw-gap-2">
-                      <Coins className="tw-w-4 tw-h-4" />
-                      <span>Beli dengan {schedule.coin_price} Koin</span>
-                    </div>
-                  }
+                  customText={`Beli dengan ${schedule.coin_price} Koin`}
+                  customIcon={<Coins className="tw-w-4 tw-h-4" />}
                   onClick={() => handleBuyWithCoins(schedule)}
                   size="md"
                   className="tw-w-full"
@@ -770,14 +834,6 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     const notCompleted = userEntitlements.filter(ent => !hasCompletedExam(ent.exam_schedule_id));
     const completed = completedSchedules;
     
-    console.log('=== TRY OUT SAYA BREAKDOWN ===');
-    console.log('Total entitlements:', userEntitlements.length);
-    console.log('Not completed exams:', notCompleted.length);
-    console.log('Completed schedules fetched:', completed.length);
-    console.log('User scores with has_completed=true:', 
-      Object.values(userScores).filter(s => s.has_completed).length
-    );
-    
     return {
       ownedCompleted: completed,
       ownedNotCompleted: notCompleted,
@@ -786,27 +842,49 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
     };
   }, [userEntitlements, userScores, completedSchedules, showAllOwned]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!error && !loading) {
-        fetchSchedules();
-        if (isAuthenticated) {
-          fetchUserEntitlements();
-          fetchUserScores();
-          fetchCoinBalances();
-        }
-      }
-    }, 5 * 60 * 1000);
+  // Manual refresh function (replaces automatic interval)
+  const handleRefreshData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Use combined API call to reduce N+1 queries
+      await Promise.all([
+        fetchSchedules(),
+        isAuthenticated && fetchTryOutUserData()
+      ].filter(Boolean));
+    } catch (err) {
+      setError('Gagal memuat data. Silakan coba lagi.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return () => clearInterval(interval);
-  }, [error, loading, isAuthenticated]);
+  // Removed automatic 5-minute interval refresh
+  // Users can manually refresh if needed
 
   return (
     <>
       <Row className="justify-content-center">
         <Col lg={11} xl={10}>
+          {/* Refresh Button */}
+          <div className="tw-mb-4 tw-flex tw-justify-end">
+            <ButtonGradient
+              action="refresh"
+              customText={loading ? 'Memuat...' : 'Refresh Data'}
+              customIcon={<RefreshCw size={16} className={loading ? 'tw-animate-spin' : ''} />}
+              onClick={handleRefreshData}
+              disabled={loading}
+              size="sm"
+              customColors={{
+                gradient1: '#667eea',
+                gradient2: '#764ba2',
+                text: '#FFFFFF'
+              }}
+            />
+          </div>
+
           {/* Coin Balance Display */}
-          {isAuthenticated && (
+          {isAuthenticated ? (
             <div className="tw-mb-6">
               <Card className="tw-border-0 tw-shadow-lg tw-bg-gradient-to-r tw-from-yellow-50 tw-to-orange-100 tw-border tw-border-yellow-200">
                 <Card.Body className="tw-p-4">
@@ -834,10 +912,10 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
                 </Card.Body>
               </Card>
             </div>
-          )}
+          ) : null}
 
           {/* My Try Outs Section */}
-          {isAuthenticated && (userEntitlements.length > 0 || completedSchedules.length > 0) && (
+          {isAuthenticated && (userEntitlements.length > 0 || completedSchedules.length > 0) ? (
             <div className="tw-mb-8">
               <Card className="tw-border-0 tw-shadow-2xl tw-bg-gradient-to-br tw-from-purple-50 tw-to-indigo-100 tw-border-2 tw-border-purple-200">
                 <Card.Body className="tw-p-6">
@@ -932,7 +1010,7 @@ export default function TryOutClient({ initialSchedules = null }: Props) {
                 </Card.Body>
               </Card>
             </div>
-          )}
+          ) : null}
 
           {/* All Try Outs Section - Grouped by Type */}
           {loading ? (
