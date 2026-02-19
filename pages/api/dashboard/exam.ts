@@ -1,7 +1,8 @@
 // pages/api/dashboard/exam.ts
+// TODO: Implement getExamDashboard controller function
 import { NextApiResponse } from 'next';
 import { AuthenticatedRequest, authenticateJWT, runMiddleware } from '../../../lib/middleware/auth';
-import { getExamDashboard } from '../../../controllers/dashboard.controller';
+// import { getExamDashboard } from '../../../controllers/dashboard.controller';
 
 export default async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
   // Only allow GET method
@@ -13,8 +14,8 @@ export default async function handler(req: AuthenticatedRequest, res: NextApiRes
     // Run authentication middleware
     await runMiddleware(req, res, authenticateJWT);
     
-    // Call controller
-    await getExamDashboard(req, res);
+    // TODO: Implement controller
+    res.status(501).json({ error: 'Not implemented yet' });
   } catch (error) {
     console.error('Error in dashboard exam API:', error);
     res.status(500).json({ error: 'Internal server error' });
