@@ -24,7 +24,7 @@ import {
   Lock,
   Tag
 } from 'lucide-react';
-import CoursePurchaseModal from '../all-courses/CoursePurchaseModal';
+import CoursePurchaseModal from '../../components/all-courses/CoursePurchaseModal';
 import GoToCartFloater from '../../components/floater/GoToCartFloater';
 import NavigationBar from '@/ components/layout/NavigationBar';
 

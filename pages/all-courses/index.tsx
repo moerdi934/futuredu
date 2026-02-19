@@ -10,15 +10,15 @@ import {
 } from 'lucide-react';
 import NavigationBar from '../../components/layout/NavigationBar';
 import GoToCartFloater from '../../components/floater/GoToCartFloater';
-import CoursePurchaseModal from './CoursePurchaseModal';
-// import ClassPurchaseModal from './ClassPurchaseModal'; // TODO: Uncomment when class feature is ready
+import CoursePurchaseModal from '../../components/all-courses/CoursePurchaseModal';
+// import ClassPurchaseModal from '../../components/all-courses/ClassPurchaseModal'; // TODO: Uncomment when class feature is ready
 import CoinPurchaseModal from '../../components/modals/CoinPurchaseModal';
 // import StudentAttendanceModal from '../panel/courses/classes-page/StudentAttendanceModal'; // TODO: Uncomment when class feature is ready
 
 // Import separated components
-import AccordionSection from './AccordionSection';
-import CourseSection from './CourseSection';
-// import ClassSection from './ClassSection'; // TODO: Uncomment when class feature is ready
+import AccordionSection from '../../components/all-courses/AccordionSection';
+import CourseSection from '../../components/all-courses/CourseSection';
+// import ClassSection from '../../components/all-courses/ClassSection'; // TODO: Uncomment when class feature is ready
 
 // Type definitions
 interface LiveCourse {
