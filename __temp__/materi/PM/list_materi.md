@@ -151,7 +151,7 @@
 * Sifat-sifat eksponen dan logaritma
 * Persamaan dan pertidaksamaan eksponen-logaritma
 
-### Topic 1.4: Urutan dan Operasi Bilangan
+### Topic 1.4: Operasi Bilangan
 
 **Materi 1.4.1: Pengenalan Urutan Bilangan** *(GRATIS)*
 * Mengurutkan bilangan dari terkecil/terbesar

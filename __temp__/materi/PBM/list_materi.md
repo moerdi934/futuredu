@@ -38,7 +38,7 @@
 - Teknik memperbaiki kalimat tidak efektif
 - Strategi menjawab soal kalimat efektif
 
-### **Topik 1.2: Kata Baku dan Tidak Baku**
+### **Topik 1.2: Kata Baku**
 
 **Materi 1.2.1: Pengenalan Kata Baku dan Tidak Baku**
 - Pengertian kata baku dan tidak baku
@@ -65,7 +65,7 @@
 - Pola kesalahan umum dalam soal UTBK
 - Tips mengingat kata baku yang sering muncul
 
-### **Topik 1.3: Struktur Kalimat Tunggal**
+### **Topik 1.3: Kalimat Tunggal**
 
 **Materi 1.3.1: Pengenalan Kalimat dan Strukturnya**
 - Pengertian kalimat
@@ -166,7 +166,7 @@
 
 ---
 
-## **Section 2: PUEBI - Ejaan Bahasa Indonesia**
+## **Section 2: PUEBI**
 
 ### **Topik 2.1: Huruf Kapital**
 
@@ -307,7 +307,7 @@
 - Kesalahan umum penulisan gabungan kata
 - Strategi mengingat penulisan yang benar
 
-### **Topik 2.5: Singkatan, Akronim, dan Bilangan**
+### **Topik 2.5: Akronim**
 
 **Materi 2.5.1: Pengenalan Singkatan dan Akronim**
 - Pengertian singkatan dan akronim
@@ -342,7 +342,7 @@
 - Inkonsistensi penulisan bilangan
 - Pola kesalahan dalam soal UTBK
 
-### **Topik 2.6: Kata Ganti, Kata Sandang, Partikel, Suku Kata, dan Pemenggalan**
+### **Topik 2.6: Kata Ganti**
 
 **Materi 2.6.1: Pengenalan Kata Ganti dan Kata Sandang**
 - Pengertian kata ganti dalam bahasa Indonesia
@@ -641,7 +641,7 @@
 - Menilai koherensi paragraf dan wacana
 - Memperbaiki teks yang tidak kohesif/koheren
 
-### **Topik 4.3: Istilah dan Tata Istilah**
+### **Topik 4.3: Istilah**
 
 **Materi 4.3.1: Pengenalan Istilah dan Tata Istilah**
 - Pengertian istilah

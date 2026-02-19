@@ -1,8 +1,8 @@
 # List Materi - Literasi Bahasa Inggris SNBT
 
-## Section 1: Pemahaman Ide dan Tujuan Teks
+## Section 1: Text Idea
 
-### Topik 1.1: Main Idea dan Topic
+### Topik 1.1: Main Idea
 
 **Materi 1.1.1: Pengenalan Main Idea dan Topic** *(Materi Dibuka)*
 - Perbedaan konsep Main Idea (kalimat lengkap) dan Topic (frasa/kata kunci)
@@ -41,7 +41,7 @@
 
 ---
 
-### Topik 1.2: Purpose (Tujuan Penulisan)
+### Topik 1.2: Purpose
 
 **Materi 1.2.1: Pengenalan Purpose dan Jenisnya** *(Materi Dibuka)*
 - Definisi Purpose: tujuan penulis dalam menyampaikan teks/informasi
@@ -81,7 +81,7 @@
 
 ---
 
-### Topik 1.3: Stated and Unstated Detail Information
+### Topik 1.3: Detail Information
 
 **Materi 1.3.1: Pengenalan Detail Information** *(Materi Dibuka)*
 - Perbedaan Stated (tersurat, eksplisit) vs Unstated (tersirat, implicit)
@@ -120,7 +120,7 @@
 
 ---
 
-### Topik 1.4: Inference dan Conclusion
+### Topik 1.4: Inference
 
 **Materi 1.4.1: Pengenalan Inference dan Conclusion** *(Materi Dibuka)*
 - Konsep inference: menarik kesimpulan dari informasi yang tidak langsung dinyatakan
@@ -159,7 +159,7 @@
 
 ---
 
-### Topik 1.5: Author's Attitude (Opinion dan Tone)
+### Topik 1.5: Author's Attitude
 
 **Materi 1.5.1: Pengenalan Author's Attitude** *(Materi Dibuka)*
 - Author's Attitude: sikap/perasaan/pendapat penulis terhadap topik
@@ -198,7 +198,7 @@
 
 ---
 
-## Section 2: Struktur dan Organisasi Teks
+## Section 2: Text Structure
 
 ### Topik 2.1: Organization of Ideas
 
@@ -240,7 +240,7 @@
 
 ---
 
-### Topik 2.2: Transition Questions (Preceding-Following)
+### Topik 2.2: Transition Questions
 
 **Materi 2.2.1: Pengenalan Preceding dan Following Paragraph** *(Materi Dibuka)*
 - Preceding paragraph: paragraf yang kemungkinan ada sebelum paragraf pertama
@@ -279,7 +279,7 @@
 
 ---
 
-### Topik 2.3: Text Coherence dan Unity
+### Topik 2.3: Text Coherence
 
 **Materi 2.3.1: Pengenalan Text Coherence** *(Materi Dibuka)*
 - Coherence: kejelasan hubungan antar ide dalam teks
@@ -318,7 +318,7 @@
 
 ---
 
-### Topik 2.4: Sentence Function dalam Paragraf
+### Topik 2.4: Sentence Function
 
 **Materi 2.4.1: Pengenalan Sentence Function** *(Materi Dibuka)*
 - Topic sentence: kalimat yang menyatakan Main Idea paragraf
@@ -357,9 +357,9 @@
 
 ---
 
-## Section 3: Kosakata dan Referensi
+## Section 3: Vocabulary 
 
-### Topik 3.1: Synonym (Padanan Kata)
+### Topik 3.1: Synonym
 
 **Materi 3.1.1: Pengenalan Synonym dalam Konteks** *(Materi Dibuka)*
 - Synonym: kata dengan makna sama atau mirip
@@ -398,7 +398,7 @@
 
 ---
 
-### Topik 3.2: Reference (Kata Ganti)
+### Topik 3.2: Reference
 
 **Materi 3.2.1: Pengenalan Reference** *(Materi Dibuka)*
 - Reference: kata ganti (pronoun) yang merujuk ke noun (antecedent)
@@ -437,7 +437,7 @@
 
 ---
 
-### Topik 3.3: Paraphrase dan Restatement
+### Topik 3.3: Paraphrase
 
 **Materi 3.3.1: Pengenalan Paraphrase dan Restatement** *(Materi Dibuka)*
 - Paraphrase: mengungkapkan informasi sama dengan kata/struktur berbeda
@@ -476,7 +476,7 @@
 
 ---
 
-### Topik 3.4: Word Formation dan Affixes
+### Topik 3.4: Affixes
 
 **Materi 3.4.1: Pengenalan Word Formation** *(Materi Dibuka)*
 - Word parts: prefix (awalan), root (akar kata), suffix (akhiran)
@@ -515,7 +515,7 @@
 
 ---
 
-### Topik 3.5: Idiomatic Expressions dan Figurative Language
+### Topik 3.5: Idiom
 
 **Materi 3.5.1: Pengenalan Figurative Language** *(Materi Dibuka)*
 - Figurative language: bahasa non-literal, bersifat kiasan
@@ -554,7 +554,7 @@
 
 ---
 
-## Section 4: Analisis Teks Kompleks
+## Section 4: Text Analysis
 
 ### Topik 4.1: Two Texts Comparison
 
@@ -595,7 +595,7 @@
 
 ---
 
-### Topik 4.2: Cloze Test dan Grammar in Context
+### Topik 4.2: Cloze Test
 
 **Materi 4.2.1: Pengenalan Cloze Test** *(Materi Dibuka)*
 - Cloze test: fill in the blank dalam paragraf/teks
@@ -634,7 +634,7 @@
 
 ---
 
-### Topik 4.3: Infographic dan Visual Data
+### Topik 4.3: Infographic
 
 **Materi 4.3.1: Pengenalan Infographic Reading** *(Materi Dibuka)*
 - Infographic: visual representation of information atau data
@@ -673,7 +673,7 @@
 
 ---
 
-### Topik 4.4: Sentence Completion dan Text Reconstruction
+### Topik 4.4: Text Reconstruction
 
 **Materi 4.4.1: Pengenalan Sentence Completion** *(Materi Dibuka)*
 - Missing sentences dalam paragraf: completing the gap
@@ -751,7 +751,7 @@
 
 ---
 
-### Topik 4.6: Summary dan Main Point Identification
+### Topik 4.6: Summary
 
 **Materi 4.6.1: Pengenalan Summary Questions** *(Materi Dibuka)*
 - Summary: condensed version yang captures essential points

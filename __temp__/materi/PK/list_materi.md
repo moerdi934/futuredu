@@ -197,7 +197,7 @@
 
 ---
 
-## SECTION 2: Bilangan dan Aritmatika
+## SECTION 2: Aritmatika
 
 ### Topic 2.1: Sistem Bilangan
 
@@ -384,9 +384,9 @@
 
 ---
 
-## SECTION 3: Geometri dan Pengukuran
+## SECTION 3: Geometri
 
-### Topic 3.1: Geometri Bidang Datar
+### Topic 3.1: Geometri Datar
 
 **Materi 3.1.1: Pengenalan Bangun Datar** *(GRATIS)*
 * Jenis-jenis bangun datar (segitiga, segiempat, lingkaran)
@@ -481,7 +481,7 @@
 * Soal cerita tentang bangun ruang
 * Optimasi volume dan luas permukaan
 
-### Topic 3.3: Transformasi Geometri
+### Topic 3.3: Transformasi
 
 **Materi 3.3.1: Pengenalan Transformasi Geometri** *(GRATIS)*
 * Pengertian transformasi geometri
@@ -525,7 +525,7 @@
 * Mencari transformasi tunggal dari komposisi
 * Aplikasi transformasi dalam masalah
 
-### Topic 3.4: Trigonometri Dasar
+### Topic 3.4: Trigonometri
 
 **Materi 3.4.1: Pengenalan Trigonometri** *(GRATIS)*
 * Konsep perbandingan trigonometri
@@ -580,7 +580,7 @@
 
 ## SECTION 4: Statistika dan Peluang
 
-### Topic 4.1: Statistika Deskriptif
+### Topic 4.1: Statistika
 
 **Materi 4.1.1: Pengenalan Statistika dan Pengumpulan Data** *(GRATIS)*
 * Pengertian statistika dan data
@@ -912,3 +912,145 @@
 * Ingkaran implikasi
 * Ingkaran biimplikasi
 * Ingkaran pernyataan berkuantor
+
+## SECTION 6: Kalkulus
+
+### Topic 6.1: Limit Fungsi
+
+**Materi 6.1.1: Pengenalan Limit Fungsi** *(GRATIS)*
+* Konsep limit dan intuisi grafis
+* Notasi limit: lim f(x) saat x → a
+* Limit kiri dan limit kanan
+* Syarat eksistensi limit
+* Perbedaan limit dan nilai fungsi
+
+**Materi 6.1.2: Menghitung Limit Aljabar**
+* Teknik substitusi langsung
+* Teknik faktorisasi untuk bentuk tak tentu
+* Teknik perkalian sekawan
+* Sifat-sifat limit (penjumlahan, perkalian, pembagian)
+* Limit fungsi polinomial dan rasional
+
+**Materi 6.1.3: Limit Bentuk Tak Tentu**
+* Bentuk tak tentu 0/0 dan karakteristiknya
+* Bentuk tak tentu ∞/∞ dan karakteristiknya
+* Teknik pembagian dengan pangkat tertinggi
+* Limit fungsi trigonometri (lim sin x/x = 1)
+* Strategi memilih teknik penyelesaian yang tepat
+
+**Materi 6.1.4: Limit Tak Hingga dan Limit di Tak Hingga**
+* Pengertian limit tak hingga (x → ∞)
+* Perilaku fungsi saat x mendekati tak hingga
+* Asimtot horizontal dan hubungannya dengan limit
+* Limit fungsi rasional di tak hingga
+* Limit fungsi irasional di tak hingga
+
+---
+
+### Topic 6.2: Turunan
+
+**Materi 6.2.1: Pengenalan Turunan** *(GRATIS)*
+* Konsep laju perubahan dan kemiringan
+* Definisi turunan dari konsep limit
+* Notasi turunan: f'(x), dy/dx, y'
+* Turunan sebagai fungsi baru
+* Interpretasi geometris turunan
+
+**Materi 6.2.2: Aturan Turunan Dasar**
+* Turunan konstanta dan fungsi pangkat
+* Aturan perkalian konstanta
+* Aturan penjumlahan dan pengurangan
+* Turunan fungsi polinomial
+* Turunan fungsi rasional sederhana
+
+**Materi 6.2.3: Aturan Rantai, Perkalian, dan Pembagian**
+* Aturan perkalian dua fungsi (product rule)
+* Aturan pembagian dua fungsi (quotient rule)
+* Aturan rantai (chain rule)
+* Kombinasi aturan turunan
+* Turunan fungsi komposisi
+
+**Materi 6.2.4: Turunan Fungsi Trigonometri, Eksponen, dan Logaritma**
+* Turunan sin x, cos x, tan x
+* Turunan fungsi eksponen (eˣ, aˣ)
+* Turunan fungsi logaritma (ln x, log x)
+* Kombinasi dengan aturan rantai
+* Turunan fungsi-fungsi khusus lainnya
+
+**Materi 6.2.5: Turunan Tingkat Tinggi**
+* Pengertian turunan kedua f''(x)
+* Turunan ketiga dan seterusnya
+* Interpretasi turunan kedua sebagai kecekungan fungsi
+* Hubungan turunan pertama dan kedua dalam analisis fungsi
+* Notasi turunan tingkat tinggi
+
+---
+
+### Topic 6.3: Integral
+
+**Materi 6.3.1: Pengenalan Integral Tak Tentu** *(GRATIS)*
+* Konsep integral sebagai anti-turunan
+* Notasi integral: ∫f(x)dx
+* Konstanta integrasi C dan maknanya
+* Hubungan integral dan turunan
+* Verifikasi hasil integral dengan turunan
+
+**Materi 6.3.2: Aturan Integral Dasar**
+* Integral konstanta dan fungsi pangkat
+* Aturan penjumlahan dan pengurangan
+* Integral fungsi polinomial
+* Integral fungsi eksponen dan logaritma
+* Integral fungsi trigonometri dasar
+
+**Materi 6.3.3: Teknik Integral Substitusi**
+* Konsep substitusi dalam integral
+* Langkah-langkah metode substitusi
+* Menentukan substitusi yang tepat
+* Substitusi untuk fungsi komposisi
+* Substitusi trigonometri sederhana
+
+**Materi 6.3.4: Integral Tentu**
+* Konsep integral tentu dan batas integrasinya
+* Teorema dasar kalkulus
+* Cara menghitung integral tentu
+* Sifat-sifat integral tentu
+* Hubungan integral tentu dengan konsep luas
+
+---
+
+### Topic 6.4: Optimasi dan Pengukuran
+
+**Materi 6.4.1: Analisis Fungsi dengan Turunan** *(GRATIS)*
+* Fungsi naik dan turun berdasarkan uji turunan pertama
+* Titik kritis dan cara menentukannya
+* Kecekungan fungsi berdasarkan turunan kedua
+* Titik belok (inflection point)
+* Sketsa grafik fungsi menggunakan informasi turunan
+
+**Materi 6.4.2: Nilai Ekstrem**
+* Nilai maksimum dan minimum lokal
+* Uji turunan pertama untuk menentukan nilai ekstrem
+* Uji turunan kedua untuk menentukan nilai ekstrem
+* Nilai maksimum dan minimum global pada interval tertutup
+* Perbedaan ekstrem lokal dan global
+
+**Materi 6.4.3: Optimasi dalam Konteks Nyata**
+* Pemodelan matematika untuk masalah optimasi
+* Optimasi luas dan keliling bangun datar
+* Optimasi volume dan luas permukaan bangun ruang
+* Optimasi dalam konteks ekonomi (fungsi keuntungan dan biaya)
+* Optimasi dalam konteks fisika (posisi, kecepatan, percepatan)
+
+**Materi 6.4.4: Pengukuran Luas dengan Integral**
+* Luas daerah di bawah kurva dan sumbu x
+* Luas daerah antara dua kurva
+* Menentukan batas integral dari kondisi yang diberikan
+* Penanganan luas daerah dengan fungsi bernilai negatif
+* Interpretasi geometris integral tentu
+
+**Materi 6.4.5: Pengukuran Volume dengan Integral**
+* Konsep volume benda putar
+* Volume benda putar terhadap sumbu x (metode cakram)
+* Volume benda putar terhadap sumbu y
+* Metode cincin untuk benda putar dengan rongga
+* Interpretasi geometris integral dalam tiga dimensi

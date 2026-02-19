@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "cdn:migrate": "node scripts/cdn/migrate-images-to-cloudinary.js",
+    "cdn:migrate:dry-run": "node scripts/cdn/migrate-images-to-cloudinary.js --dry-run"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.4.2",
@@ -25,6 +27,8 @@
     "axios": "^1.7.9",
     "bcryptjs": "^3.0.2",
     "bootstrap": "^5.3.3",
+    "cheerio": "^1.0.0",
+    "cloudinary": "^2.9.0",
     "crypto-js": "^4.2.0",
     "dayjs": "^1.11.13",
     "dompurify": "^3.2.3",

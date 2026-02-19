@@ -1,6 +1,6 @@
-## **Section 1: Pemahaman Struktur Teks**
+## **Section 1: Struktur Teks**
 
-### **Topik 1.1: Paragraf dan Strukturnya**
+### **Topik 1.1: Struktur Paragraf**
 
 **Materi 1.1.1: Pengenalan Paragraf dan Strukturnya**
 - Pengertian paragraf dan alinea
@@ -39,7 +39,7 @@
 - Menganalisis koherensi dan kohesi kalimat
 - Strategi memperbaiki paragraf yang tidak padu
 
-### **Topik 1.2: Paragraf Narasi**
+### **Topik 1.2: Narasi**
 
 **Materi 1.2.1: Pengenalan Paragraf Narasi**
 - Pengertian dan karakteristik paragraf narasi
@@ -71,7 +71,7 @@
 - Membedakan tema eksplisit dan implisit
 - Analisis nilai moral, sosial, dan budaya
 
-### **Topik 1.3: Paragraf Deskripsi**
+### **Topik 1.3: Deskripsi**
 
 **Materi 1.3.1: Pengenalan Paragraf Deskripsi**
 - Pengertian dan tujuan paragraf deskripsi
@@ -103,7 +103,7 @@
 - Membedakan deskripsi subjektif dan objektif
 - Analisis tone dalam teks deskripsi
 
-### **Topik 1.4: Paragraf Persuasi**
+### **Topik 1.4: Persuasi**
 
 **Materi 1.4.1: Pengenalan Paragraf Persuasi**
 - Pengertian dan tujuan paragraf persuasi
@@ -135,7 +135,7 @@
 - Teknik memisahkan fakta dan opini
 - Analisis penggunaan data untuk persuasi
 
-### **Topik 1.5: Paragraf Eksposisi**
+### **Topik 1.5: Eksposisi**
 
 **Materi 1.5.1: Pengenalan Paragraf Eksposisi**
 - Pengertian dan tujuan paragraf eksposisi
@@ -171,7 +171,7 @@
 - Strategi scanning dan skimming
 - Latihan ekstraksi informasi langsung
 
-### **Topik 1.6: Paragraf Argumentasi**
+### **Topik 1.6: Argumentasi**
 
 **Materi 1.6.1: Pengenalan Paragraf Argumentasi**
 - Pengertian dan tujuan paragraf argumentasi
@@ -205,9 +205,9 @@
 
 ---
 
-## **Section 2: Pemahaman dan Analisis Bacaan**
+## **Section 2: Analisis Bacaan**
 
-### **Topik 2.1: Teks Biografi**
+### **Topik 2.1:Teks Biografi**
 
 **Materi 2.1.1: Pengenalan Teks Biografi**
 - Pengertian teks biografi
@@ -234,7 +234,7 @@
 - Nilai pendidikan dan inspiratif
 - Teknik mengidentifikasi nilai-nilai kehidupan
 
-### **Topik 2.2: Teks Eksplanasi**
+### **Topik 2.2: Eksplanasi**
 
 **Materi 2.2.1: Pengenalan Teks Eksplanasi**
 - Pengertian teks eksplanasi
@@ -266,7 +266,7 @@
 - Strategi memilih informasi yang tepat
 - Latihan identifikasi informasi relevan
 
-### **Topik 2.3: Teks Editorial**
+### **Topik 2.3: Editorial**
 
 **Materi 2.3.1: Pengenalan Teks Editorial**
 - Pengertian teks editorial (tajuk rencana)
@@ -304,7 +304,7 @@
 - Membedakan berbagai sikap: mendukung, menentang, netral
 - Teknik menemukan maksud tersirat penulis
 
-### **Topik 2.4: Teks Ulasan**
+### **Topik 2.4: Ulasan**
 
 **Materi 2.4.1: Pengenalan Teks Ulasan**
 - Pengertian teks ulasan (resensi)
@@ -410,7 +410,7 @@
 
 ---
 
-## **Section 3: Teks Sastra dan Pemaknaan**
+## **Section 3: Sastra**
 
 ### **Topik 3.1: Novel**
 
@@ -524,7 +524,7 @@
 - Nilai estetika dan keindahan bahasa
 - Teknik menemukan amanat puisi
 
-### **Topik 3.4: Majas dan Gaya Bahasa**
+### **Topik 3.4: Majas**
 
 **Materi 3.4.1: Pengenalan Majas dan Gaya Bahasa**
 - Pengertian majas (figure of speech)
@@ -559,7 +559,7 @@
 - Membedakan majas yang mirip
 - Latihan identifikasi majas dalam kalimat
 
-### **Topik 3.5: Diksi dan Makna Kata**
+### **Topik 3.5: Diksi**
 
 **Materi 3.5.1: Pengenalan Diksi**
 - Pengertian diksi (pilihan kata)
@@ -591,7 +591,7 @@
 - Kata berimbuhan dalam konteks
 - Analisis makna kata kompleks
 
-### **Topik 3.6: Referensi Silang Sastra (baru)**
+### **Topik 3.6: Referensi Silang**
 
 **Materi 3.6.1: Pengenalan Referensi Silang**
 - Pengertian referensi silang dalam teks sastra
@@ -619,7 +619,7 @@
 
 ---
 
-## **Section 4: Penggunaan Bahasa yang Efektif dan Benar (PUEB)**
+## **Section 4: PUEBI**
 
 ### **Topik 4.1: Frasa**
 
@@ -688,7 +688,7 @@
 - Makna yang rancu dan ambigu
 - Memperbaiki kesalahan morfologi dan semantik
 
-### **Topik 4.3: Sintaksis - Struktur Kalimat**
+### **Topik 4.3: Sintaksis**
 
 **Materi 4.3.1: Pengenalan Sintaksis**
 - Pengertian sintaksis (ilmu tata kalimat)
@@ -721,7 +721,7 @@
 - Kalimat hipotesis dan kondisional
 - Analisis sintaksis dalam argumentasi
 
-### **Topik 4.4: Ejaan - Huruf Kapital dan Huruf Miring**
+### **Topik 4.4: Huruf Kapital dan Huruf Miring**
 
 **Materi 4.4.1: Pengenalan Ejaan (PUEBI)**
 - Pengertian PUEBI (Pedoman Umum Ejaan Bahasa Indonesia)
@@ -753,7 +753,7 @@
 - Kesalahan umum dalam penulisan
 - Latihan identifikasi dan perbaikan
 
-### **Topik 4.5: Ejaan - Penulisan Kata**
+### **Topik 4.5: Penulisan Kata**
 
 **Materi 4.5.1: Pengenalan Penulisan Kata**
 - Prinsip penulisan kata dalam bahasa Indonesia
