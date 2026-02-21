@@ -9,7 +9,7 @@ import { Upload, Link, Image as ImageIcon, X } from 'lucide-react';
 interface ImageModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onInsert: (data: { imageUrl?: string; uploadedImage?: File }) => void;
+  onInsert: (imageData: ImageInsertionData) => Promise<void>;
 }
 
 interface ImageAlignmentFloaterProps {
@@ -40,6 +40,7 @@ const ImageModal: React.FC<ImageModalProps> = ({
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [imageLoadError, setImageLoadError] = useState<boolean>(false);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
 
   // Effect untuk preview URL gambar
   useEffect(() => {
@@ -97,15 +98,26 @@ const ImageModal: React.FC<ImageModalProps> = ({
     fileInputRef.current?.click();
   };
 
-  const handleImageInsert = () => {
+  const handleImageInsert = async () => {
     if (imageUrl || uploadedImage) {
-      onInsert({ imageUrl, uploadedImage });
-      // Reset the state after insertion
-      setImageUrl('');
-      setUploadedImage(null);
-      setPreviewUrl('');
-      setImageLoadError(false);
-      onClose();
+      setIsUploading(true);
+      try {
+        await onInsert({ 
+          imageUrl, 
+          uploadedImage: uploadedImage || undefined 
+        });
+        // Reset the state after insertion
+        setImageUrl('');
+        setUploadedImage(null);
+        setPreviewUrl('');
+        setImageLoadError(false);
+        onClose();
+      } catch (error) {
+        console.error('Failed to insert image:', error);
+        alert('Failed to insert image. Please try again.');
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -133,6 +145,7 @@ const ImageModal: React.FC<ImageModalProps> = ({
     setUploadedImage(null);
     setPreviewUrl('');
     setImageLoadError(false);
+    setIsUploading(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -144,6 +157,7 @@ const ImageModal: React.FC<ImageModalProps> = ({
     setUploadedImage(null);
     setPreviewUrl('');
     setImageLoadError(false);
+    setIsUploading(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -156,14 +170,15 @@ const ImageModal: React.FC<ImageModalProps> = ({
       action: 'cancel',
       text: 'Cancel',
       onClick: handleModalClose,
-      variant: 'secondary'
+      variant: 'secondary',
+      disabled: isUploading
     },
     {
       action: 'submit',
-      text: 'Insert Image',
-      icon: <ImageIcon className="tw-w-4 tw-h-4" />,
+      text: isUploading ? 'Uploading...' : 'Insert Image',
+      icon: isUploading ? null : <ImageIcon className="tw-w-4 tw-h-4" />,
       onClick: handleImageInsert,
-      disabled: (!imageUrl && !uploadedImage) || imageLoadError,
+      disabled: (!imageUrl && !uploadedImage) || imageLoadError || isUploading,
       variant: 'primary'
     }
   ];
@@ -239,6 +254,18 @@ const ImageModal: React.FC<ImageModalProps> = ({
             Supported formats: JPG, PNG, GIF, WebP (max 5MB)
           </p>
         </div>
+
+        {/* Upload Progress */}
+        {isUploading && (
+          <div className="tw-p-4 tw-bg-blue-50 tw-border-2 tw-border-blue-200 tw-rounded-lg">
+            <div className="tw-flex tw-items-center tw-gap-3">
+              <div className="tw-animate-spin tw-w-5 tw-h-5 tw-border-2 tw-border-blue-600 tw-border-t-transparent tw-rounded-full"></div>
+              <p className="tw-text-sm tw-font-medium tw-text-blue-700">
+                Uploading to CDN... This may take a few seconds.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Preview Section */}
         {previewUrl && (
@@ -1104,25 +1131,49 @@ const updateHandlePositions = (wrapper: HTMLElement, img: HTMLImageElement): voi
 };
 
 // Function to handle image insertion in the editor
-export const handleImageInsertion = (
+export const handleImageInsertion = async (
   { imageUrl, uploadedImage }: ImageInsertionData, 
   execCommand: (command: string, value: string) => void
-): boolean => {
+): Promise<boolean> => {
+  // If URL is provided, insert directly
   if (imageUrl) {
     const imgHtml = `<img src="${imageUrl}" alt="Inserted Image" style="max-width: 100%;" class="resizable-image" />`;
     execCommand('insertHTML', imgHtml);
     return true;
-  } else if (uploadedImage) {
-    const reader = new FileReader();
-    reader.onload = (e: ProgressEvent<FileReader>) => {
-      if (e.target?.result) {
-        const imgHtml = `<img src="${e.target.result}" alt="Uploaded Image" style="max-width: 100%;" class="resizable-image" />`;
-        execCommand('insertHTML', imgHtml);
+  } 
+  
+  // If file is uploaded, upload to Cloudinary CDN first
+  if (uploadedImage) {
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('image', uploadedImage);
+
+      // Upload to API endpoint
+      const response = await fetch('/api/upload/image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Upload failed');
       }
-    };
-    reader.readAsDataURL(uploadedImage);
-    return true;
+
+      const result = await response.json();
+      
+      // Insert image with Cloudinary URL
+      const imgHtml = `<img src="${result.url}" alt="Uploaded Image" style="max-width: 100%;" class="resizable-image" />`;
+      execCommand('insertHTML', imgHtml);
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to upload image to CDN:', error);
+      alert('Failed to upload image. Please try again.');
+      return false;
+    }
   }
+  
   return false;
 };
 

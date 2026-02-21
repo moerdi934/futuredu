@@ -6,6 +6,8 @@ import * as examTypesModel from '../models/examTypes.model';
 import * as crypto from 'crypto';
 import pool from '../lib/db';
 import { AuthenticatedRequest } from '../lib/middleware/auth';
+import * as cache from '../lib/cache';
+import { CACHE_DURATION, generateCacheKey } from '../lib/cache';
 
 // Types
 interface QuestionData {
@@ -174,7 +176,21 @@ export const searchQuestions = async (req: NextApiRequest, res: NextApiResponse)
 
 export const getAllQuestions = async (req: NextApiRequest, res: NextApiResponse) => {
   try {
+    const cacheKey = 'questions:all';
+    
+    // Try to get from cache
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      console.log('[getAllQuestions] Cache HIT');
+      return res.status(200).json(cachedData);
+    }
+    
+    console.log('[getAllQuestions] Cache MISS - fetching from DB');
     const questions = await questionModel.getAllQuestions();
+    
+    // Cache for 1 month
+    cache.set(cacheKey, questions, CACHE_DURATION.ONE_MONTH);
+    
     res.status(200).json(questions);
   } catch (error) {
     console.error('[getAllQuestions] Error:', error);
@@ -200,7 +216,22 @@ export const getPagedQuestions = async (req: NextApiRequest, res: NextApiRespons
       userId: req.query.userId as string || undefined,
     };
 
+    // Generate cache key from filters
+    const cacheKey = generateCacheKey('questions:paged', filters);
+    
+    // Try to get from cache
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      console.log('[getPagedQuestions] Cache HIT:', cacheKey);
+      return res.status(200).json(cachedData);
+    }
+    
+    console.log('[getPagedQuestions] Cache MISS - fetching from DB');
     const result = await questionModel.getPagedQuestions(filters);
+    
+    // Cache for 1 month
+    cache.set(cacheKey, result, CACHE_DURATION.ONE_MONTH);
+    
     res.status(200).json(result);
   } catch (error) {
     console.error('[getPagedQuestions] Error:', error);
@@ -236,7 +267,21 @@ export const getQuestionsByExamId = async (req: NextApiRequest, res: NextApiResp
   const examId = parseInt(req.query.examid as string);
   
   try {
+    const cacheKey = `questions:exam:${examId}`;
+    
+    // Try to get from cache
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      console.log('[getQuestionsByExamId] Cache HIT:', cacheKey);
+      return res.status(200).json(cachedData);
+    }
+    
+    console.log('[getQuestionsByExamId] Cache MISS - fetching from DB');
     const questions = await questionModel.getQuestionsByExamId(examId);
+    
+    // Cache for 1 month
+    cache.set(cacheKey, questions, CACHE_DURATION.ONE_MONTH);
+    
     res.status(200).json(questions);
   } catch (error) {
     console.error('[getQuestionsByExamId] Error:', error);
@@ -247,7 +292,22 @@ export const getQuestionsByExamId = async (req: NextApiRequest, res: NextApiResp
 export const getQuestionById = async (req: NextApiRequest, res: NextApiResponse) => {
   const id = parseInt(req.query.id as string);
   try {
+    const cacheKey = `question:${id}`;
+    
+    // Try to get from cache
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      console.log('[getQuestionById] Cache HIT:', cacheKey);
+      return res.status(200).json(cachedData);
+    }
+    
+    console.log('[getQuestionById] Cache MISS - fetching from DB');
     const question = await questionModel.getQuestionById(id);
+    
+    // Cache individual question for 1 month  
+    if (question) {
+      cache.set(cacheKey, question, CACHE_DURATION.ONE_MONTH);
+    }
     if (!question) {
       return res.status(404).json({ error: 'Question not found' });
     }
@@ -301,6 +361,9 @@ export const createQuestion = async (req: AuthenticatedRequest, res: NextApiResp
       handleSingleQuestion({ questionData: sanitizedData, create_user_id })
     );
 
+    // Invalidate hanya list caches (tidak perlu hapus individual question cache)
+    cache.invalidate.questionLists();
+    
     res.status(201).json(result);
   } catch (error: any) {
     console.error('[createQuestion] Error in queue:', error);
@@ -553,6 +616,10 @@ export const updateQuestion = async (req: AuthenticatedRequest, res: NextApiResp
     if (!updatedQuestion) {
       return res.status(404).json({ error: 'Question not found' });
     }
+    
+    // Invalidate cache untuk question ini + semua list caches
+    cache.invalidate.questionWithLists(questionId);
+    
     res.json(updatedQuestion);
   } catch (error) {
     console.error('[updateQuestion] Error:', error);
@@ -595,6 +662,10 @@ export const updateBulkQuestions = async (req: AuthenticatedRequest, res: NextAp
 
   try {
     const updatedQuestions = await questionModel.updateBulkQuestions(sanitizedQuestions, edit_user_id);
+    
+    // Bulk update: hapus semua cache (karena banyak questions terpengaruh)
+    cache.invalidate.questions();
+    
     res.status(200).json(updatedQuestions);
   } catch (error) {
     console.error('[updateBulkQuestions] Error:', error);
@@ -611,6 +682,10 @@ export const appendExamId = async (req: NextApiRequest, res: NextApiResponse) =>
     }
 
     const result = await questionModel.appendExamIdToQuestion(questionId, examId);
+    
+    // Invalidate list caches karena exam associations berubah
+    cache.invalidate.questionLists();
+    
     return res.status(200).json({
       message: 'Exam ID appended successfully',
       data: result,
@@ -629,6 +704,10 @@ export const deleteQuestion = async (req: NextApiRequest, res: NextApiResponse) 
     if (!deletedQuestion) {
       return res.status(404).json({ error: 'Question not found' });
     }
+    
+    // Invalidate cache untuk question ini + semua list caches
+    cache.invalidate.questionWithLists(questionId);
+    
     res.json({ message: 'Question deleted successfully', question: deletedQuestion });
   } catch (error) {
     console.error('[deleteQuestion] Error:', error);

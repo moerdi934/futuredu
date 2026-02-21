@@ -1143,14 +1143,17 @@ const SuperEditor: React.FC<SuperEditorProps> = ({
     setSavedSelection(saveSelectionRange());
   }, [savedSelection, saveSelectionRange, restoreSelectionRange, handleChange, componentsLoaded.color]);
 
-  const handleImageInsert = useCallback((imageData: any) => {
-    if (helpersRef.current.handleImageInsertion && helpersRef.current.handleImageInsertion(imageData, execCommand)) {
-      setShowImageModal(false);
-      setTimeout(() => {
-        if (helpersRef.current.setupImageResizeHandlers) {
-          helpersRef.current.setupImageResizeHandlers(editorRef, handleChange);
-        }
-      }, 100);
+  const handleImageInsert = useCallback(async (imageData: any) => {
+    if (helpersRef.current.handleImageInsertion) {
+      const success = await helpersRef.current.handleImageInsertion(imageData, execCommand);
+      if (success) {
+        setShowImageModal(false);
+        setTimeout(() => {
+          if (helpersRef.current.setupImageResizeHandlers) {
+            helpersRef.current.setupImageResizeHandlers(editorRef, handleChange);
+          }
+        }, 100);
+      }
     }
   }, [execCommand, handleChange]);
 

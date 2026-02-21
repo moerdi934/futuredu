@@ -1,6 +1,8 @@
 # Image Migration to Cloudinary CDN
 
-Script untuk memindahkan semua gambar base64 yang embedded di **database** (tabel `questions`) ke Cloudinary CDN.
+Script untuk memindahkan semua gambar yang embedded di **database** ke Cloudinary CDN:
+- **Tabel `questions`**: Gambar base64 di kolom `question_text`
+- **Tabel `question_passages`**: Gambar base64 dan URL eksternal di kolom `passage`
 
 ## Prerequisites
 
@@ -41,53 +43,98 @@ CLOUDINARY_API_SECRET=your_api_secret
 ### 3. Install Dependencies
 
 ```bash
-npm install cloudinary cheerio pg
+npm install cloudinary cheerio pg axios
 ```
+
+**Dependencies yang dibutuhkan:**
+- `cloudinary`: Upload images ke Cloudinary CDN
+- `cheerio`: Parse dan manipulasi HTML
+- `pg`: PostgreSQL client
+- `axios`: Download images dari external URLs
 
 ## Cara Menggunakan
 
-### Dry Run (Test Mode)
+### Migration 1: Questions Table
+
+Migrasi gambar base64 dari tabel `questions` kolom `question_text`.
+
+#### Dry Run (Test Mode)
 
 Jalankan dulu dalam mode dry run untuk melihat apa yang akan dilakukan tanpa mengubah database:
-
-```bash
-npm run cdn:migrate:dry-run
-```
-
-Atau:
 
 ```bash
 node scripts/cdn/migrate-images-to-cloudinary.js --dry-run
 ```
 
-### Production Run
+#### Production Run
 
 Setelah yakin, jalankan migrasi sebenarnya:
-
-```bash
-npm run cdn:migrate
-```
-
-Atau:
 
 ```bash
 node scripts/cdn/migrate-images-to-cloudinary.js
 ```
 
+### Migration 2: Question Passages Table
+
+Migrasi gambar dari tabel `question_passages` kolom `passage`. Script ini bisa handle:
+- **Base64 images** (data:image/...)
+- **External URLs** (http://..., https://...) seperti dari CDN Ruangguru
+
+#### Dry Run (Test Mode)
+
+```bash
+node scripts/cdn/migrate-passage-images-to-cloudinary.js --dry-run
+```
+
+#### Production Run
+
+```bash
+node scripts/cdn/migrate-passage-images-to-cloudinary.js
+```
+
 ## Apa yang Dilakukan Script Ini?
 
-1. **Query** database untuk semua pertanyaan dengan gambar base64 embedded (`data:image...`)
+### Script 1: migrate-images-to-cloudinary.js (Questions)
+
+1. **Query** database untuk semua pertanyaan dengan gambar base64 embedded
    ```sql
-   SELECT question_id, question_text 
+   SELECT id, question_text 
    FROM questions 
    WHERE question_text ILIKE '%data:image%'
    ```
 2. **Extract** gambar base64 dari HTML menggunakan Cheerio
 3. **Upload** ke Cloudinary dengan struktur folder:
    - Folder: `futuredu/questions`
-   - Naming: `question_{question_id}_img_{index}`
+   - Naming: `question_{id}_img_{index}`
 4. **Replace** URL base64 dengan URL Cloudinary
 5. **Update** database dengan HTML yang sudah dimodifikasi
+
+### Script 2: migrate-passage-images-to-cloudinary.js (Passages)
+
+1. **Query** database untuk semua passages dengan gambar
+   ```sql
+   SELECT id, title, passage 
+   FROM question_passages 
+   WHERE passage ILIKE '%<img%'
+   ```
+2. **Extract** gambar dari HTML menggunakan Cheerio
+3. **Handle 2 tipe gambar:**
+   - **Base64 images**: Upload langsung ke Cloudinary
+   - **External URLs**: Download dulu → Upload ke Cloudinary
+4. **Upload** ke Cloudinary dengan struktur folder:
+   - Folder: `futuredu/passages`
+   - Naming: `passage_{id}_img_{index}`
+5. **Replace** semua image sources dengan URL Cloudinary
+6. **Update** database dengan HTML yang sudah dimodifikasi
+
+**Contoh External URL yang Di-handle:**
+```html
+<!-- Sebelum: CDN Ruangguru -->
+<img src="https://cdn-web.ruangguru.com/landing-pages/assets/hs/2-Oct-04-2022-05-47-23-71-AM.png">
+
+<!-- Setelah: CDN Kita -->
+<img src="https://res.cloudinary.com/dl3oqxp6r/image/upload/v1234567890/futuredu/passages/passage_123_img_1.png">
+```
 
 ## Output
 

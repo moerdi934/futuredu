@@ -12,16 +12,17 @@
 const { v2: cloudinary } = require('cloudinary');
 const { Pool } = require('pg');
 const cheerio = require('cheerio');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
 // Database connection
 const pool = new Pool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  database: process.env.DB_DATABASE,
   port: parseInt(process.env.DB_PORT || '5432'),
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+  ssl: { rejectUnauthorized: false }, // Aiven requires SSL
 });
 
 // Configure Cloudinary
@@ -41,6 +42,9 @@ async function uploadToCloudinary(base64Data, questionId, imageIndex) {
       public_id: `question_${questionId}_img_${imageIndex}`,
       resource_type: 'image',
       overwrite: true,
+      transformation: [
+        { quality: 'auto:good', fetch_format: 'auto' }
+      ]
     });
 
     return result.secure_url;
@@ -94,7 +98,7 @@ async function processQuestionText(questionText, questionId) {
 async function updateQuestion(questionId, newText) {
   try {
     await pool.query(
-      'UPDATE questions SET question_text = $1, updated_at = NOW() WHERE question_id = $2',
+      'UPDATE questions SET question_text = $1, edit_date = NOW() WHERE id = $2',
       [newText, questionId]
     );
   } catch (error) {
@@ -122,7 +126,7 @@ async function migrateImagesToCloudinary(dryRun = false) {
 
     // Find all questions with embedded images
     const result = await pool.query(
-      "SELECT question_id, question_text FROM questions WHERE question_text ILIKE '%data:image%'"
+      "SELECT id, question_text FROM questions WHERE question_text ILIKE '%data:image%'"
     );
 
     const questions = result.rows;
@@ -133,31 +137,31 @@ async function migrateImagesToCloudinary(dryRun = false) {
     // Process each question
     for (let i = 0; i < questions.length; i++) {
       const question = questions[i];
-      console.log(`\n[${i + 1}/${questions.length}] Processing question ID: ${question.question_id}`);
+      console.log(`\n[${i + 1}/${questions.length}] Processing question ID: ${question.id}`);
 
       try {
         const { updatedText, imagesProcessed } = await processQuestionText(
           question.question_text,
-          question.question_id
+          question.id
         );
 
         stats.totalImages += imagesProcessed;
         stats.successfulUploads += imagesProcessed;
 
         if (!dryRun && imagesProcessed > 0) {
-          await updateQuestion(question.question_id, updatedText);
+          await updateQuestion(question.id, updatedText);
           stats.updatedQuestions++;
-          console.log(`  ✓ Database updated for question ${question.question_id}`);
+          console.log(`  ✓ Database updated for question ${question.id}`);
         } else if (dryRun && imagesProcessed > 0) {
-          console.log(`  ℹ DRY RUN: Would update question ${question.question_id}`);
+          console.log(`  ℹ DRY RUN: Would update question ${question.id}`);
         }
       } catch (error) {
         stats.failedUploads++;
         stats.errors.push({
-          question_id: question.question_id,
+          question_id: question.id,
           error: error.message || String(error),
         });
-        console.error(`  ✗ Failed to process question ${question.question_id}`);
+        console.error(`  ✗ Failed to process question ${question.id}`);
       }
     }
 
