@@ -1,0 +1,72 @@
+[
+  {
+    "passageTitle": "SuperEditor Complete Format Reference",
+    "passageText": "<Heading kind=\"2\">SuperEditor Import Format - Complete Example</Heading><p>This passage demonstrates <strong>all available SuperEditor custom tags</strong> that can be used when importing questions. Use this as a reference guide for creating your own import files.</p><KeyConcept style=\"important\">All tags are case-sensitive. Make sure to use exact capitalization: <code>Heading</code>, <code>KeyConcept</code>, <code>Equation</code>, etc.</KeyConcept><Heading kind=\"3\">1. Heading Tags</Heading><p>Headings can be used to structure your content hierarchically. Available levels: 1-6.</p><CodeBlock language=\"html\"><Heading kind=\"2\">Main Title</Heading>\n<Heading kind=\"3\">Subsection</Heading></CodeBlock><Heading kind=\"3\">2. KeyConcept Tags</Heading><p>Use KeyConcept to highlight important information. Available styles:</p><CardGrid style=\"blue\" columns=\"2\"><Card title=\"Classic\"><KeyConcept style=\"classic\">Standard key concept box</KeyConcept></Card><Card title=\"Important\"><KeyConcept style=\"important\">Critical information</KeyConcept></Card><Card title=\"Highlight\"><KeyConcept style=\"highlight\">Emphasized content</KeyConcept></Card><Card title=\"Warning\"><KeyConcept style=\"warning\">Caution or warning</KeyConcept></Card><Card title=\"Insight\"><KeyConcept style=\"insight\">Deep insight or tip</KeyConcept></Card><Card title=\"Definition\"><KeyConcept style=\"definition\">Formal definition</KeyConcept></Card><Card title=\"Goal\"><KeyConcept style=\"goal\">Learning objective</KeyConcept></Card><Card title=\"Info\"><KeyConcept style=\"info\">Additional information</KeyConcept></Card></CardGrid><Heading kind=\"3\">3. StyledList with ListItem</Heading><p>Create colorful bullet points to organize information:</p><StyledList><ListItem style=\"blue\">Blue – General information</ListItem><ListItem style=\"green\">Green – Positive or correct items</ListItem><ListItem style=\"yellow\">Yellow – Important notes</ListItem><ListItem style=\"orange\">Orange – Warnings or attention</ListItem><ListItem style=\"red\">Red – Critical or incorrect items</ListItem><ListItem style=\"purple\">Purple – Special cases</ListItem><ListItem style=\"teal\">Teal – Alternative approaches</ListItem><ListItem style=\"pink\">Pink – Examples or demonstrations</ListItem></StyledList><Heading kind=\"3\">4. Table Tags</Heading><p>Tables support three styles: bordered, striped, and borderless. Set <code>hasHeader=\"true\"</code> to make the first row a header.</p><Table style=\"bordered\" hasHeader=\"true\"><Row><Cell>Style</Cell><Cell>Description</Cell><Cell>Best For</Cell></Row><Row><Cell>bordered</Cell><Cell>Clear cell borders</Cell><Cell>Structured data</Cell></Row><Row><Cell>striped</Cell><Cell>Alternating row colors</Cell><Cell>Long data lists</Cell></Row><Row><Cell>borderless</Cell><Cell>No visible borders</Cell><Cell>Simple comparisons</Cell></Row></Table><Heading kind=\"3\">5. Equation Tags</Heading><p>Support inline and display math using LaTeX syntax:</p><StyledList><ListItem style=\"purple\"><strong>Inline:</strong> Use <code>&lt;Equation type=\"inline\"&gt;</code> for math within text, like <Equation type=\"inline\">E = mc^2</Equation> or <Equation type=\"inline\">\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}</Equation>.</ListItem><ListItem style=\"blue\"><strong>Display:</strong> Use <code>&lt;Equation type=\"display\"&gt;</code> for centered, standalone equations.</ListItem></StyledList><p>Example quadratic formula:</p><Equation type=\"display\">x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}</Equation><p>Multiline equations using <code>\\\\</code> for line breaks:</p><Equation type=\"display\">\\begin{cases}x + y = 10 \\\\2x - y = 5\\end{cases}</Equation><Heading kind=\"3\">6. CardGrid with Card</Heading><p>Create responsive card layouts with 1-4 columns. Available themes: blue, green, purple, orange, teal, pink, indigo, amber.</p><CardGrid style=\"indigo\" columns=\"3\"><Card title=\"Step 1\">Understand the problem</Card><Card title=\"Step 2\">Plan your approach</Card><Card title=\"Step 3\">Execute and verify</Card></CardGrid><Heading kind=\"3\">7. CodeBlock Tags</Heading><p>Display code with syntax highlighting. Supports 30+ languages:</p><CodeBlock language=\"python\">def fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n-1) + fibonacci(n-2)\n\nprint(fibonacci(10))</CodeBlock><CodeBlock language=\"javascript\">const factorial = (n) => {\n  return n <= 1 ? 1 : n * factorial(n - 1);\n};\n\nconsole.log(factorial(5)); // 120</CodeBlock><KeyConcept style=\"goal\">With these tags, you can create rich, engaging educational content that enhances student understanding!</KeyConcept>"
+  },
+  {
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Which SuperEditor tag should you use to display a mathematical equation centered on its own line?</p>",
+    "bidang": "Teknologi Informasi",
+    "bidang_code": "TI1",
+    "topik": "Pemrograman Web",
+    "topic_code": "WEB",
+    "subtopic": "Frontend Development",
+    "subtopic_code": "FE",
+    "subtopic_id": 501,
+    "passageTitle": "SuperEditor Complete Format Reference",
+    "options": [
+      "<p><code>&lt;Equation type=\"inline\"&gt;</code></p>",
+      "<p><code>&lt;Equation type=\"display\"&gt;</code></p>",
+      "<p><code>&lt;Equation type=\"centered\"&gt;</code></p>",
+      "<p><code>&lt;Math mode=\"block\"&gt;</code></p>",
+      "<p><code>&lt;Formula display=\"true\"&gt;</code></p>"
+    ],
+    "correctAnswer": [1],
+    "explanation": "<Heading kind=\"3\">Answer Explanation</Heading><p>The SuperEditor supports two types of equation display modes:</p><Table style=\"bordered\" hasHeader=\"true\"><Row><Cell>Type</Cell><Cell>Tag</Cell><Cell>Usage</Cell></Row><Row><Cell>Inline</Cell><Cell><code>&lt;Equation type=\"inline\"&gt;</code></Cell><Cell>Math within text flow</Cell></Row><Row><Cell>Display</Cell><Cell><code>&lt;Equation type=\"display\"&gt;</code></Cell><Cell>Centered, standalone equation</Cell></Row></Table><KeyConcept style=\"classic\">Use <code>&lt;Equation type=\"display\"&gt;</code> for equations that should appear on their own line, centered and prominent.</KeyConcept><p>Example:</p><CodeBlock language=\"html\"><Equation type=\"display\">\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}</Equation></CodeBlock><p>This renders as:</p><Equation type=\"display\">\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}</Equation>"
+  },
+  {
+    "level": 4,
+    "questionType": "single-choice",
+    "questionText": "<p>You want to create a comparison table with 3 columns showing different approaches. Which combination of tags is correct?</p>",
+    "bidang": "Teknologi Informasi",
+    "bidang_code": "TI1",
+    "topik": "Pemrograman Web",
+    "topic_code": "WEB",
+    "subtopic": "Frontend Development",
+    "subtopic_code": "FE",
+    "subtopic_id": 501,
+    "passageTitle": "SuperEditor Complete Format Reference",
+    "options": [
+      "<p><code>&lt;Table columns=\"3\"&gt;&lt;Column&gt;&lt;Data&gt;</code></p>",
+      "<p><code>&lt;Table style=\"bordered\"&gt;&lt;Row&gt;&lt;Cell&gt;</code></p>",
+      "<p><code>&lt;Grid cols=\"3\"&gt;&lt;Item&gt;</code></p>",
+      "<p><code>&lt;DataTable&gt;&lt;Header&gt;&lt;Body&gt;</code></p>",
+      "<p><code>&lt;TableGrid&gt;&lt;RowData&gt;</code></p>"
+    ],
+    "correctAnswer": [1],
+    "explanation": "<Heading kind=\"3\">Table Structure in SuperEditor</Heading><p>The correct structure for tables in SuperEditor uses three nested components:</p><StyledList><ListItem style=\"blue\"><strong>&lt;Table&gt;</strong> – Container with style and hasHeader attributes</ListItem><ListItem style=\"green\"><strong>&lt;Row&gt;</strong> – Each row of the table</ListItem><ListItem style=\"purple\"><strong>&lt;Cell&gt;</strong> – Individual cells within each row</ListItem></StyledList><KeyConcept style=\"definition\">Table syntax: <code>&lt;Table style=\"bordered|striped|borderless\" hasHeader=\"true|false\"&gt;</code></KeyConcept><p>Complete example:</p><CodeBlock language=\"html\"><Table style=\"bordered\" hasHeader=\"true\">\n  <Row>\n    <Cell>Approach 1</Cell>\n    <Cell>Approach 2</Cell>\n    <Cell>Approach 3</Cell>\n  </Row>\n  <Row>\n    <Cell>Fast</Cell>\n    <Cell>Memory efficient</Cell>\n    <Cell>Easiest to understand</Cell>\n  </Row>\n</Table></CodeBlock><p>This renders as:</p><Table style=\"striped\" hasHeader=\"true\"><Row><Cell>Approach 1</Cell><Cell>Approach 2</Cell><Cell>Approach 3</Cell></Row><Row><Cell>Fast execution</Cell><Cell>Memory efficient</Cell><Cell>Easy to understand</Cell></Row><Row><Cell>Complex code</Cell><Cell>Slower runtime</Cell><Cell>Higher memory usage</Cell></Row></Table>"
+  },
+  {
+    "level": 2,
+    "questionType": "single-choice",
+    "questionText": "<p>How many columns can a CardGrid display at maximum?</p>",
+    "bidang": "Teknologi Informasi",
+    "bidang_code": "TI1",
+    "topik": "Pemrograman Web",
+    "topic_code": "WEB",
+    "subtopic": "Frontend Development",
+    "subtopic_code": "FE",
+    "subtopic_id": 501,
+    "passageTitle": "SuperEditor Complete Format Reference",
+    "options": [
+      "<p>2 columns</p>",
+      "<p>3 columns</p>",
+      "<p>4 columns</p>",
+      "<p>6 columns</p>",
+      "<p>8 columns</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<Heading kind=\"3\">CardGrid Column Options</Heading><p>CardGrid supports 1 to 4 columns for responsive layouts:</p><CardGrid style=\"teal\" columns=\"4\"><Card title=\"1 Column\">Full width cards</Card><Card title=\"2 Columns\">Side-by-side comparison</Card><Card title=\"3 Columns\">Balanced grid layout</Card><Card title=\"4 Columns\">Maximum density</Card></CardGrid><KeyConcept style=\"info\">The <code>columns</code> attribute can be set to <strong>1, 2, 3, or 4</strong>. Choose based on content density and readability.</KeyConcept><p>Example syntax:</p><CodeBlock language=\"html\"><CardGrid style=\"indigo\" columns=\"4\">\n  <Card title=\"Card 1\">Content 1</Card>\n  <Card title=\"Card 2\">Content 2</Card>\n  <Card title=\"Card 3\">Content 3</Card>\n  <Card title=\"Card 4\">Content 4</Card>\n</CardGrid></CodeBlock>"
+  }
+]

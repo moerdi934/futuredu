@@ -43,13 +43,20 @@ export const CACHE_DURATION = {
  * Get value from cache
  */
 export function get<T>(key: string): T | undefined {
-  return cache.get<T>(key);
+  const value = cache.get<T>(key);
+  if (value !== undefined) {
+    console.log(`[CACHE HIT] ${key}`);
+  } else {
+    console.log(`[CACHE MISS] ${key}`);
+  }
+  return value;
 }
 
 /**
  * Set value to cache with optional TTL
  */
 export function set<T>(key: string, value: T, ttl?: number): boolean {
+  console.log(`[CACHE SET] ${key} (TTL: ${ttl || ONE_MONTH}s)`);
   return cache.set(key, value, ttl || ONE_MONTH);
 }
 
@@ -57,6 +64,8 @@ export function set<T>(key: string, value: T, ttl?: number): boolean {
  * Delete specific key from cache
  */
 export function del(key: string | string[]): number {
+  const keys = Array.isArray(key) ? key : [key];
+  console.log(`[CACHE DELETE] ${keys.join(', ')}`);
   return cache.del(key);
 }
 
@@ -69,6 +78,9 @@ export function delPattern(pattern: string): number {
     const regex = new RegExp(pattern.replace('*', '.*'));
     return regex.test(key);
   });
+  if (matchingKeys.length > 0) {
+    console.log(`[CACHE DELETE PATTERN] ${pattern} → ${matchingKeys.length} keys: ${matchingKeys.join(', ')}`);
+  }
   return cache.del(matchingKeys);
 }
 

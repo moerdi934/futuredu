@@ -4,7 +4,6 @@
 import React, {
   useState,
   useEffect,
-  useCallback,
   useRef,
 } from 'react';
 import { useRouter } from 'next/navigation';
@@ -14,7 +13,6 @@ import {
   BookOpen,
   FileText,
   Check,
-  X,
   Bookmark,
   Trash2,
   ChevronDown,
@@ -27,10 +25,6 @@ import {
   Upload,
   FileJson,
   AlertCircle,
-  Calendar,
-  Eye,
-  EyeOff,
-  Clock,
 } from 'lucide-react';
 import axios from 'axios';
 import SuperEditor from '../../../../../components/supereditor/SuperEditor';
@@ -49,7 +43,7 @@ import CreateBulkModal from './CreateBulkModal';
 import {
   validateImportJSON,
 } from '../../../../../utils/bulkQuestionImport';
-import katex from 'katex';
+import { processContent } from '../../../../../components/supereditor/utils';
 import 'katex/dist/katex.min.css';
 
 const optionLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
@@ -185,57 +179,20 @@ const CustomAccordionItem: React.FC<{
   );
 };
 
-// Helper functions
-const parseEquationTags = (content: string): string => {
-  if (!content) return content;
-  
-  return content.replace(/<equation>([\s\S]*?)<\/equation>/g, (match, latex) => {
-    try {
-      const isMultiline = /\\begin\{(align|gather|equation|eqnarray)/.test(latex);
-      
-      const rendered = katex.renderToString(latex.trim(), {
-        displayMode: isMultiline,
-        throwOnError: false
-      });
-
-      const containerTag = isMultiline ? 'div' : 'span';
-      return `<${containerTag} class="cte-katex-equation ${isMultiline ? 'cte-katex-block' : 'cte-katex-inline'}" data-latex="${encodeURIComponent(latex.trim())}" data-display-mode="${isMultiline}" data-editable="true">${rendered}</${containerTag}>`;
-    } catch (error) {
-      console.error('Error parsing equation:', error);
-      return match;
-    }
-  });
-};
-
-const parseTableMarkup = (content: string): string => {
-  if (!content) return content;
-  return content;
-};
-
-const normalizeParagraphSpacing = (content: string): string => {
-  if (!content) return content;
-  
-  let normalized = content.replace(/\n\n+/g, '\n');
-  normalized = normalized.replace(/<p>/g, '<p style="margin-bottom: 1em;">');
-  normalized = normalized.replace(/<p\s+style="([^"]*)"/g, (match, existingStyle) => {
-    if (existingStyle.includes('margin-bottom')) {
-      return match;
-    }
-    return `<p style="${existingStyle}; margin-bottom: 1em;"`;
-  });
-  
-  return normalized;
-};
-
-const processContent = (content: string): string => {
-  if (!content) return content;
-  
-  let processed = parseEquationTags(content);
-  processed = parseTableMarkup(processed);
-  processed = normalizeParagraphSpacing(processed);
-  
-  return processed;
-};
+// ===================================================================
+// PARSER FUNCTIONS MOVED TO CENTRALIZED LOCATION
+// ===================================================================
+// All SuperEditor content parsing functions (Equation, Table, Heading, 
+// KeyConcept, StyledList, CardGrid, CodeBlock) have been moved to:
+// 
+//   @/components/supereditor/utils/contentParser.ts
+// 
+// This centralization allows any feature to import SuperEditor content
+// parsing without code duplication. Import via:
+// 
+//   import { processContent } from '@/components/supereditor/utils';
+//
+// ===================================================================
 
 // Bulk Question Item Component
 const BulkQuestionItem: React.FC<{
@@ -263,7 +220,7 @@ const BulkQuestionItem: React.FC<{
     latestDataRef.current = data;
   }, [data]);
   
-  const passageSearchTimeout = useRef<NodeJS.Timeout>();
+  const passageSearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Filter exam types locally from allExamTypes
   const bidangOptions = React.useMemo(() => {
@@ -333,18 +290,23 @@ const BulkQuestionItem: React.FC<{
 
   const handleImportPassage = () => {
     try {
-      onChange(index, {
-        ...latestDataRef.current,
-        passageImportError: '',
-      });
+      console.log('🔄 Starting passage import...');
+      console.log('JSON Input:', data.passageJsonInput);
+      
+      if (!data.passageJsonInput || !data.passageJsonInput.trim()) {
+        throw new Error('JSON input kosong. Silakan paste data JSON terlebih dahulu.');
+      }
       
       const parsedData = JSON.parse(data.passageJsonInput);
+      console.log('✅ JSON parsed successfully:', parsedData);
       
       if (!parsedData.passageTitle || !parsedData.passageText) {
         throw new Error('Format JSON harus memiliki "passageTitle" dan "passageText"');
       }
       
       const processedPassageText = processContent(parsedData.passageText);
+      console.log('✅ Content processed. Title:', parsedData.passageTitle);
+      console.log('📝 Processed content length:', processedPassageText.length);
       
       onChange(index, {
         ...latestDataRef.current,
@@ -355,8 +317,10 @@ const BulkQuestionItem: React.FC<{
         passageImportError: '',
       });
       
-      alert('Berhasil mengimport data bacaan! Silakan review dan simpan.');
+      console.log('✅ State updated successfully');
+      alert('Berhasil mengimport data bacaan! Silakan review dan klik "Simpan Bacaan".');
     } catch (error: any) {
+      console.error('❌ Error importing passage:', error);
       onChange(index, {
         ...latestDataRef.current,
         passageImportError: `Error: ${error.message || 'Format JSON tidak valid'}`,
@@ -366,19 +330,40 @@ const BulkQuestionItem: React.FC<{
 
   const createPassage = async () => {
     try {
+      console.log('🔄 Creating passage...');
+      console.log('Title:', data.newPassageTitle);
+      console.log('Content length:', data.newPassageContent?.length || 0);
+      
+      // Validation: Check if title and passage are not empty
+      if (!data.newPassageTitle || !data.newPassageTitle.trim()) {
+        alert('Judul bacaan tidak boleh kosong! Silakan isi judul terlebih dahulu.');
+        return;
+      }
+      
+      if (!data.newPassageContent || !data.newPassageContent.trim()) {
+        alert('Isi bacaan tidak boleh kosong! Silakan isi konten bacaan terlebih dahulu.');
+        return;
+      }
+
+      const requestData = {
+        title: data.newPassageTitle,
+        passage: data.newPassageContent,
+        create_user_id: userId,
+      };
+      
+      console.log('📤 Sending request to API:', requestData);
+
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/questions/passage`,
-        {
-          title: data.newPassageTitle,
-          passage: data.newPassageContent,
-          create_user_id: userId,
-        },
+        requestData,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('authToken')}`,
           },
         }
       );
+      
+      console.log('✅ Passage created successfully:', response.data);
       
       onChange(index, {
         ...latestDataRef.current,
@@ -392,9 +377,124 @@ const BulkQuestionItem: React.FC<{
         showPassageModal: false,
         createNewPassage: false,
       });
-    } catch (error) {
-      console.error('Error creating passage:', error);
-      alert('Gagal membuat bacaan baru. Silakan coba lagi.');
+      
+      alert('Bacaan berhasil disimpan!');
+    } catch (error: any) {
+      console.error('❌ Error creating passage:', error);
+      console.error('Error response:', error.response?.data);
+      alert(`Gagal membuat bacaan baru: ${error.response?.data?.error || error.message || 'Unknown error'}`);
+    }
+  };
+
+  // Smart handler for save button - handles both import and direct save
+  const handleSavePassage = async () => {
+    // If in import mode, import first then save
+    if (data.importPassageMode) {
+      try {
+        // Validate JSON input
+        if (!data.passageJsonInput || !data.passageJsonInput.trim()) {
+          alert('Silakan masukkan JSON data terlebih dahulu!');
+          return;
+        }
+        
+        const parsedData = JSON.parse(data.passageJsonInput);
+        
+        if (!parsedData.passageTitle || !parsedData.passageText) {
+          alert('Format JSON harus memiliki "passageTitle" dan "passageText"');
+          return;
+        }
+        
+        const processedPassageText = processContent(parsedData.passageText);
+        
+        // Update state with imported data
+        onChange(index, {
+          ...latestDataRef.current,
+          newPassageTitle: parsedData.passageTitle,
+          newPassageContent: processedPassageText,
+          importPassageMode: false,
+          passageJsonInput: '',
+          passageImportError: '',
+        });
+        
+        // Wait for state to update, then create passage
+        setTimeout(async () => {
+          await createPassageWithData(parsedData.passageTitle, processedPassageText);
+        }, 100);
+        
+      } catch (error: any) {
+        onChange(index, {
+          ...latestDataRef.current,
+          passageImportError: `Error: ${error.message || 'Format JSON tidak valid'}`,
+        });
+        return;
+      }
+    } else {
+      // Direct save from manual input
+      await createPassage();
+    }
+  };
+  
+  // Helper function to create passage with specific data
+  const createPassageWithData = async (title: string, content: string) => {
+    try {
+      console.log('🔄 Creating passage with data...');
+      console.log('Title:', title);
+      console.log('Content length:', content?.length || 0);
+      
+      if (!title || !title.trim()) {
+        alert('Judul bacaan tidak boleh kosong!');
+        return;
+      }
+      
+      if (!content || !content.trim()) {
+        alert('Isi bacaan tidak boleh kosong!');
+        return;
+      }
+
+      const requestData = {
+        title: title,
+        passage: content,
+        create_user_id: userId,
+      };
+      
+      console.log('📤 Sending request to API:', {
+        title: requestData.title,
+        passageLength: requestData.passage.length,
+        create_user_id: requestData.create_user_id
+      });
+
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/questions/passage`,
+        requestData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+          },
+        }
+      );
+      
+      console.log('✅ Passage created successfully:', response.data);
+      
+      onChange(index, {
+        ...latestDataRef.current,
+        passage: {
+          id: response.data.id,
+          title: title,
+          passage: content,
+        },
+        newPassageTitle: '',
+        newPassageContent: '',
+        showPassageModal: false,
+        createNewPassage: false,
+        importPassageMode: false,
+        passageJsonInput: '',
+      });
+      
+      alert('Bacaan berhasil disimpan!');
+    } catch (error: any) {
+      console.error('❌ Error creating passage:', error);
+      console.error('Error response:', error.response?.data);
+      alert(`Gagal membuat bacaan baru: ${error.response?.data?.error || error.message || 'Unknown error'}`);
     }
   };
 
@@ -415,8 +515,8 @@ const BulkQuestionItem: React.FC<{
     },
     {
       action: 'save',
-      text: 'Simpan Bacaan',
-      onClick: createPassage,
+      text: data.importPassageMode ? 'Import & Simpan' : 'Simpan Bacaan',
+      onClick: handleSavePassage,
     },
   ];
 
@@ -551,8 +651,9 @@ const BulkQuestionItem: React.FC<{
         // Search for passage
         if (item.passageTitle) {
           try {
+            console.log('🔍 Searching passage with title:', item.passageTitle);
             const response = await axios.get(
-              `${process.env.NEXT_PUBLIC_API_URL}/passage/search?query=${encodeURIComponent(item.passageTitle)}`,
+              `${process.env.NEXT_PUBLIC_API_URL}/questions/passage/search?search=${encodeURIComponent(item.passageTitle)}`,
               {
                 headers: {
                   Authorization: `Bearer ${localStorage.getItem('authToken')}`,
@@ -560,23 +661,31 @@ const BulkQuestionItem: React.FC<{
               }
             );
             
+            console.log('📥 Passage search response:', response.data);
+            
             if (response.data && Array.isArray(response.data) && response.data.length > 0) {
               const foundPassage = response.data.find((p: any) => 
                 p.title?.toLowerCase() === item.passageTitle.toLowerCase()
               );
               
               if (foundPassage) {
+                console.log('✅ Found matching passage:', foundPassage.title);
                 questionData.hasPassage = true;
                 questionData.passage = {
                   id: foundPassage.id,
                   title: foundPassage.title,
-                  passage: foundPassage.content,
+                  passage: foundPassage.passage,
                 };
                 questionData.passageSearchResults = [foundPassage];
+              } else {
+                console.warn('⚠️ No exact match found for passage title:', item.passageTitle);
               }
+            } else {
+              console.warn('⚠️ No passages found in search results');
             }
-          } catch (error) {
-            console.warn('Failed to search passage:', error);
+          } catch (error: any) {
+            console.error('❌ Failed to search passage:', error);
+            console.error('Endpoint:', `${process.env.NEXT_PUBLIC_API_URL}/questions/passage/search?search=${encodeURIComponent(item.passageTitle)}`);
           }
         }
         
@@ -1495,6 +1604,7 @@ const CreateQuestionBulk: React.FC = () => {
   useEffect(() => {
     const fetchAllExamTypes = async () => {
       setIsLoadingExamTypes(true);
+      console.log('🔄 Fetching all exam types...');
       try {
         const response = await axios.get(
           `${process.env.NEXT_PUBLIC_API_URL}/exam-types?limit=10000`,
@@ -1507,8 +1617,16 @@ const CreateQuestionBulk: React.FC = () => {
         
         const examTypes = response.data.examTypes || [];
         setAllExamTypes(examTypes);
+        
+        console.log('✅ Exam types loaded successfully');
+        console.log('Total exam types:', examTypes.length);
+        console.log('By kind:', {
+          bidang: examTypes.filter((et: any) => et.kind === 1).length,
+          topik: examTypes.filter((et: any) => et.kind === 2).length,
+          subtopik: examTypes.filter((et: any) => et.kind === 3).length,
+        });
       } catch (error) {
-        console.error('Error fetching all exam types:', error);
+        console.error('❌ Error fetching all exam types:', error);
         setAllExamTypes([]);
       } finally {
         setIsLoadingExamTypes(false);
@@ -1587,19 +1705,27 @@ const CreateQuestionBulk: React.FC = () => {
   };
 
   // Convert fetched question to QuestionData format
-  const convertQuestionToQuestionData = (question: any, examTypesMap: Map<number, any>): QuestionData | null => {
+  const convertQuestionToQuestionData = (
+    question: any, 
+    examTypesMap: Map<number, any>,
+    failedQuestionsDetails: Array<{id: number, reason: string}>
+  ): QuestionData | null => {
     try {
       // Get exam type info from question
       const subtopicId = question.question_topic_type;
       if (!subtopicId) {
-        console.warn('Question missing subtopic:', question.id);
+        const reason = `Question ID ${question.id}: Missing question_topic_type`;
+        console.warn(reason);
+        failedQuestionsDetails.push({ id: question.id, reason });
         return null;
       }
 
       // Lookup subtopic from map
       const subtopic = examTypesMap.get(subtopicId);
       if (!subtopic) {
-        console.warn('Subtopic not found in map:', subtopicId);
+        const reason = `Question ID ${question.id}: Subtopic ID ${subtopicId} not found in exam types`;
+        console.warn(reason);
+        failedQuestionsDetails.push({ id: question.id, reason });
         return null;
       }
 
@@ -1608,7 +1734,9 @@ const CreateQuestionBulk: React.FC = () => {
       const bidang = topik?.master_id ? examTypesMap.get(topik.master_id) : null;
 
       if (!bidang || !topik || !subtopic) {
-        console.warn('Could not find complete exam type hierarchy for question:', question.id);
+        const reason = `Question ID ${question.id}: Incomplete hierarchy - Bidang: ${bidang?.id || 'missing'}, Topik: ${topik?.id || 'missing'}, Subtopic: ${subtopicId}`;
+        console.warn(reason);
+        failedQuestionsDetails.push({ id: question.id, reason });
         return null;
       }
 
@@ -1681,8 +1809,10 @@ const CreateQuestionBulk: React.FC = () => {
       };
 
       return questionData;
-    } catch (error) {
-      console.error('Error converting question:', question.id, error);
+    } catch (error: any) {
+      const reason = `Question ID ${question.id}: Conversion error - ${error.message || 'Unknown error'}`;
+      console.error(reason, error);
+      failedQuestionsDetails.push({ id: question.id, reason });
       return null;
     }
   };
@@ -1704,6 +1834,14 @@ const CreateQuestionBulk: React.FC = () => {
         examTypesMap.set(et.id, et);
       });
 
+      console.group(`📥 Import from Exam ID: ${selectedExam.value}`);
+      console.log('Total exam types loaded:', allExamTypes.length);
+      console.log('Exam types by kind:', {
+        bidang: allExamTypes.filter(et => et.kind === 1).length,
+        topik: allExamTypes.filter(et => et.kind === 2).length,
+        subtopik: allExamTypes.filter(et => et.kind === 3).length,
+      });
+
       // Fetch questions from the selected exam
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/questions/byExamId?examid=${selectedExam.value}`,
@@ -1715,27 +1853,37 @@ const CreateQuestionBulk: React.FC = () => {
       );
 
       const fetchedQuestions = response.data.questions || [];
+      console.log('Fetched questions count:', fetchedQuestions.length);
+      
+      // Log unique subtopic IDs from questions
+      const uniqueSubtopicIds = [...new Set(fetchedQuestions.map((q: any) => q.question_topic_type))];
+      console.log('Unique subtopic IDs in questions:', uniqueSubtopicIds);
+      console.log('Missing subtopic IDs:', uniqueSubtopicIds.filter(id => id && !examTypesMap.has(id)));
       
       if (fetchedQuestions.length === 0) {
         setImportError('Tidak ada soal ditemukan di exam ini');
         setIsLoadingQuestions(false);
+        console.groupEnd();
         return;
       }
 
       // Convert all questions to QuestionData format
       const convertedQuestions: QuestionData[] = [];
-      const failedQuestions: number[] = [];
+      const failedQuestionsDetails: Array<{id: number, reason: string}> = [];
+
+      console.log(`Starting conversion of ${fetchedQuestions.length} questions...`);
+      console.log('Available exam types in map:', examTypesMap.size);
 
       for (let i = 0; i < fetchedQuestions.length; i++) {
         const question = fetchedQuestions[i];
-        const converted = convertQuestionToQuestionData(question, examTypesMap);
+        const converted = convertQuestionToQuestionData(question, examTypesMap, failedQuestionsDetails);
         
         if (converted) {
           convertedQuestions.push(converted);
-        } else {
-          failedQuestions.push(question.id);
         }
       }
+
+      console.log(`Conversion complete: ${convertedQuestions.length} successful, ${failedQuestionsDetails.length} failed`);
 
       if (convertedQuestions.length === 0) {
         setImportError('Gagal mengkonversi soal. Pastikan soal memiliki data yang lengkap.');
@@ -1753,14 +1901,26 @@ const CreateQuestionBulk: React.FC = () => {
       setExamOptions([]);
       setImportError('');
       
-      let message = `Berhasil mengimport ${convertedQuestions.length} soal dari exam!`;
-      if (failedQuestions.length > 0) {
-        message += ` ${failedQuestions.length} soal gagal dikonversi (ID: ${failedQuestions.join(', ')}).`;
+      // Show detailed result message
+      let message = `✅ Berhasil mengimport ${convertedQuestions.length} dari ${fetchedQuestions.length} soal!\n\n`;
+      
+      if (failedQuestionsDetails.length > 0) {
+        message += `⚠️ ${failedQuestionsDetails.length} soal gagal dikonversi:\n\n`;
+        failedQuestionsDetails.forEach(({ id, reason }) => {
+          message += `• ${reason}\n`;
+        });
+        message += '\n💡 Tips: Periksa console browser untuk detail lengkap';
+        console.group('❌ Failed Questions Details');
+        failedQuestionsDetails.forEach(detail => console.log(detail));
+        console.groupEnd();
       }
+      
       alert(message);
+      console.groupEnd();
       
     } catch (error: any) {
       console.error('Error importing questions from exam:', error);
+      console.groupEnd();
       setImportError(`Error: ${error.response?.data?.error || error.message || 'Gagal mengimport soal dari exam'}`);
     } finally {
       setIsLoadingQuestions(false);
@@ -1779,20 +1939,8 @@ const CreateQuestionBulk: React.FC = () => {
     const warnings: string[] = [];
     
     try {
-      // Helper to process content (from bulkQuestionImport)
-      const processContent = (content: string): string => {
-        if (!content) return content;
-        let processed = content.replace(/<equation>([\s\S]*?)<\/equation>/g, (match, latex) => {
-          try {
-            const isMultiline = /\\begin\{(align|gather|equation|eqnarray)/.test(latex);
-            const containerTag = isMultiline ? 'div' : 'span';
-            return `<${containerTag} class="cte-katex-equation ${isMultiline ? 'cte-katex-block' : 'cte-katex-inline'}" data-latex="${encodeURIComponent(latex.trim())}" data-display-mode="${isMultiline}" data-editable="true">${latex}</${containerTag}>`;
-          } catch (error) {
-            return match;
-          }
-        });
-        return processed;
-      };
+      // Note: processContent is imported from @/components/supereditor/utils
+      // and provides comprehensive parsing for all SuperEditor tags
 
       // Process question text and explanation
       const processedQuestionText = processContent(item.questionText || '');

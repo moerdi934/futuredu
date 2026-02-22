@@ -25,8 +25,13 @@ export default async function handler(req: AuthenticatedRequest, res: NextApiRes
       await runMiddleware(req, res, authenticateJWT);
       return questionController.updatePassage(req, res);
 
+    case 'DELETE':
+      // Apply authentication middleware for DELETE
+      await runMiddleware(req, res, authenticateJWT);
+      return questionController.deletePassage(req, res);
+
     default:
-      res.setHeader('Allow', ['GET', 'PUT']);
+      res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
       return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 }

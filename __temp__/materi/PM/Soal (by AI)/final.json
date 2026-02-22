@@ -1,0 +1,315 @@
+[
+  {
+    "passageTitle": "Teks Bacaan: Perbandingan Tabungan Rina",
+    "passageText": "<Heading kind=\"2\">Memahami Perbedaan Bunga Tunggal dan Bunga Majemuk</Heading><p>Rina memutuskan untuk mengalokasikan uangnya ke dalam dua jenis tabungan yang berbeda guna memahami bagaimana modalnya berkembang. Ia menyetor uang masing-masing sebesar <strong>Rp1.000.000,00</strong> ke Rekening A dan Rekening B pada waktu yang bersamaan.</p><CardGrid style=\"indigo\" columns=\"2\"><Card title=\"Rekening A (Bunga Tunggal)\">Memberikan bunga sebesar <strong>10% per tahun</strong>. Pada sistem ini, bunga hanya dihitung berdasarkan nilai setoran awal saja, sehingga jumlah bunga yang didapat setiap tahunnya selalu tetap.</Card><Card title=\"Rekening B (Bunga Majemuk)\">Memberikan bunga sebesar <strong>10% per tahun</strong> dengan perhitungan tahunan. Pada sistem ini, bunga dihitung dari saldo terakhir (bunga berbunga), sehingga nilai tabungan tumbuh lebih cepat.</Card></CardGrid><p>Setelah berjalan selama beberapa tahun, Rina mulai mengevaluasi selisih keuntungan di antara keduanya dan mempertimbangkan langkah strategis untuk menggabungkan seluruh dananya agar mendapatkan hasil yang optimal.</p>"
+  },
+  {
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Setelah tabungan berjalan selama tepat 3 tahun, berapakah selisih saldo antara Rekening B dan Rekening A?</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Matematika Sosial",
+    "topic_code": "MS",
+    "subtopic": "Aritmatika Sosial dan Aplikasi",
+    "subtopic_code": "AS",
+    "subtopic_id": 321,
+    "passageTitle": "Teks Bacaan: Perbandingan Tabungan Rina",
+    "options": [
+      "<p>Rp21.000,00</p>",
+      "<p>Rp31.000,00</p>",
+      "<p>Rp41.000,00</p>",
+      "<p>Rp51.000,00</p>",
+      "<p>Rp61.000,00</p>"
+    ],
+    "correctAnswer": [
+      1
+    ],
+    "explanation": "<div><Heading kind=\"3\">Langkah Penyelesaian</Heading><p>Kita perlu menghitung saldo akhir di kedua rekening setelah 3 tahun:</p><StyledList><ListItem style=\"blue\"><strong>Rekening A (Bunga Tunggal):</strong><br/>Saldo akhir dihitung dengan rumus <Equation type=\"inline\">M_t = M_0(1 + i \\cdot t)</Equation>.<br/><Equation type=\"inline\">1.000.000 \\times (1 + 0,10 \\times 3) = 1.000.000 \\times 1,3 = 1.300.000</Equation>.</ListItem><ListItem style=\"purple\"><strong>Rekening B (Bunga Majemuk):</strong><br/>Saldo akhir dihitung dengan rumus <Equation type=\"inline\">M_t = M_0(1 + i)^t</Equation>.<br/><Equation type=\"inline\">1.000.000 \\times (1,1)^3 = 1.000.000 \\times 1,331 = 1.331.000</Equation>.</ListItem></StyledList><p><strong>Maka, selisih saldo keduanya adalah:</strong></p><Equation type=\"display\">1.331.000 - 1.300.000 = 31.000</Equation><KeyConcept style=\"classic\">Selisih saldo Rina adalah <strong>Rp31.000,00</strong>.</KeyConcept></div>"
+  },
+  {
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Rina mencatat bahwa saldo Rekening B di akhir tahun pertama adalah Rp1.100.000,00. Pada akhir tahun ke berapakah saldo Rekening B untuk pertama kalinya melampaui <strong>1,5 kali lipat</strong> dari saldo tahun pertamanya?</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Aljabar",
+    "topic_code": "AL",
+    "subtopic": "Pola Bilangan",
+    "subtopic_code": "PB",
+    "subtopic_id": 310,
+    "passageTitle": "Teks Bacaan: Perbandingan Tabungan Rina",
+    "options": [
+      "<p>Tahun ke-4</p>",
+      "<p>Tahun ke-5</p>",
+      "<p>Tahun ke-6</p>",
+      "<p>Tahun ke-7</p>",
+      "<p>Tahun ke-8</p>"
+    ],
+    "correctAnswer": [
+      2
+    ],
+    "explanation": "<div><Heading kind=\"3\">Analisis Pertumbuhan</Heading><p>Target saldo adalah lebih dari 1,5 kali saldo akhir tahun ke-1:</p><Equation type=\"display\">Target > 1,5 \\times 1.100.000 = 1.650.000</Equation><p>Mari kita cek saldo Rekening B (pertumbuhan geometri 10% atau perkalian <Equation type=\"inline\">1,1</Equation> tiap tahun):</p><ul><li>Tahun ke-4: <Equation type=\"inline\">1.000.000 \\times (1,1)^4 = 1.464.100</Equation> (Belum mencapai)</li><li>Tahun ke-5: <Equation type=\"inline\">1.000.000 \\times (1,1)^5 = 1.610.510</Equation> (Belum mencapai)</li><li>Tahun ke-6: <Equation type=\"inline\">1.000.000 \\times (1,1)^6 = 1.771.561</Equation> (Sudah mencapai)</li></ul><KeyConcept style=\"insight\">Saldo melampaui target pertama kali pada <strong>tahun ke-6</strong>.</KeyConcept></div>"
+  },
+  {
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Tepat setelah 3 tahun, Rina memindahkan seluruh uang dari Rekening A (Rp1.300.000,00) ke Rekening B (yang sudah berisi Rp1.331.000,00). Jika total dana gabungan tersebut dibungakan kembali dengan bunga majemuk 10% per tahun, berapakah total saldo akhir Rina setelah 2 tahun masa penggabungan tersebut?</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Matematika Sosial",
+    "topic_code": "MS",
+    "subtopic": "Aritmatika Sosial dan Aplikasi",
+    "subtopic_code": "AS",
+    "subtopic_id": 321,
+    "passageTitle": "Teks Bacaan: Perbandingan Tabungan Rina",
+    "options": [
+      "<p>Rp2.783.310,00</p>",
+      "<p>Rp2.904.210,00</p>",
+      "<p>Rp3.183.510,00</p>",
+      "<p>Rp3.200.000,00</p>",
+      "<p>Rp3.300.000,00</p>"
+    ],
+    "correctAnswer": [
+      2
+    ],
+    "explanation": "<div><Heading kind=\"3\">Langkah Perhitungan</Heading><p><strong>1. Menentukan Modal Gabungan:</strong></p><Equation type=\"display\">M_{total} = 1.300.000 + 1.331.000 = 2.631.000</Equation><p><strong>2. Menghitung Pertumbuhan 2 Tahun:</strong></p><p>Menggunakan bunga majemuk <Equation type=\"inline\">10\\%</Equation> per tahun selama <Equation type=\"inline\">n = 2</Equation>:</p><Equation type=\"display\">Saldo = 2.631.000 \\times (1,1)^2</Equation><Equation type=\"display\">Saldo = 2.631.000 \\times 1,21 = 3.183.510</Equation><KeyConcept style=\"important\">Berdasarkan perhitungan, saldo akhir adalah <strong>Rp3.183.510,00</strong>. (Catatan: Karena pilihan jawaban C adalah yang paling mendekati nilai eksak ini pada draf awal, pilihlah jawaban tersebut dalam konteks ujian).</KeyConcept></div>"
+  }
+]
+[
+  {
+    "passageTitle": "Teks Bacaan: Lomba Lari di Lapangan",
+    "passageText": "<Heading kind=\"2\">Lomba Lari di Lapangan</Heading><p>Dua pelari, <strong>Andi</strong> dan <strong>Beni</strong>, berlomba di sebuah lintasan lurus sepanjang <strong>1.200 meter</strong>. Keduanya berangkat dari titik awal (start) yang sama pada waktu yang bersamaan. Namun, mereka memiliki kecepatan lari yang berbeda:</p><ul><li><strong>Andi:</strong> 6 m/s</li><li><strong>Beni:</strong> 4 m/s</li></ul><p>Aturan perlombaan ini adalah setelah mencapai ujung lintasan (1.200 m), setiap pelari harus segera berbalik arah dan berlari kembali menuju titik start dengan kecepatan yang tetap sama. Pertemuan antar pelari bisa terjadi saat mereka bergerak searah maupun saat mereka bergerak berlawanan arah setelah salah satunya berbalik.</p>"
+  },
+  {
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Setelah berapa detik sejak start, Andi dan Beni pertama kali berada pada posisi yang sama (berpapasan), selain di titik start?</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Matematika Sosial",
+    "topic_code": "MS",
+    "subtopic": "Kecepatan, Jarak, dan Waktu",
+    "subtopic_code": "KJ",
+    "subtopic_id": 322,
+    "passageTitle": "Teks Bacaan: Lomba Lari di Lapangan",
+    "options": [
+      "<p>100 detik</p>",
+      "<p>120 detik</p>",
+      "<p>150 detik</p>",
+      "<p>200 detik</p>",
+      "<p>240 detik</p>"
+    ],
+    "correctAnswer": [
+      4
+    ],
+    "explanation": "<div><Heading kind=\"3\">Langkah Penyelesaian:</Heading><p>Untuk mengetahui kapan mereka bertemu, kita perlu menganalisis perjalanan mereka dalam beberapa fase:</p><StyledList><ListItem style=\"purple\"><strong>Fase 1: Mencapai Ujung Lintasan</strong><br/>Andi mencapai ujung (1.200 m) pada detik ke: <Equation type=\"inline\">1200 / 6 = 200</Equation> detik.<br/>Beni mencapai ujung (1.200 m) pada detik ke: <Equation type=\"inline\">1200 / 4 = 300</Equation> detik.</ListItem><ListItem style=\"blue\"><strong>Fase 2: Analisis Pertemuan</strong><br/>Sebelum 200 detik, mereka lari searah dan Andi selalu di depan, jadi tidak mungkin berpapasan. Pertemuan terjadi saat Andi sudah berbalik arah (menuju start) sementara Beni masih menuju ujung (berlawanan arah).</ListItem></StyledList><p>Misalkan mereka bertemu pada waktu <Equation type=\"inline\">t</Equation> detik:</p><ul><li><strong>Jarak Beni:</strong> <Equation type=\"inline\">s_1 = 4t</Equation></li><li><strong>Jarak Andi (sudah berbalik):</strong> Andi sudah lari sejauh 1.200 m ke ujung dan sekarang kembali. Total jarak yang ditempuh Andi adalah <Equation type=\"inline\">6t</Equation>. Posisinya dari titik start adalah <Equation type=\"inline\">1200 - (6t - 1200) = 2400 - 6t</Equation>.</li></ul><p>Mereka berada di posisi yang sama jika:</p><Equation type=\"display\">4t = 2400 - 6t</Equation><Equation type=\"display\">10t = 2400</Equation><Equation type=\"display\">t = 240 \\text{ detik}</Equation><KeyConcept style=\"insight\">Jadi, mereka pertama kali berpapasan pada detik ke-240 saat Andi dalam perjalanan pulang dan Beni masih dalam perjalanan pergi.</KeyConcept></div>"
+  },
+  {
+    "level": 2,
+    "questionType": "single-choice",
+    "questionText": "<p>Andi menyelesaikan satu kali perjalanan pulang-pergi (start &rarr; ujung &rarr; start). Berapakah kecepatan rata-rata Andi selama seluruh perjalanan tersebut?</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Matematika Sosial",
+    "topic_code": "MS",
+    "subtopic": "Kecepatan, Jarak, dan Waktu",
+    "subtopic_code": "KJ",
+    "subtopic_id": 322,
+    "passageTitle": "Teks Bacaan: Lomba Lari di Lapangan",
+    "options": [
+      "<p>3 m/s</p>",
+      "<p>4 m/s</p>",
+      "<p>5 m/s</p>",
+      "<p>6 m/s</p>",
+      "<p>12 m/s</p>"
+    ],
+    "correctAnswer": [
+      3
+    ],
+    "explanation": "<div><Heading kind=\"3\">Konsep Kecepatan Rata-rata</Heading><p>Kecepatan rata-rata dihitung dengan membagi total jarak dengan total waktu tempuh.</p><Table style=\"bordered\" hasHeader=\"true\"><Row><Cell>Komponen</Cell><Cell>Perhitungan</Cell><Cell>Hasil</Cell></Row><Row><Cell>Total Jarak</Cell><Cell><Equation type=\"inline\">1.200 \\text{ m (pergi)} + 1.200 \\text{ m (pulang)}</Equation></Cell><Cell>2.400 m</Cell></Row><Row><Cell>Total Waktu</Cell><Cell><Equation type=\"inline\">200 \\text{ s (pergi)} + 200 \\text{ s (pulang)}</Equation></Cell><Cell>400 s</Cell></Row></Table><p>Maka, kecepatan rata-ratanya adalah:</p><Equation type=\"display\">v = \\frac{\\text{Total Jarak}}{\\text{Total Waktu}} = \\frac{2400}{400} = 6 \\text{ m/s}</Equation><KeyConcept style=\"info\">Karena Andi berlari dengan kecepatan tetap baik saat pergi maupun pulang, maka kecepatan rata-ratanya akan sama dengan kecepatan konstan tersebut.</KeyConcept></div>"
+  },
+{
+    "level": 4,
+    "questionType": "single-choice",
+    "questionText": "<p>Andi dan Beni akan menempuh total jarak 6.000 meter secara estafet. Andi berlari lebih dulu sejauh <i>d</i> meter dengan kecepatan 6 m/s, kemudian sisanya dilanjutkan oleh Beni dengan kecepatan 4 m/s. Berapakah nilai <i>d</i> agar kecepatan rata-rata seluruh tim estafet tersebut tepat 5 m/s?</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Matematika Sosial",
+    "topic_code": "MS",
+    "subtopic": "Penalaran Proporsi dan Rasio",
+    "subtopic_code": "PR",
+    "subtopic_id": 323,
+    "passageTitle": "Teks Bacaan: Lomba Lari di Lapangan",
+    "options": [
+      "<p>2.400 m</p>",
+      "<p>3.000 m</p>",
+      "<p>3.600 m</p>",
+      "<p>4.000 m</p>",
+      "<p>4.200 m</p>"
+    ],
+    "correctAnswer": [
+      2
+    ],
+    "explanation": "<div><Heading kind=\"3\">Analisis Kecepatan Rata-rata Estafet</Heading><p>Untuk menyelesaikan soal ini, kita harus mencari total waktu yang dibutuhkan berdasarkan target kecepatan rata-rata yang diinginkan.</p><KeyConcept style=\"definition\">Rumus Dasar:<br/>Waktu Total = Total Jarak / Kecepatan Rata-rata</KeyConcept><p><strong>1. Menentukan Target Waktu:</strong></p><p>Total jarak adalah 6.000 meter dan target kecepatan rata-rata adalah 5 m/s.</p><Equation type=\"display\">t_{total} = \\frac{6000 \\text{ m}}{5 \\text{ m/s}} = 1200 \\text{ detik}</Equation><p><strong>2. Menyusun Persamaan Estafet:</strong></p><p>Misalkan Andi berlari sejauh <Equation type=\"inline\">d</Equation> meter dan Beni berlari sisanya, yaitu <Equation type=\"inline\">6000 - d</Equation> meter. Waktu total adalah jumlah waktu Andi dan waktu Beni:</p><Equation type=\"display\">\\frac{d}{6} + \\frac{6000 - d}{4} = 1200</Equation><p><strong>3. Menyelesaikan Persamaan:</strong></p><p>Kalikan kedua ruas dengan 12 (KPK dari 6 dan 4) untuk menyederhanakan pecahan:</p><StyledList><ListItem style=\"teal\">Langkah 1: <Equation type=\"inline\">2(d) + 3(6000 - d) = 14400</Equation></ListItem><ListItem style=\"teal\">Langkah 2: <Equation type=\"inline\">2d + 18000 - 3d = 14400</Equation></ListItem><ListItem style=\"teal\">Langkah 3: <Equation type=\"inline\">-d + 18000 = 14400</Equation></ListItem><ListItem style=\"teal\">Langkah 4: <Equation type=\"inline\">-d = 14400 - 18000</Equation></ListItem><ListItem style=\"teal\">Langkah 5: <Equation type=\"inline\">-d = -3600 \\implies d = 3600</Equation></ListItem></StyledList><p>Jadi, agar kecepatan rata-rata tim menjadi 5 m/s, Andi harus berlari sejauh <strong>3.600 meter</strong> sebelum memberikan tongkat estafet kepada Beni.</p></div>"
+}
+]
+[
+  {
+    "passageTitle": "Survei Kegemaran Musik",
+    "passageText": "<Heading kind=\"2\">Survei Kegemaran Musik</Heading><p>Sebuah survei dilakukan terhadap <strong>60 siswa</strong> di suatu sekolah mengenai kegemaran mereka terhadap genre musik. Hasil survei menunjukkan data sebagai berikut:</p><ul><li><strong>35 siswa</strong> menyukai musik Pop.</li><li><strong>28 siswa</strong> menyukai musik K-Pop.</li><li><strong>10 siswa</strong> menyukai keduanya (Pop dan K-Pop).</li><li>Sisanya tidak menyukai keduanya.</li></ul><p>Data tersebut menggambarkan distribusi minat siswa yang dapat dianalisis menggunakan prinsip himpunan untuk menentukan probabilitas pemilihan siswa berdasarkan kriteria tertentu.</p>\n\n"
+  },
+  {
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Jika seorang siswa dipilih secara acak, berapakah peluang siswa tersebut menyukai musik Pop, K-Pop, atau keduanya?</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Statistika dan Probabilitas",
+    "topic_code": "SP",
+    "subtopic": "Peluang",
+    "subtopic_code": "PL",
+    "subtopic_id": 320,
+    "passageTitle": "Survei Kegemaran Musik",
+    "options": [
+      "<p><Equation type=\"inline\">7/10</Equation></p>",
+      "<p><Equation type=\"inline\">53/60</Equation></p>",
+      "<p><Equation type=\"inline\">43/60</Equation></p>",
+      "<p><Equation type=\"inline\">11/12</Equation></p>",
+      "<p><Equation type=\"inline\">9/10</Equation></p>"
+    ],
+    "correctAnswer": [
+      1
+    ],
+    "explanation": "<div><Heading kind=\"3\">Langkah Penyelesaian:</Heading><p>Pertama, kita tentukan jumlah siswa yang menyukai Pop, K-Pop, atau keduanya menggunakan prinsip inklusi-eksklusi:</p>\n<Equation type=\"display\">\nn(Pop \\cup K\\text{-}Pop) = n(Pop) + n(K\\text{-}Pop) - n(Pop \\cap K\\text{-}Pop) \\\\\nn(Pop \\cup K\\text{-}Pop) = 35 + 28 - 10 \\\\\nn(Pop \\cup K\\text{-}Pop) = 53 \\text{ siswa}\n</Equation>\n<p>Setelah mengetahui jumlah siswanya, kita hitung peluangnya terhadap total seluruh siswa (60 orang):</p>\n<Equation type=\"display\">\nP = \\frac{n(Pop \\cup K\\text{-}Pop)}{n(S)} = \\frac{53}{60}\n</Equation></div>"
+  },
+  {
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Diketahui bahwa siswa yang terpilih menyukai K-Pop. Berapakah peluang bahwa siswa tersebut juga menyukai musik Pop?</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Statistika dan Probabilitas",
+    "topic_code": "SP",
+    "subtopic": "Peluang",
+    "subtopic_code": "PL",
+    "subtopic_id": 320,
+    "passageTitle": "Survei Kegemaran Musik",
+    "options": [
+      "<p><Equation type=\"inline\">1/6</Equation></p>",
+      "<p><Equation type=\"inline\">5/14</Equation></p>",
+      "<p><Equation type=\"inline\">2/7</Equation></p>",
+      "<p><Equation type=\"inline\">5/28</Equation></p>",
+      "<p><Equation type=\"inline\">10/35</Equation></p>"
+    ],
+    "correctAnswer": [
+      1
+    ],
+    "explanation": "<div><Heading kind=\"3\">Langkah Penyelesaian:</Heading><p>Ini adalah persoalan peluang bersyarat, di mana kita hanya meninjau kelompok siswa yang menyukai K-Pop sebagai pembagi (semesta baru).</p>\n<Equation type=\"display\">\nP(Pop | K\\text{-}Pop) = \\frac{n(Pop \\cap K\\text{-}Pop)}{n(K\\text{-}Pop)} \\\\\nP(Pop | K\\text{-}Pop) = \\frac{10}{28} \\\\\nP(Pop | K\\text{-}Pop) = \\frac{5}{14}\n</Equation>\n<p>Jadi, peluang siswa penyuka K-Pop tersebut juga menyukai Pop adalah 5/14.</p></div>"
+  },
+  {
+    "level": 4,
+    "questionType": "single-choice",
+    "questionText": "<p>Jika dipilih 2 siswa secara acak dari total 60 siswa, berapakah peluang bahwa tepat satu dari mereka tidak menyukai musik Pop maupun K-Pop?</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Statistika dan Probabilitas",
+    "topic_code": "SP",
+    "subtopic": "Peluang",
+    "subtopic_code": "PL",
+    "subtopic_id": 320,
+    "passageTitle": "Survei Kegemaran Musik",
+    "options": [
+      "<p><Equation type=\"inline\">\\frac{7 \\times 53}{60 \\times 59}</Equation></p>",
+      "<p><Equation type=\"inline\">\\frac{2 \\times 7 \\times 53}{60 \\times 59}</Equation></p>",
+      "<p><Equation type=\"inline\">\\frac{7 \\times 53}{59}</Equation></p>",
+      "<p><Equation type=\"inline\">\\frac{14}{60}</Equation></p>",
+      "<p><Equation type=\"inline\">\\frac{7}{53}</Equation></p>"
+    ],
+    "correctAnswer": [
+      1
+    ],
+    "explanation": "<div><Heading kind=\"3\">Langkah Penyelesaian:</Heading><p>Tentukan dulu jumlah siswa yang tidak menyukai keduanya:</p>\n<Equation type=\"display\">\nn(\\text{Bukan Keduanya}) = 60 - 53 = 7 \\text{ siswa} \\\\\nn(\\text{Pop atau K-Pop}) = 53 \\text{ siswa}\n</Equation>\n<p>Kejadian yang diinginkan adalah terpilih 1 siswa dari kelompok 'Bukan Keduanya' dan 1 siswa dari kelompok 'Pop atau K-Pop'.</p>\n<Equation type=\"display\">\nP = \\frac{\\binom{7}{1} \\times \\binom{53}{1}}{\\binom{60}{2}} \\\\\nP = \\frac{7 \\times 53}{\\frac{60 \\times 59}{2}} \\\\\nP = \\frac{7 \\times 53 \\times 2}{60 \\times 59} = \\frac{2 \\times 7 \\times 53}{60 \\times 59}\n</Equation></div>"
+  }
+]
+[
+  {
+    "passageTitle": "Nilai Ujian Matematika",
+    "passageText": "<Heading kind=\"2\">Nilai Ujian Matematika</Heading><p>Sebuah kelas terdiri dari <strong>20 siswa</strong> yang baru saja menyelesaikan ujian matematika. Guru merangkum hasil ujian tersebut ke dalam tabel frekuensi untuk mempermudah analisis data prestasi siswa. Berikut adalah distribusi nilai ujian tersebut:</p><Table style=\"bordered\" hasHeader=\"true\"><Row><Cell>Nilai Ujian</Cell><Cell>Frekuensi (Jumlah Siswa)</Cell></Row><Row><Cell>50</Cell><Cell>2</Cell></Row><Row><Cell>60</Cell><Cell>4</Cell></Row><Row><Cell>70</Cell><Cell>6</Cell></Row><Row><Cell>80</Cell><Cell>5</Cell></Row><Row><Cell>90</Cell><Cell>3</Cell></Row></Table><p>Data ini merupakan data tunggal berbobot yang akan digunakan untuk menentukan ukuran pemusatan (mean, median, modus) serta ukuran penyebaran data.</p>"
+  },
+  {
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p>Berdasarkan data di atas, nilai rata-rata (mean), median, dan modus dari nilai ujian siswa berturut-turut adalah ....</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Statistika dan Probabilitas",
+    "topic_code": "SP",
+    "subtopic": "Ukuran Pemusatan dan Penyebaran",
+    "subtopic_code": "UP",
+    "subtopic_id": 319,
+    "passageTitle": "Nilai Ujian Matematika",
+    "options": [
+      "<p>70 ; 70 ; 70</p>",
+      "<p>71,5 ; 70 ; 70</p>",
+      "<p>72 ; 70 ; 70</p>",
+      "<p>71,5 ; 75 ; 70</p>",
+      "<p>72 ; 75 ; 80</p>"
+    ],
+    "correctAnswer": [
+      1
+    ],
+    "explanation": "<div><Heading kind=\"3\">1. Menghitung Rata-rata (Mean)</Heading><p>Mean dihitung dengan menjumlahkan hasil kali nilai dengan frekuensinya, lalu dibagi total siswa:</p>\n<Equation type=\"display\">\n\\bar{x} = \\frac{(50 \\times 2) + (60 \\times 4) + (70 \\times 6) + (80 \\times 5) + (90 \\times 3)}{20} \\\\\n\\bar{x} = \\frac{100 + 240 + 420 + 400 + 270}{20} \\\\\n\\bar{x} = \\frac{1430}{20} = 71,5\n</Equation>\n\n<Heading kind=\"3\">2. Menghitung Median (Nilai Tengah)</Heading><p>Median data genap (n=20) adalah rata-rata dari data ke-10 dan ke-11. Kita lihat akumulasi frekuensinya:</p><ul><li>Data 1-2: Nilai 50</li><li>Data 3-6: Nilai 60</li><li>Data 7-12: Nilai 70</li></ul><p>Karena data ke-10 dan ke-11 berada di kelompok nilai 70, maka:</p>\n<Equation type=\"display\">Median = \\frac{70 + 70}{2} = 70</Equation>\n\n<Heading kind=\"3\">3. Menghitung Modus</Heading><p>Modus adalah nilai yang paling sering muncul (frekuensi tertinggi). Nilai 70 memiliki frekuensi terbanyak yaitu <strong>6 siswa</strong>.</p><p><strong>Kesimpulan:</strong> Mean = 71,5; Median = 70; Modus = 70.</p></div>"
+  },
+  {
+    "level": 4,
+    "questionType": "single-choice",
+    "questionText": "<p>Guru memutuskan untuk menambah 5 poin kepada seluruh nilai siswa karena tingkat kesulitan soal yang tinggi. Pernyataan berikut yang <strong>BENAR</strong> mengenai perubahan data statistik tersebut adalah ....</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Statistika dan Probabilitas",
+    "topic_code": "SP",
+    "subtopic": "Ukuran Pemusatan dan Penyebaran",
+    "subtopic_code": "UP",
+    "subtopic_id": 319,
+    "passageTitle": "Nilai Ujian Matematika",
+    "options": [
+      "<p>Mean bertambah 5, standar deviasi bertambah 5</p>",
+      "<p>Mean bertambah 5, standar deviasi tidak berubah</p>",
+      "<p>Mean tidak berubah, standar deviasi bertambah 5</p>",
+      "<p>Mean bertambah 5, jangkauan bertambah 5</p>",
+      "<p>Semua ukuran statistik bertambah 5</p>"
+    ],
+    "correctAnswer": [
+      1
+    ],
+    "explanation": "<div><Heading kind=\"3\">Analisis Perubahan Data</Heading><p>Dalam statistika, terdapat aturan mengenai manipulasi data dengan konstanta (misal ditambah <i>k</i>):</p>\n<StyledList>\n<ListItem style=\"purple\"><strong>Ukuran Pemusatan (Mean, Median, Modus):</strong> Ikut berubah jika ditambah/dikurang. Jadi, Mean baru = 71,5 + 5 = 76,5.</ListItem>\n<ListItem style=\"teal\"><strong>Ukuran Penyebaran (Jangkauan, Standar Deviasi, Variansi):</strong> <strong>TIDAK BERUBAH</strong> jika seluruh data ditambah atau dikurangi bilangan yang sama.</ListItem>\n</StyledList>\n<p><strong>Kenapa Standar Deviasi/Jangkauan tidak berubah?</strong></p>\n<p>Jangkauan adalah selisih nilai tertinggi dan terendah. Jika keduanya naik 5, selisihnya tetap sama:</p>\n<Equation type=\"display\">(90+5) - (50+5) = 95 - 55 = 40 \\text{ (tetap)}</Equation>\n<p>Begitu juga dengan standar deviasi yang mengukur jarak antar data terhadap rata-rata. Karena semua bergeser bersamaan, jarak antar datanya tidak berubah.</p></div>"
+  },
+  {
+    "level": 4,
+    "questionType": "single-choice",
+    "questionText": "<p>Tentukan nilai Kuartil Bawah (<Equation type=\"inline\">Q_1</Equation>), Kuartil Tengah (<Equation type=\"inline\">Q_2</Equation>), dan Kuartil Atas (<Equation type=\"inline\">Q_3</Equation>) dari data nilai siswa tersebut secara berturut-turut!</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Statistika dan Probabilitas",
+    "topic_code": "SP",
+    "subtopic": "Ukuran Pemusatan dan Penyebaran",
+    "subtopic_code": "UP",
+    "subtopic_id": 319,
+    "passageTitle": "Nilai Ujian Matematika",
+    "options": [
+      "<p>60 ; 70 ; 80</p>",
+      "<p>60 ; 70 ; 75</p>",
+      "<p>65 ; 70 ; 80</p>",
+      "<p>60 ; 70 ; 70</p>",
+      "<p>70 ; 70 ; 80</p>"
+    ],
+    "correctAnswer": [
+      0
+    ],
+    "explanation": "<div><Heading kind=\"3\">Menghitung Kuartil (Data n = 20)</Heading><p>Langkah pertama adalah memastikan data sudah terurut dan menentukan posisi kuartil.</p>\n
+
+[Image of Box-and-Whisker plot elements]
+\n<p><strong>1. Kuartil Kedua (Q2/Median):</strong></p>\n<p>Seperti perhitungan sebelumnya, Q2 adalah rata-rata data ke-10 dan ke-11.</p>\n<Equation type=\"display\">Q_2 = \\frac{x_{10} + x_{11}}{2} = \\frac{70 + 70}{2} = 70</Equation>\n\n<p><strong>2. Kuartil Pertama (Q1):</strong></p>\n<p>Q1 adalah median dari separuh data bagian bawah (data ke-1 sampai ke-10). Maka Q1 adalah rata-rata data ke-5 dan ke-6.</p>\n<Equation type=\"display\">x_5 = 60, x_6 = 60 \\implies Q_1 = \\frac{60 + 60}{2} = 60</Equation>\n\n<p><strong>3. Kuartil Ketiga (Q3):</strong></p>\n<p>Q3 adalah median dari separuh data bagian atas (data ke-11 sampai ke-20). Maka Q3 adalah rata-rata data ke-15 dan ke-16.</p>\n<Equation type=\"display\">x_{15} = 80, x_{16} = 80 \\implies Q_3 = \\frac{80 + 80}{2} = 80</Equation>\n\n<p><strong>Hasil:</strong> Q1 = 60, Q2 = 70, Q3 = 80.</p></div>"
+  }
+]

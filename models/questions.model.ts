@@ -59,6 +59,23 @@ export interface QuestionPassage {
   update_date?: Date;
 }
 
+export interface PassageFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  creator?: string;
+  start_date?: string;
+  end_date?: string;
+  sortKey?: string;
+  sortOrder?: string;
+}
+
+export interface PagedPassagesResult {
+  data: any[];
+  total: number;
+  totalPages: number;
+}
+
 export interface VerificationPair {
   id: string;
   code: string;
@@ -873,6 +890,124 @@ export const updatePassage = async (id: number, passageData: QuestionPassage, up
     console.error('Error updating passage:', error);
     throw error;
   }
+};
+
+export const deletePassage = async (id: number): Promise<boolean> => {
+  try {
+    // Check if passage is being used by any questions
+    const usageCheck = await pool.query(
+      'SELECT COUNT(*) as count FROM questions WHERE passage_id = $1',
+      [id]
+    );
+    
+    const usageCount = parseInt(usageCheck.rows[0].count);
+    if (usageCount > 0) {
+      throw new Error(`Cannot delete passage. It is being used by ${usageCount} question(s).`);
+    }
+    
+    await pool.query('DELETE FROM question_passages WHERE id = $1', [id]);
+    return true;
+  } catch (error) {
+    console.error('Error deleting passage:', error);
+    throw error;
+  }
+};
+
+export const getPagedPassages = async (filters: PassageFilters): Promise<PagedPassagesResult> => {
+  const {
+    page = 1,
+    limit = 50,
+    search = '',
+    creator = '',
+    start_date = '',
+    end_date = '',
+    sortKey = 'qp.id',
+    sortOrder = 'desc'
+  } = filters;
+
+  const offset = (page - 1) * limit;
+  const whereClauses: string[] = [];
+  const queryParams: any[] = [];
+  let paramIndex = 1;
+
+  // Search filter
+  if (search && search.trim() !== '') {
+    whereClauses.push(`(qp.id::text ILIKE $${paramIndex} OR qp.title ILIKE $${paramIndex})`);
+    queryParams.push(`%${search}%`);
+    paramIndex++;
+  }
+
+  // Creator filter
+  if (creator && creator.trim() !== '') {
+    whereClauses.push(`(u_create.name ILIKE $${paramIndex})`);
+    queryParams.push(`%${creator}%`);
+    paramIndex++;
+  }
+
+  // Date range filter
+  if (start_date && start_date.trim() !== '') {
+    whereClauses.push(`qp.create_date >= $${paramIndex}`);
+    queryParams.push(start_date);
+    paramIndex++;
+  }
+
+  if (end_date && end_date.trim() !== '') {
+    whereClauses.push(`qp.create_date <= $${paramIndex}`);
+    queryParams.push(end_date);
+    paramIndex++;
+  }
+
+  const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+  // Count total records
+  const countQuery = `
+    SELECT COUNT(DISTINCT qp.id) as total
+    FROM question_passages qp
+    LEFT JOIN users u_create ON qp.create_user_id = u_create.id
+    LEFT JOIN users u_update ON qp.update_user_id = u_update.id
+    ${whereClause}
+  `;
+
+  const countResult = await pool.query(countQuery, queryParams);
+  const total = parseInt(countResult.rows[0].total);
+  const totalPages = Math.ceil(total / limit);
+
+  // Validate and sanitize sort key
+  const allowedSortKeys = ['qp.id', 'qp.title', 'qp.create_date', 'qp.update_date', 'usage_count'];
+  const safeSortKey = allowedSortKeys.includes(sortKey) ? sortKey : 'qp.id';
+  const safeSortOrder = sortOrder.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+  // Main query with pagination
+  const dataQuery = `
+    SELECT 
+      qp.id,
+      qp.title,
+      qp.passage,
+      qp.create_date,
+      qp.update_date,
+      u_create.name as creator,
+      u_update.name as editor,
+      (
+        SELECT COUNT(*) 
+        FROM questions q 
+        WHERE q.passage_id = qp.id
+      ) as usage_count
+    FROM question_passages qp
+    LEFT JOIN users u_create ON qp.create_user_id = u_create.id
+    LEFT JOIN users u_update ON qp.update_user_id = u_update.id
+    ${whereClause}
+    ORDER BY ${safeSortKey} ${safeSortOrder}
+    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+  `;
+
+  queryParams.push(limit, offset);
+  const dataResult = await pool.query(dataQuery, queryParams);
+
+  return {
+    data: dataResult.rows,
+    total,
+    totalPages
+  };
 };
 
 export const verifyIdCodePairs = async (pairs: VerificationPair[]): Promise<VerificationSummary> => {

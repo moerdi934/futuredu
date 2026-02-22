@@ -787,6 +787,46 @@ export const updatePassage = async (req: AuthenticatedRequest, res: NextApiRespo
   }
 };
 
+export const deletePassage = async (req: NextApiRequest, res: NextApiResponse) => {
+  const passageId = parseInt(req.query.id as string);
+
+  if (!passageId) {
+    return res.status(400).json({ error: 'Passage ID is required' });
+  }
+
+  try {
+    await questionModel.deletePassage(passageId);
+    res.status(200).json({ message: 'Passage deleted successfully' });
+  } catch (error: any) {
+    console.error('[deletePassage] Error:', error);
+    if (error.message.includes('Cannot delete passage')) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getPagedPassages = async (req: NextApiRequest, res: NextApiResponse) => {
+  try {
+    const filters = {
+      page: parseInt(req.query.page as string) || 1,
+      limit: parseInt(req.query.limit as string) || 50,
+      search: req.query.search as string || '',
+      creator: req.query.creator as string || undefined,
+      start_date: req.query.start_date as string || undefined,
+      end_date: req.query.end_date as string || undefined,
+      sortKey: req.query.sortKey as string || 'qp.id',
+      sortOrder: req.query.sortOrder as string || 'desc',
+    };
+
+    const result = await questionModel.getPagedPassages(filters);
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error('[getPagedPassages] Error:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+};
+
 export const verifyCsv = async (req: NextApiRequest, res: NextApiResponse) => {
   try {
     const payload = req.body;
