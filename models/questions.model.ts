@@ -865,8 +865,12 @@ export const createPassage = async (passageData: QuestionPassage, create_user_id
       [title, passage, create_user_id]
     );
     return result.rows[0];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating passage:', error);
+    // Check if it's a unique constraint violation
+    if (error.code === '23505' && error.constraint === 'question_passages_title_key') {
+      throw new Error(`Judul bacaan "${title}" sudah digunakan. Silakan gunakan judul yang berbeda.`);
+    }
     throw error;
   }
 };

@@ -758,7 +758,16 @@ export const createPassage = async (req: AuthenticatedRequest, res: NextApiRespo
     res.status(201).json(newPassage);
   } catch (error: any) {
     console.error('[createPassage] Error:', error);
-    res.status(500).json({ error: error.message });
+    
+    // Handle duplicate title error
+    if (error.message && error.message.includes('sudah digunakan')) {
+      return res.status(409).json({ 
+        error: error.message,
+        code: 'DUPLICATE_TITLE' 
+      });
+    }
+    
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 };
 
