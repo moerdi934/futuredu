@@ -285,31 +285,220 @@
     ],
     "explanation": "<div><Heading kind=\"3\">Analisis Perubahan Data</Heading><p>Dalam statistika, terdapat aturan mengenai manipulasi data dengan konstanta (misal ditambah <i>k</i>):</p>\n<StyledList>\n<ListItem style=\"purple\"><strong>Ukuran Pemusatan (Mean, Median, Modus):</strong> Ikut berubah jika ditambah/dikurang. Jadi, Mean baru = 71,5 + 5 = 76,5.</ListItem>\n<ListItem style=\"teal\"><strong>Ukuran Penyebaran (Jangkauan, Standar Deviasi, Variansi):</strong> <strong>TIDAK BERUBAH</strong> jika seluruh data ditambah atau dikurangi bilangan yang sama.</ListItem>\n</StyledList>\n<p><strong>Kenapa Standar Deviasi/Jangkauan tidak berubah?</strong></p>\n<p>Jangkauan adalah selisih nilai tertinggi dan terendah. Jika keduanya naik 5, selisihnya tetap sama:</p>\n<Equation type=\"display\">(90+5) - (50+5) = 95 - 55 = 40 \\text{ (tetap)}</Equation>\n<p>Begitu juga dengan standar deviasi yang mengukur jarak antar data terhadap rata-rata. Karena semua bergeser bersamaan, jarak antar datanya tidak berubah.</p></div>"
   },
+{
+  "level": 4,
+  "questionType": "single-choice",
+  "questionText": "<p>Tentukan nilai Kuartil Bawah (<Equation type=\"inline\">Q_1</Equation>), Kuartil Tengah (<Equation type=\"inline\">Q_2</Equation>), dan Kuartil Atas (<Equation type=\"inline\">Q_3</Equation>) dari data nilai siswa tersebut secara berturut-turut!</p>",
+  "bidang": "Penalaran Matematika",
+  "bidang_code": "PM1",
+  "topik": "Statistika dan Probabilitas",
+  "topic_code": "SP",
+  "subtopic": "Ukuran Pemusatan dan Penyebaran",
+  "subtopic_code": "UP",
+  "subtopic_id": 319,
+  "passageTitle": "Nilai Ujian Matematika",
+  "options": [
+    "<p>60 ; 70 ; 80</p>",
+    "<p>60 ; 70 ; 75</p>",
+    "<p>65 ; 70 ; 80</p>",
+    "<p>60 ; 70 ; 70</p>",
+    "<p>70 ; 70 ; 80</p>"
+  ],
+  "correctAnswer": [0],
+  "explanation": "<div><Heading kind=\"3\">Menghitung Kuartil (Data n = 20)</Heading><p>Langkah pertama adalah memastikan data sudah terurut dan menentukan posisi kuartil.</p><p><strong>1. Kuartil Kedua (Q2 / Median):</strong></p><p>Q2 adalah rata-rata data ke-10 dan ke-11.</p><Equation type=\"display\">Q_2 = \\\\frac{x_{10} + x_{11}}{2} = \\\\frac{70 + 70}{2} = 70</Equation><p><strong>2. Kuartil Pertama (Q1):</strong></p><p>Q1 adalah median dari separuh data bagian bawah (data ke-1 sampai ke-10), yaitu rata-rata data ke-5 dan ke-6.</p><Equation type=\"display\">x_5 = 60,\\ x_6 = 60 \\\\implies Q_1 = \\\\frac{60 + 60}{2} = 60</Equation><p><strong>3. Kuartil Ketiga (Q3):</strong></p><p>Q3 adalah median dari separuh data bagian atas (data ke-11 sampai ke-20), yaitu rata-rata data ke-15 dan ke-16.</p><Equation type=\"display\">x_{15} = 80,\\ x_{16} = 80 \\\\implies Q_3 = \\\\frac{80 + 80}{2} = 80</Equation><p><strong>Hasil:</strong> Q1 = 60, Q2 = 70, Q3 = 80.</p></div>"
+}
+]
+[
+  {
+    "passageTitle": "Kolam Renang yang Diisi Dua Pipa",
+    "passageText": "<p>Sebuah kolam renang berkapasitas 1.200 liter akan diisi menggunakan dua pipa secara bersamaan. Pipa A mampu mengisi kolam penuh dalam 40 menit jika bekerja sendiri. Pipa B mampu mengisi kolam penuh dalam 60 menit jika bekerja sendiri.</p>\n\n<p>Kedua pipa mulai mengisi kolam bersama-sama. Namun, setelah 15 menit berjalan, Pipa B tiba-tiba tersumbat dan berhenti bekerja. Pipa A terus bekerja sendiri hingga kolam benar-benar penuh.</p>"
+  },
+  {
+    "level": 2,
+    "questionType": "single-choice",
+    "questionText": "<p style=\"margin-bottom: 1em;\">Berapa menit total waktu yang diperlukan untuk mengisi kolam hingga penuh, dihitung sejak kedua pipa mulai bekerja bersama?</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Matematika Sosial",
+    "topic_code": "MS",
+    "subtopic": "Kecepatan, Jarak, dan Waktu",
+    "subtopic_code": "KJ",
+    "subtopic_id": 322,
+    "passageTitle": "Kolam Renang yang Diisi Dua Pipa",
+    "options": [
+      "<p style=\"margin-bottom: 1em;\">28 menit</p>",
+      "<p style=\"margin-bottom: 1em;\">30 menit</p>",
+      "<p style=\"margin-bottom: 1em;\">32 menit</p>",
+      "<p style=\"margin-bottom: 1em;\">35 menit</p>",
+      "<p style=\"margin-bottom: 1em;\">36 menit</p>"
+    ],
+    "correctAnswer": [1],
+    "explanation": "<div>\n\n<Heading kind=\"3\">Pembahasan Soal 6.1 — Total Waktu Mengisi Kolam</Heading>\n\n<KeyConcept style=\"goal\">Tujuan: Menghitung total waktu pengisian kolam, di mana dua pipa bekerja bersama selama 15 menit pertama, kemudian hanya Pipa A yang melanjutkan hingga kolam penuh.</KeyConcept>\n\n<Heading kind=\"4\">Langkah 1 — Tentukan Debit Masing-Masing Pipa</Heading>\n\n<p>Debit adalah banyaknya air (dalam liter) yang masuk ke kolam setiap menitnya. Kita hitung dengan membagi kapasitas kolam dengan waktu yang dibutuhkan masing-masing pipa:</p>\n\n<Equation type=\"display\">\\text{Debit Pipa A} = \\frac{1200 \\text{ liter}}{40 \\text{ menit}} = 30 \\text{ liter/menit}</Equation>\n\n<Equation type=\"display\">\\text{Debit Pipa B} = \\frac{1200 \\text{ liter}}{60 \\text{ menit}} = 20 \\text{ liter/menit}</Equation>\n\n<Heading kind=\"4\">Langkah 2 — Hitung Volume Air Selama 15 Menit Pertama (A + B Bersama)</Heading>\n\n<p>Ketika kedua pipa bekerja bersama, debit totalnya adalah penjumlahan keduanya:</p>\n\n<Equation type=\"display\">\\text{Debit Total} = 30 + 20 = 50 \\text{ liter/menit}</Equation>\n\n<p>Dalam 15 menit pertama, volume air yang masuk ke kolam adalah:</p>\n\n<Equation type=\"display\">V_1 = 50 \\times 15 = 750 \\text{ liter}</Equation>\n\n<Heading kind=\"4\">Langkah 3 — Hitung Sisa Volume yang Belum Terisi</Heading>\n\n<Equation type=\"display\">V_{\\text{sisa}} = 1200 - 750 = 450 \\text{ liter}</Equation>\n\n<Heading kind=\"4\">Langkah 4 — Hitung Waktu yang Dibutuhkan Pipa A untuk Mengisi Sisa</Heading>\n\n<Equation type=\"display\">t_2 = \\frac{450}{30} = 15 \\text{ menit}</Equation>\n\n<Heading kind=\"4\">Langkah 5 — Hitung Total Waktu Keseluruhan</Heading>\n\n<Equation type=\"display\">t_{\\text{total}} = 15 + 15 = 30 \\text{ menit}</Equation>\n\n<StyledList>\n  <ListItem style=\"blue\">Debit Pipa A = 1.200 ÷ 40 = 30 liter/menit</ListItem>\n  <ListItem style=\"blue\">Debit Pipa B = 1.200 ÷ 60 = 20 liter/menit</ListItem>\n  <ListItem style=\"teal\">Fase 1 (0–15 menit): A + B bersama → 50 × 15 = 750 liter terisi</ListItem>\n  <ListItem style=\"teal\">Fase 2 (setelah menit ke-15): hanya Pipa A → sisa 450 ÷ 30 = 15 menit lagi</ListItem>\n  <ListItem style=\"green\">Total waktu = 15 + 15 = 30 menit ✅</ListItem>\n</StyledList>\n\n<KeyConcept style=\"important\">Jawaban yang benar adalah B. 30 menit.</KeyConcept>\n\n</div>"
+  },
+  {
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p style=\"margin-bottom: 1em;\">Jika kolam sudah penuh (1.200 liter), lalu saluran pembuangan dibuka bersamaan dengan Pipa A (Pipa B tetap tidak bekerja), dan saluran pembuangan mampu mengosongkan kolam dalam 24 menit, berapa menit hingga kolam menjadi kosong kembali?</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Matematika Sosial",
+    "topic_code": "MS",
+    "subtopic": "Penalaran Proporsi dan Rasio",
+    "subtopic_code": "PR",
+    "subtopic_id": 323,
+    "passageTitle": "Kolam Renang yang Diisi Dua Pipa",
+    "options": [
+      "<p style=\"margin-bottom: 1em;\">30 menit</p>",
+      "<p style=\"margin-bottom: 1em;\">45 menit</p>",
+      "<p style=\"margin-bottom: 1em;\">60 menit</p>",
+      "<p style=\"margin-bottom: 1em;\">90 menit</p>",
+      "<p style=\"margin-bottom: 1em;\">Kolam tidak akan pernah kosong</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<div>\n\n<Heading kind=\"3\">Pembahasan Soal 6.2 — Waktu hingga Kolam Kosong</Heading>\n\n<KeyConcept style=\"goal\">Tujuan: Menghitung berapa lama kolam akan kosong jika Pipa A terus mengisi air sementara saluran pembuangan membuang air secara bersamaan.</KeyConcept>\n\n<Heading kind=\"4\">Langkah 1 — Tentukan Debit Masing-Masing Aliran</Heading>\n\n<Equation type=\"display\">\\text{Debit Pipa A (masuk)} = 30 \\text{ liter/menit}</Equation>\n\n<Equation type=\"display\">\\text{Debit Pembuangan (keluar)} = \\frac{1200}{24} = 50 \\text{ liter/menit}</Equation>\n\n<Heading kind=\"4\">Langkah 2 — Hitung Debit Neto</Heading>\n\n<p>Karena air masuk dan keluar terjadi bersamaan, volume air berkurang sebesar selisih keduanya setiap menit:</p>\n\n<Equation type=\"display\">\\text{Debit Neto} = 50 - 30 = 20 \\text{ liter/menit (berkurang)}</Equation>\n\n<Heading kind=\"4\">Langkah 3 — Hitung Waktu hingga Kolam Kosong</Heading>\n\n<Equation type=\"display\">t = \\frac{1200}{20} = 60 \\text{ menit}</Equation>\n\n<StyledList>\n  <ListItem style=\"blue\">Pipa A mengisi: +30 liter/menit</ListItem>\n  <ListItem style=\"red\">Saluran pembuangan membuang: −50 liter/menit</ListItem>\n  <ListItem style=\"teal\">Debit neto: 50 − 30 = 20 liter/menit berkurang setiap menit</ListItem>\n  <ListItem style=\"green\">Waktu hingga kosong: 1.200 ÷ 20 = 60 menit ✅</ListItem>\n</StyledList>\n\n<KeyConcept style=\"important\">Jawaban yang benar adalah C. 60 menit.</KeyConcept>\n\n</div>"
+  },
+  {
+    "level": 2,
+    "questionType": "single-choice",
+    "questionText": "<p style=\"margin-bottom: 1em;\">Sebuah Pipa C ditambahkan ke sistem pengisian. Jika Pipa A, B, dan C bekerja bersama-sama, kolam yang sama dapat terisi penuh dalam 10 menit. Berapa debit Pipa C dalam liter per menit?</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Aljabar",
+    "topic_code": "AL",
+    "subtopic": "Hubungan Antar Variabel",
+    "subtopic_code": "HV",
+    "subtopic_id": 311,
+    "passageTitle": "Kolam Renang yang Diisi Dua Pipa",
+    "options": [
+      "<p style=\"margin-bottom: 1em;\">50 liter/menit</p>",
+      "<p style=\"margin-bottom: 1em;\">60 liter/menit</p>",
+      "<p style=\"margin-bottom: 1em;\">70 liter/menit</p>",
+      "<p style=\"margin-bottom: 1em;\">80 liter/menit</p>",
+      "<p style=\"margin-bottom: 1em;\">90 liter/menit</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<div>\n\n<Heading kind=\"3\">Pembahasan Soal 6.3 — Menentukan Debit Pipa C</Heading>\n\n<KeyConcept style=\"goal\">Tujuan: Menghitung debit Pipa C dengan cara mencari selisih antara debit gabungan ketiga pipa dan debit dua pipa yang sudah diketahui.</KeyConcept>\n\n<Heading kind=\"4\">Langkah 1 — Hitung Debit Gabungan Ketiga Pipa</Heading>\n\n<Equation type=\"display\">\\text{Debit A + B + C} = \\frac{1200}{10} = 120 \\text{ liter/menit}</Equation>\n\n<Heading kind=\"4\">Langkah 2 — Hitung Debit Pipa A dan B (dari informasi bacaan)</Heading>\n\n<Equation type=\"display\">\\text{Debit A} = \\frac{1200}{40} = 30 \\text{ liter/menit}</Equation>\n<Equation type=\"display\">\\text{Debit B} = \\frac{1200}{60} = 20 \\text{ liter/menit}</Equation>\n\n<Heading kind=\"4\">Langkah 3 — Hitung Debit Pipa C</Heading>\n\n<Equation type=\"display\">\\text{Debit C} = 120 - 30 - 20 = 70 \\text{ liter/menit}</Equation>\n\n<Heading kind=\"4\">Verifikasi</Heading>\n\n<Equation type=\"display\">\\frac{1200}{30 + 20 + 70} = \\frac{1200}{120} = 10 \\text{ menit} \\checkmark</Equation>\n\n<StyledList>\n  <ListItem style=\"blue\">Debit gabungan A + B + C = 1.200 ÷ 10 = 120 liter/menit</ListItem>\n  <ListItem style=\"blue\">Debit A = 30 liter/menit, Debit B = 20 liter/menit</ListItem>\n  <ListItem style=\"teal\">Debit C = 120 − 30 − 20 = 70 liter/menit</ListItem>\n  <ListItem style=\"green\">Verifikasi: 1.200 ÷ 120 = 10 menit ✅</ListItem>\n</StyledList>\n\n<KeyConcept style=\"important\">Jawaban yang benar adalah C. 70 liter/menit.</KeyConcept>\n\n</div>"
+  }
+]
+[
+  {
+    "passageTitle": "Kebun Berbentuk Persegi Panjang",
+    "passageText": "<p>Pak Hendra memiliki sebidang tanah berbentuk persegi panjang yang akan dipagari di sekeliling luarnya. Ia memiliki bahan pagar sepanjang 60 meter dan ingin memaksimalkan luas kebun yang terbentuk.</p>\n\n<p>Selain itu, ia juga ingin membagi kebun menjadi 3 bagian yang sama luas menggunakan dua pagar pemisah yang dipasang sejajar dengan sisi lebar kebun.</p>"
+  },
+  {
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p style=\"margin-bottom: 1em;\">Jika panjang kebun adalah p meter dan lebar kebun adalah l meter, dengan kendala 2p + 2l = 60, berapakah luas maksimum kebun yang dapat dibentuk?</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Geometri Spasial",
+    "topic_code": "GS",
+    "subtopic": "Bangun Datar",
+    "subtopic_code": "BD",
+    "subtopic_id": 314,
+    "passageTitle": "Kebun Berbentuk Persegi Panjang",
+    "options": [
+      "<p style=\"margin-bottom: 1em;\">100 m²</p>",
+      "<p style=\"margin-bottom: 1em;\">200 m²</p>",
+      "<p style=\"margin-bottom: 1em;\">225 m²</p>",
+      "<p style=\"margin-bottom: 1em;\">250 m²</p>",
+      "<p style=\"margin-bottom: 1em;\">300 m²</p>"
+    ],
+    "correctAnswer": [2],
+    "explanation": "<div>\n\n<Heading kind=\"3\">Pembahasan Soal 7.1 — Luas Maksimum Kebun Tanpa Pemisah</Heading>\n\n<KeyConcept style=\"goal\">Tujuan: Mencari ukuran panjang dan lebar yang menghasilkan luas maksimum dengan total keliling 60 meter.</KeyConcept>\n\n<Heading kind=\"4\">Langkah 1 — Sederhanakan Persamaan Keliling</Heading>\n\n<Equation type=\"display\">2p + 2l = 60 \\implies p + l = 30 \\implies p = 30 - l</Equation>\n\n<Heading kind=\"4\">Langkah 2 — Nyatakan Luas sebagai Fungsi Satu Variabel</Heading>\n\n<Equation type=\"display\">L = p \\times l = (30 - l) \\times l = 30l - l^2</Equation>\n\n<p>Fungsi ini berbentuk kuadrat dengan koefisien l² negatif, sehingga memiliki nilai maksimum.</p>\n\n<Heading kind=\"4\">Langkah 3 — Temukan Nilai l di Titik Puncak</Heading>\n\n<Equation type=\"display\">l = -\\frac{b}{2a} = -\\frac{30}{2 \\times (-1)} = 15 \\text{ m}</Equation>\n\n<Heading kind=\"4\">Langkah 4 — Hitung p dan Luas Maksimum</Heading>\n\n<Equation type=\"display\">p = 30 - 15 = 15 \\text{ m}</Equation>\n\n<Equation type=\"display\">L_{\\text{maks}} = 15 \\times 15 = 225 \\text{ m}^2</Equation>\n\n<KeyConcept style=\"insight\">Luas maksimum dicapai ketika kebun berbentuk persegi (p = l). Di antara semua persegi panjang dengan keliling yang sama, persegi selalu memiliki luas terbesar.</KeyConcept>\n\n<StyledList>\n  <ListItem style=\"blue\">p + l = 30, sehingga p = 30 − l</ListItem>\n  <ListItem style=\"teal\">L = (30 − l) × l = 30l − l²</ListItem>\n  <ListItem style=\"teal\">Titik puncak: l = 15 m → p = 15 m</ListItem>\n  <ListItem style=\"green\">Luas maksimum = 15 × 15 = 225 m² ✅</ListItem>\n</StyledList>\n\n<KeyConcept style=\"important\">Jawaban yang benar adalah C. 225 m².</KeyConcept>\n\n</div>"
+  },
   {
     "level": 4,
     "questionType": "single-choice",
-    "questionText": "<p>Tentukan nilai Kuartil Bawah (<Equation type=\"inline\">Q_1</Equation>), Kuartil Tengah (<Equation type=\"inline\">Q_2</Equation>), dan Kuartil Atas (<Equation type=\"inline\">Q_3</Equation>) dari data nilai siswa tersebut secara berturut-turut!</p>",
+    "questionText": "<p style=\"margin-bottom: 1em;\">Pak Hendra memutuskan membagi kebun menjadi 3 bagian menggunakan 2 pagar pemisah sejajar lebar. Total bahan pagar tetap 60 meter, sehingga persamaan kendalanya menjadi 2p + 4l = 60. Berapakah luas maksimum kebun secara keseluruhan dalam kondisi ini?</p>",
     "bidang": "Penalaran Matematika",
     "bidang_code": "PM1",
-    "topik": "Statistika dan Probabilitas",
-    "topic_code": "SP",
-    "subtopic": "Ukuran Pemusatan dan Penyebaran",
-    "subtopic_code": "UP",
-    "subtopic_id": 319,
-    "passageTitle": "Nilai Ujian Matematika",
+    "topik": "Geometri Spasial",
+    "topic_code": "GS",
+    "subtopic": "Bangun Datar",
+    "subtopic_code": "BD",
+    "subtopic_id": 314,
+    "passageTitle": "Kebun Berbentuk Persegi Panjang",
     "options": [
-      "<p>60 ; 70 ; 80</p>",
-      "<p>60 ; 70 ; 75</p>",
-      "<p>65 ; 70 ; 80</p>",
-      "<p>60 ; 70 ; 70</p>",
-      "<p>70 ; 70 ; 80</p>"
+      "<p style=\"margin-bottom: 1em;\">100 m²</p>",
+      "<p style=\"margin-bottom: 1em;\">112,5 m²</p>",
+      "<p style=\"margin-bottom: 1em;\">150 m²</p>",
+      "<p style=\"margin-bottom: 1em;\">200 m²</p>",
+      "<p style=\"margin-bottom: 1em;\">225 m²</p>"
     ],
-    "correctAnswer": [
-      0
+    "correctAnswer": [1],
+    "explanation": "<div>\n\n<Heading kind=\"3\">Pembahasan Soal 7.2 — Luas Maksimum Kebun dengan 2 Pagar Pemisah</Heading>\n\n<KeyConcept style=\"goal\">Tujuan: Mencari luas maksimum kebun ketika bahan pagar yang sama (60 m) mencakup keliling luar dan dua pagar pemisah di dalam kebun.</KeyConcept>\n\n<Heading kind=\"4\">Langkah 1 — Isolasi p dari Persamaan Kendala</Heading>\n\n<Equation type=\"display\">2p + 4l = 60 \\implies 2p = 60 - 4l \\implies p = 30 - 2l</Equation>\n\n<Heading kind=\"4\">Langkah 2 — Nyatakan Luas sebagai Fungsi Satu Variabel</Heading>\n\n<Equation type=\"display\">L = p \\times l = (30 - 2l) \\times l = 30l - 2l^2</Equation>\n\n<Heading kind=\"4\">Langkah 3 — Temukan Nilai l di Titik Puncak</Heading>\n\n<Equation type=\"display\">l = -\\frac{b}{2a} = -\\frac{30}{2 \\times (-2)} = \\frac{30}{4} = 7{,}5 \\text{ m}</Equation>\n\n<Heading kind=\"4\">Langkah 4 — Hitung p dan Luas Maksimum</Heading>\n\n<Equation type=\"display\">p = 30 - 2(7{,}5) = 30 - 15 = 15 \\text{ m}</Equation>\n\n<Equation type=\"display\">L_{\\text{maks}} = 15 \\times 7{,}5 = 112{,}5 \\text{ m}^2</Equation>\n\n<KeyConcept style=\"insight\">Luas maksimum turun dari 225 m² menjadi 112,5 m² karena sebagian bahan pagar dialokasikan untuk pemisah dalam, sehingga sisi luar kebun yang bisa dibentuk menjadi lebih pendek.</KeyConcept>\n\n<StyledList>\n  <ListItem style=\"blue\">Kendala: 2p + 4l = 60 → p = 30 − 2l</ListItem>\n  <ListItem style=\"teal\">L = (30 − 2l) × l = 30l − 2l²</ListItem>\n  <ListItem style=\"teal\">Titik puncak: l = 30 ÷ 4 = 7,5 m → p = 15 m</ListItem>\n  <ListItem style=\"green\">Luas maksimum = 15 × 7,5 = 112,5 m² ✅</ListItem>\n</StyledList>\n\n<KeyConcept style=\"important\">Jawaban yang benar adalah B. 112,5 m².</KeyConcept>\n\n</div>"
+  }
+]
+[
+  {
+    "passageTitle": "Pertumbuhan Pohon",
+    "passageText": "<p>Sebuah pohon pada awal pengamatan memiliki tinggi 2 meter. Setiap tahun, tinggi pohon bertambah sebesar 50% dari tinggi tahun sebelumnya. Pengamat mencatat data ini selama beberapa tahun dan menyajikannya dalam sebuah tabel.</p>\n\n<Table style=\"bordered\" hasHeader=\"true\">\n  <Row><Cell>Tahun ke-</Cell><Cell>Tinggi (meter)</Cell></Row>\n  <Row><Cell>0 (awal)</Cell><Cell>2,00</Cell></Row>\n  <Row><Cell>1</Cell><Cell>3,00</Cell></Row>\n  <Row><Cell>2</Cell><Cell>4,50</Cell></Row>\n  <Row><Cell>3</Cell><Cell>6,75</Cell></Row>\n</Table>"
+  },
+  {
+    "level": 2,
+    "questionType": "single-choice",
+    "questionText": "<p style=\"margin-bottom: 1em;\">Tinggi pohon pada tahun ke-4 adalah ... meter.</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Aljabar",
+    "topic_code": "AL",
+    "subtopic": "Pola Bilangan",
+    "subtopic_code": "PB",
+    "subtopic_id": 310,
+    "passageTitle": "Pertumbuhan Pohon",
+    "options": [
+      "<p style=\"margin-bottom: 1em;\">5,0625 m</p>",
+      "<p style=\"margin-bottom: 1em;\">6,0625 m</p>",
+      "<p style=\"margin-bottom: 1em;\">6,5 m</p>",
+      "<p style=\"margin-bottom: 1em;\">7,5 m</p>",
+      "<p style=\"margin-bottom: 1em;\">10,125 m</p>"
     ],
-    "explanation": "<div><Heading kind=\"3\">Menghitung Kuartil (Data n = 20)</Heading><p>Langkah pertama adalah memastikan data sudah terurut dan menentukan posisi kuartil.</p>\n
-
-[Image of Box-and-Whisker plot elements]
-\n<p><strong>1. Kuartil Kedua (Q2/Median):</strong></p>\n<p>Seperti perhitungan sebelumnya, Q2 adalah rata-rata data ke-10 dan ke-11.</p>\n<Equation type=\"display\">Q_2 = \\frac{x_{10} + x_{11}}{2} = \\frac{70 + 70}{2} = 70</Equation>\n\n<p><strong>2. Kuartil Pertama (Q1):</strong></p>\n<p>Q1 adalah median dari separuh data bagian bawah (data ke-1 sampai ke-10). Maka Q1 adalah rata-rata data ke-5 dan ke-6.</p>\n<Equation type=\"display\">x_5 = 60, x_6 = 60 \\implies Q_1 = \\frac{60 + 60}{2} = 60</Equation>\n\n<p><strong>3. Kuartil Ketiga (Q3):</strong></p>\n<p>Q3 adalah median dari separuh data bagian atas (data ke-11 sampai ke-20). Maka Q3 adalah rata-rata data ke-15 dan ke-16.</p>\n<Equation type=\"display\">x_{15} = 80, x_{16} = 80 \\implies Q_3 = \\frac{80 + 80}{2} = 80</Equation>\n\n<p><strong>Hasil:</strong> Q1 = 60, Q2 = 70, Q3 = 80.</p></div>"
+    "correctAnswer": [4],
+    "explanation": "<div>\n\n<Heading kind=\"3\">Pembahasan Soal 8.1 — Tinggi Pohon pada Tahun ke-4</Heading>\n\n<KeyConcept style=\"goal\">Tujuan: Menghitung tinggi pohon setelah 4 tahun pertumbuhan menggunakan pola barisan geometri yang terbentuk dari data bacaan.</KeyConcept>\n\n<Heading kind=\"4\">Langkah 1 — Identifikasi Suku Awal dan Rasio</Heading>\n\n<p>Dari tabel, tinggi awal pohon adalah 2 meter dan setiap tahun bertambah 50%, sehingga tinggi tahun berikutnya selalu 1,5 kali tinggi tahun sebelumnya:</p>\n\n<StyledList>\n  <ListItem style=\"blue\">Suku awal: a = 2 meter</ListItem>\n  <ListItem style=\"blue\">Rasio: r = 1,5 (karena bertambah 50% berarti dikalikan 150% = 1,5)</ListItem>\n</StyledList>\n\n<Heading kind=\"4\">Langkah 2 — Terapkan Rumus Suku ke-n</Heading>\n\n<Equation type=\"display\">U_n = a \\times r^n = 2 \\times (1{,}5)^n</Equation>\n\n<Equation type=\"display\">U_4 = 2 \\times (1{,}5)^4</Equation>\n\n<Heading kind=\"4\">Langkah 3 — Hitung (1,5)⁴ Secara Bertahap</Heading>\n\n<Equation type=\"display\">(1{,}5)^2 = 2{,}25 \\quad \\rightarrow \\quad (1{,}5)^4 = 2{,}25 \\times 2{,}25 = 5{,}0625</Equation>\n\n<Heading kind=\"4\">Langkah 4 — Hasil Akhir</Heading>\n\n<Equation type=\"display\">U_4 = 2 \\times 5{,}0625 = 10{,}125 \\text{ meter}</Equation>\n\n<KeyConcept style=\"warning\">Pilihan A (5,0625 m) adalah jebakan — itu nilai (1,5)⁴ sebelum dikalikan tinggi awal. Tinggi pohon baru didapat setelah dikalikan a = 2.</KeyConcept>\n\n<StyledList>\n  <ListItem style=\"blue\">a = 2 m, r = 1,5</ListItem>\n  <ListItem style=\"teal\">(1,5)⁴ = 2,25 × 2,25 = 5,0625</ListItem>\n  <ListItem style=\"green\">U₄ = 2 × 5,0625 = 10,125 meter ✅</ListItem>\n</StyledList>\n\n<KeyConcept style=\"important\">Jawaban yang benar adalah E. 10,125 m.</KeyConcept>\n\n</div>"
+  },
+  {
+    "level": 3,
+    "questionType": "single-choice",
+    "questionText": "<p style=\"margin-bottom: 1em;\">Jumlah total tinggi pohon dari tahun ke-0 hingga tahun ke-3 adalah ... meter.</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Aljabar",
+    "topic_code": "AL",
+    "subtopic": "Pola Bilangan",
+    "subtopic_code": "PB",
+    "subtopic_id": 310,
+    "passageTitle": "Pertumbuhan Pohon",
+    "options": [
+      "<p style=\"margin-bottom: 1em;\">16,25 m</p>",
+      "<p style=\"margin-bottom: 1em;\">18,5 m</p>",
+      "<p style=\"margin-bottom: 1em;\">19,25 m</p>",
+      "<p style=\"margin-bottom: 1em;\">20,0 m</p>",
+      "<p style=\"margin-bottom: 1em;\">20,75 m</p>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<div>\n\n<Heading kind=\"3\">Pembahasan Soal 8.2 — Jumlah Total Tinggi Tahun ke-0 hingga ke-3</Heading>\n\n<KeyConcept style=\"goal\">Tujuan: Menghitung jumlah keempat nilai tinggi pohon (tahun ke-0 sampai ke-3) menggunakan rumus jumlah deret geometri.</KeyConcept>\n\n<Heading kind=\"4\">Langkah 1 — Gunakan Rumus Jumlah Deret Geometri</Heading>\n\n<p>Dengan a = 2, r = 1,5, dan n = 4 suku (tahun ke-0 sampai ke-3):</p>\n\n<Equation type=\"display\">S_4 = a \\cdot \\frac{r^4 - 1}{r - 1} = 2 \\cdot \\frac{(1{,}5)^4 - 1}{1{,}5 - 1}</Equation>\n\n<Equation type=\"display\">S_4 = 2 \\cdot \\frac{5{,}0625 - 1}{0{,}5} = 2 \\cdot \\frac{4{,}0625}{0{,}5} = 2 \\times 8{,}125 = 16{,}25 \\text{ meter}</Equation>\n\n<Heading kind=\"4\">Verifikasi dengan Penjumlahan Langsung</Heading>\n\n<Equation type=\"display\">2 + 3 + 4{,}5 + 6{,}75 = 16{,}25 \\text{ meter} \\checkmark</Equation>\n\n<StyledList>\n  <ListItem style=\"teal\">S₄ = 2 × ((1,5)⁴ − 1) ÷ (1,5 − 1) = 2 × (4,0625 ÷ 0,5) = 16,25</ListItem>\n  <ListItem style=\"green\">Verifikasi langsung: 2 + 3 + 4,5 + 6,75 = 16,25 meter ✅</ListItem>\n</StyledList>\n\n<KeyConcept style=\"important\">Jawaban yang benar adalah A. 16,25 m.</KeyConcept>\n\n</div>"
+  },
+  {
+    "level": 4,
+    "questionType": "single-choice",
+    "questionText": "<p style=\"margin-bottom: 1em;\">Pada tahun ke berapa tinggi pohon pertama kali melebihi 20 meter? Diketahui: (1,5)⁵ ≈ 7,59; (1,5)⁶ ≈ 11,39; (1,5)⁷ ≈ 17,09; (1,5)⁸ ≈ 25,63.</p>",
+    "bidang": "Penalaran Matematika",
+    "bidang_code": "PM1",
+    "topik": "Aljabar",
+    "topic_code": "AL",
+    "subtopic": "Aljabar",
+    "subtopic_code": "AJ",
+    "subtopic_id": 312,
+    "passageTitle": "Pertumbuhan Pohon",
+    "options": [
+      "<p style=\"margin-bottom: 1em;\">Tahun ke-6</p>",
+      "<p style=\"margin-bottom: 1em;\">Tahun ke-7</p>",
+      "<p style=\"margin-bottom: 1em;\">Tahun ke-8</p>",
+      "<p style=\"margin-bottom: 1em;\">Tahun ke-9</p>",
+      "<p style=\"margin-bottom: 1em;\">Tahun ke-10</p>"
+    ],
+    "correctAnswer": [0],
+    "explanation": "<div>\n\n<Heading kind=\"3\">Pembahasan Soal 8.3 — Tahun Pertama Tinggi Pohon Melebihi 20 Meter</Heading>\n\n<KeyConcept style=\"goal\">Tujuan: Menentukan nilai n terkecil sehingga Uₙ = 2 × (1,5)ⁿ lebih besar dari 20 meter.</KeyConcept>\n\n<Heading kind=\"4\">Langkah 1 — Susun Pertidaksamaan</Heading>\n\n<Equation type=\"display\">2 \\times (1{,}5)^n > 20 \\implies (1{,}5)^n > 10</Equation>\n\n<Heading kind=\"4\">Langkah 2 — Periksa dengan Nilai yang Diberikan</Heading>\n\n<Table style=\"bordered\" hasHeader=\"true\">\n  <Row><Cell>Tahun (n)</Cell><Cell>(1,5)ⁿ</Cell><Cell>Tinggi = 2 × (1,5)ⁿ</Cell><Cell>Melebihi 20 m?</Cell></Row>\n  <Row><Cell>5</Cell><Cell>≈ 7,59</Cell><Cell>≈ 15,18 m</Cell><Cell>Belum</Cell></Row>\n  <Row><Cell>6</Cell><Cell>≈ 11,39</Cell><Cell>≈ 22,78 m</Cell><Cell>Ya ✅</Cell></Row>\n</Table>\n\n<p>Pada tahun ke-5 tinggi pohon masih 15,18 meter. Pada tahun ke-6, tinggi mencapai 22,78 meter dan melampaui 20 meter untuk pertama kalinya.</p>\n\n<KeyConcept style=\"insight\">Alternatif menggunakan logaritma: dari (1,5)ⁿ > 10, diperoleh n > log(10) ÷ log(1,5) ≈ 5,68, sehingga n terkecil yang memenuhi adalah n = 6.</KeyConcept>\n\n<StyledList>\n  <ListItem style=\"blue\">Pertidaksamaan: (1,5)ⁿ > 10</ListItem>\n  <ListItem style=\"teal\">n = 5: tinggi ≈ 15,18 m → belum melebihi 20 m</ListItem>\n  <ListItem style=\"teal\">n = 6: tinggi ≈ 22,78 m → sudah melebihi 20 m untuk pertama kali</ListItem>\n  <ListItem style=\"green\">Jawaban: tahun ke-6 ✅</ListItem>\n</StyledList>\n\n<KeyConcept style=\"important\">Jawaban yang benar adalah A. Tahun ke-6.</KeyConcept>\n\n</div>"
   }
 ]

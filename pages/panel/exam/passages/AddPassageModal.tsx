@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Modal, Button } from 'react-bootstrap';
-import { FileJson, Save, X, FileText, Upload } from 'lucide-react';
+import { FileJson, Save, X, FileText, Upload, Eye } from 'lucide-react';
 import SuperEditor from '../../../../components/supereditor/SuperEditor';
 import { processContent } from '../../../../components/supereditor/utils';
 import { ShortFormField } from '../../../../components/form/FormComponentLayout';
@@ -26,6 +26,8 @@ const AddPassageModal: React.FC<AddPassageModalProps> = ({ isOpen, onClose, onSa
   const [importMode, setImportMode] = useState(false);
   const [jsonInput, setJsonInput] = useState('');
   const [importError, setImportError] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewContent, setPreviewContent] = useState('');
 
   const handleSubmit = async () => {
     if (!title.trim()) {
@@ -97,10 +99,46 @@ const AddPassageModal: React.FC<AddPassageModalProps> = ({ isOpen, onClose, onSa
       setPassage(processedContent);
       setImportMode(false);
       setJsonInput('');
+      setShowPreview(false);
+      setPreviewContent('');
       
       alert('Data berhasil diimport! Silakan review dan klik "Simpan".');
     } catch (error: any) {
       setImportError(`Error: ${error.message || 'Format JSON tidak valid'}`);
+    }
+  };
+
+  const handlePreview = () => {
+    try {
+      setImportError('');
+      
+      if (!jsonInput.trim()) {
+        setImportError('JSON input tidak boleh kosong!');
+        return;
+      }
+
+      const parsedData = JSON.parse(jsonInput);
+
+      if (!parsedData.passageTitle && !parsedData.title) {
+        setImportError('Format JSON harus memiliki "passageTitle" atau "title"');
+        return;
+      }
+
+      if (!parsedData.passageText && !parsedData.passage) {
+        setImportError('Format JSON harus memiliki "passageText" atau "passage"');
+        return;
+      }
+
+      const importedContent = parsedData.passageText || parsedData.passage;
+      
+      // Process content to parse all SuperEditor tags
+      const processedContent = processContent(importedContent);
+
+      setPreviewContent(processedContent);
+      setShowPreview(true);
+    } catch (error: any) {
+      setImportError(`Error: ${error.message || 'Format JSON tidak valid'}`);
+      setShowPreview(false);
     }
   };
 
@@ -132,6 +170,8 @@ const AddPassageModal: React.FC<AddPassageModalProps> = ({ isOpen, onClose, onSa
     setImportMode(false);
     setJsonInput('');
     setImportError('');
+    setShowPreview(false);
+    setPreviewContent('');
     onClose();
   };
 
@@ -241,6 +281,7 @@ const AddPassageModal: React.FC<AddPassageModalProps> = ({ isOpen, onClose, onSa
                   onChange={(e) => {
                     setJsonInput(e.target.value);
                     setImportError('');
+                    setShowPreview(false);
                   }}
                   className="tw-w-full tw-h-64 tw-p-3 tw-border-2 tw-border-purple-300 tw-rounded-lg tw-font-mono tw-text-sm focus:tw-border-purple-500 focus:tw-outline-none"
                   placeholder='Paste JSON di sini...'
@@ -253,13 +294,48 @@ const AddPassageModal: React.FC<AddPassageModalProps> = ({ isOpen, onClose, onSa
                 </div>
               )}
 
-              <div className="tw-flex tw-justify-end">
+              {/* Preview Section */}
+              {showPreview && previewContent && (
+                <div className="tw-bg-white tw-border-2 tw-border-purple-300 tw-rounded-lg tw-overflow-hidden">
+                  <div className="tw-bg-gradient-to-r tw-from-purple-600 tw-to-indigo-600 tw-text-white tw-px-4 tw-py-2 tw-flex tw-items-center tw-gap-2">
+                    <Eye className="tw-w-5 tw-h-5" />
+                    <span className="tw-font-semibold">Preview Konten</span>
+                  </div>
+                  <div 
+                    className="tw-p-6 tw-max-h-96 tw-overflow-y-auto practice-content-area"
+                    dangerouslySetInnerHTML={{ __html: previewContent }}
+                    style={{
+                      fontSize: '16px',
+                      lineHeight: '1.6',
+                      color: '#374151'
+                    }}
+                  />
+                </div>
+              )}
+
+              <div className="tw-flex tw-gap-3 tw-justify-end">
+                <ButtonGradient
+                  action="custom"
+                  customText="Preview"
+                  customIcon={<Eye className="tw-w-4 tw-h-4" />}
+                  customColors={{
+                    primary: '#8B5CF6',
+                    secondary: '#7C3AED',
+                    gradient1: '#8B5CF6',
+                    gradient2: '#A78BFA',
+                    text: '#FFFFFF'
+                  }}
+                  onClick={handlePreview}
+                  size="md"
+                  disabled={!jsonInput.trim()}
+                />
                 <ButtonGradient
                   action="apply"
                   customText="Import"
                   customIcon={<Upload className="tw-w-4 tw-h-4" />}
                   onClick={handleImportJson}
                   size="md"
+                  disabled={!jsonInput.trim()}
                 />
               </div>
             </>
@@ -281,6 +357,175 @@ const AddPassageModal: React.FC<AddPassageModalProps> = ({ isOpen, onClose, onSa
           {isSubmitting ? 'Menyimpan...' : 'Simpan'}
         </Button>
       </Modal.Footer>
+
+      {/* SuperEditor Styles for Preview */}
+      <style jsx global>{`
+        /* Practice Content Area Styles */
+        .practice-content-area {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+        }
+
+        /* Headings */
+        .practice-content-area .cte-heading {
+          font-weight: 700;
+          margin-top: 1.5rem;
+          margin-bottom: 1rem;
+          line-height: 1.3;
+        }
+
+        .practice-content-area .cte-heading-1 { font-size: 2rem; color: #7C3AED; }
+        .practice-content-area .cte-heading-2 { font-size: 1.75rem; color: #8B5CF6; }
+        .practice-content-area .cte-heading-3 { font-size: 1.5rem; color: #9333EA; }
+        .practice-content-area .cte-heading-4 { font-size: 1.25rem; color: #A855F7; }
+        .practice-content-area .cte-heading-5 { font-size: 1.125rem; color: #C084FC; }
+        .practice-content-area .cte-heading-6 { font-size: 1rem; color: #D8B4FE; }
+
+        /* Key Concepts */
+        .practice-content-area .cte-key-concept {
+          padding: 1.25rem;
+          margin: 1.5rem 0;
+          border-radius: 12px;
+          border-left: 4px solid;
+        }
+
+        /* Styled Lists */
+        .practice-content-area .cte-styled-list-item {
+          display: flex;
+          align-items: flex-start;
+          margin-bottom: 0.75rem;
+          padding-left: 0.5rem;
+        }
+
+        .practice-content-area .cte-styled-list-icon {
+          margin-right: 0.75rem;
+          margin-top: 0.25rem;
+          flex-shrink: 0;
+        }
+
+        /* Tables */
+        .practice-content-area .cte-table-container {
+          margin: 1.5rem 0;
+          overflow-x: auto;
+        }
+
+        .practice-content-area .cte-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+
+        .practice-content-area .cte-table td,
+        .practice-content-area .cte-table th {
+          padding: 0.75rem;
+          border: 1px solid #E5E7EB;
+        }
+
+        .practice-content-area .cte-table th {
+          background-color: #F3F4F6;
+          font-weight: 600;
+        }
+
+        .practice-content-area .cte-table-striped tbody tr:nth-child(odd) {
+          background-color: #F9FAFB;
+        }
+
+        /* Code Blocks */
+        .practice-content-area .cte-code-block-container {
+          margin: 1.5rem 0;
+          border-radius: 8px;
+          overflow: hidden;
+        }
+
+        .practice-content-area .cte-code-block-header {
+          padding: 0.75rem 1rem;
+          font-size: 0.875rem;
+          font-weight: 600;
+        }
+
+        .practice-content-area .cte-code-block {
+          padding: 1rem;
+          overflow-x: auto;
+          font-family: 'Courier New', Courier, monospace;
+          font-size: 0.875rem;
+          line-height: 1.5;
+        }
+
+        /* Equations */
+        .practice-content-area .cte-katex-equation {
+          display: inline-block;
+          margin: 0.25rem 0;
+        }
+
+        .practice-content-area .cte-katex-block {
+          display: block;
+          text-align: center;
+          margin: 1.5rem 0;
+          padding: 1rem;
+          background-color: #F9FAFB;
+          border-radius: 8px;
+        }
+
+        /* Card Grids */
+        .practice-content-area .cte-card-grid-container {
+          margin: 1.5rem 0;
+        }
+
+        .practice-content-area .cte-card-grid {
+          display: grid;
+          gap: 1rem;
+        }
+
+        .practice-content-area .cte-card-grid-item {
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .practice-content-area .cte-card-header {
+          padding: 1rem;
+          font-weight: 600;
+        }
+
+        .practice-content-area .cte-card-content {
+          padding: 1rem;
+        }
+
+        /* Images */
+        .practice-content-area img {
+          max-width: 100%;
+          height: auto;
+          border-radius: 8px;
+          margin: 1rem 0;
+        }
+
+        /* Links */
+        .practice-content-area a {
+          color: #8B5CF6;
+          text-decoration: underline;
+        }
+
+        .practice-content-area a:hover {
+          color: #7C3AED;
+        }
+
+        /* General spacing */
+        .practice-content-area p {
+          margin-bottom: 1rem;
+        }
+
+        .practice-content-area ul,
+        .practice-content-area ol {
+          margin-left: 1.5rem;
+          margin-bottom: 1rem;
+        }
+
+        .practice-content-area li {
+          margin-bottom: 0.5rem;
+        }
+
+        /* KaTeX fonts */
+        .katex { font-size: 1.1em; }
+        .katex-display { margin: 1em 0; }
+      `}</style>
     </Modal>
   );
 };

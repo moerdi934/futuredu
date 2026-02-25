@@ -8,12 +8,14 @@ import ReportLayout from '../../../../components/report/ReportLayout';
 import { ReportConfig, ColumnConfig } from '../../../../types/report';
 import AddPassageModal from './AddPassageModal';
 import EditPassageModal from './EditPassageModal';
+import ViewPassageModal from './ViewPassageModal';
 import axios from 'axios';
 
 const PassageManagementPage: React.FC = () => {
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [selectedPassage, setSelectedPassage] = useState<any>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -95,6 +97,11 @@ const PassageManagementPage: React.FC = () => {
   const handlePassageSave = () => {
     setShowAddModal(false);
     setRefreshTrigger(prev => prev + 1);
+  };
+
+  const handleViewPassage = (row: any) => {
+    setSelectedPassage(row);
+    setShowViewModal(true);
   };
 
   const handleEditPassage = (row: any) => {
@@ -262,8 +269,7 @@ const PassageManagementPage: React.FC = () => {
           variant: 'outline-info',
           size: 'sm',
           onClick: (row) => {
-            // Open detail modal or page
-            alert(`Detail bacaan ID ${row.id} akan ditampilkan di sini.`);
+            handleViewPassage(row);
           }
         },
         {
@@ -320,6 +326,16 @@ const PassageManagementPage: React.FC = () => {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSave={handlePassageSave}
+      />
+
+      {/* Modal View Detail Bacaan */}
+      <ViewPassageModal
+        isOpen={showViewModal}
+        passageData={selectedPassage}
+        onClose={() => {
+          setShowViewModal(false);
+          setSelectedPassage(null);
+        }}
       />
 
       {/* Modal Edit Bacaan */}

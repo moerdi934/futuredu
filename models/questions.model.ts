@@ -963,8 +963,8 @@ export const getPagedPassages = async (filters: PassageFilters): Promise<PagedPa
   const countQuery = `
     SELECT COUNT(DISTINCT qp.id) as total
     FROM question_passages qp
-    LEFT JOIN users u_create ON qp.create_user_id = u_create.id
-    LEFT JOIN users u_update ON qp.update_user_id = u_update.id
+    LEFT JOIN v_dashboard_userdata u_create ON qp.create_user_id = u_create.userid
+    LEFT JOIN v_dashboard_userdata u_update ON qp.update_user_id = u_update.userid
     ${whereClause}
   `;
 
@@ -993,8 +993,8 @@ export const getPagedPassages = async (filters: PassageFilters): Promise<PagedPa
         WHERE q.passage_id = qp.id
       ) as usage_count
     FROM question_passages qp
-    LEFT JOIN users u_create ON qp.create_user_id = u_create.id
-    LEFT JOIN users u_update ON qp.update_user_id = u_update.id
+    LEFT JOIN v_dashboard_userdata u_create ON qp.create_user_id = u_create.userid
+    LEFT JOIN v_dashboard_userdata u_update ON qp.update_user_id = u_update.userid
     ${whereClause}
     ORDER BY ${safeSortKey} ${safeSortOrder}
     LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
