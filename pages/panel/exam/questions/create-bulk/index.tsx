@@ -2286,8 +2286,18 @@ const CreateQuestionBulk: React.FC = () => {
       const passageItems: any[] = [];
       const questionItems: any[] = [];
       
+      console.log('🔍 Analyzing JSON items...');
       parsedData.forEach((item: any, index: number) => {
         const isPassage = item.passageTitle && item.passageText && !item.questionText && !item.question;
+        
+        console.log(`Item ${index + 1}:`, {
+          hasPassageTitle: !!item.passageTitle,
+          hasPassageText: !!item.passageText,
+          hasQuestionText: !!item.questionText,
+          hasQuestion: !!item.question,
+          type: isPassage ? 'PASSAGE' : 'QUESTION'
+        });
+        
         if (isPassage) {
           passageItems.push({ ...item, originalIndex: index });
         } else {
@@ -2295,7 +2305,7 @@ const CreateQuestionBulk: React.FC = () => {
         }
       });
       
-      console.log(`Found ${passageItems.length} passage(s) and ${questionItems.length} question(s)`);
+      console.log(`📊 Summary: ${passageItems.length} passage(s) and ${questionItems.length} question(s)`);
       
       // Create passages first (or reuse existing ones)
       const createdPassages = new Map<string, { id: number; title: string; passage: string }>();
