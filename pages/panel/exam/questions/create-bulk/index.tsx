@@ -1950,11 +1950,45 @@ const CreateQuestionBulk: React.FC = () => {
   };
 
   /**
-   * Create passage from JSON data
+   * Create passage from JSON data (checks if exists first)
    */
-  const createPassageFromJSON = async (passageData: any): Promise<{ id: number; title: string; passage: string } | null> => {
+  const createPassageFromJSON = async (passageData: any): Promise<{ id: number; title: string; passage: string; isNew: boolean } | null> => {
     try {
-      console.log('🔄 Creating passage from JSON:', passageData.passageTitle);
+      console.log('🔍 Checking if passage exists:', passageData.passageTitle);
+      
+      // First, search if passage already exists
+      try {
+        const searchResponse = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/questions/passage/search?search=${encodeURIComponent(passageData.passageTitle)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+            },
+          }
+        );
+        
+        if (searchResponse.data && Array.isArray(searchResponse.data) && searchResponse.data.length > 0) {
+          // Try to find exact match by title
+          const existingPassage = searchResponse.data.find((p: any) => 
+            p.title?.toLowerCase() === passageData.passageTitle.toLowerCase()
+          );
+          
+          if (existingPassage) {
+            console.log('✅ Found existing passage, reusing:', existingPassage.title);
+            return {
+              id: existingPassage.id,
+              title: existingPassage.title,
+              passage: existingPassage.passage,
+              isNew: false,
+            };
+          }
+        }
+      } catch (searchError) {
+        console.log('⚠️ Search failed, will create new passage');
+      }
+      
+      // Passage doesn't exist, create new one
+      console.log('🔄 Creating new passage:', passageData.passageTitle);
       
       const processedPassageText = processContent(passageData.passageText);
       
@@ -1982,6 +2016,7 @@ const CreateQuestionBulk: React.FC = () => {
         id: response.data.id,
         title: passageData.passageTitle,
         passage: processedPassageText,
+        isNew: true,
       };
     } catch (error: any) {
       console.error('❌ Error creating passage:', error);
@@ -2262,16 +2297,29 @@ const CreateQuestionBulk: React.FC = () => {
       
       console.log(`Found ${passageItems.length} passage(s) and ${questionItems.length} question(s)`);
       
-      // Create passages first
+      // Create passages first (or reuse existing ones)
       const createdPassages = new Map<string, { id: number; title: string; passage: string }>();
       const passageErrors: string[] = [];
+      let newPassagesCount = 0;
+      let existingPassagesCount = 0;
       
       for (const passageItem of passageItems) {
         try {
           const createdPassage = await createPassageFromJSON(passageItem);
           if (createdPassage) {
-            createdPassages.set(createdPassage.title, createdPassage);
-            console.log(`✅ Created passage: ${createdPassage.title}`);
+            createdPassages.set(createdPassage.title, {
+              id: createdPassage.id,
+              title: createdPassage.title,
+              passage: createdPassage.passage,
+            });
+            
+            if (createdPassage.isNew) {
+              newPassagesCount++;
+              console.log(`✅ Created new passage: ${createdPassage.title}`);
+            } else {
+              existingPassagesCount++;
+              console.log(`✅ Reusing existing passage: ${createdPassage.title}`);
+            }
           }
         } catch (error: any) {
           const errorMsg = `Passage "${passageItem.passageTitle}": ${error.message}`;
@@ -2334,8 +2382,12 @@ const CreateQuestionBulk: React.FC = () => {
       // Show summary
       let message = '';
       if (passageItems.length > 0) {
-        const successfulPassages = createdPassages.size;
-        message += `📚 Bacaan: ${successfulPassages} dari ${passageItems.length} berhasil dibuat\\n`;
+        const totalProcessed = createdPassages.size;
+        message += `📚 Bacaan: ${totalProcessed} dari ${passageItems.length} berhasil diproses`;
+        if (newPassagesCount > 0 || existingPassagesCount > 0) {
+          message += ` (${newPassagesCount} baru, ${existingPassagesCount} existing)`;
+        }
+        message += `\\n`;
       }
       message += `📝 Soal: Berhasil menambahkan ${convertedQuestions.length} dari ${questionItems.length} soal!\\n`;
       message += `\\nTotal soal sekarang: ${updatedQuestions.length}`;
