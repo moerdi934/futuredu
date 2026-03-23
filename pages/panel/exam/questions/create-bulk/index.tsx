@@ -48,6 +48,86 @@ import 'katex/dist/katex.min.css';
 
 const optionLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 
+/**
+ * Helper function to create or find passage from JSON data
+ * This is shared across components
+ */
+const createPassageFromJSON = async (
+  passageData: any, 
+  userId: string | number | null
+): Promise<{ id: number; title: string; passage: string; isNew: boolean } | null> => {
+  try {
+    console.log('🔍 Checking if passage exists:', passageData.passageTitle);
+    
+    // First, search if passage already exists
+    try {
+      const searchResponse = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/questions/passage/search?search=${encodeURIComponent(passageData.passageTitle)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+          },
+        }
+      );
+      
+      if (searchResponse.data && Array.isArray(searchResponse.data) && searchResponse.data.length > 0) {
+        // Try to find exact match by title
+        const existingPassage = searchResponse.data.find((p: any) => 
+          p.title?.toLowerCase() === passageData.passageTitle.toLowerCase()
+        );
+        
+        if (existingPassage) {
+          console.log('✅ Found existing passage, reusing:', existingPassage.title);
+          return {
+            id: existingPassage.id,
+            title: existingPassage.title,
+            passage: existingPassage.passage,
+            isNew: false,
+          };
+        }
+      }
+    } catch (searchError) {
+      console.log('⚠️ Search failed, will create new passage');
+    }
+    
+    // Passage doesn't exist, create new one
+    console.log('🔄 Creating new passage:', passageData.passageTitle);
+    
+    const processedPassageText = processContent(passageData.passageText);
+    
+    const requestData = {
+      title: passageData.passageTitle,
+      passage: processedPassageText,
+      create_user_id: userId || null,
+    };
+    
+    console.log('📤 Sending passage creation request to API');
+
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_URL}/questions/passage`,
+      requestData,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      }
+    );
+    
+    console.log('✅ Passage created successfully:', response.data);
+    
+    return {
+      id: response.data.id,
+      title: passageData.passageTitle,
+      passage: processedPassageText,
+      isNew: true,
+    };
+  } catch (error: any) {
+    console.error('❌ Error creating passage:', error);
+    console.error('Error response:', error.response?.data);
+    throw new Error(`Gagal membuat bacaan "${passageData.passageTitle}": ${error.response?.data?.error || error.message || 'Unknown error'}`);
+  }
+};
+
 const questionTypeOptions = [
   { label: 'Single Choice', value: 'single-choice' },
   { label: 'Multiple Choice', value: 'multiple-choice' },
@@ -542,7 +622,11 @@ const BulkQuestionItem: React.FC<{
       }
       
       // Helper function to convert JSON item to QuestionData with bidang/topik/subtopik search
-      const convertItemToQuestionData = async (item: any, baseData?: QuestionData): Promise<QuestionData> => {
+      const convertItemToQuestionData = async (
+        item: any, 
+        baseData?: QuestionData,
+        passageMap?: Map<string, { id: number; title: string; passage: string }>
+      ): Promise<QuestionData> => {
         const processedQuestionText = processContent(item.questionText || item.question || '');
         const processedOptions = (item.options || ['']).map((opt: string) => processContent(opt));
         const processedExplanation = processContent(item.explanation || item.explanationContent || '');
@@ -659,42 +743,52 @@ const BulkQuestionItem: React.FC<{
         
         // Search for passage
         if (item.passageTitle) {
-          try {
-            console.log('🔍 Searching passage with title:', item.passageTitle);
-            const response = await axios.get(
-              `${process.env.NEXT_PUBLIC_API_URL}/questions/passage/search?search=${encodeURIComponent(item.passageTitle)}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-                },
-              }
-            );
-            
-            console.log('📥 Passage search response:', response.data);
-            
-            if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-              const foundPassage = response.data.find((p: any) => 
-                p.title?.toLowerCase() === item.passageTitle.toLowerCase()
+          // First check if passage is in the provided passageMap
+          if (passageMap && passageMap.has(item.passageTitle.toLowerCase())) {
+            const passageData = passageMap.get(item.passageTitle.toLowerCase())!;
+            questionData.hasPassage = true;
+            questionData.passage = passageData;
+            questionData.passageSearchResults = [passageData];
+            console.log('✅ Using passage from map:', passageData.title);
+          } else {
+            // Otherwise, search from API
+            try {
+              console.log('🔍 Searching passage with title:', item.passageTitle);
+              const response = await axios.get(
+                `${process.env.NEXT_PUBLIC_API_URL}/questions/passage/search?search=${encodeURIComponent(item.passageTitle)}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+                  },
+                }
               );
               
-              if (foundPassage) {
-                console.log('✅ Found matching passage:', foundPassage.title);
-                questionData.hasPassage = true;
-                questionData.passage = {
-                  id: foundPassage.id,
-                  title: foundPassage.title,
-                  passage: foundPassage.passage,
-                };
-                questionData.passageSearchResults = [foundPassage];
+              console.log('📥 Passage search response:', response.data);
+              
+              if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+                const foundPassage = response.data.find((p: any) => 
+                  p.title?.toLowerCase() === item.passageTitle.toLowerCase()
+                );
+                
+                if (foundPassage) {
+                  console.log('✅ Found matching passage:', foundPassage.title);
+                  questionData.hasPassage = true;
+                  questionData.passage = {
+                    id: foundPassage.id,
+                    title: foundPassage.title,
+                    passage: foundPassage.passage,
+                  };
+                  questionData.passageSearchResults = [foundPassage];
+                } else {
+                  console.warn('⚠️ No exact match found for passage title:', item.passageTitle);
+                }
               } else {
-                console.warn('⚠️ No exact match found for passage title:', item.passageTitle);
+                console.warn('⚠️ No passages found in search results');
               }
-            } else {
-              console.warn('⚠️ No passages found in search results');
+            } catch (error: any) {
+              console.error('❌ Failed to search passage:', error);
+              console.error('Endpoint:', `${process.env.NEXT_PUBLIC_API_URL}/questions/passage/search?search=${encodeURIComponent(item.passageTitle)}`);
             }
-          } catch (error: any) {
-            console.error('❌ Failed to search passage:', error);
-            console.error('Endpoint:', `${process.env.NEXT_PUBLIC_API_URL}/questions/passage/search?search=${encodeURIComponent(item.passageTitle)}`);
           }
         }
         
@@ -704,9 +798,37 @@ const BulkQuestionItem: React.FC<{
       if (Array.isArray(parsedData)) {
         // Array mode: insert multiple questions after this one
         const importedQuestions: QuestionData[] = [];
+        const passageMap: Map<string, { id: number; title: string; passage: string }> = new Map();
         
+        // Step 1: Process passage-only items first (create/get passage IDs)
         for (const item of parsedData) {
-          const converted = await convertItemToQuestionData(item);
+          const isPassageOnly = !item.questionText && !item.question && item.passageTitle && item.passageText;
+          if (isPassageOnly) {
+            console.log('📚 Processing passage-only item:', item.passageTitle);
+            try {
+              const createdPassage = await createPassageFromJSON(item, userId);
+              if (createdPassage) {
+                passageMap.set(item.passageTitle.toLowerCase(), {
+                  id: createdPassage.id,
+                  title: createdPassage.title,
+                  passage: createdPassage.passage,
+                });
+                console.log(`✅ Passage ${createdPassage.isNew ? 'created' : 'found'}:`, item.passageTitle);
+              }
+            } catch (error: any) {
+              console.error('❌ Failed to process passage:', item.passageTitle, error);
+            }
+          }
+        }
+        
+        // Step 2: Process question items and attach passages from map
+        for (const item of parsedData) {
+          const isPassageOnly = !item.questionText && !item.question && item.passageTitle && item.passageText;
+          if (isPassageOnly) {
+            continue; // Skip passage-only items
+          }
+          
+          const converted = await convertItemToQuestionData(item, undefined, passageMap);
           importedQuestions.push(converted);
         }
         
@@ -1950,82 +2072,6 @@ const CreateQuestionBulk: React.FC = () => {
   };
 
   /**
-   * Create passage from JSON data (checks if exists first)
-   */
-  const createPassageFromJSON = async (passageData: any): Promise<{ id: number; title: string; passage: string; isNew: boolean } | null> => {
-    try {
-      console.log('🔍 Checking if passage exists:', passageData.passageTitle);
-      
-      // First, search if passage already exists
-      try {
-        const searchResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/questions/passage/search?search=${encodeURIComponent(passageData.passageTitle)}`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-            },
-          }
-        );
-        
-        if (searchResponse.data && Array.isArray(searchResponse.data) && searchResponse.data.length > 0) {
-          // Try to find exact match by title
-          const existingPassage = searchResponse.data.find((p: any) => 
-            p.title?.toLowerCase() === passageData.passageTitle.toLowerCase()
-          );
-          
-          if (existingPassage) {
-            console.log('✅ Found existing passage, reusing:', existingPassage.title);
-            return {
-              id: existingPassage.id,
-              title: existingPassage.title,
-              passage: existingPassage.passage,
-              isNew: false,
-            };
-          }
-        }
-      } catch (searchError) {
-        console.log('⚠️ Search failed, will create new passage');
-      }
-      
-      // Passage doesn't exist, create new one
-      console.log('🔄 Creating new passage:', passageData.passageTitle);
-      
-      const processedPassageText = processContent(passageData.passageText);
-      
-      const requestData = {
-        title: passageData.passageTitle,
-        passage: processedPassageText,
-        create_user_id: userId || null,
-      };
-      
-      console.log('📤 Sending passage creation request to API');
-
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/questions/passage`,
-        requestData,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-          },
-        }
-      );
-      
-      console.log('✅ Passage created successfully:', response.data);
-      
-      return {
-        id: response.data.id,
-        title: passageData.passageTitle,
-        passage: processedPassageText,
-        isNew: true,
-      };
-    } catch (error: any) {
-      console.error('❌ Error creating passage:', error);
-      console.error('Error response:', error.response?.data);
-      throw new Error(`Gagal membuat bacaan "${passageData.passageTitle}": ${error.response?.data?.error || error.message || 'Unknown error'}`);
-    }
-  };
-
-  /**
    * Convert imported JSON item to QuestionData using global allExamTypes
    */
   const convertJSONItemToQuestionData = async (
@@ -2326,7 +2372,7 @@ const CreateQuestionBulk: React.FC = () => {
       
       for (const passageItem of passageItems) {
         try {
-          const createdPassage = await createPassageFromJSON(passageItem);
+          const createdPassage = await createPassageFromJSON(passageItem, userId);
           if (createdPassage) {
             createdPassages.set(createdPassage.title, {
               id: createdPassage.id,
