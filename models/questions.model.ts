@@ -20,6 +20,7 @@ export interface Question {
   explanation?: string;
   level?: number;
   exam_id_list?: number[];
+  question_source_id?: number;
 }
 
 export interface QuestionFilters {
@@ -608,9 +609,9 @@ export const createQuestion = async (questionData: Partial<Question>, create_use
 
     const insertQuery = `
       INSERT INTO questions 
-        (question_topic_type, question_type, question_text, options, correct_answer, statements, passage_id, code, create_user_id, pembahasan, level) 
+        (question_topic_type, question_type, question_text, options, correct_answer, statements, passage_id, code, create_user_id, pembahasan, level, question_source_id) 
       VALUES 
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE($12, 1)) 
       RETURNING *
     `;
 
@@ -624,7 +625,8 @@ export const createQuestion = async (questionData: Partial<Question>, create_use
       passage_id,
       code,
       explanation,
-      level
+      level,
+      question_source_id
     } = questionData;
 
     // Ensure question_topic_type is not null or empty
@@ -643,7 +645,8 @@ export const createQuestion = async (questionData: Partial<Question>, create_use
       code,
       create_user_id,
       explanation || defaultExplanation,
-      level
+      level,
+      question_source_id || 1
     ]);
 
     return result.rows[0];
@@ -662,11 +665,18 @@ export const createBulkQuestions = async (questions: Partial<Question>[], create
     
     const createdQuestions: Question[] = [];
     
+    const defaultExplanation = `
+    <div>
+      <h4>Pembahasan belum tersedia secara spesifik.</h4>
+      <p>Silakan cek kembali soal dan diskusikan dengan pengajar atau teman sekelas.</p>
+    </div>
+    `;
+    
     const insertQuery = `
       INSERT INTO questions 
-        (question_topic_type, question_type, question_text, options, correct_answer, statements, create_user_id, edit_date) 
+        (question_topic_type, question_type, question_text, options, correct_answer, statements, passage_id, code, create_user_id, pembahasan, level, question_source_id, edit_date) 
       VALUES 
-        ($1, $2, $3, $4, $5, $6, $7, null) 
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE($12, 1), null) 
       RETURNING *
     `;
 
@@ -678,7 +688,12 @@ export const createBulkQuestions = async (questions: Partial<Question>[], create
         question.options,
         question.correct_answer,
         question.statements,
-        create_user_id
+        question.passage_id,
+        question.code,
+        create_user_id,
+        question.explanation || defaultExplanation,
+        question.level,
+        question.question_source_id || 1
       ]);
 
       createdQuestions.push(result.rows[0]);

@@ -21,6 +21,7 @@ export interface ImportedQuestion {
   subtopic_code?: string;
   subtopic_id?: number;
   passageTitle?: string;
+  question_source_id?: number;
 }
 
 export interface ProcessedQuestion {
@@ -173,6 +174,7 @@ export const processImportedQuestion = async (
     questionText: processedQuestionText,
     hasExplanation: !!(item.explanation || item.explanationContent),
     explanationContent: processedExplanation,
+    question_source_id: item.question_source_id || 1, // Default to AI
   };
   
   // Try to find and set bidang

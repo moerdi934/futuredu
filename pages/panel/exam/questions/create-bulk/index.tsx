@@ -64,6 +64,13 @@ const levelOptions = [
   { label: '5 - Expert', value: 5 },
 ];
 
+const questionSourceOptions = [
+  { label: 'AI', value: 1 },
+  { label: 'Manual', value: 2 },
+  { label: 'Asli', value: 3 },
+  { label: 'Saduran', value: 4 },
+];
+
 interface QuestionData {
   bidang: SelectOption | null;
   topik: SelectOption | null;
@@ -94,6 +101,7 @@ interface QuestionData {
   questionText: string;
   hasExplanation: boolean;
   explanationContent: string;
+  question_source_id: number | null;
 }
 
 const initialQuestionData: QuestionData = {
@@ -126,6 +134,7 @@ const initialQuestionData: QuestionData = {
   questionText: '',
   hasExplanation: false,
   explanationContent: '',
+  question_source_id: 1, // Default to AI
 };
 
 // Custom Accordion Component
@@ -912,6 +921,18 @@ const BulkQuestionItem: React.FC<{
               options={levelOptions}
               onChange={(newValue) => {
                 onChange(index, { ...latestDataRef.current, level: newValue ? newValue.value : null });
+              }}
+              required
+            />
+          </div>
+
+          <div className="tw-mb-4 sm:tw-mb-6 tw-w-full tw-min-w-0">
+            <SelectCustomField
+              label="Sumber Soal"
+              value={questionSourceOptions.find((opt) => opt.value === data.question_source_id) || questionSourceOptions[0]}
+              options={questionSourceOptions}
+              onChange={(newValue) => {
+                onChange(index, { ...latestDataRef.current, question_source_id: newValue ? newValue.value : 1 });
               }}
               required
             />
@@ -1965,6 +1986,7 @@ const CreateQuestionBulk: React.FC = () => {
         questionText: processedQuestionText,
         hasExplanation: !!(item.explanation || item.explanationContent),
         explanationContent: processedExplanation,
+        question_source_id: item.question_source_id || 1, // Default to AI
       };
 
       // Find bidang by code or name
@@ -2284,6 +2306,7 @@ const CreateQuestionBulk: React.FC = () => {
       level: questionData.level,
       questionType: questionData.questionType,
       questionText: questionData.questionText,
+      question_source_id: questionData.question_source_id || 1, // Default to AI
     };
 
     // Add bidang/topik/subtopik info
@@ -2449,6 +2472,7 @@ const CreateQuestionBulk: React.FC = () => {
           level: q.level,
           passage_id: passageId,
           explanation: (q.hasExplanation && q.explanationContent) ? q.explanationContent : null,
+          question_source_id: q.question_source_id || 1, // Default to AI
         };
 
         if (q.questionType === 'single-choice' || q.questionType === 'multiple-choice') {

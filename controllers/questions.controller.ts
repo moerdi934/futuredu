@@ -21,6 +21,7 @@ interface QuestionData {
   question_code?: string;
   explanation?: string;
   level?: number;
+  question_source_id?: number;
 }
 
 interface BulkQuestionRequest {

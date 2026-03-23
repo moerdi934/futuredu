@@ -67,6 +67,7 @@ interface Question {
   passage_id?: number | string | null;
   passage?: string | null;
   level: number | null;
+  question_source_id?: number | null;
 }
 
 interface AddQuestionModalProps {
@@ -125,6 +126,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
   const [questionType, setQuestionType] = useState<string>('single-choice');
   const [questionText, setQuestionText] = useState<string>('');
   const [level, setLevel] = useState<number | null>(null);
+  const [questionSource, setQuestionSource] = useState<number>(1); // Default to AI
   
   // Options for single/multiple choice
   const [options, setOptions] = useState<string[]>(['']);
@@ -183,6 +185,13 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
     { label: '3 - Advanced', value: 3 },
     { label: '4 - Pro', value: 4 },
     { label: '5 - Expert', value: 5 }
+  ];
+  
+  const questionSourceOptions = [
+    { label: 'AI', value: 1 },
+    { label: 'Manual', value: 2 },
+    { label: 'Asli', value: 3 },
+    { label: 'Saduran', value: 4 }
   ];
 
   /* ---------------------- Check for changes --------------------------- */
@@ -383,6 +392,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
     setQuestionType('single-choice');
     setQuestionText('');
     setLevel(null);
+    setQuestionSource(1); // Reset to AI
     setOptions(['']);
     setCorrectAnswer([]);
     setStatements(['']);
@@ -586,7 +596,8 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
         explanation: hasExplanation ? explanationContent : null,
         passage_id: passageId || null,
         passage: passageContent || null,
-        level: level
+        level: level,
+        question_source_id: questionSource
       };
 
       const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/questions`, newQuestion, {
@@ -623,7 +634,8 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
       explanation: hasExplanation ? explanationContent : null,
       passage_id: hasPassage ? (createNewPassage ? null : passage?.id || null) : null,
       passage: hasPassage ? (createNewPassage ? newPassageContent : passage?.passage || null) : null,
-      level: level
+      level: level,
+      question_source_id: questionSource
     };
     
     onSave(newQuestion);
@@ -832,6 +844,21 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                   }}
                   required
                   error={errors.level}
+                />
+              </Col>
+            </Row>
+
+            {/* -------- Sumber Soal -------- */}
+            <Row className="tw-mb-6">
+              <Col md={12}>
+                <SelectCustomField
+                  label="Sumber Soal"
+                  value={questionSourceOptions.find(opt => opt.value === questionSource) || questionSourceOptions[0]}
+                  options={questionSourceOptions}
+                  onChange={(newValue) => {
+                    setQuestionSource(newValue ? newValue.value : 1);
+                  }}
+                  required
                 />
               </Col>
             </Row>
@@ -1263,6 +1290,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
               setNewPassageTitle('');
               setNewPassageContent('');
               setLevel(null);
+              setQuestionSource(1); // Reset to AI
               setShowSuccessModal(false);
               setSavedQuestionCode('');
               setHasChanges(false);
