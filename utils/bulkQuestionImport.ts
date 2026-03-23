@@ -371,12 +371,18 @@ export const validateImportJSON = (data: any): { valid: boolean; error?: string 
   for (let i = 0; i < data.length; i++) {
     const item = data[i];
     
-    if (!item.questionText && !item.question) {
-      return { valid: false, error: `Item #${i + 1}: questionText atau question harus ada` };
-    }
+    // Check if it's a passage object
+    const isPassage = item.passageTitle && item.passageText;
     
-    if (!item.questionType && !item.type) {
-      return { valid: false, error: `Item #${i + 1}: questionType atau type harus ada` };
+    // If not a passage, it must be a question
+    if (!isPassage) {
+      if (!item.questionText && !item.question) {
+        return { valid: false, error: `Item #${i + 1}: questionText atau question harus ada (atau passageTitle + passageText untuk bacaan)` };
+      }
+      
+      if (!item.questionType && !item.type) {
+        return { valid: false, error: `Item #${i + 1}: questionType atau type harus ada` };
+      }
     }
   }
   

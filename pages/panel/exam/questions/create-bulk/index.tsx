@@ -1594,6 +1594,7 @@ const BulkQuestionItem: React.FC<{
 // Main Component
 const CreateQuestionBulk: React.FC = () => {
   const router = useRouter();
+  const { id: userId } = useAuth();
   const [questions, setQuestions] = useState<QuestionData[]>([{ ...initialQuestionData }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successData, setSuccessData] = useState<any[]>([]);
@@ -1949,12 +1950,54 @@ const CreateQuestionBulk: React.FC = () => {
   };
 
   /**
+   * Create passage from JSON data
+   */
+  const createPassageFromJSON = async (passageData: any): Promise<{ id: number; title: string; passage: string } | null> => {
+    try {
+      console.log('🔄 Creating passage from JSON:', passageData.passageTitle);
+      
+      const processedPassageText = processContent(passageData.passageText);
+      
+      const requestData = {
+        title: passageData.passageTitle,
+        passage: processedPassageText,
+        create_user_id: userId || null,
+      };
+      
+      console.log('📤 Sending passage creation request to API');
+
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/questions/passage`,
+        requestData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+          },
+        }
+      );
+      
+      console.log('✅ Passage created successfully:', response.data);
+      
+      return {
+        id: response.data.id,
+        title: passageData.passageTitle,
+        passage: processedPassageText,
+      };
+    } catch (error: any) {
+      console.error('❌ Error creating passage:', error);
+      console.error('Error response:', error.response?.data);
+      throw new Error(`Gagal membuat bacaan "${passageData.passageTitle}": ${error.response?.data?.error || error.message || 'Unknown error'}`);
+    }
+  };
+
+  /**
    * Convert imported JSON item to QuestionData using global allExamTypes
    */
   const convertJSONItemToQuestionData = async (
     item: any, 
     examTypesMap: Map<number, any>,
-    index: number
+    index: number,
+    createdPassages: Map<string, { id: number; title: string; passage: string }>
   ): Promise<{ data: QuestionData | null; errors: string[]; warnings: string[] }> => {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -2115,38 +2158,49 @@ const CreateQuestionBulk: React.FC = () => {
       // Search for passage if needed
       if (item.passageTitle) {
         console.log(`DEBUG: Searching for passage with title="${item.passageTitle}"`);
-        try {
-          const passageResponse = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_URL}/questions/passage/search?search=${encodeURIComponent(item.passageTitle)}`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-              },
-            }
-          );
-          
-          if (passageResponse.data && Array.isArray(passageResponse.data) && passageResponse.data.length > 0) {
-            // Try to find exact match by title
-            let matchedPassage = passageResponse.data.find((p: any) => 
-              p.title?.toLowerCase() === item.passageTitle.toLowerCase()
+        
+        // First check if we just created this passage in the same import
+        if (createdPassages.has(item.passageTitle)) {
+          const createdPassage = createdPassages.get(item.passageTitle)!;
+          console.log('✅ Found passage in created passages:', createdPassage.title);
+          questionData.hasPassage = true;
+          questionData.passage = createdPassage;
+        } else {
+          // If not in created passages, search the API
+          try {
+            const passageResponse = await axios.get(
+              `${process.env.NEXT_PUBLIC_API_URL}/questions/passage/search?search=${encodeURIComponent(item.passageTitle)}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+                },
+              }
             );
             
-            if (!matchedPassage) {
-              matchedPassage = passageResponse.data[0];
-              warnings.push(`Soal #${index + 1}: Bacaan "${item.passageTitle}" tidak ditemukan exact match, menggunakan: ${matchedPassage.title}`);
+            if (passageResponse.data && Array.isArray(passageResponse.data) && passageResponse.data.length > 0) {
+              // Try to find exact match by title
+              let matchedPassage = passageResponse.data.find((p: any) => 
+                p.title?.toLowerCase() === item.passageTitle.toLowerCase()
+              );
+              
+              if (!matchedPassage) {
+                matchedPassage = passageResponse.data[0];
+                warnings.push(`Soal #${index + 1}: Bacaan "${item.passageTitle}" tidak ditemukan exact match, menggunakan: ${matchedPassage.title}`);
+              }
+              
+              questionData.hasPassage = true;
+              questionData.passage = {
+                id: matchedPassage.id,
+                title: matchedPassage.title,
+                passage: matchedPassage.passage,
+              };
+            } else {
+              warnings.push(`Soal #${index + 1}: Bacaan "${item.passageTitle}" tidak ditemukan`);
             }
-            
-            questionData.passage = {
-              id: matchedPassage.id,
-              title: matchedPassage.title,
-              passage: matchedPassage.passage,
-            };
-          } else {
-            warnings.push(`Soal #${index + 1}: Bacaan "${item.passageTitle}" tidak ditemukan`);
+          } catch (error) {
+            console.error('Error searching passage:', error);
+            warnings.push(`Soal #${index + 1}: Gagal mencari bacaan "${item.passageTitle}"`);
           }
-        } catch (error) {
-          console.error('Error searching passage:', error);
-          warnings.push(`Soal #${index + 1}: Gagal mencari bacaan "${item.passageTitle}"`);
         }
       }
 
@@ -2193,55 +2247,99 @@ const CreateQuestionBulk: React.FC = () => {
         examTypesMap.set(et.id, et);
       });
       
-      // Convert all items to QuestionData
-      const allErrors: string[] = [];
+      // Separate passages and questions
+      const passageItems: any[] = [];
+      const questionItems: any[] = [];
+      
+      parsedData.forEach((item: any, index: number) => {
+        const isPassage = item.passageTitle && item.passageText && !item.questionText && !item.question;
+        if (isPassage) {
+          passageItems.push({ ...item, originalIndex: index });
+        } else {
+          questionItems.push({ ...item, originalIndex: index });
+        }
+      });
+      
+      console.log(`Found ${passageItems.length} passage(s) and ${questionItems.length} question(s)`);
+      
+      // Create passages first
+      const createdPassages = new Map<string, { id: number; title: string; passage: string }>();
+      const passageErrors: string[] = [];
+      
+      for (const passageItem of passageItems) {
+        try {
+          const createdPassage = await createPassageFromJSON(passageItem);
+          if (createdPassage) {
+            createdPassages.set(createdPassage.title, createdPassage);
+            console.log(`✅ Created passage: ${createdPassage.title}`);
+          }
+        } catch (error: any) {
+          const errorMsg = `Passage "${passageItem.passageTitle}": ${error.message}`;
+          passageErrors.push(errorMsg);
+          console.error(errorMsg);
+        }
+      }
+      
+      // Convert all question items to QuestionData
+      const allErrors: string[] = [...passageErrors];
       const allWarnings: string[] = [];
       const convertedQuestions: QuestionData[] = [];
       
-      for (let i = 0; i < parsedData.length; i++) {
-        const item = parsedData[i];
-        console.log(`Processing item ${i + 1}:`, {
+      for (let i = 0; i < questionItems.length; i++) {
+        const item = questionItems[i];
+        console.log(`Processing question ${i + 1}:`, {
           bidang: item.bidang,
           bidang_code: item.bidang_code,
           topik: item.topik,
           topic_code: item.topic_code,
           subtopic: item.subtopic,
           subtopic_code: item.subtopic_code,
-          subtopic_id: item.subtopic_id
+          subtopic_id: item.subtopic_id,
+          passageTitle: item.passageTitle
         });
         
-        const result = await convertJSONItemToQuestionData(item, examTypesMap, i);
+        const result = await convertJSONItemToQuestionData(item, examTypesMap, i, createdPassages);
         
         if (result.data) {
-          console.log(`Item ${i + 1} converted successfully:`, {
+          console.log(`Question ${i + 1} converted successfully:`, {
             bidang: result.data.bidang,
             topik: result.data.topik,
-            subTopik: result.data.subTopik
+            subTopik: result.data.subTopik,
+            hasPassage: result.data.hasPassage,
+            passageTitle: result.data.passage?.title
           });
           convertedQuestions.push(result.data);
         } else {
-          console.log(`Item ${i + 1} failed to convert`);
+          console.log(`Question ${i + 1} failed to convert`);
         }
         
         allErrors.push(...result.errors);
         allWarnings.push(...result.warnings);
       }
       
-      if (convertedQuestions.length === 0) {
+      if (convertedQuestions.length === 0 && passageItems.length === 0) {
         console.error('All errors:', allErrors);
-        setImportError('Tidak ada soal yang berhasil diimport. Periksa format JSON dan data.');
+        setImportError('Tidak ada soal atau bacaan yang berhasil diimport. Periksa format JSON dan data.');
         setIsProcessingImport(false);
         return;
       }
       
-      // Set questions directly
-      setQuestions(convertedQuestions);
-      setOpenIndex(0);
+      // APPEND questions to existing questions instead of replacing
+      const updatedQuestions = [...questions, ...convertedQuestions];
+      setQuestions(updatedQuestions);
+      setOpenIndex(questions.length); // Open first newly added question
       setShowImportModal(false);
       setJsonInput('');
       
       // Show summary
-      let message = `Berhasil mengimport ${convertedQuestions.length} dari ${parsedData.length} soal!`;
+      let message = '';
+      if (passageItems.length > 0) {
+        const successfulPassages = createdPassages.size;
+        message += `📚 Bacaan: ${successfulPassages} dari ${passageItems.length} berhasil dibuat\\n`;
+      }
+      message += `📝 Soal: Berhasil menambahkan ${convertedQuestions.length} dari ${questionItems.length} soal!\\n`;
+      message += `\\nTotal soal sekarang: ${updatedQuestions.length}`;
+      
       if (allErrors.length > 0) {
         message += `\\n\\nErrors (${allErrors.length}):\\n` + allErrors.slice(0, 5).join('\\n');
         if (allErrors.length > 5) {
