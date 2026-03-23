@@ -2287,15 +2287,17 @@ const CreateQuestionBulk: React.FC = () => {
       const questionItems: any[] = [];
       
       console.log('🔍 Analyzing JSON items...');
+      console.log('Total items in JSON:', parsedData.length);
+      
       parsedData.forEach((item: any, index: number) => {
         const isPassage = item.passageTitle && item.passageText && !item.questionText && !item.question;
         
-        console.log(`Item ${index + 1}:`, {
-          hasPassageTitle: !!item.passageTitle,
-          hasPassageText: !!item.passageText,
-          hasQuestionText: !!item.questionText,
-          hasQuestion: !!item.question,
-          type: isPassage ? 'PASSAGE' : 'QUESTION'
+        console.log(`\nItem ${index + 1}:`, {
+          passageTitle: item.passageTitle ? `"${item.passageTitle}"` : 'NONE',
+          passageText: item.passageText ? `${item.passageText.substring(0, 50)}...` : 'NONE',
+          questionText: item.questionText ? `${item.questionText.substring(0, 50)}...` : 'NONE',
+          question: item.question || 'NONE',
+          '→ TYPE': isPassage ? '📚 PASSAGE' : '❓ QUESTION'
         });
         
         if (isPassage) {
@@ -2305,7 +2307,16 @@ const CreateQuestionBulk: React.FC = () => {
         }
       });
       
-      console.log(`📊 Summary: ${passageItems.length} passage(s) and ${questionItems.length} question(s)`);
+      console.log(`\n📊 FINAL SUMMARY:`);
+      console.log(`   Passages detected: ${passageItems.length}`);
+      console.log(`   Questions detected: ${questionItems.length}`);
+      
+      // Show confirmation to user
+      const confirmMsg = `Terdeteksi:\n• ${passageItems.length} Bacaan (Passage)\n• ${questionItems.length} Soal (Question)\n\nLanjutkan import?`;
+      if (!window.confirm(confirmMsg)) {
+        setIsProcessingImport(false);
+        return;
+      }
       
       // Create passages first (or reuse existing ones)
       const createdPassages = new Map<string, { id: number; title: string; passage: string }>();
